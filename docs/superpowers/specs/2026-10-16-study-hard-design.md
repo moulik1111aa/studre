@@ -527,8 +527,9 @@ Counts: 30 + 45 + 56 + 55 + 50 + 45 + 40 = **321 skills**.
 
 | Activity | Coins |
 |---|---|
-| Passed level | 10 |
-| Stars | 1★ +1, 2★ +3, 3★ +5 |
+| Passed level | 6 |
+| Stars | 1★ +1, 2★ +2, 3★ +3 |
+| Stage pay (questions take longer for the youngest and in the hardest stages) | Stage 1 ×1.7, 2 ×1.5, 3 ×1, 4 ×1.1, 5 ×1.25, 6 ×1.4, 7 ×1.5 |
 | Review (minion) win | 15 |
 | Boss win | 50 |
 | Face-off win | 5 |
@@ -600,9 +601,9 @@ Counts: 30 + 45 + 56 + 55 + 50 + 45 + 40 = **321 skills**.
   - The child then chooses the next reward.
   - Coins over the cost carry into the next jar.
 - **Pacing check:** the economy simulation (§10) must show, at 30 minutes a day:
-  - 5 ± 1.5 levels a day;
+  - about 5–10 levels a day, depending on age;
   - a Small treat in 6–9 days;
-  - a Toy · big in 45–70 days.
+  - a Toy · big in 45–75 days (with 1 in 10 days missed).
 
 ## 5. Boss fights and minions
 
