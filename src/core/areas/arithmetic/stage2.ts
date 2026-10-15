@@ -1,0 +1,314 @@
+// Stage 2 — Number Friends (ages 5–6). Spoken prompts, big choice buttons, pictures where they help.
+
+import { stageSkills, OBJECTS, NAMES } from '../../skill.ts';
+import { nearNumbers, num, spoken, uniqueWrong, type Made } from '../../question.ts';
+import type { Rng } from '../../rng.ts';
+
+const { list, add } = stageSkills('arithmetic', 2, { format: 'choice', speedSec: 8 });
+export const STAGE2 = list;
+
+/** Spoken + written arithmetic question with near-number distractors. */
+function sum(prompt: string, answer: number, r: Rng, speak?: string, hint?: string, extras: number[] = []): Made {
+  return { prompt, speak: speak ?? spoken(prompt), answer: num(answer), distractors: nearNumbers(r, answer, extras), hint };
+}
+
+// ── Counting & Number ──────────────────────────────────────────────────────
+const countTo = (hi: number) => (r: Rng): Made => {
+  const start = r.int(Math.max(1, hi - 30), hi - 4);
+  const seq = [start, start + 1, start + 2, start + 3];
+  const gap = r.int(1, 3);
+  return {
+    prompt: seq.map((n, i) => (i === gap ? '?' : n)).join(', '),
+    speak: `Which number is missing? ${seq.map((n, i) => (i === gap ? 'blank' : n)).join(', ')}`,
+    answer: num(seq[gap]),
+    distractors: nearNumbers(r, seq[gap], [seq[gap] + 10, seq[gap] - 10].filter((n) => n > 0)),
+  };
+};
+add('count20', 'number', 'Count to 20', countTo(20));
+add('count50', 'number', 'Count to 50', countTo(50));
+add('count100', 'number', 'Count to 100', countTo(100));
+
+const readNumeral = (lo: number, hi: number) => (r: Rng): Made => {
+  const n = r.int(lo, hi);
+  const words = toWords(n);
+  return {
+    prompt: `Find ${words}`,
+    speak: `Find the number ${n}`,
+    answer: num(n),
+    distractors: uniqueWrong(num(n), [num(reverse(n)), num(n + 10), num(n - 10), num(n + 1)].filter((s) => +s >= lo - 10 && +s > 0), () => num(r.int(lo, hi))),
+  };
+};
+add('numeral20', 'number', 'Numerals 11–20', readNumeral(11, 20));
+add('numeral100', 'number', 'Numerals to 100', readNumeral(21, 99));
+
+const cmp = (hi: number) => (r: Rng): Made => {
+  const a = r.int(1, hi);
+  let b = r.int(1, hi);
+  if (b === a) b = a === hi ? a - 1 : a + 1;
+  const ans = Math.max(a, b);
+  return {
+    prompt: `Which is bigger: ${a} or ${b}?`,
+    speak: `Which is bigger, ${a} or ${b}?`,
+    answer: num(ans),
+    distractors: [num(Math.min(a, b)), num(ans + 1), num(Math.min(a, b) - 1 > 0 ? Math.min(a, b) - 1 : ans + 2)],
+  };
+};
+add('compare20', 'number', 'Compare to 20', cmp(20));
+add('compare100', 'number', 'Compare to 100 (< >)', (r) => {
+  const a = r.int(10, 99);
+  let b = r.int(10, 99);
+  if (a === b) b = a + 1;
+  const sym = a > b ? '>' : '<';
+  return {
+    prompt: `${a}  ?  ${b}`,
+    speak: `Is ${a} greater than or less than ${b}?`,
+    answer: sym,
+    distractors: [sym === '>' ? '<' : '>', '='],
+    exactForm: true,
+    hint: 'The open mouth eats the bigger number.',
+  };
+});
+add('order3', 'number', 'Order three numbers to 20', (r) => {
+  const nums = r.shuffle([...Array(20).keys()].map((n) => n + 1)).slice(0, 3);
+  const sorted = [...nums].sort((a, b) => a - b);
+  return {
+    prompt: `Smallest of ${nums.join(', ')}?`,
+    speak: `Which is the smallest: ${nums.join(', ')}?`,
+    answer: num(sorted[0]),
+    distractors: [num(sorted[1]), num(sorted[2]), num(sorted[0] + 1 === sorted[1] ? sorted[0] + 3 : sorted[0] + 1)],
+  };
+});
+add('beforeafter', 'number', 'Before and after (to 100)', (r) => {
+  const n = r.int(2, 99);
+  const after = r.chance(0.5);
+  const ans = after ? n + 1 : n - 1;
+  return { prompt: `What comes ${after ? 'after' : 'before'} ${n}?`, speak: `What number comes ${after ? 'after' : 'before'} ${n}?`, answer: num(ans), distractors: nearNumbers(r, ans, [after ? n - 1 : n + 1, n]) };
+});
+const skip = (step: number) => (r: Rng): Made => {
+  const start = step * r.int(0, step === 10 ? 6 : 12);
+  const seq = [start, start + step, start + 2 * step];
+  const ans = start + 3 * step;
+  return {
+    prompt: `${seq.join(', ')}, ?`,
+    speak: `Count in ${step}s: ${seq.join(', ')}. What comes next?`,
+    answer: num(ans),
+    distractors: nearNumbers(r, ans, [ans + 1, ans - 1, ans + step]),
+  };
+};
+add('skip2', 'number', 'Count in 2s', skip(2));
+add('skip5', 'number', 'Count in 5s', skip(5));
+add('skip10', 'number', 'Count in 10s', skip(10));
+add('oddeven', 'number', 'Odd or even', (r) => {
+  const n = r.int(1, 50);
+  const ans = n % 2 === 0 ? 'even' : 'odd';
+  return { prompt: `Is ${n} odd or even?`, speak: `Is ${n} odd or even?`, answer: ans, distractors: [ans === 'odd' ? 'even' : 'odd'], exactForm: true, hint: 'Even numbers end in 0, 2, 4, 6 or 8.' };
+});
+add('ordinal', 'number', 'Ordinals to 10th', (r) => {
+  const items = r.shuffle([...OBJECTS]).slice(0, 6);
+  const i = r.int(0, 5);
+  const ord = ['1st', '2nd', '3rd', '4th', '5th', '6th'][i];
+  return {
+    prompt: `Which is ${ord} in the row?`,
+    speak: `Which one is ${['first', 'second', 'third', 'fourth', 'fifth', 'sixth'][i]} in the row?`,
+    visual: { kind: 'pattern', items },
+    answer: items[i],
+    distractors: items.filter((_, k) => k !== i).slice(0, 3),
+    exactForm: true,
+  };
+});
+add('teens', 'number', 'Teens as ten and ones', (r) => {
+  const ones = r.int(1, 9);
+  return sum(`10 + ${ones} = ?`, 10 + ones, r, `Ten and ${ones} more make?`, 'Ten and some ones make a teen number.');
+});
+add('line20', 'number', 'Number line to 20', (r) => {
+  const n = r.int(2, 18);
+  const seq = [n - 1, n, n + 1];
+  return { prompt: `${seq[0]} — ? — ${seq[2]}`, speak: `What number is between ${seq[0]} and ${seq[2]}?`, answer: num(n), distractors: nearNumbers(r, n, [n + 2, n - 2]) };
+});
+
+// ── Add & Subtract ─────────────────────────────────────────────────────────
+add('add10', 'addsub', 'Add within 10', (r) => {
+  const a = r.int(1, 8);
+  const b = r.int(1, 10 - a);
+  return sum(`${a} + ${b} = ?`, a + b, r);
+});
+add('add0', 'addsub', 'Add 0', (r) => {
+  const a = r.int(0, 20);
+  return r.chance(0.5) ? sum(`${a} + 0 = ?`, a, r, undefined, 'Adding zero changes nothing.') : sum(`0 + ${a} = ?`, a, r, undefined, 'Adding zero changes nothing.');
+});
+add('counton', 'addsub', 'Count on 1 and 2', (r) => {
+  const a = r.int(3, 18);
+  const b = r.int(1, 2);
+  return sum(`${a} + ${b} = ?`, a + b, r, undefined, `Start at ${a} and count on ${b}.`);
+});
+add('doubles5', 'addsub', 'Doubles to 5 + 5', (r) => {
+  const a = r.int(1, 5);
+  return sum(`${a} + ${a} = ?`, 2 * a, r);
+});
+add('neardoubles', 'addsub', 'Near doubles', (r) => {
+  const a = r.int(2, 9);
+  return sum(`${a} + ${a + 1} = ?`, 2 * a + 1, r, undefined, `${a} + ${a} = ${2 * a}, and one more.`, [2 * a]);
+});
+add('make10', 'addsub', 'Pairs that make 10', (r) => {
+  const a = r.int(0, 10);
+  return sum(`${a} + ? = 10`, 10 - a, r, `${a} and what make 10?`);
+});
+add('add3nums', 'addsub', 'Add three small numbers', (r) => {
+  const [a, b, c] = [r.int(1, 5), r.int(1, 5), r.int(1, 5)];
+  return sum(`${a} + ${b} + ${c} = ?`, a + b + c, r, undefined, 'Look for a pair that makes 10 first.');
+});
+add('add20nb', 'addsub', 'Add within 20 without bridging', (r) => {
+  const a = r.int(11, 17);
+  const b = r.int(1, 19 - a);
+  return sum(`${a} + ${b} = ?`, a + b, r);
+});
+add('add20b', 'addsub', 'Add within 20 bridging 10', (r) => {
+  const a = r.int(5, 9);
+  const b = r.int(11 - a, 9);
+  return sum(`${a} + ${b} = ?`, a + b, r, undefined, `Make 10 first: ${a} + ${10 - a} = 10, then add ${b - (10 - a)} more.`);
+});
+add('add10to', 'addsub', 'Add 10', (r) => {
+  const a = r.int(1, 89);
+  return sum(`${a} + 10 = ?`, a + 10, r, undefined, 'The tens digit goes up by one.', [a + 1]);
+});
+add('missadd10', 'addsub', 'Missing addend within 10', (r) => {
+  const total = r.int(4, 10);
+  const a = r.int(1, total - 1);
+  return sum(`${a} + ? = ${total}`, total - a, r, `${a} plus what makes ${total}?`, `Count up from ${a} to ${total}.`);
+});
+add('missadd20', 'addsub', 'Missing addend within 20', (r) => {
+  const total = r.int(11, 20);
+  const a = r.int(2, total - 2);
+  return sum(`${a} + ? = ${total}`, total - a, r, `${a} plus what makes ${total}?`);
+});
+add('take10', 'addsub', 'Take away within 10', (r) => {
+  const a = r.int(3, 10);
+  const b = r.int(1, a);
+  return sum(`${a} − ${b} = ?`, a - b, r);
+});
+add('sub012', 'addsub', 'Subtract 0, 1 and 2', (r) => {
+  const a = r.int(2, 20);
+  const b = r.int(0, 2);
+  return sum(`${a} − ${b} = ?`, a - b, r);
+});
+add('subfrom10', 'addsub', 'Subtract from 10', (r) => {
+  const b = r.int(0, 10);
+  return sum(`10 − ${b} = ?`, 10 - b, r);
+});
+add('difference', 'addsub', 'Difference between two numbers', (r) => {
+  const a = r.int(2, 20);
+  const b = r.int(1, a - 1);
+  const name = r.pick(NAMES);
+  return { prompt: `${name} has ${a} stickers, you have ${b}. How many more does ${name} have?`, speak: `${name} has ${a} stickers. You have ${b}. How many more does ${name} have?`, answer: num(a - b), distractors: nearNumbers(r, a - b, [a + b]) };
+});
+add('sub20nb', 'addsub', 'Subtract within 20 without bridging', (r) => {
+  const a = r.int(12, 19);
+  const b = r.int(1, a - 10);
+  return sum(`${a} − ${b} = ?`, a - b, r);
+});
+add('sub20b', 'addsub', 'Subtract within 20 bridging 10', (r) => {
+  const a = r.int(11, 18);
+  const b = r.int(a - 9, 9);
+  return sum(`${a} − ${b} = ?`, a - b, r, undefined, `Take away ${a - 10} to get to 10, then ${b - (a - 10)} more.`);
+});
+add('sub10', 'addsub', 'Subtract 10', (r) => {
+  const a = r.int(11, 99);
+  return sum(`${a} − 10 = ?`, a - 10, r, undefined, 'The tens digit goes down by one.', [a - 1]);
+});
+add('misssub', 'addsub', 'Missing number in subtraction', (r) => {
+  const a = r.int(6, 20);
+  const b = r.int(1, a - 1);
+  return sum(`${a} − ? = ${a - b}`, b, r, `${a} minus what makes ${a - b}?`);
+});
+add('factfamily', 'addsub', 'Fact families', (r) => {
+  const a = r.int(2, 9);
+  const b = r.int(2, 9);
+  const forms = [
+    [`${a + b} − ${a} = ?`, b],
+    [`${a + b} − ${b} = ?`, a],
+    [`${b} + ${a} = ?`, a + b],
+  ] as const;
+  const [p, ans] = r.pick(forms);
+  return sum(p, ans, r, undefined, `${a} + ${b} = ${a + b}, so the family is ${a}, ${b} and ${a + b}.`);
+});
+
+// ── Mixed ──────────────────────────────────────────────────────────────────
+add('word20', 'word', 'Add/subtract word problems within 20', (r) => {
+  const name = r.pick(NAMES);
+  if (r.chance(0.5)) {
+    const a = r.int(3, 12);
+    const b = r.int(2, 20 - a);
+    return { prompt: `${name} has ${a} marbles and finds ${b} more. How many now?`, speak: `${name} has ${a} marbles and finds ${b} more. How many now?`, answer: num(a + b), distractors: nearNumbers(r, a + b, [a - b > 0 ? a - b : a + b + 2]) };
+  }
+  const a = r.int(8, 20);
+  const b = r.int(2, a - 1);
+  return { prompt: `${name} had ${a} sweets and gave away ${b}. How many are left?`, speak: `${name} had ${a} sweets and gave away ${b}. How many are left?`, answer: num(a - b), distractors: nearNumbers(r, a - b, [a + b]) };
+});
+add('whichsign', 'addsub', 'Choose + or −', (r) => {
+  const a = r.int(4, 15);
+  const b = r.int(1, Math.min(9, a - 1));
+  const plus = r.chance(0.5);
+  return { prompt: `${a} ? ${b} = ${plus ? a + b : a - b}`, speak: `${a}, something, ${b} equals ${plus ? a + b : a - b}. Plus or minus?`, answer: plus ? '+' : '−', distractors: [plus ? '−' : '+'], exactForm: true };
+});
+add('equalnot', 'addsub', 'Equal or not equal', (r) => {
+  const a = r.int(1, 9);
+  const b = r.int(1, 9);
+  const c = r.int(1, 9);
+  const equal = r.chance(0.5);
+  const d = equal ? a + b - c : a + b - c + r.pick([1, -1, 2]);
+  const ok = d >= 0 ? d : d + 3;
+  const truth = a + b === c + ok;
+  return { prompt: `${a} + ${b}  ?  ${c} + ${ok}`, speak: `Is ${a} plus ${b} the same as ${c} plus ${ok}?`, answer: truth ? '=' : '≠', distractors: [truth ? '≠' : '='], exactForm: true };
+});
+add('coins20', 'word', 'Count coins to ₹20', (r) => {
+  const values: number[] = [];
+  let total = 0;
+  const k = r.int(2, 4);
+  while (values.length < k) {
+    const c = r.pick([1, 2, 5, 10]);
+    if (total + c > 20) break;
+    values.push(c);
+    total += c;
+  }
+  if (!values.length) values.push(5), (total = 5);
+  return { prompt: 'How many rupees?', speak: 'Add up the coins. How many rupees?', visual: { kind: 'money', values }, answer: num(total), distractors: nearNumbers(r, total, [total + 5, total - 5].filter((n) => n > 0)) };
+}, { speedSec: 12 });
+add('halve20', 'muldiv', 'Halve even numbers to 20', (r) => {
+  const h = r.int(1, 10);
+  return sum(`Half of ${2 * h} = ?`, h, r, `What is half of ${2 * h}?`, 'Share into two equal groups.', [2 * h, h + 2]);
+});
+add('double20', 'muldiv', 'Double to 20', (r) => {
+  const a = r.int(1, 10);
+  return sum(`Double ${a} = ?`, 2 * a, r, `What is double ${a}?`, `Double means ${a} + ${a}.`, [a + 2]);
+});
+add('mix10', 'addsub', 'Speed mix within 10', (r) => {
+  const a = r.int(1, 9);
+  if (r.chance(0.5)) {
+    const b = r.int(1, 10 - a);
+    return sum(`${a} + ${b} = ?`, a + b, r);
+  }
+  const b = r.int(1, a);
+  return sum(`${a} − ${b} = ?`, a - b, r);
+}, { speedSec: 5 });
+add('mix20', 'addsub', 'Speed mix within 20', (r) => {
+  const a = r.int(2, 18);
+  if (r.chance(0.5)) {
+    const b = r.int(1, 20 - a);
+    return sum(`${a} + ${b} = ?`, a + b, r);
+  }
+  const b = r.int(1, a);
+  return sum(`${a} − ${b} = ?`, a - b, r);
+}, { speedSec: 6 });
+
+// ── helpers ────────────────────────────────────────────────────────────────
+const ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+export function toWords(n: number): string {
+  if (n < 20) return ONES[n];
+  if (n < 100) return TENS[Math.floor(n / 10)] + (n % 10 ? '-' + ONES[n % 10] : '');
+  return String(n);
+}
+function reverse(n: number): number {
+  const r = Number(String(n).split('').reverse().join(''));
+  return r === n ? n + 1 : r;
+}

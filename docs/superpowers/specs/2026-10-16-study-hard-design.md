@@ -40,7 +40,7 @@ A separate Android app that teaches arithmetic to children aged 3–16 through a
 
 - **Maths areas:** the first area is **Arithmetic**. Geometry, Measurement & Time, and Data can be added later as separate areas with their own maps, sharing profiles, coins and rewards.
 - **Stages:** Arithmetic has 7 stages, each mapped to an age band.
-- **Skills:** each stage holds an ordered list of small skills (320 in total). A skill belongs to one **strand**:
+- **Skills:** each stage holds an ordered list of small skills (321 in total). A skill belongs to one **strand**:
   - Counting & Number
   - Add & Subtract
   - Multiply & Divide
@@ -55,7 +55,7 @@ A separate Android app that teaches arithmetic to children aged 3–16 through a
   - an answer format;
   - a difficulty parameter from 0 to 1 within the skill.
 - **Levels:** every skill has a ladder of 5 levels. Every 5 skills there is a Review level, played as a minion fight. Every stage has a mid-stage boss and a final boss.
-  - Total: 320 × 5 + 64 reviews + 14 bosses = **1,678 levels**.
+  - Total: 321 × 5 + 64 reviews + 14 bosses = **1,683 levels**.
 
 | Level | Name | Rules |
 |---|---|---|
@@ -162,7 +162,7 @@ A separate Android app that teaches arithmetic to children aged 3–16 through a
 - Speed mix within 10
 - Speed mix within 20
 
-**Stage 3 — Big Numbers** (ages 7–8, 55 skills)
+**Stage 3 — Big Numbers** (ages 7–8, 56 skills)
 
 *Place value*
 - Tens and ones to 100
@@ -482,7 +482,7 @@ A separate Android app that teaches arithmetic to children aged 3–16 through a
 - Missing-operator puzzles
 - Grand review
 
-Counts: 30 + 45 + 55 + 55 + 50 + 45 + 40 = **320 skills**.
+Counts: 30 + 45 + 56 + 55 + 50 + 45 + 40 = **321 skills**.
 
 ### 2.3 Question quality rules (enforced by tests)
 
@@ -528,7 +528,7 @@ Counts: 30 + 45 + 55 + 55 + 50 + 45 + 40 = **320 skills**.
 | Activity | Coins |
 |---|---|
 | Passed level | 10 |
-| Stars | +1 per star, up to +5 |
+| Stars | 1★ +1, 2★ +3, 3★ +5 |
 | Review (minion) win | 15 |
 | Boss win | 50 |
 | Face-off win | 5 |
@@ -839,7 +839,7 @@ In the browser preview, speech falls back to the web speech API and photos to In
 
 1. **Milestone 1:**
    - setup, profiles, grown-up check and placement;
-   - Stages 1–3 (130 skills) with 4 bosses and their minions;
+   - Stages 1–3 (131 skills) with 4 bosses and their minions;
    - the full rewards system with melting and photos;
    - the parent area (without the report), loader and motion system.
    - This produces the first APK children can use.

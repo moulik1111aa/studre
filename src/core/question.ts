@@ -229,3 +229,18 @@ export const lerp = (a: number, b: number, t: number): number => Math.round(a + 
 export function indian(n: number): string {
   return Math.round(n).toLocaleString('en-IN');
 }
+
+/** A written sum read aloud: "27 + 36 = ?" → "27 plus 36 equals what?" */
+export function spoken(prompt: string): string {
+  return prompt
+    .replace(/= \?/g, 'equals what?')
+    .replace(/\?/g, 'what')
+    .replace(/\+/g, ' plus ')
+    .replace(/−/g, ' minus ')
+    .replace(/×/g, ' times ')
+    .replace(/÷/g, ' divided by ')
+    .replace(/=/g, ' equals ')
+    .replace(/\s+/g, ' ')
+    .replace('equals what what', 'equals what?')
+    .trim();
+}
