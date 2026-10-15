@@ -78,7 +78,7 @@ export class Placement {
         w.placed = max;
         return;
       }
-      w.pos = Math.min(max, w.pos + (prev === 'effort' ? 2 : 4));
+      w.pos = Math.min(max, w.pos + (prev === 'effort' ? 2 : 5));
     } else {
       if (prev === 'yes') {
         w.placed = Math.max(0, w.pos - 2);
@@ -90,7 +90,7 @@ export class Placement {
       }
       w.pos = Math.max(0, w.pos - 2);
     }
-    if (w.asked >= 4) w.placed = w.pos;
+    if (w.asked >= 3) w.placed = w.pos;
   }
 
   /** How many questions are left at most (for a progress indicator). */

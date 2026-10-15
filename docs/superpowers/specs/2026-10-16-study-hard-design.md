@@ -499,10 +499,10 @@ Counts: 30 + 45 + 56 + 55 + 50 + 45 + 40 = **321 skills**.
   - The starting guess comes from age: the middle of that age's stage.
   - For each strand relevant to the age, the parent sees a real example: "Can Aarav easily do 17 + 34?"
   - The answers are **Yes, easily** / **With a little effort** / **Not yet**.
-    - *Yes* moves 4 skills ahead (2 if the previous answer was *effort*).
+    - *Yes* moves 5 skills ahead (2 if the previous answer was *effort*).
     - *Effort* places the child at that skill.
     - *Not yet* moves back 2 skills.
-  - It stops when an answer flips, or after 4 questions in that strand. That's about 6–10 questions in total.
+  - It stops when an answer flips, or after 3 questions in that strand. That is at most 15 questions in total, usually fewer.
   - **"Let them try"** replaces a parent question with a 6-question placement check the child plays (2 minutes).
   - **Placed skills:** skills below the placement point are marked *skipped*. They stay open on the map with 0 stars, and passing their Master level grants the star.
   - **Self-correction:** in the first 3 levels after placement, a score below 6/10 steps the strand back one skill.
