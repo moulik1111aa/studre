@@ -119,6 +119,12 @@ export function valueOf(s: string): number {
 
 /** Normalise typed input: trims, unifies minus signs, strips trailing zeros of decimals. */
 export function normalise(s: string): string {
+  // A mixed number "1 3/4" becomes the improper fraction "7/4" (before spaces are dropped).
+  const mixed = /^\s*(-?)(\d+)\s+(\d+)\/(\d+)\s*$/.exec(s.replace(/−/g, '-'));
+  if (mixed) {
+    const d = Number(mixed[4]);
+    return `${mixed[1]}${Number(mixed[2]) * d + Number(mixed[3])}/${d}`;
+  }
   let t = s.trim().replace(/\s+/g, '').replace(/−/g, '-').replace(/^\+/, '');
   if (/^-?\d*\.\d+$/.test(t)) t = num(Number(t));
   if (/^-?\d+$/.test(t)) t = String(Number(t));

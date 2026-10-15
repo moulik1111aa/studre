@@ -74,6 +74,8 @@ export function optionHtml(value: string, optionObject?: string): string {
 
 /** Answers shown nicely: "3/4" as a stacked fraction, "-7" with a real minus. */
 export function prettyAnswer(a: string): string {
+  const mx = /^(-?)(\d+) (\d+)\/(\d+)$/.exec(a);
+  if (mx) return `${mx[1] ? '−' : ''}${mx[2]}<span class="frac"><sup>${mx[3]}</sup><sub>${mx[4]}</sub></span>`;
   const m = /^(-?)(\d+)\/(\d+)$/.exec(a);
   if (m) return `${m[1] ? '−' : ''}<span class="frac"><sup>${m[2]}</sup><sub>${m[3]}</sub></span>`;
   return a.replace(/^-/, '−').replace(/,/g, ' and ');
