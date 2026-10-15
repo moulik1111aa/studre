@@ -142,7 +142,8 @@ const DIFFICULTY: Record<Tier, [number, number]> = { 1: [0, 0.3], 2: [0, 0.5], 3
 
 /** Make one question for a skill, avoiding the keys in `avoid` (retries a few times). */
 export function makeQuestion(skill: Skill, rng: Rng, d: number, avoid: Set<string>, choiceCount?: number, last?: string): Question {
-  const keyOf = (m: ReturnType<Skill['make']>) => `${skill.id}|${m.prompt}|${m.visual ? JSON.stringify(m.visual) : ''}`;
+  const keyOf = (m: ReturnType<Skill['make']>) =>
+    `${skill.id}|${m.prompt}|${m.visual ? JSON.stringify(m.visual) : ''}|${m.answer}|${[...m.distractors].sort().join(',')}`;
   let made = skill.make(rng, d);
   // Prefer a question not seen recently; never the same as the one just asked.
   for (let tries = 0; tries < 40; tries++) {
