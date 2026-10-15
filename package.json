@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Study Hard — a maths learning path for children aged 3–16, with rewards, boss fights and Face-off",
+  "description": "Study Hard \u2014 a maths learning path for children aged 3\u201316, with rewards, boss fights and Face-off",
   "scripts": {
     "setup:local": "sh scripts/link-tools.sh",
     "typecheck": "tsc --noEmit -p .",
@@ -13,7 +13,8 @@
     "e2e": "playwright test",
     "simulate": "node scripts/simulate.ts",
     "check": "npm run typecheck && npm test && npm run build && npm run e2e",
-    "android": "node scripts/android.mjs"
+    "android": "node scripts/android.mjs",
+    "icons": "node scripts/icons.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",

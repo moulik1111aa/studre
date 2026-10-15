@@ -10,6 +10,6 @@ rm -rf .git
 git init -q
 git checkout -q -b ci-results
 git add -A
-git -c user.name="Pairfall CI" -c user.email="ci@users.noreply.github.com" commit -qm "$MSG"
+git -c user.name="Study Hard CI" -c user.email="ci@users.noreply.github.com" commit -qm "$MSG"
 git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ci-results
 echo "shared to the ci-results branch"

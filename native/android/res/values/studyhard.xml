@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Night-indigo backdrop: shown by the launch splash and behind the WebView before it paints. -->
+    <color name="studyhard_bg">#14173A</color>
+</resources>
