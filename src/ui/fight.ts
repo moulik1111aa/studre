@@ -39,11 +39,12 @@ function renderQuestion(app: App, qwrap: HTMLElement, answers: HTMLElement, q: Q
     <div class="q-tools"><button class="icon-btn say" aria-label="Read it again">${ICONS.speaker}</button></div>
   </article>`;
   const card = qwrap.firstElementChild as HTMLElement;
+  if (app.debug) card.dataset.answer = q.answer;
   if (!reducedMotion()) card.animate([{ opacity: 0, transform: 'scale(.9) translateY(16px)' }, { opacity: 1, transform: 'none' }], { duration: 360, easing: EASE_OUT });
   stagger(card.querySelectorAll('.obj, .dots circle, .cell, .note, .coin-piece'), { gap: 30, y: 8, scale: 0.6 });
   card.querySelector('.say')!.addEventListener('click', () => app.voice.say(q.speak ?? spoken(q.prompt)));
   if (little || q.speak) app.voice.say(q.speak ?? spoken(q.prompt));
-  answers.className = `answers fight-answers ${q.format === 'picture' ? 'picture' : 'choice'}`;
+  answers.className = `answers fight-answers fmt-${q.format === 'picture' ? 'picture' : 'choice'}`;
   answers.innerHTML = q.choices.map((c) => `<button type="button" class="choice" data-v="${encodeURIComponent(c)}" aria-label="${esc(c)}">${optionHtml(c, q.optionObject)}</button>`).join('');
   let locked = false;
   answers.querySelectorAll<HTMLButtonElement>('.choice').forEach((b) =>

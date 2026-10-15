@@ -53,8 +53,8 @@
 
 /* Answers */
 .answers{display:grid;gap:12px;padding-bottom:4px}
-.answers.picture,.answers.choice{grid-template-columns:repeat(2,1fr)}
-.answers.picture{grid-template-columns:repeat(auto-fit,minmax(100px,1fr))}
+.answers.fmt-picture,.answers.fmt-choice{grid-template-columns:repeat(2,1fr)}
+.answers.fmt-picture{grid-template-columns:repeat(auto-fit,minmax(100px,1fr))}
 .choice{appearance:none;border:0;cursor:pointer;min-height:84px;padding:10px;border-radius:24px;color:#1B1440;font-weight:900;display:grid;place-items:center;
   background:linear-gradient(180deg,#fff,#E4E7FF);box-shadow:0 6px 0 #A7AEEA,0 14px 24px -12px rgba(0,0,0,.6);transition:transform .1s,box-shadow .1s}
 .choice:active{transform:translateY(4px);box-shadow:0 2px 0 #A7AEEA}
@@ -63,7 +63,7 @@
 .opt-num{font-size:34px;line-height:1}
 .opt-emoji{font-size:44px;line-height:1}
 .choice .group{background:none;max-width:150px}
-.answers.pad,.answers.pad-ext{grid-template-columns:1fr;gap:10px;max-width:440px;width:100%;margin:0 auto}
+.answers.fmt-pad,.answers.fmt-pad-ext{grid-template-columns:1fr;gap:10px;max-width:440px;width:100%;margin:0 auto}
 .entry{min-height:60px;border-radius:18px;background:rgba(255,255,255,.95);color:#1B1440;display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:900;gap:2px}
 .caret{width:3px;height:38px;border-radius:2px;background:#5F3DC4;animation:caret 1s steps(2) infinite}
 @keyframes caret{50%{opacity:0}}

@@ -78,6 +78,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
         <p class="hint-text" hidden>${q.hint ?? ''}</p>
       </article>`;
       const card = qwrap.firstElementChild as HTMLElement;
+      if (app.debug) card.dataset.answer = q.answer;
       if (!reducedMotion()) card.animate([{ opacity: 0, transform: 'perspective(800px) rotateX(-18deg) translateY(24px)' }, { opacity: 1, transform: 'none' }], { duration: 520, easing: EASE_OUT });
       stagger(card.querySelectorAll('.obj, .dots circle, .cell, .note, .coin-piece'), { gap: 45, y: 10, scale: 0.6 });
       card.querySelector('.say')!.addEventListener('click', () => app.voice.say(q.speak ?? spoken(q.prompt)));
@@ -92,7 +93,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
     };
 
     const renderAnswers = (q: Question) => {
-      answers.className = `answers ${q.format}`;
+      answers.className = `answers fmt-${q.format}`;
       if (q.format === 'pad' || q.format === 'pad-ext') {
         const ext = q.format === 'pad-ext' || /[./,-]/.test(q.answer);
         const keys = [7, 8, 9, 4, 5, 6, 1, 2, 3, ext ? '−' : '', 0, '⌫'];

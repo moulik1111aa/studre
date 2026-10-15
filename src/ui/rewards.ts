@@ -43,7 +43,7 @@ export function rewardsScreen(child: Child, jar: Jar) {
       let photo: string | undefined;
       const ov = html(`<div class="overlay" role="dialog" aria-modal="true" aria-label="${esc(r.name)}"><div class="sheet rw-confirm">
         <div class="rw-big">${r.icon}</div><h2>${esc(r.name)}</h2>
-        <p>${coinSvg} ${costOf(r)} coins · ${PRICES[r.tier].about}</p>
+        <p class="rw-price">${coinSvg} ${costOf(r)} coins · ${PRICES[r.tier].about}</p>
         <p class="lock-note">${ICONS.lock} Once you choose, it’s locked in until you earn it.</p>
         <div class="photo-slot"></div>
         <div class="actions">

@@ -97,7 +97,7 @@ export const ART: Record<string, BossArt> = {
 };
 
 const MINIONS: Record<number, string[]> = {
-  1: ['🧦', '🫧'], 2: ['🦜', '🦉'], 3: ['🐲', '🟩'], 4: ['🤖', '🐛'], 5: ['🧀', '🥧'], 6: ['🦀', '⚡'], 7: ['🐸', '👤'],
+  1: ['🧦', '🫧'], 2: ['🦜', '🦉'], 3: ['🐲', '🦎'], 4: ['🤖', '🐛'], 5: ['🧀', '🥧'], 6: ['🦀', '⚡'], 7: ['🐸', '👤'],
 };
 export const minionFor = (stage: number, n: number): string => {
   const l = MINIONS[stage] ?? ['👾'];

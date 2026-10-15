@@ -1,7 +1,7 @@
 /* Fights: the arena, boss rigs and idle loops, HP bar, hearts, effects and banners. */
 
 .fight{gap:8px;overflow:hidden}
-.arena{position:relative;height:30vh;min-height:170px;max-height:250px;display:grid;place-items:center}
+.arena{position:relative;flex:1;min-height:170px;max-height:360px;display:grid;place-items:center}
 .boss-fight .play-top{align-items:center}
 .boss-hp{flex:1;display:flex;flex-direction:column;gap:5px}
 .boss-hp b{font-size:16px;text-align:center}
@@ -11,7 +11,7 @@
 .hp-fill{background:linear-gradient(90deg,#FF4D6D,#FF8A5C 60%,var(--sun))}
 .hp-bar .tick{position:absolute;top:0;bottom:0;width:2px;background:rgba(0,0,0,.45)}
 
-.boss-view{position:relative;width:200px;height:200px;--boss:#fff}
+.boss-view{position:relative;width:min(240px,62vw);aspect-ratio:1;--boss:#fff}
 .boss-body{width:100%;height:100%;transform-origin:50% 90%}
 .boss-svg{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 16px 20px rgba(0,0,0,.45))}
 .boss-shadow{position:absolute;left:20%;right:20%;bottom:-6px;height:16px;border-radius:50%;background:rgba(0,0,0,.35);filter:blur(4px)}
@@ -76,8 +76,8 @@
 .hero-spot{display:flex;justify-content:center}
 
 @media (max-height:700px){
-  .arena{height:24vh;min-height:140px}
-  .boss-view{width:150px;height:150px}
+  .arena{min-height:140px}
+  .boss-view{width:160px}
   .fight-q .prompt{font-size:28px}
   .m-body{font-size:80px}
 }

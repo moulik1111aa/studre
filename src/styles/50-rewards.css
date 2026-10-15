@@ -17,6 +17,8 @@
 .rw-cost svg{width:18px;height:18px}
 .rw-card small{color:var(--ink-faint);font-weight:700;font-size:12px}
 .rw-confirm .rw-big{font-size:96px;line-height:1;margin-bottom:6px;filter:drop-shadow(0 10px 14px rgba(0,0,0,.45))}
+.rw-price{display:flex;align-items:center;justify-content:center;gap:6px;font-weight:800}
+.rw-price svg{width:22px;height:22px}
 .lock-note{display:flex;align-items:center;justify-content:center;gap:6px;font-weight:800!important;font-size:15px!important}
 .lock-note svg{width:18px;height:18px}
 .photo-slot{margin-bottom:12px}
