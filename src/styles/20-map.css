@@ -67,3 +67,6 @@
 .skip-btn{width:58px;height:58px;flex:none;border-radius:20px;background:rgba(20,23,58,.9)}
 .harder-row{margin:0 0 10px;padding:12px 14px;border-radius:18px;background:rgba(255,138,92,.14);text-align:left}
 .harder-row input:checked{background:var(--coral)}
+.nd-face.quest{width:68px;height:68px;font-size:34px;background:radial-gradient(circle at 32% 26%,rgba(255,255,255,.55),transparent 45%),linear-gradient(160deg,#5CF3C8,#1F8F8A);box-shadow:0 7px 0 #136B67,0 0 0 3px rgba(92,243,200,.45),0 16px 24px -10px rgba(0,0,0,.6);animation:questGlow 2.4s ease-in-out infinite}
+@keyframes questGlow{50%{box-shadow:0 7px 0 #136B67,0 0 0 7px rgba(92,243,200,.25),0 16px 24px -10px rgba(0,0,0,.6)}}
+.nd-label small{display:block;font-size:12px;color:#7FF5D2;font-weight:800}

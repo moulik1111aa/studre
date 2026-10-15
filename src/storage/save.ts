@@ -34,6 +34,8 @@ export interface Child {
   createdDay: string;
   /** Parent-set difficulty: 0 normal, 1 harder, 2 toughest (same skills, harder questions). */
   challenge: 0 | 1 | 2;
+  /** Levels finished since the big progress screen was last shown. */
+  sinceShowcase?: number;
   /** Recent changes, so a parent can remove the last hour or today (see core/undo.ts). */
   undo?: UndoEntry[];
 }

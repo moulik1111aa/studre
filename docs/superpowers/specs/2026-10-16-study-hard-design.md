@@ -857,3 +857,16 @@ In the browser preview, speech falls back to the web speech API and photos to In
 - Other maths areas: the structure is ready for them, but they are not built yet.
 - Accounts, cloud sync, online play, ads and in-app purchases.
 - Languages other than English.
+
+## 13. Additions after the first build (2026-10-16)
+
+- **Coins reward accuracy.** A level pays `1.6 × multiplier × stage pay` coins, where the multiplier is ×10 for a perfect score, ×5 for 9/10, ×3 for 8/10, ×2 for 7/10 and ×1 for any other pass (Master: 10 in a row with no slips is perfect; boss: 3/2/1 hearts left = ×10/×5/×3). Replays pay half. Stage pay is 1.85, 1.6, 1, 1.1, 1.3, 1.5, 1.6. The pacing check still passes (a small treat every 6.6–7.5 days, a big toy on day 61–69).
+- **Prize chip.** During a level a chip shows what the level pays right now ("Perfect score +30"); it shrinks after each slip. The result screen says what a perfect score would have paid.
+- **Progress showcase.** After every 3 paid levels a full-screen card shows both rewards with big animated bars, coins so far, "about N perfect levels to go", and a ladder of what 10/10, 9/10, 8/10 and 7/10 pay.
+- **Side quests.** Beating a boss unlocks a side quest on the map, right after that boss: 100 quick questions in 300 seconds from the skills before it. Optional and replayable; best score kept; stars at 40/70/90; coins by score (half on replays).
+- **Reward pace (parent).** How often a small treat comes (3 days / 1 week / 2 weeks / 1 month) and a big toy (1 / 2 / 3 / 6 months). Prices scale; melting follows earning speed, not price.
+- **Difficulty (parent, per child).** Normal / Harder (tougher numbers, no hints, pass mark +1) / Toughest (hardest numbers, pass mark +2, timers on). On the map, any level can also be played once "harder".
+- **Skip a level (parent).** A skip button next to Play, behind the grown-up check; no stars or coins.
+- **Undo recent play (parent).** In a child's report: remove the last hour or all of today. Stars, coins, time and bosses go back; question history stays.
+- **Reading voice.** The clearest English voice on the phone is chosen automatically (Indian English first, high quality, offline); a parent can pick another and the speed (slow / normal / quick). Blanks are read once ("10 plus 3 equals what?").
+- **Screens.** Long questions shrink to fit; the number pad uses solid light keys on a dark tray.

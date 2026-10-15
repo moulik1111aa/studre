@@ -8,7 +8,7 @@ import { type Level, makeRound, makeQuestion, recordResult, starsFor, noteAsked 
 import { skillById } from '../core/areas/index.ts';
 import { createRng } from '../core/rng.ts';
 import { isCorrect, spoken, type Question } from '../core/question.ts';
-import { addCoins, addPlayTime, coinsForLevel } from '../core/economy.ts';
+import { addCoins, addPlayTime, coinsForLevel, bossFraction } from '../core/economy.ts';
 import { Fight, FIGHT, bossFor, fightTime, type FightEvent } from '../core/boss.ts';
 import { BossView, minionFor, projectile } from './bosses.ts';
 import { visualHtml, optionHtml, prettyAnswer } from './visuals.ts';
@@ -85,7 +85,7 @@ class Clock {
   }
 }
 
-function settle(app: App, child: Child, level: FightLevel, asked: Question[], correct: number, stars: 0 | 1 | 2 | 3, seconds: number, beaten?: string): { coins: number; unlocked: ('treat' | 'goal')[] } {
+function settle(app: App, child: Child, level: FightLevel, asked: Question[], correct: number, stars: 0 | 1 | 2 | 3, seconds: number, fraction: number, beaten?: string): { coins: number; unlocked: ('treat' | 'goal')[] } {
   let coins = 0;
   let unlocked: ('treat' | 'goal')[] = [];
   app.save.update(() => {
@@ -99,7 +99,7 @@ function settle(app: App, child: Child, level: FightLevel, asked: Question[], co
     recordResult(child.progress, level.id, stars);
     if (beaten && stars > 0 && !child.bossesBeaten.includes(beaten)) child.bossesBeaten.push(beaten);
     if (inside && stars > 0) {
-      coins = coinsForLevel(level.kind, stars, wasPassed, level.stage);
+      coins = coinsForLevel(level.kind, fraction, stars > 0, wasPassed, level.stage);
       unlocked = addCoins(child.wallet, coins).unlocked;
     }
   });
@@ -208,7 +208,7 @@ function minionScreen(app: App, child: Child, level: Extract<Level, { kind: 'rev
       app.sfx.sad();
       if (!reducedMotion()) await body.animate([{ transform: 'none' }, { transform: 'translateX(-30px) rotate(-10deg)' }, { transform: 'translateX(400px)', opacity: 0 }], { duration: 900, easing: EASE_OUT, fill: 'forwards' }).finished;
     }
-    const { coins, unlocked } = settle(app, child, level, questions, correct, stars, clock.seconds);
+    const { coins, unlocked } = settle(app, child, level, questions, correct, stars, clock.seconds, correct / questions.length);
     void app.show(resultScreen(child, level, { stars, score: correct, total: questions.length, coins, unlocked, timeUp: timeState(app, child) !== 'ok', title: stars ? 'Minion beaten!' : 'The minion ran away!' }));
   };
 
@@ -408,7 +408,7 @@ function bossScreen(app: App, child: Child, level: Extract<Level, { kind: 'boss'
     app.fx.confetti(r.x + r.width / 2, r.y + r.height / 2, 120, 1.4);
     await wait(900);
     const stars = (fight.hearts >= 3 ? 3 : fight.hearts === 2 ? 2 : 1) as 1 | 2 | 3;
-    const { coins, unlocked } = settle(app, child, level, asked, correct, stars, clock.seconds, def.id);
+    const { coins, unlocked } = settle(app, child, level, asked, correct, stars, clock.seconds, bossFraction(fight.hearts), def.id);
     void app.show(resultScreen(child, level, { stars, score: correct, total: asked.length, coins, unlocked, timeUp: timeState(app, child) !== 'ok', title: `${def.name} defeated!` }));
   };
 
@@ -420,7 +420,7 @@ function bossScreen(app: App, child: Child, level: Extract<Level, { kind: 'boss'
     qwrap.innerHTML = `<article class="qcard"><h2 class="prompt">Out of hearts!</h2><p class="subtitle">The answer was <b>${prettyAnswer(q.answer)}</b>. Practise a little and come back stronger.</p></article>`;
     answers.innerHTML = '';
     await say('Ha! Come back when you are ready!', 2000);
-    const { coins, unlocked } = settle(app, child, level, asked, correct, 0, clock.seconds);
+    const { coins, unlocked } = settle(app, child, level, asked, correct, 0, clock.seconds, 0);
     void app.show(resultScreen(child, level, { stars: 0, score: correct, total: asked.length, coins, unlocked, timeUp: timeState(app, child) !== 'ok', title: 'The boss won this time' }));
   };
 

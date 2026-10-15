@@ -122,9 +122,13 @@ test('economy: coins split 80/20, unlock waits for Given, surplus carries over',
   assert.equal(w.treat.coins, 10);
   assert.equal(w.treat.rewardId, null);
   assert.equal(w.earned.length, 1);
-  assert.equal(coinsForLevel('skill', 3, false), 9);
-  assert.equal(coinsForLevel('skill', 1, true), 3);
-  assert.equal(coinsForLevel('boss', 2, false), 50);
+  // Perfect pays about 10×, 9/10 about 5×, 8/10 about 3× (a ratio, rounded).
+  assert.equal(coinsForLevel('skill', 1, true, false), 16);
+  assert.equal(coinsForLevel('skill', 0.9, true, false), 8);
+  assert.equal(coinsForLevel('skill', 0.8, true, false), 5);
+  assert.equal(coinsForLevel('skill', 0.5, false, false), 0);
+  assert.equal(coinsForLevel('skill', 1, true, true), 8);
+  assert.equal(coinsForLevel('boss', 1, true, false), 50);
   assert.equal(costOf(choc), 350);
 });
 
@@ -224,4 +228,19 @@ test('reward pace scales prices but melting follows earning speed', async () => 
   assert.equal(costOf(r), base * 2);
   assert.match(aboutOf(r), /2 weeks/);
   setPace(1, 1);
+});
+
+test('side quests: one per boss, unlocked by beating it, skills from before it', async () => {
+  const { questsFor, questUnlocked, questStars } = await import('../src/core/quest.ts');
+  const { buildPath, freshProgress } = await import('../src/core/path.ts');
+  const { AREAS } = await import('../src/core/areas/index.ts');
+  const path = buildPath(AREAS[0]);
+  const qs = questsFor(path);
+  assert.equal(qs.length, 14);
+  const p = freshProgress();
+  assert.equal(questUnlocked(path, p, qs[0]), false);
+  p.levels[qs[0].bossLevelId] = { stars: 1, passes: 1 };
+  assert.equal(questUnlocked(path, p, qs[0]), true);
+  assert.ok(qs.every((q) => q.skillIds.length >= 5));
+  assert.deepEqual([questStars(95), questStars(75), questStars(45), questStars(10)], [3, 2, 1, 0]);
 });

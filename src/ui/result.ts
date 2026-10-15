@@ -11,6 +11,7 @@ import { countUp, flyArc, popIn, stagger, wait, EASE_SPRING, reducedMotion } fro
 import { enterChild, playLevel } from './flow.ts';
 import { unlockScreen } from './unlock.ts';
 import { timesUpScreen } from './timesup.ts';
+import { showcaseScreen, SHOWCASE_EVERY } from './showcase.ts';
 
 export interface ResultInfo {
   stars: 0 | 1 | 2 | 3;
@@ -20,6 +21,9 @@ export interface ResultInfo {
   unlocked: ('treat' | 'goal')[];
   timeUp: boolean;
   title?: string;
+  /** Whether the score was perfect, and what a perfect score pays here (to aim for next time). */
+  perfect?: boolean;
+  perfectCoins?: number;
 }
 
 const CHEERS = ['Brilliant!', 'Super work!', 'Fantastic!', 'You did it!', 'Amazing!', 'Well done!'];
@@ -36,6 +40,7 @@ export function resultScreen(child: Child, level: Level, r: ResultInfo) {
         <div class="res-stars" aria-label="${r.stars} of 3 stars">${[1, 2, 3].map((n) => `<span class="rstar${n <= r.stars ? ' on' : ''}${n === 2 ? ' mid' : ''}">${ICONS.star}</span>`).join('')}</div>
         <p class="res-score">${r.score} / ${r.total} right</p>
         ${r.coins ? `<p class="res-coins">${coinSvg}<b class="coin-count">+0</b></p>` : r.timeUp && passed ? `<p class="res-note">Time’s up for today, so no coins this time.</p>` : ''}
+        ${r.perfect ? `<p class="res-perfect">💯 Perfect score — the biggest prize!</p>` : r.perfectCoins && !r.timeUp ? `<p class="res-aim">Aim for perfect: ${coinSvg} <b>+${r.perfectCoins}</b> for ${r.total}/${r.total}</p>` : ''}
         ${passed ? '' : `<p class="res-note">You need ${level.kind === 'skill' && level.tier === 5 ? '10 in a row' : 'a few more right'} to pass. Let’s try again!</p>`}
       </div>
       <div class="res-actions">
@@ -45,9 +50,14 @@ export function resultScreen(child: Child, level: Level, r: ResultInfo) {
     </section>`);
     const jar = new JarBar(child);
     el.querySelector('.jar-slot')!.appendChild(jar.el);
+    if (r.coins > 0) app.save.update(() => (child.sinceShowcase = (child.sinceShowcase ?? 0) + 1));
     const proceed = (fn: () => void) => {
       if (r.unlocked.length) return void app.show(unlockScreen(child, r.unlocked[0]));
       if (r.timeUp && app.save.data.settings.timeUpMode === 'stop') return void app.show(timesUpScreen(child));
+      if ((child.sinceShowcase ?? 0) >= SHOWCASE_EVERY) {
+        app.save.update(() => (child.sinceShowcase = 0));
+        return void app.show(showcaseScreen(child, level.stage, fn), 'liquid');
+      }
       fn();
     };
     el.querySelector('.next')!.addEventListener('click', () =>

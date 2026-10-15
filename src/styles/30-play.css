@@ -99,3 +99,34 @@
   .choice{min-height:68px}
   .answers .key{min-height:48px}
 }
+.prize{display:flex;align-items:center;justify-content:center;gap:10px;align-self:center;padding:6px 14px;border-radius:999px;background:linear-gradient(90deg,rgba(255,210,90,.25),rgba(255,122,168,.2));box-shadow:inset 0 0 0 2px rgba(255,210,90,.55);font-weight:800;font-size:15px;transition:opacity .3s,filter .3s}
+.prize b{display:flex;align-items:center;gap:4px;color:var(--sun);font-size:18px}
+.prize svg{width:20px;height:20px}
+.prize.dim{filter:saturate(.6);box-shadow:inset 0 0 0 2px rgba(255,255,255,.2);background:rgba(255,255,255,.08)}
+.res-perfect{margin:6px 0 0;font-weight:900;color:var(--mint)}
+.res-aim{margin:6px 0 0;display:flex;align-items:center;justify-content:center;gap:6px;font-weight:800;color:var(--ink-soft)}
+.res-aim svg{width:20px;height:20px}
+.res-aim b{color:var(--sun)}
+
+/* Side quest */
+.quest{gap:8px}
+.q-clock{min-width:64px;height:44px;border-radius:14px;display:grid;place-items:center;background:rgba(0,0,0,.35);font-size:20px;font-weight:900;font-variant-numeric:tabular-nums}
+.quest.hurry .q-clock{color:var(--danger);animation:readyPulse .6s ease-in-out infinite}
+.q-meter{height:10px;border-radius:999px;background:rgba(255,255,255,.12);overflow:hidden}
+.q-time{display:block;height:100%;transform-origin:left center;background:linear-gradient(90deg,var(--danger),var(--sun),var(--mint))}
+.q-stats{display:flex;justify-content:space-between;font-weight:800;font-size:16px;padding:0 4px}
+.q-stats b{font-size:20px}
+.q-best{color:var(--sun)}
+.qcard.quick{padding:14px 16px;gap:6px}
+.qcard.quick .prompt{font-size:36px}
+.quest .answers .choice{min-height:76px}
+.quest.on-fire .q-right{color:var(--coral);text-shadow:0 0 12px rgba(255,138,92,.8)}
+.quest-end{align-items:center}
+.quest-end .sheet{border-radius:32px;margin:16px;max-width:440px}
+.qe-score{font-size:40px!important}
+.qe-score b{color:var(--sun);font-size:56px}
+.res-stars.small{justify-content:center;margin:4px 0 8px}
+.res-stars.small .rstar{width:52px;height:52px}
+.res-stars.small .rstar.mid{transform:none}
+.quest-end .res-coins{justify-content:center}
+.quest-end .jar-slot{margin:6px 0 12px}

@@ -7,7 +7,8 @@ import { type Level, makeRound, recordResult, starsFor, noteAsked, dueForRevisio
 import { skillById, AREAS } from '../core/areas/index.ts';
 import { createRng } from '../core/rng.ts';
 import { isCorrect, spoken, type Question } from '../core/question.ts';
-import { addCoins, addPlayTime, coinsForLevel } from '../core/economy.ts';
+import { addCoins, addPlayTime, coinsForLevel, masterFraction } from '../core/economy.ts';
+import { coinSvg } from './icons.ts';
 import { visualHtml, optionHtml, prettyAnswer } from './visuals.ts';
 import { ICONS } from './icons.ts';
 import { JarBar } from './jars.ts';
@@ -38,6 +39,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
         <div class="play-title"><b>${TIER_NAMES[level.tier]}${boost ? ` · ${boost === 2 ? '🔥🔥 Toughest' : '🔥 Harder'}` : ''}</b><span>${skill.name}</span></div>
         <div class="dots" aria-hidden="true"></div>
       </header>
+      <div class="prize" aria-live="polite"></div>
       <div class="jar-slot"></div>
       <div class="timer" hidden><i></i></div>
       <main class="qwrap" aria-live="polite"></main>
@@ -61,6 +63,23 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
     let timer: Animation | null = null;
     let timeout = 0;
     const asked: Question[] = [];
+
+    // The prize for this level, shrinking with each slip: perfect scores pay the most.
+    const wasPassedBefore = (child.progress.levels[level.id]?.stars ?? 0) >= 1;
+    const prizeEl = el.querySelector<HTMLElement>('.prize')!;
+    let misses = 0;
+    const paintPrize = () => {
+      let best: number;
+      if (rules.streak) best = masterFraction(Math.max(10, i - streak + 10));
+      else {
+        const left = questions.length - misses;
+        best = left >= rules.passMark ? left / questions.length : 0;
+      }
+      const coins = best ? coinsForLevel('skill', best, true, wasPassedBefore, level.stage) : 0;
+      const label = best >= 1 ? 'Perfect score' : best ? `${rules.streak ? 'Now' : `${questions.length - misses}/${questions.length}`}` : 'Keep going — you can retry';
+      prizeEl.innerHTML = coins ? `<span>${label}</span><b>${coinSvg} +${coins}</b>` : `<span>${label}</span>`;
+      prizeEl.classList.toggle('dim', best < 1);
+    };
 
     const accrue = () => {
       activeMs += performance.now() - activeSince;
@@ -175,6 +194,9 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
         await wait(650);
       } else {
         streak = 0;
+        misses++;
+        paintPrize();
+        if (!reducedMotion()) prizeEl.animate([{ transform: 'scale(1)' }, { transform: 'scale(.9)' }, { transform: 'scale(1)' }], { duration: 300 });
         app.sfx.wrong();
         btn?.classList.add('wrong');
         shake(btn ?? card);
@@ -203,6 +225,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
       const score = rules.streak ? (streak >= rules.streak ? rules.streak : Math.min(streak, rules.streak - 1)) : correct;
       const scoreTotal = rules.streak ?? questions.length;
       const stars = starsFor(score, scoreTotal, passMark);
+      const fraction = rules.streak ? (stars ? masterFraction(i) : 0) : correct / questions.length;
       let coins = 0;
       let unlocked: ('treat' | 'goal')[] = [];
       app.save.update(() => {
@@ -215,7 +238,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
         const wasPassed = (child.progress.levels[level.id]?.stars ?? 0) >= 1;
         recordResult(child.progress, level.id, stars);
         if (inside) {
-          coins = coinsForLevel('skill', stars, wasPassed, level.stage);
+          coins = coinsForLevel('skill', fraction, stars > 0, wasPassed, level.stage);
           unlocked = addCoins(child.wallet, coins).unlocked;
         }
         if (child.placementChecks > 0) {
@@ -223,7 +246,9 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
           if (score / scoreTotal < 0.6) stepBackAfterPlacement(child, skill);
         }
       });
-      void app.show(resultScreen(child, level, { stars, score, total: scoreTotal, coins, unlocked, timeUp: timeState(app, child) !== 'ok' }));
+      const replay = (child.progress.levels[level.id]?.passes ?? 0) > (stars ? 1 : 0);
+      const perfect = coinsForLevel('skill', 1, true, replay, level.stage);
+      void app.show(resultScreen(child, level, { stars, score, total: scoreTotal, coins, unlocked, timeUp: timeState(app, child) !== 'ok', perfect: fraction >= 1, perfectCoins: perfect }));
     };
 
     const pause = () => {
@@ -261,6 +286,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
       mounted: () => {
         stagger([el.querySelector('.play-top')!, jar.el], { gap: 80 });
         activeSince = performance.now();
+        paintPrize();
         show(questions[0]);
       },
       back: () => {

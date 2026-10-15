@@ -11,14 +11,17 @@ import { ICONS, avatarHtml } from './icons.ts';
 import { JarBar } from './jars.ts';
 import { WORLDS, worldVars } from './worlds.ts';
 import { drawOn, stagger, popIn, reducedMotion, EASE_OUT } from '../render/motion.ts';
-import { playLevel } from './flow.ts';
+import { playLevel, timeState } from './flow.ts';
+import { questsFor, questUnlocked } from '../core/quest.ts';
+import { questScreen } from './quest.ts';
+import { timesUpScreen } from './timesup.ts';
 import { whosPlayingScreen } from './whos.ts';
 import { trophyScreen } from './trophy.ts';
 import { BOSS_EMOJI } from './bosses.ts';
 import { remember } from '../core/undo.ts';
 
 interface Node {
-  kind: 'skill' | 'review' | 'boss';
+  kind: 'skill' | 'review' | 'boss' | 'quest';
   stage: number;
   levels: Level[];
   label: string;
@@ -42,7 +45,12 @@ export function mapScreen(child: Child) {
   return (app: App): Screen => {
     const path = app.path;
     const p = child.progress;
-    const nodes = nodesFor(path);
+    const quests = questsFor(path);
+    const nodes = nodesFor(path).flatMap((n) => {
+      if (n.kind !== 'boss') return [n];
+      const q = quests.find((x) => x.bossLevelId === n.levels[0].id)!;
+      return questUnlocked(path, p, q) ? [n, { kind: 'quest' as const, stage: n.stage, levels: [], label: 'Side quest', id: q.id }] : [n];
+    });
     const front = frontier(path, p);
     const next = path[front];
     const stagesBuilt = AREAS[0].skills.filter((s) => s.length).length;
@@ -74,9 +82,10 @@ export function mapScreen(child: Child) {
       let skillNo = 0;
       stageNodes.forEach((n, k) => {
         if (n.kind === 'skill') skillNo++;
-        const done = n.levels.every((l) => isDone(p, l));
-        const playable = n.levels.some((l) => isPlayable(path, p, l));
-        const skipped = n.levels.every((l) => isSkipped(p, l)) && !n.levels.some((l) => isPassed(p, l));
+        const qbest = n.kind === 'quest' ? (p.questBest?.[n.id] ?? 0) : 0;
+        const done = n.kind === 'quest' ? (p.levels[n.id]?.stars ?? 0) > 0 : n.levels.every((l) => isDone(p, l));
+        const playable = n.kind === 'quest' || n.levels.some((l) => isPlayable(path, p, l));
+        const skipped = n.kind !== 'quest' && n.levels.every((l) => isSkipped(p, l)) && !n.levels.some((l) => isPassed(p, l));
         const isCurrent = n.levels.some((l) => l.index === front);
         const x = 50 + Math.sin(k * 0.9) * 30;
         const face =
@@ -84,10 +93,12 @@ export function mapScreen(child: Child) {
             ? `<span class="nd-face boss">${BOSS_EMOJI[bossFor(s, (n.levels[0] as Extract<Level, { kind: 'boss' }>).boss).id] ?? '👾'}</span>`
             : n.kind === 'review'
               ? `<span class="nd-face minion">⚔️</span>`
+              : n.kind === 'quest'
+              ? `<span class="nd-face quest">🧭</span>`
               : `<span class="nd-face">${skillNo}</span>`;
         const pips = n.kind === 'skill' ? `<span class="pips">${n.levels.map((l) => `<i class="${isPassed(p, l) ? 'on' : ''}"></i>`).join('')}</span>` : '';
         const node = html(`<button class="node ${n.kind}${done ? ' done' : ''}${skipped ? ' skipped' : ''}${isCurrent ? ' current' : ''}${playable ? '' : ' locked'}" style="left:${x}%" data-node="${esc(n.id)}" aria-label="${esc(n.label)}${done ? ', done' : playable ? '' : ', locked'}">
-          ${face}${pips}<span class="nd-label">${esc(n.label)}</span>${playable ? '' : `<span class="nd-lock">${ICONS.lock}</span>`}
+          ${face}${pips}<span class="nd-label">${esc(n.label)}${n.kind === 'quest' ? `<small>${qbest ? `Best ${qbest}/100` : '100 in 5 min'}</small>` : ''}</span>${playable ? '' : `<span class="nd-lock">${ICONS.lock}</span>`}
         </button>`);
         if (isCurrent) currentNode = node;
         node.addEventListener('click', () => {
@@ -95,6 +106,10 @@ export function mapScreen(child: Child) {
             popIn(node, 0, 0.9);
             app.toast('Finish the levels before this one to open it.');
             return;
+          }
+          if (n.kind === 'quest') {
+            if (timeState(app, child) === 'stop') return void app.show(timesUpScreen(child));
+            return void app.show(questScreen(child, quests.find((x) => x.id === n.id)!), 'liquid');
           }
           if (n.kind !== 'skill') return playLevel(app, child, n.levels[0]);
           openSkill(app, child, n, path);

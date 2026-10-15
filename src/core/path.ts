@@ -62,6 +62,8 @@ export interface Progress {
   history: Record<string, string[]>;
   /** Single levels a parent chose to skip (0 stars, no coins). */
   skippedLevels?: Record<string, true>;
+  /** Side quest id → best score out of 100. */
+  questBest?: Record<string, number>;
 }
 
 export const freshProgress = (): Progress => ({ levels: {}, skipped: {}, lastSeen: {}, history: {} });

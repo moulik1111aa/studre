@@ -42,9 +42,9 @@ for (const k of kids) {
       secs += t;
       if (!inside) break;
       const correct = Array.from({ length: 10 }, () => rng.chance(k.accuracy)).filter(Boolean).length;
-      const stars = correct >= 10 ? 3 : correct >= 9 ? 2 : correct >= 8 ? 1 : 0;
-      if (stars) levels++;
-      const { unlocked } = addCoins(w, coinsForLevel(levels % 14 === 0 ? 'review' : 'skill', stars as 0 | 1 | 2 | 3, false, k.stage));
+      const passed = correct >= 8;
+      if (passed) levels++;
+      const { unlocked } = addCoins(w, coinsForLevel(levels % 14 === 0 ? 'review' : 'skill', correct / 10, passed, false, k.stage));
       if (unlocked.includes('treat')) {
         treatDays.push(d - lastTreat);
         lastTreat = d;

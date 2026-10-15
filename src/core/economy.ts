@@ -4,13 +4,28 @@
 import { baseCostOf, costOf, jarOf, rewardById } from './rewards.ts';
 
 export const COINS = {
-  level: 6,
-  /** Bonus by stars: 1★ +1, 2★ +2, 3★ +3. */
-  starBonus: [0, 1, 2, 3] as const,
-  review: 15,
-  boss: 50,
+  /** Coins per point of the score multiplier for a skill or review level (× stage pay). */
+  level: 1.6,
+  /** Same for a boss fight. */
+  boss: 5,
   faceoffWin: 5,
 };
+
+/**
+ * Perfect scores pay far more than scraping a pass (spec §4): the multiplier by how much
+ * of the level was right. 10/10 → ×10, 9/10 → ×5, 8/10 → ×3, 7/10 → ×2, any other pass → ×1.
+ */
+export const SCORE_MULT: [number, number][] = [
+  [1, 10],
+  [0.9, 5],
+  [0.8, 3],
+  [0.7, 2],
+  [0, 1],
+];
+export function scoreMult(fraction: number): number {
+  for (const [at, m] of SCORE_MULT) if (fraction >= at - 1e-9) return m;
+  return 1;
+}
 export const TREAT_SHARE = 0.8;
 export const MELT = { treat: 0.05, goal: 0.02 };
 
@@ -57,13 +72,22 @@ export const freshWallet = (): Wallet => ({
  * (multi-step work), so levels there pay more. This keeps "a treat about once a week at
  * 30 minutes a day" true for every age (checked by `npm run simulate`).
  */
-export const STAGE_PAY = [1.7, 1.5, 1, 1.1, 1.25, 1.4, 1.5];
+export const STAGE_PAY = [1.85, 1.6, 1, 1.1, 1.3, 1.5, 1.6];
 
-export function coinsForLevel(kind: 'skill' | 'review' | 'boss', stars: 0 | 1 | 2 | 3, replay: boolean, stage = 3): number {
-  if (stars === 0) return 0;
-  const base = kind === 'boss' ? COINS.boss : kind === 'review' ? COINS.review : COINS.level + COINS.starBonus[stars];
-  const paid = Math.round(base * (STAGE_PAY[stage - 1] ?? 1));
-  return replay ? Math.floor(paid / 2) : paid;
+/**
+ * Coins for a finished level. `fraction` is the share answered right (Master: 1 when the 10 in a
+ * row came with no slips; boss: 1 / 0.9 / 0.8 for 3 / 2 / 1 hearts left). Replays pay half.
+ */
+/** Master levels: 10 in a row with no slips counts as perfect; each slip costs a little. */
+export const masterFraction = (asked: number): number => (asked <= 10 ? 1 : asked <= 12 ? 0.9 : asked <= 14 ? 0.8 : 0.7);
+/** Boss fights: hearts left → score share for the multiplier. */
+export const bossFraction = (hearts: number): number => (hearts >= 3 ? 1 : hearts === 2 ? 0.9 : 0.8);
+
+export function coinsForLevel(kind: 'skill' | 'review' | 'boss', fraction: number, passed: boolean, replay: boolean, stage = 3): number {
+  if (!passed) return 0;
+  const unit = kind === 'boss' ? COINS.boss : COINS.level;
+  const paid = Math.max(1, Math.round(unit * scoreMult(fraction) * (STAGE_PAY[stage - 1] ?? 1)));
+  return replay ? Math.max(1, Math.floor(paid / 2)) : paid;
 }
 
 /** Days from a to b (YYYY-MM-DD), b − a. */
