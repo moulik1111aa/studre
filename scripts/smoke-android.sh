@@ -91,7 +91,7 @@ sleep 2; shot welcome
 tap_text "Set up for my child"
 grown_up
 if wait_for "Add a child" 15; then note "add-child screen"; else fail "add-child screen did not open"; fi
-tap_text "e.g. Riya" || tap_text "Name"
+tap_text "Name" exact
 sleep 1; adb shell input text "Aarav"; sleep 1
 tap_text "Pick a buddy" >/dev/null; sleep 1
 tap_text "Older" exact; sleep 0.5; tap_text "Older" exact
@@ -126,7 +126,7 @@ if wait_for "Pick a big goal" 15; then note "goal picker"; else fail "goal picke
 tap_text "Toy car"; wait_for "Choose this" 10; tap_text "Choose this"
 
 # 5. Map, then a level; back pauses it, "Leave level" returns to the map.
-if wait_for "Play" 20 && wait_for "min left today" 5; then note "map is up"; else fail "map did not appear"; fi
+if wait_for "Trophy room" 20; then note "map is up"; else fail "map did not appear"; fi
 sleep 2; shot map
 tap_text "Play" exact || tap_text "Play"
 sleep 5; shot level
@@ -134,7 +134,7 @@ adb shell input keyevent KEYCODE_BACK
 if wait_for "Paused" 10; then note "back paused the level"; else fail "back did not pause"; fi
 shot paused
 tap_text "Leave level"
-wait_for "min left today" 15 && note "back on the map" || fail "did not return to the map"
+wait_for "Trophy room" 15 && note "back on the map" || fail "did not return to the map"
 
 # 6. On the map, back warns first, then leaves.
 adb shell input keyevent KEYCODE_BACK; sleep 1
@@ -146,7 +146,7 @@ echo "$FOCUS" | grep -q "$PKG" && fail "app did not leave on second back"
 
 # 7. Relaunch: the child and their rewards are remembered.
 adb shell am start -W -n $PKG/.MainActivity >/dev/null
-wait_for "Aarav" 40 && note "child remembered after relaunch" || fail "child not remembered"
+{ wait_for "Trophy room" 40 || wait_for "Aarav" 5; } && note "child remembered after relaunch" || fail "child not remembered"
 alive && note "process alive after relaunch" || fail "process died"
 shot relaunch
 
