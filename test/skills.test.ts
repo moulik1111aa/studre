@@ -9,8 +9,9 @@ const EXPECTED = [30, 45, 56, 55, 50, 45, 40];
 
 /** Independent checker: evaluates simple written sums like "27 + 36 = ?" or "8 + ? = 15". */
 function check(prompt: string): number | null {
-  const p = prompt.replace(/−/g, '-').replace(/×/g, '*').replace(/÷/g, '/');
-  const m = /^(-?[\d.]+(?:\s*[-+*/]\s*-?[\d.]+)*)\s*=\s*\?$/.exec(p.trim());
+  // Written fractions are single numbers: "4 ÷ 1/6" means 4 ÷ (1/6).
+  const p = prompt.replace(/(\d+)\/(\d+)/g, '($1/$2)').replace(/−/g, '-').replace(/×/g, '*').replace(/÷/g, '/');
+  const m = /^(-?[\d.()/]+(?:\s*[-+*/]\s*-?[\d.()/]+)*)\s*=\s*\?$/.exec(p.trim());
   if (m) return Function(`return (${m[1]})`)() as number;
   const miss = /^(-?[\d.]+)\s*([-+*/])\s*\?\s*=\s*(-?[\d.]+)$/.exec(p.trim());
   if (miss) {
