@@ -1,0 +1,56 @@
+/* Choosing rewards, the unlock celebration, melted chocolate and time's up. */
+
+.rewards{gap:12px}
+.rw-head{display:flex;align-items:center;gap:12px}
+.rw-head .title{font-size:28px}
+.rw-head .subtitle{margin:4px 0 0;font-size:15px}
+.cats{display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;margin:0 -18px;padding:4px 18px;flex:none}
+.cat{appearance:none;border:0;cursor:pointer;white-space:nowrap;padding:10px 16px;border-radius:999px;font-weight:900;font-size:16px;color:var(--ink);background:rgba(255,255,255,.1);box-shadow:inset 0 0 0 2px rgba(255,255,255,.12);transition:background .2s,transform .2s var(--ease-spring)}
+.cat.on{background:linear-gradient(180deg,#FFE58A,var(--sun));color:#2A1A00;box-shadow:0 4px 0 #C7791A;transform:translateY(-2px)}
+.rw-grid{flex:1;display:grid;grid-template-columns:repeat(auto-fill,minmax(146px,1fr));gap:12px;align-content:start;padding:4px 2px 20px}
+.rw-card{appearance:none;border:0;cursor:pointer;color:var(--ink);display:flex;flex-direction:column;align-items:center;gap:4px;padding:16px 10px 12px;border-radius:24px;text-align:center;
+  background:linear-gradient(180deg,var(--card-2),var(--card));box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.08);transition:transform .2s var(--ease-spring)}
+.rw-card:active{transform:scale(.95)}
+.rw-icon{font-size:52px;line-height:1.1;filter:drop-shadow(0 6px 8px rgba(0,0,0,.35))}
+.rw-card b{font-size:16px;line-height:1.15}
+.rw-cost{display:flex;align-items:center;gap:4px;font-weight:900;color:var(--sun);font-size:15px}
+.rw-cost svg{width:18px;height:18px}
+.rw-card small{color:var(--ink-faint);font-weight:700;font-size:12px}
+.rw-confirm .rw-big{font-size:96px;line-height:1;margin-bottom:6px;filter:drop-shadow(0 10px 14px rgba(0,0,0,.45))}
+.lock-note{display:flex;align-items:center;justify-content:center;gap:6px;font-weight:800!important;font-size:15px!important}
+.lock-note svg{width:18px;height:18px}
+.photo-slot{margin-bottom:12px}
+.agreed{display:block;max-width:100%;max-height:200px;margin:0 auto;border-radius:18px;box-shadow:0 10px 24px -10px rgba(0,0,0,.6);border:4px solid #fff}
+.add-photo svg{width:20px;height:20px}
+
+/* Unlock */
+.unlock{align-items:center;justify-content:center;gap:12px;text-align:center;overflow:hidden}
+.spotlight{position:absolute;inset:-30%;background:conic-gradient(from 0deg,transparent 0 8deg,rgba(255,210,90,.18) 8deg 16deg,transparent 16deg 30deg,rgba(255,122,168,.14) 30deg 38deg,transparent 38deg 60deg);
+  -webkit-mask:radial-gradient(circle,#000 20%,transparent 65%);mask:radial-gradient(circle,#000 20%,transparent 65%);animation:spin 22s linear infinite;z-index:0!important}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ul-stage{position:relative;width:220px;height:220px;display:grid;place-items:center}
+.ul-ring{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,rgba(255,210,90,.45),transparent 65%);animation:readyPulse 1.6s ease-in-out infinite}
+.ul-icon{font-size:130px;line-height:1;filter:drop-shadow(0 18px 20px rgba(0,0,0,.5))}
+.unlock .subtitle b{color:var(--sun)}
+.ul-photo{max-width:280px}
+.ul-actions{display:grid;gap:12px;width:100%;max-width:420px}
+.ul-actions svg{width:22px;height:22px}
+.ul-wait{margin:0;color:var(--ink-faint);font-weight:800;font-size:14px;letter-spacing:.08em;text-transform:uppercase}
+
+/* Melted */
+.melted{align-items:center;justify-content:center;gap:14px;text-align:center}
+.melt-choc svg{width:150px;height:170px;filter:drop-shadow(0 14px 16px rgba(0,0,0,.4))}
+.drip{transform-box:fill-box;transform-origin:top center;animation:dripDown 2.6s ease-in infinite}
+.drip.d2{animation-delay:.7s}.drip.d3{animation-delay:1.4s}
+@keyframes dripDown{0%{transform:scaleY(.3)}70%{transform:scaleY(1.1)}100%{transform:scaleY(.3)}}
+.melted .jar-slot{width:100%;max-width:420px}
+.melted .go{min-width:240px}
+
+/* Time's up */
+.timesup{align-items:center;justify-content:center;gap:16px;text-align:center;background:radial-gradient(100% 70% at 50% 0%,#1D2266,#0B0D26)}
+.moon{position:relative;width:100%;height:200px}
+.moon span{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:110px;filter:drop-shadow(0 0 30px rgba(255,230,150,.6));animation:bFloat 4s ease-in-out infinite}
+.moon i{position:absolute;width:4px;height:4px;border-radius:50%;background:#fff;animation:twinkle 2.4s ease-in-out calc(var(--i)*.2s) infinite}
+@keyframes twinkle{50%{opacity:.2;transform:scale(.5)}}
+.timesup .jar-slot{width:100%;max-width:420px}
+.timesup .btn{min-width:220px}

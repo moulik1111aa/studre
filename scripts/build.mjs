@@ -72,6 +72,25 @@ __req(${JSON.stringify(entryId)});
 /** Make a string safe to place inside an inline <script> element. */
 const scriptSafe = (s) => s.replace(/<\/(script)/gi, '<\\/$1').replace(/<!--/g, '<\\!--');
 
+/**
+ * The rounded display font (Nunito) is bundled when its npm package is installed (it is in
+ * CI and the APK); without it the system font is used, which is fine for local tests.
+ */
+function fonts() {
+  const dir = join(root, 'node_modules', '@fontsource', 'nunito', 'files');
+  const faces = [];
+  for (const w of [600, 700, 800, 900]) {
+    const f = join(dir, `nunito-latin-${w}-normal.woff2`);
+    try {
+      const b64 = readFileSync(f).toString('base64');
+      faces.push(`@font-face{font-family:"Nunito";font-weight:${w};font-style:normal;font-display:block;src:url(data:font/woff2;base64,${b64}) format("woff2")}`);
+    } catch {
+      /* not installed */
+    }
+  }
+  return faces.join('');
+}
+
 export function build() {
   const css = readdirSync(join(src, 'styles'))
     .filter((f) => f.endsWith('.css'))
@@ -83,7 +102,9 @@ export function build() {
   const scriptFor = (info) =>
     `window.__BUILD__=${JSON.stringify(info)};\n` + appSrc;
   const js = scriptFor(buildInfo);
+  const fontCss = fonts();
   const html = readFileSync(join(src, 'index.html'), 'utf8')
+    .replace('/*__FONTS__*/', () => fontCss)
     .replace('/*__CSS__*/', () => css)
     .replace('/*__JS__*/', () => scriptSafe(js));
   mkdirSync(dist, { recursive: true });
@@ -93,7 +114,7 @@ export function build() {
   // The shared preview link is a playtest build: it also offers preview tools.
   const previewJs = scriptFor({ ...buildInfo, preview: true });
   const artifact =
-    `<title>Study Hard</title>\n<meta name="theme-color" content="#1B1F4B">\n<style>${css}</style>\n` +
+    `<title>Study Hard</title>\n<meta name="theme-color" content="#14173A">\n<style>${fontCss}</style>\n<style>${css}</style>\n` +
     `<div id="app" aria-live="polite"></div>\n<script>${scriptSafe(previewJs)}</script>\n`;
   writeFileSync(join(dist, 'artifact.html'), artifact);
   return { bytes: Buffer.byteLength(html) };

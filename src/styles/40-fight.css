@@ -1,0 +1,83 @@
+/* Fights: the arena, boss rigs and idle loops, HP bar, hearts, effects and banners. */
+
+.fight{gap:8px;overflow:hidden}
+.arena{position:relative;height:30vh;min-height:170px;max-height:250px;display:grid;place-items:center}
+.boss-fight .play-top{align-items:center}
+.boss-hp{flex:1;display:flex;flex-direction:column;gap:5px}
+.boss-hp b{font-size:16px;text-align:center}
+.hp-bar{position:relative;height:18px;border-radius:999px;background:rgba(0,0,0,.4);overflow:hidden;box-shadow:inset 0 0 0 2px rgba(255,255,255,.15)}
+.hp-bar i{position:absolute;inset:0;transform-origin:left center;border-radius:999px;transition:transform .45s var(--ease-out)}
+.hp-lag{background:#FFF1B5;transition-duration:.8s!important}
+.hp-fill{background:linear-gradient(90deg,#FF4D6D,#FF8A5C 60%,var(--sun))}
+.hp-bar .tick{position:absolute;top:0;bottom:0;width:2px;background:rgba(0,0,0,.45)}
+
+.boss-view{position:relative;width:200px;height:200px;--boss:#fff}
+.boss-body{width:100%;height:100%;transform-origin:50% 90%}
+.boss-svg{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 16px 20px rgba(0,0,0,.45))}
+.boss-shadow{position:absolute;left:20%;right:20%;bottom:-6px;height:16px;border-radius:50%;background:rgba(0,0,0,.35);filter:blur(4px)}
+.boss-fx{position:absolute;inset:0;pointer-events:none}
+.idle-float .boss-svg{animation:bFloat 3s ease-in-out infinite}
+.idle-bob .boss-svg{animation:bBob 1.2s ease-in-out infinite}
+.idle-sway .boss-svg{animation:bSway 2.6s ease-in-out infinite;transform-origin:50% 100%}
+.idle-pulse .boss-svg{animation:bPulse 1.8s ease-in-out infinite;transform-origin:50% 100%}
+.idle-hover .boss-svg{animation:bHover 2.2s ease-in-out infinite}
+.idle-jitter .boss-svg{animation:bJitter .5s steps(2) infinite}
+@keyframes bFloat{50%{transform:translateY(-12px) rotate(2deg)}}
+@keyframes bBob{50%{transform:translateY(-6px) scale(1.02,.97)}}
+@keyframes bSway{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
+@keyframes bPulse{50%{transform:scale(1.06,.94)}}
+@keyframes bHover{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes bJitter{0%{transform:translateX(-2px)}100%{transform:translateX(2px)}}
+.boss-svg .b-eyes{animation:blink 4.5s infinite;transform-box:fill-box;transform-origin:center}
+@keyframes blink{0%,94%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
+.boss-view.phase-1 .boss-svg{filter:drop-shadow(0 0 14px rgba(255,120,80,.7)) drop-shadow(0 16px 20px rgba(0,0,0,.45))}
+.boss-view.phase-2 .boss-svg{filter:drop-shadow(0 0 22px rgba(255,60,60,.95)) drop-shadow(0 16px 20px rgba(0,0,0,.45));animation-duration:.9s}
+.boss-view.phase-2 .b-brow{transform:translateY(4px)}
+.boss-after{position:absolute;left:50%;top:60%;font-size:64px;font-weight:900;transform:translate(-50%,-50%);filter:drop-shadow(0 6px 10px rgba(0,0,0,.4))}
+
+.dmg{position:absolute;left:50%;top:20%;font-size:30px;font-weight:900;color:#fff;-webkit-text-stroke:2px #1B1440;paint-order:stroke;white-space:nowrap;pointer-events:none}
+.dmg.crit{color:var(--sun);font-size:36px}
+.dmg.taunt{color:var(--pink);font-size:26px}
+.shot{position:fixed;left:0;top:0;font-size:44px;z-index:9400;pointer-events:none;filter:drop-shadow(0 4px 6px rgba(0,0,0,.45))}
+.big-emoji-fx{position:fixed;font-size:84px;z-index:9400;pointer-events:none}
+.hurt-flash{position:absolute;inset:0;z-index:50;pointer-events:none;background:radial-gradient(circle,transparent 40%,rgba(255,40,60,.55));animation:hurtFlash .6s ease-out forwards}
+@keyframes hurtFlash{from{opacity:1}to{opacity:0}}
+
+.speech{position:absolute;top:0;left:50%;transform:translateX(-50%);z-index:3;max-width:86%;padding:10px 16px;border-radius:18px;background:#fff;color:#1B1440;font-weight:900;font-size:18px;text-align:center;box-shadow:0 10px 24px -8px rgba(0,0,0,.5)}
+.speech::after{content:"";position:absolute;left:50%;bottom:-10px;border:10px solid transparent;border-top-color:#fff;border-bottom:0;transform:translateX(-50%)}
+
+.fight-banner{position:absolute;left:50%;top:45%;z-index:60;font-size:84px;font-weight:900;letter-spacing:.04em;color:var(--sun);-webkit-text-stroke:4px #1B1440;paint-order:stroke;text-shadow:0 10px 0 #1B1440,0 0 40px rgba(255,210,90,.8);transform:translate(-50%,-50%)}
+.special{position:absolute;inset:0;z-index:55;pointer-events:none;overflow:hidden;background:radial-gradient(circle,rgba(255,255,255,.35),rgba(255,210,90,.25) 50%,transparent 75%)}
+.sp-title{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%) rotate(-6deg);font-size:54px;font-weight:900;color:#fff;-webkit-text-stroke:3px #C2255C;paint-order:stroke;white-space:nowrap;animation:spTitle 1.3s var(--ease-spring) both}
+.special span{position:absolute;top:-60px;font-size:44px;animation:spRain 1.2s ease-in calc(var(--i)*50ms) both}
+@keyframes spTitle{0%{transform:translate(-50%,-50%) scale(3) rotate(-6deg);opacity:0}25%{transform:translate(-50%,-50%) scale(1) rotate(-6deg);opacity:1}80%{opacity:1}100%{opacity:0}}
+@keyframes spRain{to{transform:translateY(110vh) rotate(540deg)}}
+
+.fight .qwrap{flex:0 1 auto}
+.fight-q{padding:16px 16px 12px;gap:8px}
+.fight-q .prompt{font-size:34px}
+.fight-q.defend{background:linear-gradient(180deg,#FFF0F2,#FFD6DE);box-shadow:0 0 0 6px rgba(255,107,107,.5),0 22px 50px -22px rgba(0,0,0,.8)}
+.defend-tag{margin:0;font-weight:900;color:#C2255C;font-size:17px;animation:readyPulse .8s ease-in-out infinite}
+.fight.defending .timer i{background:var(--danger)}
+.fight-answers .choice{min-height:72px}
+.hero-bar{display:flex;align-items:center;gap:10px;padding:4px 2px 0}
+.hearts{display:flex;gap:4px;font-size:26px}
+.heart{font-style:normal;transition:transform .3s var(--ease-spring),filter .3s,opacity .3s}
+.heart.lost{filter:grayscale(1);opacity:.35;transform:scale(.8)}
+.streak{margin-left:auto;display:flex;align-items:center;gap:4px;font-size:20px}
+.streak small{font-size:13px;font-weight:800;color:var(--ink-soft)}
+
+.minion{display:flex;flex-direction:column;align-items:center;gap:10px}
+.m-body{font-size:110px;line-height:1;display:inline-block;filter:drop-shadow(0 14px 16px rgba(0,0,0,.45));animation:bBob 1.1s ease-in-out infinite}
+.m-hp{display:flex;gap:4px}
+.m-hp i{width:20px;height:10px;border-radius:4px;background:linear-gradient(180deg,#7BFF9E,#2FB84F);box-shadow:inset 0 -2px 0 rgba(0,0,0,.2);transition:opacity .3s,transform .3s}
+.m-hp i.gone{opacity:.15;transform:scaleY(.5)}
+.m-hp i.miss{background:var(--danger)}
+.hero-spot{display:flex;justify-content:center}
+
+@media (max-height:700px){
+  .arena{height:24vh;min-height:140px}
+  .boss-view{width:150px;height:150px}
+  .fight-q .prompt{font-size:28px}
+  .m-body{font-size:80px}
+}

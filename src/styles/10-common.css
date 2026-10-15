@@ -1,0 +1,105 @@
+/* Shared pieces: avatars, the jar bar, ambient world décor, loader, logo, welcome, forms. */
+
+.avatar{display:inline-grid;place-items:center;border-radius:50%;background:radial-gradient(circle at 32% 28%,rgba(255,255,255,.55),transparent 42%),linear-gradient(160deg,var(--a),var(--b));
+  box-shadow:0 8px 18px -8px rgba(0,0,0,.6),inset 0 -4px 0 rgba(0,0,0,.14),inset 0 2px 0 rgba(255,255,255,.35);flex:none;line-height:1}
+
+.center{text-align:center}
+.fine{color:var(--ink-faint);font-size:15px;font-weight:700;text-align:center;margin:10px 0 0}
+.big-emoji{font-size:64px;line-height:1;margin-bottom:8px}
+.frac{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;line-height:1;margin:0 .08em;font-size:.82em}
+.frac sup{border-bottom:.08em solid currentColor;padding:0 .12em .04em}
+.frac sub{padding:.04em .12em 0}
+.frac sup,.frac sub{vertical-align:baseline;font-size:1em;position:static}
+
+/* Ambient world décor: soft drifting emoji behind content. */
+.ambient{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0}
+.ambient span{position:absolute;font-size:30px;opacity:.16;filter:saturate(.8) blur(.3px);animation:drift var(--d,8s) ease-in-out var(--delay,0s) infinite alternate}
+@keyframes drift{from{transform:translate(0,0) rotate(-6deg)}to{transform:translate(14px,-22px) rotate(8deg)}}
+.screen > *:not(.ambient){position:relative;z-index:1}
+.screen[style*="--world"]{background:radial-gradient(120% 70% at 50% -10%,color-mix(in srgb,var(--world) 45%,transparent) 0%,transparent 60%),radial-gradient(90% 60% at 50% 120%,color-mix(in srgb,var(--world-b) 55%,transparent),transparent 70%)}
+
+/* Jar bar: treat progress with a moving glint, big goal jar with liquid and bubbles. */
+.jarbar{display:flex;align-items:center;gap:10px;margin:6px 0 4px}
+.jarbar .treat{flex:1;display:flex;align-items:center;gap:10px;padding:8px 12px 8px 8px;border-radius:999px;background:rgba(8,10,40,.45);box-shadow:inset 0 0 0 2px rgba(255,255,255,.1)}
+.tr-icon{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-size:24px;background:rgba(255,255,255,.12);flex:none}
+.tr-track{flex:1;height:16px;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden;box-shadow:inset 0 2px 4px rgba(0,0,0,.35)}
+.tr-fill{position:relative;height:100%;border-radius:999px;background:linear-gradient(90deg,#FF9AC0,var(--pink) 40%,var(--sun));box-shadow:0 0 14px rgba(255,122,168,.6);overflow:hidden}
+.tr-glint{position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.75) 50%,transparent 70%);transform:translateX(-100%);animation:glint 3.2s ease-in-out infinite}
+@keyframes glint{0%,55%{transform:translateX(-100%)}100%{transform:translateX(160%)}}
+.tr-pct{font-weight:900;font-size:16px;min-width:44px;text-align:right}
+.treat.ready{box-shadow:inset 0 0 0 2px var(--sun),0 0 24px rgba(255,210,90,.55);animation:readyPulse 1.4s ease-in-out infinite}
+@keyframes readyPulse{50%{transform:scale(1.02)}}
+.jarbar .goal{position:relative;width:52px;height:60px;flex:none}
+.goal-jar{width:100%;height:100%;filter:drop-shadow(0 6px 10px rgba(0,0,0,.4))}
+.goal-icon{position:absolute;left:50%;top:58%;transform:translate(-50%,-50%);font-size:20px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.4))}
+.bub{animation:bubble 3s ease-in infinite}
+.bub.b2{animation-delay:1s}.bub.b3{animation-delay:2s}
+@keyframes bubble{0%{transform:translateY(0);opacity:0}20%{opacity:.8}100%{transform:translateY(-30px);opacity:0}}
+.flying-coin{position:fixed;left:0;top:0;width:28px;height:28px;z-index:9500;pointer-events:none}
+.flying-coin svg{width:100%;height:100%}
+
+/* Loader */
+.loader{align-items:center;justify-content:center;background:radial-gradient(80% 60% at 50% 40%,#2B3190,transparent 70%)}
+.ld-center{display:flex;flex-direction:column;align-items:center;gap:22px}
+.ld-icon{width:150px;height:150px;color:#fff}
+.ld-icon svg{width:100%;height:100%;filter:drop-shadow(0 10px 24px rgba(0,0,0,.35))}
+.ld-caption{margin:0;font-weight:800;font-size:20px;color:var(--ink-soft);letter-spacing:.02em}
+.ld-logo{display:flex;flex-direction:column;align-items:center;gap:14px}
+.logo-mark{width:150px;height:150px;color:#fff;filter:drop-shadow(0 12px 30px rgba(168,121,255,.45))}
+.logo-mark [data-draw]{fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.wordmark{font-size:48px;line-height:1;letter-spacing:-.02em;display:flex;gap:.25em}
+.wordmark span:first-child{color:#fff}
+.wordmark span:last-child{background:linear-gradient(90deg,var(--sun),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* Welcome */
+.welcome{align-items:center;justify-content:center;gap:22px;text-align:center}
+.wl-hero{display:flex;flex-direction:column;align-items:center;gap:12px}
+.welcome .subtitle{max-width:340px;margin:0}
+.welcome .start{min-width:260px}
+
+/* Forms */
+.field{display:flex;flex-direction:column;gap:8px;margin:0 0 18px}
+.field > span{font-weight:800;color:var(--ink-soft);font-size:16px}
+.field input{appearance:none;border:0;border-radius:18px;padding:16px 18px;font-size:22px;font-weight:800;color:var(--ink);background:rgba(255,255,255,.1);box-shadow:inset 0 0 0 2px rgba(255,255,255,.16);user-select:text;-webkit-user-select:text}
+.field input:focus{outline:none;box-shadow:inset 0 0 0 2px var(--sun)}
+.field input::placeholder{color:var(--ink-faint)}
+.stepper{display:flex;align-items:center;gap:18px}
+.stepper b{font-size:40px;min-width:60px;text-align:center}
+.stepper .icon-btn{width:60px;height:60px;font-size:30px;font-weight:900}
+.avatars{display:grid;grid-template-columns:repeat(auto-fill,minmax(60px,1fr));gap:10px}
+.av{appearance:none;border:0;background:none;padding:4px;border-radius:50%;cursor:pointer;display:grid;place-items:center;transition:transform .2s var(--ease-spring)}
+.av.on{box-shadow:0 0 0 3px var(--sun);transform:scale(1.08)}
+.add-child .ac-body{flex:1;padding-top:8px}
+.ac-preview{display:grid;place-items:center;margin:4px 0 18px}
+.add-child .save{margin-top:10px}
+
+.toggle-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 4px;border-bottom:1px solid var(--line);cursor:pointer}
+.toggle-row:last-child{border-bottom:0}
+.toggle-row span{display:flex;flex-direction:column;gap:2px}
+.toggle-row small{color:var(--ink-faint);font-weight:700;font-size:14px}
+.toggle-row input{appearance:none;width:58px;height:34px;border-radius:999px;background:rgba(255,255,255,.18);position:relative;flex:none;cursor:pointer;transition:background .2s}
+.toggle-row input::after{content:"";position:absolute;left:4px;top:4px;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.35);transition:transform .25s var(--ease-spring)}
+.toggle-row input:checked{background:var(--mint)}
+.toggle-row input:checked::after{transform:translateX(24px)}
+
+/* Grown-up check */
+.grownup h2{font-size:34px;margin:14px 0 6px}
+.gu-input{font-size:40px;font-weight:900;min-height:56px;letter-spacing:.06em;margin:0 auto 12px;padding:4px 18px;border-radius:16px;background:rgba(255,255,255,.08);max-width:200px}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.gu-pad{max-width:320px;margin:0 auto 16px}
+.key{appearance:none;border:0;cursor:pointer;min-height:58px;border-radius:18px;font-size:28px;font-weight:900;color:var(--ink);background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.08));box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 4px 0 rgba(0,0,0,.25);display:grid;place-items:center;transition:transform .08s}
+.key:active{transform:translateY(3px);box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 1px 0 rgba(0,0,0,.25)}
+.key svg{width:28px;height:28px}
+.key.small{font-size:22px;min-height:50px}
+
+/* Who's playing */
+.whos .brand{display:flex;align-items:center;gap:8px;font-size:20px}
+.whos .brand svg{width:36px;height:36px}
+.whos .title{margin:26px 0 22px}
+.kids{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;align-content:start}
+.kid{appearance:none;border:0;cursor:pointer;color:var(--ink);display:flex;flex-direction:column;align-items:center;gap:8px;padding:22px 12px 18px;transition:transform .2s var(--ease-spring)}
+.kid:active{transform:scale(.96)}
+.kid b{font-size:22px}
+.kid small{color:var(--ink-soft);font-weight:800;font-size:15px}
+.more-kids{gap:18px;justify-content:center}
+.more-kids .btn{width:100%}
