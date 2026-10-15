@@ -63,6 +63,7 @@ test.afterEach(async ({ page }) => {
 });
 
 test('first run: setup, placement, rewards, first level', async ({ page }) => {
+  test.setTimeout(180_000);
   await page.goto('/?debug');
   await expect(page.locator('.welcome')).toBeVisible({ timeout: 20_000 });
   await page.click('.start');
@@ -78,7 +79,7 @@ test('first run: setup, placement, rewards, first level', async ({ page }) => {
   await page.click('.limits .done');
   await page.locator('.kid').first().click();
   await expect(page.locator('.placement')).toBeVisible();
-  for (let i = 0; i < 14 && !(await page.locator('.go').count()); i++) {
+  for (let i = 0; i < 30 && !(await page.locator('.go').count()); i++) {
     if (await page.locator('[data-a="yes"]').count()) await page.click('[data-a="yes"]');
     await page.waitForTimeout(400);
   }

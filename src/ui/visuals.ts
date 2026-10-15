@@ -78,5 +78,5 @@ export function prettyAnswer(a: string): string {
   if (mx) return `${mx[1] ? '−' : ''}${mx[2]}<span class="frac"><sup>${mx[3]}</sup><sub>${mx[4]}</sub></span>`;
   const m = /^(-?)(\d+)\/(\d+)$/.exec(a);
   if (m) return `${m[1] ? '−' : ''}<span class="frac"><sup>${m[2]}</sup><sub>${m[3]}</sub></span>`;
-  return a.replace(/^-/, '−').replace(/,/g, ' and ');
+  return a.replace(/(^|[^\w])-(?=\d)/g, '$1−').replace(/,/g, ' and ');
 }

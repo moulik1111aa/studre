@@ -6,6 +6,7 @@ import { STAGE3 } from './stage3.ts';
 import { STAGE4 } from './stage4.ts';
 import { STAGE5 } from './stage5.ts';
 import { STAGE6 } from './stage6.ts';
+import { STAGE7 } from './stage7.ts';
 
 export interface StageInfo {
   n: number;
@@ -25,4 +26,4 @@ export const ARITHMETIC_STAGES: StageInfo[] = [
 ];
 
 /** Skills per stage, in path order. Stages not yet built are empty. */
-export const ARITHMETIC_SKILLS: Skill[][] = [STAGE1, STAGE2, STAGE3, STAGE4, STAGE5, STAGE6];
+export const ARITHMETIC_SKILLS: Skill[][] = [STAGE1, STAGE2, STAGE3, STAGE4, STAGE5, STAGE6, STAGE7];

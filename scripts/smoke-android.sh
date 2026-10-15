@@ -109,7 +109,7 @@ shot whos
 tap_text "Aarav"
 if wait_for "Where should" 20; then note "placement started"; else fail "placement did not start"; fi
 shot placement
-for i in $(seq 1 14); do
+for i in $(seq 1 30); do
   [ -n "$(find_node "Choose rewards")" ] && break
   if [ -n "$(find_node "Yes, easily")" ]; then tap_text "Yes, easily" >/dev/null; fi
   sleep 2
