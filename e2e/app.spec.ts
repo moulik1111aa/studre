@@ -154,3 +154,24 @@ test("time's up stops play for the day", async ({ page }) => {
   await page.click('.play-next');
   await expect(page.locator('.timesup')).toBeVisible();
 });
+
+test('face-off: tug of war against a guest, scoreboard and coins', async ({ page }) => {
+  await page.goto('/?debug&demo=%4040');
+  await expect(page.locator('.map')).toBeVisible();
+  await page.goto('/?debug&noloader');
+  await page.click('.fo-entry');
+  await expect(page.locator('.fo-setup')).toBeVisible();
+  await page.click('.fo-start');
+  await expect(page.locator('.fo-half[data-side="0"] .choice').first()).toBeVisible({ timeout: 8000 });
+  for (let i = 0; i < 20 && !(await page.locator('.fo-results').count()); i++) {
+    const h = page.locator('.fo-half[data-side="0"]');
+    const ans = await h.getAttribute('data-answer');
+    const vals = await h.locator('.choice').evaluateAll((bs) => bs.map((b) => decodeURIComponent((b as HTMLElement).dataset.v!)));
+    await h.locator('.choice').nth(vals.indexOf(ans!)).dispatchEvent('pointerdown');
+    await page.waitForTimeout(400);
+  }
+  await expect(page.locator('.fo-end.won')).toContainText('Riya wins!');
+  const save = await page.evaluate(() => JSON.parse(localStorage.getItem('studyhard.save')!));
+  expect(Object.values(save.faceoff)).toHaveLength(1);
+  expect(save.children[0].wallet.lifetime).toBeGreaterThanOrEqual(5);
+});

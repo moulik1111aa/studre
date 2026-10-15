@@ -6,13 +6,14 @@ import { LOGO_MARK } from './loader.ts';
 import { stagger, drawOn } from '../render/motion.ts';
 import { enterChild } from './flow.ts';
 import { parentScreen } from './parent.ts';
+import { faceoffSetupScreen } from './faceoff.ts';
 import { jarProgress } from '../core/economy.ts';
 import { rewardById } from '../core/rewards.ts';
 
 export function whosPlayingScreen(app: App): Screen {
   const kids = app.save.data.children;
   const el = html(`<section class="screen whos" aria-label="Who's playing">
-    <header class="topbar"><span></span><div class="brand">${LOGO_MARK}<b>Study Hard</b></div><button class="icon-btn parent-btn" aria-label="Parent area">${ICONS.gear}</button></header>
+    <header class="topbar"><button class="icon-btn faceoff-btn" aria-label="Face-off">${ICONS.swords}</button><div class="brand">${LOGO_MARK}<b>Study Hard</b></div><button class="icon-btn parent-btn" aria-label="Parent area">${ICONS.gear}</button></header>
     <h1 class="title center">Who’s playing?</h1>
     <div class="kids">${kids
       .map((c) => {
@@ -21,6 +22,7 @@ export function whosPlayingScreen(app: App): Screen {
         return `<button class="kid card" data-id="${c.id}">${avatarHtml(c.avatar, 84)}<b>${esc(c.name)}</b><small>${r ? `${r.icon} ${p}%` : 'Age ' + c.age}</small></button>`;
       })
       .join('')}</div>
+    ${kids.length ? `<button class="btn ghost fo-entry">${ICONS.swords} Face-off: play together</button>` : ''}
   </section>`);
   el.querySelectorAll<HTMLButtonElement>('.kid').forEach((b) =>
     b.addEventListener('click', () => {
@@ -28,6 +30,8 @@ export function whosPlayingScreen(app: App): Screen {
       enterChild(app, c, 'liquid');
     }),
   );
+  el.querySelector('.fo-entry')?.addEventListener('click', () => void app.show(faceoffSetupScreen(), 'liquid'));
+  el.querySelector('.faceoff-btn')!.addEventListener('click', () => void app.show(faceoffSetupScreen(), 'liquid'));
   el.querySelector('.parent-btn')!.addEventListener('click', async () => {
     if (await app.grownUp('Parent area')) void app.show(parentScreen);
   });

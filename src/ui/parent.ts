@@ -35,6 +35,7 @@ export function parentScreen(app: App): Screen {
       <button class="pa-row card limits"><b>${st.limitMinutes} minutes a day</b><small>${st.timeUpMode === 'stop' ? 'Stops when time is up' : 'Keeps playing without coins'}</small></button>
       <h2 class="pa-h">Settings</h2>
       <div class="card pa-toggles">${TOGGLES.map((t) => `<label class="toggle-row"><span><b>${t.label}</b><small>${t.note}</small></span><input type="checkbox" role="switch" data-k="${t.key}" ${st[t.key] ? 'checked' : ''}></label>`).join('')}</div>
+      ${faceoffRows(app)}
       <h2 class="pa-h">Reward categories</h2>
       <div class="card pa-cats">${CATEGORIES.map((c) => `<label class="toggle-row"><span><b>${c.icon} ${esc(c.name)}</b></span><input type="checkbox" role="switch" data-c="${c.id}" ${st.hiddenCategories.includes(c.id) ? '' : 'checked'}></label>`).join('')}</div>
     </div>
@@ -65,6 +66,16 @@ export function parentScreen(app: App): Screen {
     b.addEventListener('click', () => void app.show(reportScreen(app.save.data.children.find((c) => c.id === b.dataset.id)!))),
   );
   return { el, mounted: () => stagger(el.querySelectorAll('.pa-body > *'), { gap: 40 }) };
+}
+
+function faceoffRows(app: App): string {
+  const kids = app.save.data.children;
+  const nameOf = (id: string) => (id === 'guest' ? 'Guest' : kids.find((k) => k.id === id)?.name ?? 'Someone');
+  const rows = Object.entries(app.save.data.faceoff).map(([key, [x, y]]) => {
+    const [a, b] = key.split('|');
+    return `<div class="fo-row"><span>${esc(nameOf(a))}</span><b>${x} – ${y}</b><span>${esc(nameOf(b))}</span></div>`;
+  });
+  return rows.length ? `<h2 class="pa-h">Face-off scores</h2><div class="card fo-board">${rows.join('')}</div>` : '';
 }
 
 const STRANDS: [string, string][] = [

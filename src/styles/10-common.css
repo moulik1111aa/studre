@@ -15,7 +15,7 @@
 .ambient{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0}
 .ambient span{position:absolute;font-size:30px;opacity:.16;filter:saturate(.8) blur(.3px);animation:drift var(--d,8s) ease-in-out var(--delay,0s) infinite alternate}
 @keyframes drift{from{transform:translate(0,0) rotate(-6deg)}to{transform:translate(14px,-22px) rotate(8deg)}}
-.screen > *:not(.ambient){position:relative;z-index:1}
+:where(.screen) > :where(:not(.ambient)){position:relative;z-index:1}
 .screen[style*="--world"]{background:radial-gradient(120% 70% at 50% -10%,color-mix(in srgb,var(--world) 45%,transparent) 0%,transparent 60%),radial-gradient(90% 60% at 50% 120%,color-mix(in srgb,var(--world-b) 55%,transparent),transparent 70%)}
 
 /* Jar bar: treat progress with a moving glint, big goal jar with liquid and bubbles. */
