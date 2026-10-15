@@ -42,6 +42,8 @@ export class App {
   private current: Screen | null = null;
   private exitUntil = -Infinity;
   private busy = false;
+  /** A screen asked for during a transition: shown as soon as the transition ends. */
+  private pending: { make: ScreenMaker; how: 'fade' | 'liquid' } | null = null;
 
   constructor(root: HTMLElement, storage: StorageAdapter = browserStorage(), native: StudyHardPlugin | null = null) {
     this.root = root;
@@ -94,7 +96,10 @@ export class App {
 
   /** Show a screen. `liquid` pours the next screen's colours over the old one. */
   async show(make: ScreenMaker, how: 'fade' | 'liquid' = 'fade'): Promise<void> {
-    if (this.busy) return;
+    if (this.busy) {
+      this.pending = { make, how };
+      return;
+    }
     this.busy = true;
     try {
       const next = make(this);
@@ -117,6 +122,9 @@ export class App {
     } finally {
       this.busy = false;
     }
+    const queued = this.pending;
+    this.pending = null;
+    if (queued) await this.show(queued.make, 'fade');
   }
 
   /** Android back: close a sheet, let the screen decide, use its back arrow, or press-twice to leave. */

@@ -28,9 +28,10 @@ async function boot(): Promise<void> {
   }
   const start = () => void app.show(app.save.data.setupDone && app.save.data.children.length ? whosPlayingScreen : welcomeScreen, 'liquid');
   const demo = params.get('demo');
-  if (app.debug && demo && seedDemo(app, demo, { coins: Number(params.get('coins')) || 0, age: Number(params.get('age')) || 8 })) {
+  const seeded = app.debug && demo ? seedDemo(app, demo, { coins: Number(params.get('coins')) || 0, age: Number(params.get('age')) || 8 }) : null;
+  if (seeded) {
     const child = app.child!;
-    if (params.has('play')) playLevel(app, child, app.path.find((l) => l.id === demo)!);
+    if (params.has('play')) playLevel(app, child, seeded);
     else enterChild(app, child);
     return;
   }
