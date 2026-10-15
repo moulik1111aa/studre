@@ -69,7 +69,8 @@ function moneyPiece(value: number, i: number): string {
 export function optionHtml(value: string, optionObject?: string): string {
   if (optionObject) return objectGroup(optionObject, Number(value), 0, 'sm');
   if (EMOJI[value]) return `<span class="opt-emoji">${EMOJI[value]}</span>`;
-  return `<span class="opt-num">${prettyAnswer(value)}</span>`;
+  const size = value.length > 14 ? ' xlong' : value.length > 7 ? ' long' : '';
+  return `<span class="opt-num${size}">${prettyAnswer(value)}</span>`;
 }
 
 /** Answers shown nicely: "3/4" as a stacked fraction, "-7" with a real minus. */

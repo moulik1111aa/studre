@@ -61,6 +61,8 @@
 .choice.right{background:linear-gradient(180deg,#B8FFE2,var(--mint));box-shadow:0 6px 0 #138058,0 0 24px rgba(67,224,168,.7)}
 .choice.wrong{background:linear-gradient(180deg,#FFD0DA,#FF8FA8);box-shadow:0 6px 0 #C2255C}
 .opt-num{font-size:34px;line-height:1}
+.opt-num.long{font-size:24px;line-height:1.15}
+.opt-num.xlong{font-size:18px;line-height:1.2}
 .opt-emoji{font-size:44px;line-height:1}
 .choice .group{background:none;max-width:150px}
 .answers.fmt-pad,.answers.fmt-pad-ext{grid-template-columns:1fr;gap:10px;max-width:440px;width:100%;margin:0 auto}
