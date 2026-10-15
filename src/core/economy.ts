@@ -4,9 +4,9 @@
 import { costOf, jarOf, rewardById } from './rewards.ts';
 
 export const COINS = {
-  level: 10,
-  /** Bonus by stars: 1★ +1, 2★ +3, 3★ +5. */
-  starBonus: [0, 1, 3, 5] as const,
+  level: 6,
+  /** Bonus by stars: 1★ +1, 2★ +2, 3★ +3. */
+  starBonus: [0, 1, 2, 3] as const,
   review: 15,
   boss: 50,
   faceoffWin: 5,
@@ -52,10 +52,18 @@ export const freshWallet = (): Wallet => ({
   earned: [],
 });
 
-export function coinsForLevel(kind: 'skill' | 'review' | 'boss', stars: 0 | 1 | 2 | 3, replay: boolean): number {
+/**
+ * Questions take longer for the youngest (listening, counting) and in the hardest stages
+ * (multi-step work), so levels there pay more. This keeps "a treat about once a week at
+ * 30 minutes a day" true for every age (checked by `npm run simulate`).
+ */
+export const STAGE_PAY = [1.7, 1.5, 1, 1.1, 1.25, 1.4, 1.5];
+
+export function coinsForLevel(kind: 'skill' | 'review' | 'boss', stars: 0 | 1 | 2 | 3, replay: boolean, stage = 3): number {
   if (stars === 0) return 0;
   const base = kind === 'boss' ? COINS.boss : kind === 'review' ? COINS.review : COINS.level + COINS.starBonus[stars];
-  return replay ? Math.floor(base / 2) : base;
+  const paid = Math.round(base * (STAGE_PAY[stage - 1] ?? 1));
+  return replay ? Math.floor(paid / 2) : paid;
 }
 
 /** Days from a to b (YYYY-MM-DD), b − a. */

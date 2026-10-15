@@ -2,7 +2,7 @@
 // through the native plugin (crisp predefined ticks and clicks); in a browser it
 // falls back to the web Vibration API where allowed. Never throws.
 
-import { quietly, type HapticKind, type PairfallPlugin } from './native.ts';
+import { quietly, type HapticKind, type StudyHardPlugin } from './native.ts';
 
 const WEB_PATTERNS: Record<HapticKind, number | number[]> = {
   tap: 6,
@@ -15,9 +15,9 @@ const WEB_PATTERNS: Record<HapticKind, number | number[]> = {
 
 export class Haptics {
   enabled: boolean;
-  private readonly native: PairfallPlugin | null;
+  private readonly native: StudyHardPlugin | null;
 
-  constructor(enabled: boolean, native: PairfallPlugin | null = null) {
+  constructor(enabled: boolean, native: StudyHardPlugin | null = null) {
     this.enabled = enabled;
     this.native = native;
   }
