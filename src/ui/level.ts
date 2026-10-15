@@ -12,12 +12,13 @@ import { visualHtml, optionHtml, prettyAnswer } from './visuals.ts';
 import { ICONS } from './icons.ts';
 import { JarBar } from './jars.ts';
 import { ambientHtml, worldVars } from './worlds.ts';
-import { popIn, shake, stagger, wait, EASE_OUT, reducedMotion } from '../render/motion.ts';
+import { popIn, shake, stagger, wait, EASE_OUT, reducedMotion, fitCard } from '../render/motion.ts';
 import { resultScreen } from './result.ts';
 import { goHome, timeState } from './flow.ts';
 import { stepBackAfterPlacement } from './placement.ts';
+import { remember } from '../core/undo.ts';
 
-export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' }>) {
+export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' }>, harder = false) {
   return (app: App): Screen => {
     const skill = skillById(level.skillId)!;
     const rng = createRng(`${child.id}:${level.id}:${Date.now()}`);
@@ -26,14 +27,15 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
       .map((l) => skillById((l as { skillId: string }).skillId)!)
       .slice(-12);
     const warm = level.tier === 1 && !child.stats.secondsByDay[app.today] ? dueForRevision(child.progress, AREAS[0].skills.flat(), app.today) : [];
-    const round: Round = makeRound(level, skillById, child.progress, rng, earlier, warm);
+    const boost = Math.min(2, (child.challenge ?? 0) + (harder ? 1 : 0));
+    const round: Round = makeRound(level, skillById, child.progress, rng, earlier, warm, boost);
     const { rules, questions } = round;
     const little = skill.stage <= 2;
     const el = html(`<section class="screen play" style="${worldVars(level.stage)}" aria-label="${skill.name}">
       ${ambientHtml(level.stage, 6)}
       <header class="play-top">
         <button class="icon-btn quit" aria-label="Pause">${ICONS.pause}</button>
-        <div class="play-title"><b>${TIER_NAMES[level.tier]}</b><span>${skill.name}</span></div>
+        <div class="play-title"><b>${TIER_NAMES[level.tier]}${boost ? ` · ${boost === 2 ? '🔥🔥 Toughest' : '🔥 Harder'}` : ''}</b><span>${skill.name}</span></div>
         <div class="dots" aria-hidden="true"></div>
       </header>
       <div class="jar-slot"></div>
@@ -79,6 +81,8 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
       </article>`;
       const card = qwrap.firstElementChild as HTMLElement;
       if (app.debug) card.dataset.answer = q.answer;
+      renderAnswers(q);
+      fitCard(card, qwrap);
       if (!reducedMotion()) card.animate([{ opacity: 0, transform: 'perspective(800px) rotateX(-18deg) translateY(24px)' }, { opacity: 1, transform: 'none' }], { duration: 520, easing: EASE_OUT });
       stagger(card.querySelectorAll('.obj, .dots circle, .cell, .note, .coin-piece'), { gap: 45, y: 10, scale: 0.6 });
       card.querySelector('.say')!.addEventListener('click', () => app.voice.say(q.speak ?? spoken(q.prompt)));
@@ -88,7 +92,6 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
         popIn(h);
       });
       if (little || q.speak) app.voice.say(q.speak ?? spoken(q.prompt));
-      renderAnswers(q);
       startTimer();
     };
 
@@ -203,6 +206,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
       let coins = 0;
       let unlocked: ('treat' | 'goal')[] = [];
       app.save.update(() => {
+        remember(child, [level.id], Date.now(), app.today);
         const inside = addPlayTime(child.wallet, app.today, seconds, app.save.data.settings.limitMinutes);
         child.stats.secondsByDay[app.today] = (child.stats.secondsByDay[app.today] ?? 0) + seconds;
         child.stats.answered += asked.length;
@@ -233,7 +237,10 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
       ], 'Paused');
       void result.then((v) => {
         if (v === 'leave') {
-          app.save.update(() => addPlayTime(child.wallet, app.today, Math.round(activeMs / 1000), app.save.data.settings.limitMinutes));
+          app.save.update(() => {
+            remember(child, [], Date.now(), app.today);
+            addPlayTime(child.wallet, app.today, Math.round(activeMs / 1000), app.save.data.settings.limitMinutes);
+          });
           activeMs = 0;
           goHome(app);
           return;

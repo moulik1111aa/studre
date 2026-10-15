@@ -3,6 +3,7 @@
 
 import { freshProgress, type Progress } from '../core/path.ts';
 import { freshWallet, type Wallet } from '../core/economy.ts';
+import type { UndoEntry } from '../core/undo.ts';
 
 export const SAVE_VERSION = 1;
 const PRIMARY = 'studyhard.save';
@@ -31,17 +32,27 @@ export interface Child {
   stats: ChildStats;
   bossesBeaten: string[];
   createdDay: string;
+  /** Parent-set difficulty: 0 normal, 1 harder, 2 toughest (same skills, harder questions). */
+  challenge: 0 | 1 | 2;
+  /** Recent changes, so a parent can remove the last hour or today (see core/undo.ts). */
+  undo?: UndoEntry[];
 }
 
 export interface Settings {
   limitMinutes: number;
   timeUpMode: 'stop' | 'keep';
+  /** Price multipliers the parent picks: how often a treat / a big goal comes (1 = calibrated). */
+  treatPace: number;
+  goalPace: number;
   holiday: boolean;
   hiddenCategories: string[];
   sound: boolean;
   music: boolean;
   vibration: boolean;
   voice: boolean;
+  /** Chosen reading voice ('' = the best one automatically) and its speed. */
+  voiceName: string;
+  voiceRate: number;
 }
 
 export interface SaveData {
@@ -62,12 +73,16 @@ export interface StorageAdapter {
 export const freshSettings = (): Settings => ({
   limitMinutes: 30,
   timeUpMode: 'stop',
+  treatPace: 1,
+  goalPace: 1,
   holiday: false,
   hiddenCategories: [],
   sound: true,
   music: true,
   vibration: true,
   voice: true,
+  voiceName: '',
+  voiceRate: 0.95,
 });
 
 export function freshSave(): SaveData {
@@ -88,6 +103,7 @@ export function newChild(name: string, age: number, avatar: number, today: strin
     stats: { answered: 0, correct: 0, secondsByDay: {} },
     bossesBeaten: [],
     createdDay: today,
+    challenge: 0,
   };
 }
 

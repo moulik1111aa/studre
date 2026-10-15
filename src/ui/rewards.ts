@@ -3,7 +3,7 @@
 
 import { html, esc, type App, type Screen } from './app.ts';
 import type { Child } from '../storage/save.ts';
-import { CATEGORIES, REWARDS, PRICES, costOf, type Reward, type Jar } from '../core/rewards.ts';
+import { CATEGORIES, REWARDS, costOf, aboutOf, jarOf, type Reward, type Jar } from '../core/rewards.ts';
 import { chooseReward } from '../core/economy.ts';
 import { ICONS, coinSvg, avatarHtml } from './icons.ts';
 import { stagger, popIn, EASE_OUT, reducedMotion } from '../render/motion.ts';
@@ -12,12 +12,12 @@ import { enterChild } from './flow.ts';
 export function rewardsScreen(child: Child, jar: Jar) {
   return (app: App): Screen => {
     const hidden = new Set(app.save.data.settings.hiddenCategories);
-    const list = REWARDS.filter((r) => PRICES[r.tier].jar === jar && !hidden.has(r.category));
+    const list = REWARDS.filter((r) => jarOf(r) === jar && !hidden.has(r.category));
     const cats = CATEGORIES.filter((c) => list.some((r) => r.category === c.id));
     let active = cats[0]?.id;
     const el = html(`<section class="screen rewards" aria-label="Choose a reward">
       <header class="rw-head">${avatarHtml(child.avatar, 48)}<div><h1 class="title">${jar === 'treat' ? 'Pick your treat!' : 'Pick a big goal!'}</h1>
-        <p class="subtitle">${jar === 'treat' ? 'Play every day to fill the bar. It takes about a week.' : 'Save up slowly for something special.'}</p></div></header>
+        <p class="subtitle">${jar === 'treat' ? 'Play every day to fill the bar.' : 'Save up slowly for something special.'}</p></div></header>
       <nav class="cats scroll" aria-label="Categories">${cats.map((c) => `<button class="cat" data-c="${c.id}">${c.icon} ${esc(c.name)}</button>`).join('')}</nav>
       <div class="rw-grid scroll"></div>
     </section>`);
@@ -26,7 +26,7 @@ export function rewardsScreen(child: Child, jar: Jar) {
       el.querySelectorAll<HTMLElement>('.cat').forEach((b) => b.classList.toggle('on', b.dataset.c === active));
       grid.innerHTML = list
         .filter((r) => r.category === active)
-        .map((r) => `<button class="rw-card" data-r="${r.id}"><span class="rw-icon">${r.icon}</span><b>${esc(r.name)}</b><span class="rw-cost">${coinSvg}${costOf(r)}</span><small>${PRICES[r.tier].about}</small></button>`)
+        .map((r) => `<button class="rw-card" data-r="${r.id}"><span class="rw-icon">${r.icon}</span><b>${esc(r.name)}</b><span class="rw-cost">${coinSvg}${costOf(r)}</span><small>${aboutOf(r)}</small></button>`)
         .join('');
       stagger(grid.children, { gap: 40, y: 14 });
       grid.querySelectorAll<HTMLButtonElement>('.rw-card').forEach((b) => b.addEventListener('click', () => confirm(REWARDS.find((x) => x.id === b.dataset.r)!)));
@@ -43,7 +43,7 @@ export function rewardsScreen(child: Child, jar: Jar) {
       let photo: string | undefined;
       const ov = html(`<div class="overlay" role="dialog" aria-modal="true" aria-label="${esc(r.name)}"><div class="sheet rw-confirm">
         <div class="rw-big">${r.icon}</div><h2>${esc(r.name)}</h2>
-        <p class="rw-price">${coinSvg} ${costOf(r)} coins · ${PRICES[r.tier].about}</p>
+        <p class="rw-price">${coinSvg} ${costOf(r)} coins · ${aboutOf(r)}</p>
         <p class="lock-note">${ICONS.lock} Once you choose, it’s locked in until you earn it.</p>
         <div class="photo-slot"></div>
         <div class="actions">

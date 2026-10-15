@@ -63,3 +63,7 @@
 .tier-stars i{width:22px;height:22px;color:rgba(255,255,255,.25)}
 .tier-stars i.on{color:var(--sun)}
 .tier-stars svg{width:100%;height:100%;fill:currentColor}
+.play-bar{gap:10px;align-items:center}
+.skip-btn{width:58px;height:58px;flex:none;border-radius:20px;background:rgba(20,23,58,.9)}
+.harder-row{margin:0 0 10px;padding:12px 14px;border-radius:18px;background:rgba(255,138,92,.14);text-align:left}
+.harder-row input:checked{background:var(--coral)}

@@ -33,8 +33,12 @@ async function playThrough(page: Page, done: string, max = 60): Promise<number> 
         continue;
       }
     } else {
-      for (const ch of ans.replace(/^-/, '−')) await page.locator(`.answers [data-k="${ch}"]`).first().dispatchEvent('pointerdown');
-      await page.locator('.answers .ok').click();
+      try {
+        for (const ch of ans.replace(/^-/, '−')) await page.locator(`.answers [data-k="${ch}"]`).first().dispatchEvent('pointerdown', {}, { timeout: 1500 });
+        await page.locator('.answers .ok').click({ timeout: 1500 });
+      } catch {
+        continue;
+      }
     }
     answered++;
     await page.waitForTimeout(250);
@@ -174,4 +178,34 @@ test('face-off: tug of war against a guest, scoreboard and coins', async ({ page
   const save = await page.evaluate(() => JSON.parse(localStorage.getItem('studyhard.save')!));
   expect(Object.values(save.faceoff)).toHaveLength(1);
   expect(save.children[0].wallet.lifetime).toBeGreaterThanOrEqual(5);
+});
+
+test('parent can skip a level, and undo the last hour', async ({ page }) => {
+  await page.goto('/?debug&demo=%400');
+  await expect(page.locator('.map')).toBeVisible();
+  // Play the first level to earn stars and coins.
+  await page.click('.play-next');
+  await playThrough(page, '.result');
+  await page.click('.res-actions .home');
+  await expect(page.locator('.map')).toBeVisible();
+  // Skip the next level (grown-up).
+  await page.click('.skip-btn');
+  await grownUp(page);
+  await page.getByRole('button', { name: 'Skip it' }).click();
+  await expect(page.locator('.toast')).toContainText('Level skipped');
+  let save = await page.evaluate(() => JSON.parse(localStorage.getItem('studyhard.save')!));
+  expect(Object.keys(save.children[0].progress.skippedLevels)).toHaveLength(1);
+  expect(save.children[0].wallet.lifetime).toBeGreaterThan(0);
+  // Parent area → report → remove the last hour.
+  await page.click('.who');
+  await page.click('.parent-btn');
+  await grownUp(page);
+  await page.locator('.report').first().click();
+  await page.click('.undo-hour');
+  await page.getByRole('button', { name: 'Remove', exact: true }).click();
+  await expect(page.locator('.toast')).toContainText('Removed');
+  save = await page.evaluate(() => JSON.parse(localStorage.getItem('studyhard.save')!));
+  expect(Object.keys(save.children[0].progress.skippedLevels ?? {})).toHaveLength(0);
+  expect(save.children[0].wallet.lifetime).toBe(0);
+  expect(save.children[0].progress.levels).toEqual({});
 });

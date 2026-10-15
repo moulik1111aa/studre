@@ -60,6 +60,8 @@ export interface Progress {
   lastSeen: Record<string, string>;
   /** Skill id → keys of the last 50 questions (no repeats). */
   history: Record<string, string[]>;
+  /** Single levels a parent chose to skip (0 stars, no coins). */
+  skippedLevels?: Record<string, true>;
 }
 
 export const freshProgress = (): Progress => ({ levels: {}, skipped: {}, lastSeen: {}, history: {} });
@@ -68,6 +70,7 @@ export const isPassed = (p: Progress, l: Level): boolean => (p.levels[l.id]?.sta
 
 /** Skipped by placement: a skill level whose skill was skipped, or a review/boss whose skills all were. */
 export function isSkipped(p: Progress, l: Level): boolean {
+  if (p.skippedLevels?.[l.id]) return true;
   if (l.kind === 'skill') return !!p.skipped[l.skillId];
   if (l.kind === 'review') return l.skillIds.every((s) => p.skipped[s]);
   return l.phases.flat().every((s) => p.skipped[s]);
@@ -120,7 +123,20 @@ export interface Round {
   questions: Question[];
 }
 
-export function rulesFor(level: Level, skill?: Skill): RoundRules {
+export function rulesFor(level: Level, skill?: Skill, boost = 0): RoundRules {
+  const base = baseRules(level, skill);
+  if (!boost || level.kind === 'boss') return base;
+  // Harder (1) / toughest (2): no hints, a higher pass mark, and a timer on every level at 2.
+  const speed = skill?.speedSec ?? 10;
+  return {
+    ...base,
+    hints: false,
+    passMark: base.streak ? base.passMark : Math.min(base.count, base.passMark + boost),
+    timer: base.timer || (boost >= 2 ? Math.round(speed * 1.5) : 0),
+  };
+}
+
+function baseRules(level: Level, skill?: Skill): RoundRules {
   if (level.kind === 'review') return { count: 10, passMark: 10, timer: 0, hints: false };
   if (level.kind === 'boss') return { count: 0, passMark: 0, timer: 0, hints: false };
   const speed = skill?.speedSec ?? 10;
@@ -160,7 +176,7 @@ export function makeQuestion(skill: Skill, rng: Rng, d: number, avoid: Set<strin
  * `earlier` are skills before this one on the path (for Practise-more mix-ins);
  * `warmup` are mastered skills due for revision (at most 2 are added at the start).
  */
-export function makeRound(level: Level, skillsById: (id: string) => Skill | undefined, p: Progress, rng: Rng, earlier: Skill[] = [], warmup: Skill[] = []): Round {
+export function makeRound(level: Level, skillsById: (id: string) => Skill | undefined, p: Progress, rng: Rng, earlier: Skill[] = [], warmup: Skill[] = [], boost = 0): Round {
   if (level.kind === 'boss') throw new Error('boss levels use the fight engine');
   const questions: Question[] = [];
   const seen = new Set<string>();
@@ -174,12 +190,14 @@ export function makeRound(level: Level, skillsById: (id: string) => Skill | unde
   for (const w of warmup.slice(0, 2)) add(w, 0.6);
   if (level.kind === 'review') {
     const skills = level.skillIds.map((id) => skillsById(id)!).filter(Boolean);
-    for (let i = 0; i < 10; i++) add(skills[i % skills.length], 0.5 + 0.5 * rng.next());
-    return { rules: rulesFor(level), questions: [...questions.slice(0, warmup.length), ...rng.shuffle(questions.slice(warmup.length))] };
+    for (let i = 0; i < 10; i++) add(skills[i % skills.length], Math.min(1, 0.5 + 0.2 * boost + 0.5 * rng.next()));
+    return { rules: rulesFor(level, undefined, boost), questions: [...questions.slice(0, warmup.length), ...rng.shuffle(questions.slice(warmup.length))] };
   }
   const skill = skillsById(level.skillId)!;
-  const rules = rulesFor(level, skill);
-  const [lo, hi] = DIFFICULTY[level.tier];
+  const rules = rulesFor(level, skill, boost);
+  const [lo0, hi0] = DIFFICULTY[level.tier];
+  const lo = Math.min(1, lo0 + 0.3 * boost);
+  const hi = Math.min(1, hi0 + 0.3 * boost);
   const others = earlier.filter((e) => e.id !== skill.id);
   const mix = level.tier === 3 && others.length ? 2 : 0;
   const own = rules.count - mix;

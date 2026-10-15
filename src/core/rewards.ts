@@ -89,5 +89,29 @@ group('dream', 'dream', [['Bicycle', '🚲'], ['Kick scooter', '🛴'], ['Giant 
 
 export const REWARDS: readonly Reward[] = R;
 export const rewardById = (id: string): Reward | undefined => R.find((r) => r.id === id);
-export const costOf = (r: Reward): number => PRICES[r.tier].coins;
 export const jarOf = (r: Reward): Jar => PRICES[r.tier].jar;
+
+/**
+ * How fast rewards come, set by a parent (spec §4): a multiplier on every price in a jar.
+ * 1 = the calibrated pace (a small treat about weekly, a big toy in about 2 months).
+ */
+export const PACE: Record<Jar, number> = { treat: 1, goal: 1 };
+export function setPace(treat: number, goal: number): void {
+  PACE.treat = treat > 0 ? treat : 1;
+  PACE.goal = goal > 0 ? goal : 1;
+}
+/** Price before the parent's pace setting (used for melting, which follows earning speed). */
+export const baseCostOf = (r: Reward): number => PRICES[r.tier].coins;
+/** Price in coins at the current pace (rounded to 10). */
+export const costOf = (r: Reward): number => Math.max(10, Math.round((PRICES[r.tier].coins * PACE[jarOf(r)]) / 10) * 10);
+
+const BASE_DAYS: Record<PriceTier, number> = { small: 7, medium: 14, large: 21, toyS: 30, toyM: 45, toyB: 60, dream: 135 };
+/** Rough time to earn a reward when playing daily, e.g. "about 2 weeks". */
+export function aboutOf(r: Reward): string {
+  const days = BASE_DAYS[r.tier] * PACE[jarOf(r)];
+  if (days < 10) return `about ${Math.max(2, Math.round(days))} days`;
+  if (days < 26) return `about ${Math.round(days / 7)} week${Math.round(days / 7) === 1 ? '' : 's'}`;
+  const m = Math.round((days / 30) * 2) / 2;
+  const txt = Number.isInteger(m) ? String(m) : `${Math.floor(m) || ''}½`;
+  return `about ${txt} month${m <= 1 ? '' : 's'}`;
+}

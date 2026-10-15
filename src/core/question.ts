@@ -236,17 +236,29 @@ export function indian(n: number): string {
   return Math.round(n).toLocaleString('en-IN');
 }
 
-/** A written sum read aloud: "27 + 36 = ?" → "27 plus 36 equals what?" */
+/**
+ * A written question read aloud: "10 + 3 = ?" → "10 plus 3 equals what?".
+ * A "?" standing on its own is a blank ("what"); a "?" right after a word is just punctuation.
+ */
 export function spoken(prompt: string): string {
-  return prompt
-    .replace(/= \?/g, 'equals what?')
-    .replace(/\?/g, 'what')
+  const asks = /\?\s*$/.test(prompt);
+  let s = prompt
+    .replace(/(^|[\s(=+−×÷:,-])\?(?=$|[\s/),=+−×÷])/g, '$1 what ')
+    .replace(/(\d)\/(\d)/g, '$1 over $2')
+    .replace(/what\s*\/\s*(\d)/g, 'what over $1')
+    .replace(/√/g, ' the square root of ')
+    .replace(/∛/g, ' the cube root of ')
+    .replace(/²/g, ' squared ')
+    .replace(/³/g, ' cubed ')
     .replace(/\+/g, ' plus ')
+    .replace(/(^|[\s(])[−-](?=\d)/g, '$1minus ')
     .replace(/−/g, ' minus ')
     .replace(/×/g, ' times ')
     .replace(/÷/g, ' divided by ')
     .replace(/=/g, ' equals ')
+    .replace(/\s+([?.,!])/g, '$1')
     .replace(/\s+/g, ' ')
-    .replace('equals what what', 'equals what?')
     .trim();
+  if (asks && !s.endsWith('?')) s += '?';
+  return s;
 }

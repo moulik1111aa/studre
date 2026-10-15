@@ -74,3 +74,24 @@
 .fo-row:last-child{border-bottom:0}
 .fo-row b{color:var(--sun)}
 .fo-row span:last-child{text-align:right}
+.screen.limits{overflow-y:auto;scrollbar-width:none}
+.screen.limits .lim-card{flex:none}
+.seg.seg4{grid-template-columns:repeat(4,1fr);gap:6px}
+.seg4 .seg-b{padding:10px 4px}
+.seg4 .seg-b b{font-size:15px}
+.limits .lim-value b{font-size:52px}
+.pa-kid{flex-wrap:wrap}
+.pa-kid-btns{display:flex;gap:8px;flex-wrap:wrap}
+.pa-kid-btns .btn{min-height:42px;font-size:15px;padding:0 14px}
+.undo-card{padding:14px 16px;display:grid;gap:10px}
+.undo-card .fine{text-align:left;margin:0}
+.seg.seg3{grid-template-columns:repeat(3,1fr)}
+.vp-list{padding:6px 12px}
+.vp-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
+.vp-row:last-child{border-bottom:0}
+.vp-pick{appearance:none;border:0;background:none;color:var(--ink);cursor:pointer;flex:1;display:flex;align-items:center;gap:10px;text-align:left;font-weight:800;padding:6px 0}
+.vp-pick i{width:22px;height:22px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 3px rgba(255,255,255,.35)}
+.vp-row.on .vp-pick i{box-shadow:inset 0 0 0 7px var(--mint)}
+.vp-try{min-height:40px!important;font-size:14px!important;padding:0 12px!important;flex:none}
+.vp-try svg{width:18px;height:18px}
+.voicepick .save{margin-top:10px}

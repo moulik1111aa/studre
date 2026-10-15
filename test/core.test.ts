@@ -171,3 +171,57 @@ test('boss fight: hits, criticals, special at 5 in a row, defends and phases', (
   while (g.status === 'fighting') g.answer(false, 1);
   assert.equal(g.status, 'lost');
 });
+
+test('spoken: blanks become "what" once, punctuation stays', async () => {
+  const { spoken } = await import('../src/core/question.ts');
+  assert.equal(spoken('10 + 3 = ?'), '10 plus 3 equals what?');
+  assert.equal(spoken('How many fish?'), 'How many fish?');
+  assert.equal(spoken('8 + ? = 15'), '8 plus what equals 15');
+  assert.equal(spoken('4, 5, 6, ?'), '4, 5, 6, what?');
+  assert.ok(!/what what/.test(spoken('? × ? = 49')));
+});
+
+test('undo: remove the last hour restores stars, coins and time', async () => {
+  const { remember, rollback, changesSince } = await import('../src/core/undo.ts');
+  const { newChild } = await import('../src/storage/save.ts');
+  const { addCoins } = await import('../src/core/economy.ts');
+  const c = newChild('Test', 8, 0, '2026-10-16');
+  c.progress.levels['a#1'] = { stars: 2, passes: 1 };
+  addCoins(c.wallet, 40);
+  const before = JSON.stringify({ l: c.progress.levels, w: c.wallet, s: c.stats });
+  const t0 = 1_000_000;
+  remember(c, ['a#1'], t0, '2026-10-16');
+  c.progress.levels['a#1'] = { stars: 3, passes: 2 };
+  addCoins(c.wallet, 9);
+  c.stats.answered += 10;
+  remember(c, ['a#2'], t0 + 60_000, '2026-10-16');
+  c.progress.levels['a#2'] = { stars: 1, passes: 1 };
+  (c.progress.skippedLevels ??= {})['a#3'] = true;
+  assert.equal(changesSince(c, t0), 2);
+  assert.equal(rollback(c, t0), 2);
+  assert.equal(JSON.stringify({ l: c.progress.levels, w: c.wallet, s: c.stats }), before);
+  assert.equal(changesSince(c, 0), 0);
+});
+
+test('challenge boost: harder rules and harder numbers', async () => {
+  const { rulesFor, buildPath } = await import('../src/core/path.ts');
+  const { AREAS } = await import('../src/core/areas/index.ts');
+  const lvl = buildPath(AREAS[0]).find((l) => l.kind === 'skill' && l.tier === 1)!;
+  const n = rulesFor(lvl);
+  const h = rulesFor(lvl, undefined, 1);
+  const t = rulesFor(lvl, undefined, 2);
+  assert.equal(n.hints, true);
+  assert.equal(h.hints, false);
+  assert.equal(h.passMark, n.passMark + 1);
+  assert.ok(t.timer > 0);
+});
+
+test('reward pace scales prices but melting follows earning speed', async () => {
+  const { setPace, costOf, rewardById, aboutOf } = await import('../src/core/rewards.ts');
+  const r = rewardById('sweets.milk-chocolate-bar')!;
+  const base = costOf(r);
+  setPace(2, 1);
+  assert.equal(costOf(r), base * 2);
+  assert.match(aboutOf(r), /2 weeks/);
+  setPace(1, 1);
+});

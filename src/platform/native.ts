@@ -13,7 +13,8 @@ export interface StudyHardPlugin {
   exit(): Promise<void>;
   readSave(): Promise<{ values?: Record<string, string> }>;
   writeSave(o: { key: string; value: string }): Promise<void>;
-  speak(o: { text: string; rate?: number }): Promise<void>;
+  speak(o: { text: string; rate?: number; pitch?: number; voice?: string }): Promise<void>;
+  voices(): Promise<{ voices?: { name: string; locale: string; quality: number; network: boolean }[] }>;
   stopSpeaking(): Promise<void>;
   savePhoto(o: { id: string; dataUrl: string }): Promise<void>;
   loadPhoto(o: { id: string }): Promise<{ dataUrl?: string }>;

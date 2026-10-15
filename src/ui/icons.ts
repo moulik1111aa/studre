@@ -22,6 +22,7 @@ export const ICONS = {
   gift: s('<rect x="3.5" y="9" width="17" height="11" rx="2"/><path d="M2.5 9h19M12 9v11M12 9c-1.5-3-5-4.5-5.5-2S9.5 9 12 9c2.5 0 6-.5 5.5-2.5S13.5 6 12 9"/>'),
   plus: s('<path d="M12 5v14M5 12h14"/>'),
   moon: s('<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>'),
+  skip: s('<path d="M5 5.5v13l9-6.5zM17 5v14"/>'),
   chart: s('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'),
 };
 

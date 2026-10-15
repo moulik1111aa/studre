@@ -11,9 +11,10 @@ import { addCoins, addPlayTime, COINS } from '../core/economy.ts';
 import { FaceoffMatch, FACEOFF, MODE_NAMES, childSkillIndex, pairScore, recordPair, showdownAllowed, type FaceoffMode } from '../core/faceoff.ts';
 import { ICONS, avatarHtml } from './icons.ts';
 import { visualHtml, optionHtml } from './visuals.ts';
-import { popIn, shake, stagger, wait, reducedMotion, EASE_OUT, EASE_SPRING } from '../render/motion.ts';
+import { popIn, shake, stagger, wait, reducedMotion, EASE_OUT, EASE_SPRING, fitCard } from '../render/motion.ts';
 import { whosPlayingScreen } from './whos.ts';
 import { timeState } from './flow.ts';
+import { remember } from '../core/undo.ts';
 
 export interface Player {
   /** Child id, or 'guest'. */
@@ -190,6 +191,8 @@ export function faceoffMatchScreen(a: Player, b: Player, mode: FaceoffMode) {
       h.querySelector('.fo-q')!.innerHTML = `${q.visual ? visualHtml(q.visual, q.key) : ''}<h2 class="prompt${q.prompt.length > 30 ? ' long' : ''}">${q.prompt.replace(/</g, '&lt;')}</h2>`;
       if (app.debug) h.dataset.answer = q.answer;
       h.querySelector('.fo-choices')!.innerHTML = q.choices.map((c) => `<button class="choice" data-v="${encodeURIComponent(c)}" aria-label="${esc(c)}">${optionHtml(c, q.optionObject)}</button>`).join('');
+      const qbox = h.querySelector<HTMLElement>('.fo-q')!;
+      fitCard(qbox, qbox, 14);
       if (!reducedMotion()) h.querySelector('.fo-q')!.animate([{ opacity: 0, transform: 'scale(.92)' }, { opacity: 1, transform: 'none' }], { duration: 260, easing: EASE_OUT });
       return q;
     };
@@ -266,6 +269,7 @@ export function faceoffMatchScreen(a: Player, b: Player, mode: FaceoffMode) {
         players.forEach((p, i) => {
           const c = kids.find((k) => k.id === p.id);
           if (!c) return;
+          remember(c, [], Date.now(), app.today);
           const inside = addPlayTime(c.wallet, app.today, seconds, d.settings.limitMinutes);
           c.stats.secondsByDay[app.today] = (c.stats.secondsByDay[app.today] ?? 0) + seconds;
           if (i === winner && inside) {

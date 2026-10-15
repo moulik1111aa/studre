@@ -188,3 +188,23 @@ export function countUp(el: HTMLElement, from: number, to: number, ms = 700, for
   };
   requestAnimationFrame(tick);
 }
+
+/**
+ * Shrink a question's text until its card fits the space it has (long word problems,
+ * long expressions). Pictures shrink a little too. Never below `min` px; if it still
+ * overflows, the card scrolls.
+ */
+export function fitCard(card: HTMLElement, room: HTMLElement, min = 16): void {
+  const prompt = card.querySelector<HTMLElement>('.prompt');
+  if (!prompt) return;
+  prompt.style.fontSize = '';
+  const vis = card.querySelector<HTMLElement>('.vis');
+  if (vis) vis.style.zoom = '';
+  let size = parseFloat(getComputedStyle(prompt).fontSize) || 32;
+  const over = () => card.scrollHeight > room.clientHeight + 1 || prompt.scrollWidth > prompt.clientWidth + 1;
+  for (let i = 0; i < 30 && over() && size > min; i++) {
+    size -= 2;
+    prompt.style.fontSize = `${size}px`;
+    if (vis && i % 3 === 2) vis.style.zoom = String(Math.max(0.6, Number(vis.style.zoom || 1) - 0.1));
+  }
+}

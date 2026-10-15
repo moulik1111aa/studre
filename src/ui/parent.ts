@@ -11,7 +11,26 @@ import { ICONS, avatarHtml } from './icons.ts';
 import { stagger } from '../render/motion.ts';
 import { whosPlayingScreen } from './whos.ts';
 import { addChildScreen, limitsScreen } from './setup.ts';
+import { voiceScreen } from './voicepick.ts';
 import { freshProgress } from '../core/path.ts';
+import { changesSince, rollback } from '../core/undo.ts';
+
+const startOfToday = (): number => {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+};
+
+export const CHALLENGE = [
+  { name: 'Normal', icon: '🙂', note: 'as designed' },
+  { name: 'Harder', icon: '🔥', note: 'tougher numbers, no hints' },
+  { name: 'Toughest', icon: '🔥🔥', note: 'hardest numbers, timers on' },
+] as const;
+
+const paceText = (v: number, jar: 'treat' | 'goal'): string => {
+  const days = (jar === 'treat' ? 7 : 60) * v;
+  return days < 10 ? `every ${Math.round(days)} days` : days < 26 ? `every ${Math.round(days / 7)} weeks`.replace('every 1 weeks', 'weekly') : `in ${Math.round(days / 30)} month${Math.round(days / 30) === 1 ? '' : 's'}`;
+};
 
 const TOGGLES: { key: keyof Settings; label: string; note: string }[] = [
   { key: 'holiday', label: 'Holiday mode', note: 'Rewards don’t melt while you’re away or unwell.' },
@@ -28,12 +47,13 @@ export function parentScreen(app: App): Screen {
       <h2 class="pa-h">Children</h2>
       <div class="pa-kids">${app.save.data.children
         .map((c) => `<div class="pa-kid card">${avatarHtml(c.avatar, 52)}<div><b>${esc(c.name)}</b><small>Age ${c.age}</small></div>
-          <button class="btn ghost small report" data-id="${c.id}">${ICONS.chart} Report</button></div>`)
+          <div class="pa-kid-btns"><button class="btn ghost small level-btn" data-id="${c.id}">${CHALLENGE[c.challenge ?? 0].icon} ${CHALLENGE[c.challenge ?? 0].name}</button><button class="btn ghost small report" data-id="${c.id}">${ICONS.chart} Report</button></div></div>`)
         .join('')}</div>
       <button class="btn ghost small add-kid">+ Add a child</button>
-      <h2 class="pa-h">Play time</h2>
-      <button class="pa-row card limits"><b>${st.limitMinutes} minutes a day</b><small>${st.timeUpMode === 'stop' ? 'Stops when time is up' : 'Keeps playing without coins'}</small></button>
+      <h2 class="pa-h">Play time and rewards</h2>
+      <button class="pa-row card limits"><b>${st.limitMinutes} minutes a day</b><small>${st.timeUpMode === 'stop' ? 'Stops when time is up' : 'Keeps playing without coins'} · treats ${paceText(st.treatPace, 'treat')}, big toy ${paceText(st.goalPace, 'goal')}</small></button>
       <h2 class="pa-h">Settings</h2>
+      <button class="pa-row card voice-row"><b>Reading voice</b><small>${st.voiceName ? 'Chosen voice' : 'Automatic (clearest)'} · ${st.voiceRate < 0.9 ? 'slow' : st.voiceRate > 1 ? 'quick' : 'normal speed'}</small></button>
       <div class="card pa-toggles">${TOGGLES.map((t) => `<label class="toggle-row"><span><b>${t.label}</b><small>${t.note}</small></span><input type="checkbox" role="switch" data-k="${t.key}" ${st[t.key] ? 'checked' : ''}></label>`).join('')}</div>
       ${faceoffRows(app)}
       <h2 class="pa-h">Reward categories</h2>
@@ -43,6 +63,7 @@ export function parentScreen(app: App): Screen {
   el.querySelector('.back-btn')!.addEventListener('click', () => void app.show(whosPlayingScreen));
   el.querySelector('.add-kid')!.addEventListener('click', () => void app.show(addChildScreen(false)));
   el.querySelector('.limits')!.addEventListener('click', () => void app.show(limitsScreen(false)));
+  el.querySelector('.voice-row')!.addEventListener('click', () => void app.show(voiceScreen));
   el.querySelectorAll<HTMLInputElement>('[data-k]').forEach((i) =>
     i.addEventListener('change', () => {
       const k = i.dataset.k as keyof Settings;
@@ -61,6 +82,20 @@ export function parentScreen(app: App): Screen {
         d.settings.hiddenCategories = [...set];
       }),
     ),
+  );
+  el.querySelectorAll<HTMLButtonElement>('.level-btn').forEach((b) =>
+    b.addEventListener('click', async () => {
+      const c = app.save.data.children.find((k) => k.id === b.dataset.id)!;
+      const actions: { label: string; value: number; kind: 'mint' | 'ghost'; back?: boolean }[] = [
+        ...CHALLENGE.map((x, i) => ({ label: `${x.icon} ${x.name} — ${x.note}`, value: i, kind: i === (c.challenge ?? 0) ? ('mint' as const) : ('ghost' as const) })),
+        { label: 'Cancel', value: -1, kind: 'ghost', back: true },
+      ];
+      const { result } = app.sheet(`<h2>How hard for ${esc(c.name)}?</h2><p>The skills stay the same; the numbers get tougher.</p>`, actions, 'Difficulty');
+      const v = await result;
+      if (v === -1) return;
+      app.save.update(() => (c.challenge = v as 0 | 1 | 2));
+      void app.show(parentScreen);
+    }),
   );
   el.querySelectorAll<HTMLButtonElement>('.report').forEach((b) =>
     b.addEventListener('click', () => void app.show(reportScreen(app.save.data.children.find((c) => c.id === b.dataset.id)!))),
@@ -113,10 +148,29 @@ export function reportScreen(child: Child) {
         <h2 class="pa-h">Skills by strand</h2><div class="card rep-strands">${strandRows}<p class="fine">Lighter part = skipped at placement.</p></div>
         <h2 class="pa-h">Minutes played (last 14 days)</h2><div class="card rep-days">${bars}</div>
         <h2 class="pa-h">Rewards earned</h2><ul class="card rep-earned">${earned}</ul>
+        <h2 class="pa-h">Undo recent play</h2>
+        <div class="card undo-card"><p class="fine">Someone else played on ${esc(child.name)}’s profile? Remove it. Stars, coins and time go back to how they were.</p>
+          <button class="btn ghost small undo-hour"${changesSince(child, Date.now() - 3_600_000) ? '' : ' disabled'}>Remove the last hour (${changesSince(child, Date.now() - 3_600_000)})</button>
+          <button class="btn ghost small undo-today"${changesSince(child, startOfToday()) ? '' : ' disabled'}>Remove all of today (${changesSince(child, startOfToday())})</button></div>
         <button class="btn ghost small redo">Redo placement</button>
       </div>
     </section>`);
     el.querySelector('.back-btn')!.addEventListener('click', () => void app.show(parentScreen));
+    const undo = (since: number, what: string) => {
+      const { result } = app.sheet(`<h2>Remove ${what}?</h2><p>${changesSince(child, since)} saved result(s) will be undone for ${esc(child.name)}. This can’t be reversed.</p>`, [
+        { label: 'Remove', value: true, kind: 'mint' },
+        { label: 'Cancel', value: false, kind: 'ghost', back: true },
+      ], 'Undo recent play');
+      void result.then((yes) => {
+        if (!yes) return;
+        let n = 0;
+        app.save.update(() => (n = rollback(child, since)));
+        app.toast(`Removed ${n} result${n === 1 ? '' : 's'}.`);
+        void app.show(reportScreen(child));
+      });
+    };
+    el.querySelector('.undo-hour')!.addEventListener('click', () => undo(Date.now() - 3_600_000, 'the last hour'));
+    el.querySelector('.undo-today')!.addEventListener('click', () => undo(startOfToday(), 'all of today'));
     el.querySelector('.redo')!.addEventListener('click', () => {
       const { result } = app.sheet(`<h2>Redo placement?</h2><p>${esc(child.name)}’s stars stay. Skipped levels are re-checked with a few new questions.</p>`, [
         { label: 'Redo placement', value: true, kind: 'mint' },

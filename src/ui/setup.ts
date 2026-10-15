@@ -6,6 +6,13 @@ import { AVATARS, avatarHtml } from './icons.ts';
 import { LOGO_MARK } from './loader.ts';
 import { stagger, drawOn, popIn } from '../render/motion.ts';
 import { whosPlayingScreen } from './whos.ts';
+import { setPace } from '../core/rewards.ts';
+import { recheckJars } from '../core/economy.ts';
+
+/** [multiplier, label, note] — relative to the calibrated pace (treat ≈ weekly, big toy ≈ 2 months). */
+const TREAT_PACES: [number, string, string][] = [[0.45, '3 days', 'Often'], [1, '1 week', 'Normal'], [2, '2 weeks', 'Slower'], [4.3, '1 month', 'Rare']];
+const GOAL_PACES: [number, string, string][] = [[0.5, '1 month', 'Faster'], [1, '2 months', 'Normal'], [1.5, '3 months', 'Slower'], [3, '6 months', 'Rare']];
+const near = (a: number, b: number) => Math.abs(a - b) < 0.01;
 
 export function welcomeScreen(app: App): Screen {
   const el = html(`<section class="screen welcome" aria-label="Welcome">
@@ -99,26 +106,46 @@ export function limitsScreen(firstRun: boolean) {
           <button class="seg-b${st.timeUpMode === 'keep' ? ' on' : ''}" data-m="keep"><b>Keep playing</b><small>…but no more coins today</small></button>
         </div>
       </div>
+      <div class="card lim-card">
+        <p class="subtitle">How often can they earn a small treat?</p>
+        <div class="seg seg4" data-pace="treat">${TREAT_PACES.map(([v, t, n]) => `<button class="seg-b${near(st.treatPace, v) ? ' on' : ''}" data-v="${v}"><b>${t}</b><small>${n}</small></button>`).join('')}</div>
+        <p class="subtitle">And a big toy?</p>
+        <div class="seg seg4" data-pace="goal">${GOAL_PACES.map(([v, t, n]) => `<button class="seg-b${near(st.goalPace, v) ? ' on' : ''}" data-v="${v}"><b>${t}</b><small>${n}</small></button>`).join('')}</div>
+        <p class="fine">If they play every day. Bigger treats take longer. You can change this any time.</p>
+      </div>
       <button class="btn done">${firstRun ? 'Finish setup' : 'Save'}</button>
     </section>`);
     let mins = st.limitMinutes;
     let mode = st.timeUpMode;
+    const pace = { treat: st.treatPace, goal: st.goalPace };
+    el.querySelectorAll<HTMLElement>('[data-pace]').forEach((g) =>
+      g.querySelectorAll<HTMLElement>('.seg-b').forEach((b) =>
+        b.addEventListener('click', () => {
+          pace[g.dataset.pace as 'treat' | 'goal'] = Number(b.dataset.v);
+          g.querySelectorAll('.seg-b').forEach((x) => x.classList.toggle('on', x === b));
+        }),
+      ),
+    );
     const slider = el.querySelector<HTMLInputElement>('.slider')!;
     slider.addEventListener('input', () => (el.querySelector('.mins')!.textContent = String((mins = Number(slider.value)))));
-    el.querySelectorAll<HTMLElement>('.seg-b').forEach((b) =>
+    el.querySelectorAll<HTMLElement>('.seg-b[data-m]').forEach((b) =>
       b.addEventListener('click', () => {
         mode = b.dataset.m as 'stop' | 'keep';
-        el.querySelectorAll('.seg-b').forEach((x) => x.classList.toggle('on', x === b));
+        el.querySelectorAll('.seg-b[data-m]').forEach((x) => x.classList.toggle('on', x === b));
       }),
     );
     el.querySelector('.done')!.addEventListener('click', () => {
       app.save.update((d) => {
         d.settings.limitMinutes = mins;
         d.settings.timeUpMode = mode;
+        d.settings.treatPace = pace.treat;
+        d.settings.goalPace = pace.goal;
         d.setupDone = true;
+        setPace(pace.treat, pace.goal);
+        for (const c of d.children) recheckJars(c.wallet);
       });
       void app.show(whosPlayingScreen);
     });
-    return { el, mounted: () => stagger(el.querySelectorAll('.lim-card > *, .done'), { gap: 70 }) };
+    return { el, mounted: () => stagger(el.querySelectorAll('.lim-card > *, .done'), { gap: 50 }) };
   };
 }

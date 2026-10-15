@@ -3,6 +3,7 @@ package com.studyhard.app;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.speech.tts.TextToSpeech;
+import android.speech.tts.Voice;
 import android.util.Base64;
 import java.io.File;
 import java.io.FileInputStream;
@@ -66,6 +67,8 @@ public class StudyHardPlugin extends Plugin {
                     break;
                 }
             }
+            Voice best = bestVoice();
+            if (best != null) tts.setVoice(best);
         });
 
         AppCompatActivity activity = getActivity();
@@ -265,16 +268,78 @@ public class StudyHardPlugin extends Plugin {
         call.resolve();
     }
 
+    /** English voices installed on the phone, best first. */
+    private java.util.List<Voice> englishVoices() {
+        java.util.List<Voice> out = new java.util.ArrayList<>();
+        try {
+            java.util.Set<Voice> all = tts.getVoices();
+            if (all == null) return out;
+            for (Voice v : all) {
+                if (v.getLocale() == null || !"en".equals(v.getLocale().getLanguage())) continue;
+                if (v.getFeatures() != null && v.getFeatures().contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED)) continue;
+                out.add(v);
+            }
+        } catch (Exception ignored) {
+            // Some engines throw before they are ready.
+        }
+        out.sort((a, b) -> Integer.compare(score(b), score(a)));
+        return out;
+    }
+
+    /** Clear, natural voices first: Indian English, high quality, works offline. */
+    private static int score(Voice v) {
+        int s = v.getQuality() / 10;
+        String c = v.getLocale().getCountry();
+        if ("IN".equals(c)) s += 30;
+        else if ("GB".equals(c)) s += 20;
+        else if ("US".equals(c)) s += 15;
+        if (v.isNetworkConnectionRequired()) s -= 12;
+        return s;
+    }
+
+    private Voice bestVoice() {
+        java.util.List<Voice> list = englishVoices();
+        return list.isEmpty() ? null : list.get(0);
+    }
+
+    @PluginMethod
+    public void voices(PluginCall call) {
+        com.getcapacitor.JSArray arr = new com.getcapacitor.JSArray();
+        if (tts != null && ttsReady) {
+            for (Voice v : englishVoices()) {
+                JSObject o = new JSObject();
+                o.put("name", v.getName());
+                o.put("locale", v.getLocale().toLanguageTag());
+                o.put("quality", v.getQuality());
+                o.put("network", v.isNetworkConnectionRequired());
+                arr.put(o);
+            }
+        }
+        JSObject result = new JSObject();
+        result.put("voices", arr);
+        call.resolve(result);
+    }
+
     @PluginMethod
     public void speak(PluginCall call) {
         String text = call.getString("text", "");
-        Double rate = call.getDouble("rate", 0.92);
+        Double rate = call.getDouble("rate", 0.95);
+        Double pitch = call.getDouble("pitch", 1.0);
+        String voice = call.getString("voice");
         if (tts == null || !ttsReady || text == null || text.isEmpty()) {
             call.resolve();
             return;
         }
-        tts.setSpeechRate(rate == null ? 0.92f : rate.floatValue());
-        tts.setPitch(1.05f);
+        if (voice != null && !voice.isEmpty() && (tts.getVoice() == null || !voice.equals(tts.getVoice().getName()))) {
+            for (Voice v : englishVoices()) {
+                if (v.getName().equals(voice)) {
+                    tts.setVoice(v);
+                    break;
+                }
+            }
+        }
+        tts.setSpeechRate(rate == null ? 0.95f : rate.floatValue());
+        tts.setPitch(pitch == null ? 1.0f : pitch.floatValue());
         tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "q");
         call.resolve();
     }

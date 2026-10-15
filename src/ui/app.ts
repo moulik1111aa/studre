@@ -12,6 +12,7 @@ import { liquidWipe, reducedMotion, EASE_OUT } from '../render/motion.ts';
 import { dayKey } from '../core/economy.ts';
 import { AREAS } from '../core/areas/index.ts';
 import { buildPath, type Level } from '../core/path.ts';
+import { setPace } from '../core/rewards.ts';
 
 export interface Screen {
   el: HTMLElement;
@@ -51,8 +52,9 @@ export class App {
     this.save = new SaveStore(storage);
     this.debug = new URLSearchParams(location.search).has('debug');
     const st = this.save.data.settings;
+    setPace(st.treatPace, st.goalPace);
     this.sfx = new Sfx(st.sound);
-    this.voice = new Voice(st.voice, native);
+    this.voice = new Voice(st.voice, native, st.voiceName, st.voiceRate);
     this.haptics = new Haptics(st.vibration, native);
     this.photos = new Photos(native);
     this.path = buildPath(AREAS[0]);

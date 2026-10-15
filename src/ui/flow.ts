@@ -46,12 +46,12 @@ export function timeState(app: App, child: Child): 'ok' | 'stop' | 'no-coins' {
   return app.save.data.settings.timeUpMode === 'stop' ? 'stop' : 'no-coins';
 }
 
-export function playLevel(app: App, child: Child, level: Level): void {
+export function playLevel(app: App, child: Child, level: Level, harder = false): void {
   if (timeState(app, child) === 'stop') {
     void app.show(timesUpScreen(child));
     return;
   }
-  const make = level.kind === 'skill' ? levelScreen(child, level) : fightScreen(child, level);
+  const make = level.kind === 'skill' ? levelScreen(child, level, harder) : fightScreen(child, level);
   const screen = make;
   void app.show((a) => {
     const s = screen(a);

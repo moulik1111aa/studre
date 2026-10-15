@@ -14,9 +14,10 @@ import { BossView, minionFor, projectile } from './bosses.ts';
 import { visualHtml, optionHtml, prettyAnswer } from './visuals.ts';
 import { ICONS } from './icons.ts';
 import { ambientHtml, worldVars } from './worlds.ts';
-import { popIn, shake, stagger, wait, EASE_OUT, reducedMotion, screenShake } from '../render/motion.ts';
+import { popIn, shake, stagger, wait, EASE_OUT, reducedMotion, screenShake, fitCard } from '../render/motion.ts';
 import { resultScreen } from './result.ts';
 import { goHome, timeState } from './flow.ts';
+import { remember } from '../core/undo.ts';
 import { avatarHtml } from './icons.ts';
 
 type FightLevel = Exclude<Level, { kind: 'skill' }>;
@@ -55,6 +56,7 @@ function renderQuestion(app: App, qwrap: HTMLElement, answers: HTMLElement, q: Q
     }),
   );
   stagger(answers.children, { gap: 50, y: 12 });
+  fitCard(card, qwrap);
 }
 
 function markAnswers(answers: HTMLElement, q: Question, btn: HTMLElement | undefined, ok: boolean): void {
@@ -87,6 +89,7 @@ function settle(app: App, child: Child, level: FightLevel, asked: Question[], co
   let coins = 0;
   let unlocked: ('treat' | 'goal')[] = [];
   app.save.update(() => {
+    remember(child, [level.id], Date.now(), app.today);
     const inside = addPlayTime(child.wallet, app.today, seconds, app.save.data.settings.limitMinutes);
     child.stats.secondsByDay[app.today] = (child.stats.secondsByDay[app.today] ?? 0) + seconds;
     child.stats.answered += asked.length;
@@ -112,7 +115,10 @@ function pauseSheet(app: App, child: Child, clock: Clock, onResume: () => void, 
   void result.then((v) => {
     if (v === 'leave') {
       onLeave();
-      app.save.update(() => addPlayTime(child.wallet, app.today, clock.seconds, app.save.data.settings.limitMinutes));
+      app.save.update(() => {
+        remember(child, [], Date.now(), app.today);
+        addPlayTime(child.wallet, app.today, clock.seconds, app.save.data.settings.limitMinutes);
+      });
       clock.ms = 0;
       goHome(app);
       return;
@@ -126,7 +132,7 @@ function pauseSheet(app: App, child: Child, clock: Clock, onResume: () => void, 
 
 function minionScreen(app: App, child: Child, level: Extract<Level, { kind: 'review' }>): Screen {
   const rng = createRng(`${child.id}:${level.id}:${Date.now()}`);
-  const round = makeRound(level, skillById, child.progress, rng);
+  const round = makeRound(level, skillById, child.progress, rng, [], [], child.challenge ?? 0);
   const first = skillById(level.skillIds[0])!;
   const little = first.stage <= 2;
   const minion = minionFor(level.stage, level.n);
@@ -295,7 +301,7 @@ function bossScreen(app: App, child: Child, level: Extract<Level, { kind: 'boss'
     const mode = fight.mode;
     const pool = phases[Math.min(fight.phase, phases.length - 1)].length ? phases[Math.min(fight.phase, phases.length - 1)] : phases.flat();
     const skill = rng.pick(pool);
-    const d = mode === 'defend' ? 0.4 : 0.5 + 0.15 * fight.phase + 0.2 * rng.next();
+    const d = (mode === 'defend' ? 0.4 : 0.5 + 0.15 * fight.phase + 0.2 * rng.next()) + 0.15 * (child.challenge ?? 0);
     const q = makeQuestion(skill, rng, Math.min(1, d), new Set([...seen, ...(child.progress.history[skill.id] ?? [])]), skill.format === 'picture' ? 3 : 4, asked.at(-1)?.key);
     seen.add(q.key);
     current = q;

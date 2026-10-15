@@ -15,6 +15,7 @@ import { playLevel } from './flow.ts';
 import { whosPlayingScreen } from './whos.ts';
 import { trophyScreen } from './trophy.ts';
 import { BOSS_EMOJI } from './bosses.ts';
+import { remember } from '../core/undo.ts';
 
 interface Node {
   kind: 'skill' | 'review' | 'boss';
@@ -55,7 +56,7 @@ export function mapScreen(child: Child) {
       </header>
       <div class="jar-slot"></div>
       <div class="worlds scroll"></div>
-      <div class="play-bar"><button class="btn play-next">${next ? `${ICONS.play} ${next.kind === 'skill' ? 'Play' : next.kind === 'boss' ? 'Fight the boss!' : 'Minion fight!'}` : 'All done!'}</button></div>
+      <div class="play-bar">${next ? `<button class="icon-btn skip-btn" aria-label="Skip this level (grown-up)">${ICONS.skip}</button>` : ''}<button class="btn play-next">${next ? `${ICONS.play} ${next.kind === 'skill' ? 'Play' : next.kind === 'boss' ? 'Fight the boss!' : 'Minion fight!'}` : 'All done!'}</button></div>
     </section>`);
     const jar = new JarBar(child);
     el.querySelector('.jar-slot')!.appendChild(jar.el);
@@ -137,6 +138,21 @@ export function mapScreen(child: Child) {
     el.querySelector('.play-next')!.addEventListener('click', () => {
       if (next) playLevel(app, child, next);
     });
+    el.querySelector('.skip-btn')?.addEventListener('click', async () => {
+      if (!next || !(await app.grownUp('Skip a level'))) return;
+      const label = next.kind === 'skill' ? `${skillById(next.skillId)!.name} · ${TIER_NAMES[next.tier]}` : next.kind === 'boss' ? `the boss ${bossFor(next.stage, next.boss).name}` : 'this minion fight';
+      const { result } = app.sheet(`<h2>Skip a level?</h2><p>Skip <b>${esc(label)}</b>? ${esc(child.name)} gets no stars or coins for it, and can still play it later from the map.</p>`, [
+        { label: 'Skip it', value: true, kind: 'mint' },
+        { label: 'Cancel', value: false, kind: 'ghost', back: true },
+      ], 'Skip a level');
+      if (!(await result)) return;
+      app.save.update(() => {
+        remember(child, [next.id], Date.now(), app.today);
+        (child.progress.skippedLevels ??= {})[next.id] = true;
+      });
+      app.toast('Level skipped.');
+      void app.show(mapScreen(child));
+    });
 
     return {
       el,
@@ -169,12 +185,15 @@ function openSkill(app: App, child: Child, n: Node, path: Level[]): void {
     })
     .join('');
   const ov = html(`<div class="overlay" role="dialog" aria-modal="true" aria-label="${esc(n.label)}"><div class="sheet skill-sheet" style="${worldVars(n.stage)}">
-    <p class="chip">Stage ${n.stage}</p><h2>${esc(n.label)}</h2><div class="tiers">${rows}</div>
+    <p class="chip">Stage ${n.stage}</p><h2>${esc(n.label)}</h2>
+    <label class="toggle-row harder-row"><span><b>🔥 Play it harder</b><small>Same skill, tougher numbers, no hints</small></span><input type="checkbox" role="switch" class="harder"${(child.challenge ?? 0) >= 2 ? ' disabled checked' : ''}></label>
+    <div class="tiers">${rows}</div>
     <div class="actions"><button class="btn ghost" data-back>Close</button></div></div></div>`);
   ov.querySelectorAll<HTMLButtonElement>('.tier-row').forEach((b) =>
     b.addEventListener('click', () => {
+      const harder = ov.querySelector<HTMLInputElement>('.harder')!.checked && (child.challenge ?? 0) < 2;
       ov.remove();
-      playLevel(app, child, path[Number(b.dataset.l)]);
+      playLevel(app, child, path[Number(b.dataset.l)], harder);
     }),
   );
   ov.querySelector('[data-back]')!.addEventListener('click', () => ov.remove());

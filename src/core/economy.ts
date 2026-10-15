@@ -1,7 +1,7 @@
 // Coins, the two jars, melting on missed days and the daily time limit (spec §4).
 // Pure functions over a child's wallet; the app saves the result.
 
-import { costOf, jarOf, rewardById } from './rewards.ts';
+import { baseCostOf, costOf, jarOf, rewardById } from './rewards.ts';
 
 export const COINS = {
   level: 6,
@@ -165,7 +165,7 @@ export function applyMelt(w: Wallet, today: string, holiday: boolean): { treat: 
     const r = jar.rewardId ? rewardById(jar.rewardId) : undefined;
     if (!r || jar.waiting) continue;
     const before = jar.coins;
-    jar.coins = Math.max(0, Math.round((jar.coins - missed * rate * costOf(r)) * 100) / 100);
+    jar.coins = Math.max(0, Math.round((jar.coins - missed * rate * baseCostOf(r)) * 100) / 100);
     lost[name] = Math.round((before - jar.coins) * 100) / 100;
   }
   return lost;
@@ -181,4 +181,12 @@ export function jarProgress(jar: JarState): number {
   const r = jar.rewardId ? rewardById(jar.rewardId) : undefined;
   if (!r) return 0;
   return Math.min(1, jar.coins / costOf(r));
+}
+
+/** After prices change (the parent's pace setting), a jar that is now full is ready to give. */
+export function recheckJars(w: Wallet): void {
+  for (const jar of [w.treat, w.goal]) {
+    const r = jar.rewardId ? rewardById(jar.rewardId) : undefined;
+    if (r && !jar.waiting && jar.coins >= costOf(r)) jar.waiting = true;
+  }
 }
