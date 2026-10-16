@@ -28,7 +28,7 @@
 /* Unlock */
 .unlock{align-items:center;justify-content:center;gap:12px;text-align:center;overflow:hidden}
 .spotlight{position:absolute;inset:-30%;background:conic-gradient(from 0deg,transparent 0 8deg,rgba(255,210,90,.18) 8deg 16deg,transparent 16deg 30deg,rgba(255,122,168,.14) 30deg 38deg,transparent 38deg 60deg);
-  -webkit-mask:radial-gradient(circle,#000 20%,transparent 65%);mask:radial-gradient(circle,#000 20%,transparent 65%);animation:spin 22s linear infinite;z-index:0!important}
+  -webkit-mask:radial-gradient(circle,#000 20%,transparent 65%);mask:radial-gradient(circle,#000 20%,transparent 65%);animation:spin 22s linear 2;z-index:0!important}
 @keyframes spin{to{transform:rotate(360deg)}}
 .ul-stage{position:relative;width:220px;height:220px;display:grid;place-items:center}
 .ul-ring{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,rgba(255,210,90,.45),transparent 65%);animation:readyPulse 1.6s ease-in-out infinite}
@@ -51,8 +51,8 @@
 /* Time's up */
 .timesup{align-items:center;justify-content:center;gap:16px;text-align:center;background:radial-gradient(100% 70% at 50% 0%,#1D2266,#0B0D26)}
 .moon{position:relative;width:100%;height:200px}
-.moon span{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:110px;filter:drop-shadow(0 0 30px rgba(255,230,150,.6));animation:bFloat 4s ease-in-out infinite}
-.moon i{position:absolute;width:4px;height:4px;border-radius:50%;background:#fff;animation:twinkle 2.4s ease-in-out calc(var(--i)*.2s) infinite}
+.moon span{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:110px;filter:drop-shadow(0 0 30px rgba(255,230,150,.6));animation:bFloat 4s ease-in-out 6}
+.moon i{position:absolute;width:4px;height:4px;border-radius:50%;background:#fff;animation:twinkle 2.4s ease-in-out calc(var(--i)*.2s) 6}
 @keyframes twinkle{50%{opacity:.2;transform:scale(.5)}}
 .timesup .jar-slot{width:100%;max-width:420px}
 .timesup .btn{min-width:220px}

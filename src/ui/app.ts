@@ -43,6 +43,9 @@ export class App {
   private current: Screen | null = null;
   private exitUntil = -Infinity;
   private busy = false;
+  /** Screen-on is released after this long without a touch, even mid-level (battery). */
+  private awakeTimer = 0;
+  private awake = false;
   /** A screen asked for during a transition: shown as soon as the transition ends. */
   private pending: { make: ScreenMaker; how: 'fade' | 'liquid' } | null = null;
 
@@ -70,6 +73,10 @@ export class App {
     }
     const unlock = () => this.sfx.unlock();
     for (const t of ['pointerdown', 'keydown'] as const) document.addEventListener(t, unlock, { capture: true });
+    // Any touch on a keep-awake screen (levels, fights) keeps the screen on for 3 more minutes.
+    document.addEventListener('pointerdown', () => {
+      if (this.current?.keepAwake) this.setAwake(true);
+    }, { capture: true, passive: true });
     document.addEventListener('click', (e) => {
       if ((e.target as HTMLElement).closest('button')) {
         this.sfx.tap();
@@ -86,6 +93,14 @@ export class App {
     });
     if (this.save.loadedFrom === 'backup') this.toast('Progress was restored from a backup copy.');
     if (this.save.loadedFrom === 'reset') this.toast('Saved progress could not be read, so the app started fresh.');
+  }
+
+  private setAwake(on: boolean): void {
+    clearTimeout(this.awakeTimer);
+    if (on) this.awakeTimer = window.setTimeout(() => this.setAwake(false), 180_000);
+    if (on === this.awake) return;
+    this.awake = on;
+    if (this.native) quietly(this.native.keepAwake({ on }));
   }
 
   get today(): string {
@@ -111,7 +126,7 @@ export class App {
         this.voice.stop();
         this.current = next;
         this.root.appendChild(next.el);
-        if (this.native) quietly(this.native.keepAwake({ on: !!next.keepAwake }));
+        this.setAwake(!!next.keepAwake);
       };
       if (how === 'liquid' && this.current) {
         const [a, b] = next.colors ?? ['#5CC8FF', '#2457C9'];
