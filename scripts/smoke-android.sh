@@ -137,8 +137,12 @@ tap_text "Leave level"
 wait_for "Trophy room" 15 && note "back on the map" || fail "did not return to the map"
 
 # 6. On the map, back warns first, then leaves.
+# (A first round only takes the screenshot; screen capture on the emulator can outlast the
+# hint, so the real test presses back twice promptly, as a person would.)
 adb shell input keyevent KEYCODE_BACK; sleep 1
 shot exit-warning
+sleep 4
+adb shell input keyevent KEYCODE_BACK; sleep 1
 adb shell input keyevent KEYCODE_BACK; sleep 3
 FOCUS=$(adb shell dumpsys window | grep -m1 mCurrentFocus | tr -d '\r')
 note "after second back: $FOCUS"
