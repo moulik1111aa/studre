@@ -38,7 +38,8 @@ export function whosPlayingScreen(app: App): Screen {
   return {
     el,
     mounted: () => {
-      void drawOn(el.querySelector('.brand svg')!, { duration: 700, stagger: 60 });
+      const mark = el.querySelector<SVGElement>('.brand svg')!;
+      void drawOn(mark, { duration: 500, stagger: 30 }).then(() => mark.classList.add('alive'));
       stagger([el.querySelector('.title')!, ...el.querySelectorAll('.kid')], { gap: 90 });
     },
   };

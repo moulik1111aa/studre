@@ -3,6 +3,7 @@
 // The full sequence plays on the first launch of the day; later launches show just the logo.
 
 import { html, type App, type Screen } from './app.ts';
+import { dogSvg } from './dog.ts';
 import { drawOn, wait, frame, reducedMotion, EASE_OUT } from '../render/motion.ts';
 
 const ST = 'stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"';
@@ -26,24 +27,8 @@ const STAGES: { caption: string; svg: string }[] = [
   },
 ];
 
-/** The Study Hard mark: an open book whose pages fan into a rising star. */
-export const LOGO_MARK = `<svg class="logo-mark" viewBox="0 0 120 120" aria-hidden="true">
-  <defs>
-    <linearGradient id="lgA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFE58A"/><stop offset="1" stop-color="#F5A524"/></linearGradient>
-    <linearGradient id="lgB" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7FD6FF"/><stop offset="1" stop-color="#5A6CFF"/></linearGradient>
-    <linearGradient id="lgC" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF9FC2"/><stop offset="1" stop-color="#C64CFF"/></linearGradient>
-  </defs>
-  <path data-fill fill="url(#lgB)" d="M60 92 C46 82 30 80 14 82 L14 40 C30 38 46 40 60 50 Z" opacity="0"/>
-  <path data-fill fill="url(#lgC)" d="M60 92 C74 82 90 80 106 82 L106 40 C90 38 74 40 60 50 Z" opacity="0"/>
-  <path data-fill fill="url(#lgA)" d="M60 8 L66.5 22.5 L82 24 L70.5 34.5 L74 50 L60 42 L46 50 L49.5 34.5 L38 24 L53.5 22.5 Z" opacity="0"/>
-  <g fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-    <path data-draw d="M60 92 C46 82 30 80 14 82 L14 40 C30 38 46 40 60 50"/>
-    <path data-draw d="M60 92 C74 82 90 80 106 82 L106 40 C90 38 74 40 60 50"/>
-    <path data-draw d="M60 50 L60 92"/>
-    <path data-draw d="M60 8 L66.5 22.5 L82 24 L70.5 34.5 L74 50 L60 42 L46 50 L49.5 34.5 L38 24 L53.5 22.5 Z"/>
-    <path data-draw d="M24 52 C34 51 44 53 52 58 M24 64 C34 63 44 65 52 70 M96 52 C86 51 76 53 68 58 M96 64 C86 63 76 65 68 70"/>
-  </g>
-</svg>`;
+/** The Study Hard mark: Biscuit, a very round dog (see dog.ts). */
+export const LOGO_MARK = dogSvg({ cls: 'logo-mark' });
 
 export function loaderScreen(next: () => void, full: boolean): (app: App) => Screen {
   return () => {
@@ -85,7 +70,9 @@ export function loaderScreen(next: () => void, full: boolean): (app: App) => Scr
       words.forEach((w, i) =>
         (w as HTMLElement).animate([{ opacity: 0, transform: 'translateY(16px)', filter: 'blur(6px)' }, { opacity: 1, transform: 'none', filter: 'blur(0)' }], { duration: 700, delay: 700 + i * 160, easing: EASE_OUT, fill: 'backwards' }),
       );
-      await drawOn(logo.querySelector('svg')!, { duration: 900, stagger: 110 });
+      const mark = logo.querySelector<SVGElement>('svg')!;
+      await drawOn(mark, { duration: 600, stagger: 32 });
+      mark.classList.add('alive', 'hop');
       await wait(reducedMotion() ? 0 : 450);
       if (!cancelled) next();
     };

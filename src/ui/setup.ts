@@ -27,7 +27,8 @@ export function welcomeScreen(app: App): Screen {
   return {
     el,
     mounted: () => {
-      void drawOn(el.querySelector('svg')!, { duration: 800 });
+      const mark = el.querySelector<SVGElement>('svg')!;
+      void drawOn(mark, { duration: 550, stagger: 28 }).then(() => mark.classList.add('alive', 'hop'));
       stagger(el.querySelectorAll('.wordmark span, .subtitle, .start, .fine'), { delay: 500, gap: 120 });
     },
   };

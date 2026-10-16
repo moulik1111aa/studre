@@ -1,5 +1,5 @@
-// Renders Study Hard's Android launcher icons and splash logo from the logo mark (an open
-// book whose pages fan into a rising star). Output is committed under native/android/res,
+// Renders Study Hard's Android launcher icons and splash logo from Biscuit, the round dog
+// mascot (src/ui/dog.ts). Output is committed under native/android/res,
 // so the APK build needs no image tools. Re-run after changing the mark:
 //   node scripts/icons.mjs
 // Uses sharp (installed globally here: npm root -g).
@@ -17,6 +17,9 @@ try {
   sharp = require(join(execSync('npm root -g').toString().trim(), 'sharp'));
 }
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const { dogSvg } = await import('../src/ui/dog.ts');
+/** Inner markup of the dog (200-unit canvas), without its own <svg> wrapper. */
+const DOG = dogSvg({ noShadow: true }).replace(/^[\s\S]*?<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '').replace(/ data-(draw|fill)/g, '');
 const res = join(root, 'native/android/res');
 
 const DEFS = `<defs>
@@ -39,19 +42,19 @@ const mark = () => `<circle cx="60" cy="30" r="30" fill="url(#glow)"/>
     <path d="${LEFT}"/><path d="${RIGHT}"/><path d="M60 50 L60 92"/><path d="${STAR}"/><path d="${LINES}" stroke-opacity=".8"/>
   </g>`;
 
-/** Place the 120-unit mark at size `w` centred on (cx, cy). */
-const placed = (cx, cy, w) => `<g transform="translate(${cx} ${cy}) scale(${w / 120}) translate(-60 -52)">${mark()}</g>`;
+/** Place the 200-unit dog at size `w` centred on (cx, cy). */
+const placed = (cx, cy, w) => `<g transform="translate(${cx} ${cy}) scale(${w / 200}) translate(-100 -112)">${DOG}</g>`;
 
 const background = () => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108">${DEFS}<rect width="108" height="108" fill="url(#bg)"/>
   ${Array.from({ length: 14 }, (_, i) => `<circle cx="${(i * 37 + 9) % 104}" cy="${(i * 53 + 13) % 104}" r="${0.6 + (i % 3) * 0.4}" fill="#fff" opacity=".35"/>`).join('')}</svg>`;
-const foreground = () => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108">${DEFS}${placed(54, 54, 56)}</svg>`;
-const monochrome = () => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108"><g transform="translate(54 54) scale(${56 / 120}) translate(-60 -52)" fill="#000">
-  <path d="${LEFT}"/><path d="${RIGHT}"/><path d="${STAR}"/></g></svg>`;
+const foreground = () => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108">${DEFS}${placed(54, 56, 70)}</svg>`;
+// Themed icon: the dog's silhouette (every fill and stroke black).
+const monochrome = () => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108">${placed(54, 56, 70).replace(/fill="(?!none)[^"]*"/g, 'fill="#000"').replace(/stroke="[^"]*"/g, 'stroke="#000"')}</svg>`;
 function legacy(shape) {
   const clip = shape === 'round' ? '<clipPath id="c"><circle cx="54" cy="54" r="54"/></clipPath>' : '<clipPath id="c"><rect width="108" height="108" rx="24"/></clipPath>';
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108">${DEFS}<defs>${clip}</defs><g clip-path="url(#c)"><rect width="108" height="108" fill="url(#bg)"/>${placed(54, 56, 78)}</g></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108">${DEFS}<defs>${clip}</defs><g clip-path="url(#c)"><rect width="108" height="108" fill="url(#bg)"/>${placed(54, 58, 96)}</g></svg>`;
 }
-const splash = () => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 104">${DEFS}<g transform="translate(0 0)">${mark()}</g></svg>`;
+const splash = () => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">${DOG}</svg>`;
 
 async function png(svg, w, h, file) {
   const out = join(res, file);
@@ -69,7 +72,7 @@ for (const [name, scale] of Object.entries(DENSITIES)) {
   await png(background(), layer, layer, `mipmap-${name}/ic_launcher_background.png`);
   await png(monochrome(), layer, layer, `mipmap-${name}/ic_launcher_monochrome.png`);
 }
-await png(splash(), 480, 416, 'drawable-nodpi/splash_logo.png');
+await png(splash(), 480, 480, 'drawable-nodpi/splash_logo.png');
 mkdirSync(join(root, 'docs/assets'), { recursive: true });
 writeFileSync(join(root, 'docs/assets/icon-512.png'), await sharp(Buffer.from(legacy('square'))).resize(512, 512).png().toBuffer());
 console.log('icons written');

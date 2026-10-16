@@ -45,8 +45,23 @@
 .ld-icon svg{width:100%;height:100%;filter:drop-shadow(0 10px 24px rgba(0,0,0,.35))}
 .ld-caption{margin:0;font-weight:800;font-size:20px;color:var(--ink-soft);letter-spacing:.02em}
 .ld-logo{display:flex;flex-direction:column;align-items:center;gap:14px}
-.logo-mark{width:150px;height:150px;color:#fff;filter:drop-shadow(0 12px 30px rgba(168,121,255,.45))}
-.logo-mark [data-draw]{fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.logo-mark{width:180px;height:180px;filter:drop-shadow(0 14px 30px rgba(255,180,90,.35));overflow:visible}
+
+/* Biscuit the dog: belly wobble, tail wag, blinking, a happy hop. */
+.dog{overflow:visible}
+.dog g{transform-box:fill-box}
+.dog.alive .dog-body{transform-origin:50% 100%;animation:dogWobble 1.6s ease-in-out infinite}
+.dog.alive .dog-head{transform-origin:50% 90%;animation:dogNod 1.6s ease-in-out infinite}
+.dog.alive .dog-tail{transform-origin:0% 100%;animation:dogWag .5s ease-in-out infinite alternate}
+.dog.alive .dog-eyes{transform-origin:50% 50%;animation:blink 4s infinite}
+.dog.alive.hop{animation:dogHop 1.1s cubic-bezier(.3,1.4,.5,1) 1}
+.dog-z{animation:dogZ 2.4s ease-in-out infinite}
+.dog-z.z2{animation-delay:1.2s}
+@keyframes dogWobble{0%,100%{transform:scale(1,1)}50%{transform:scale(1.04,.96)}}
+@keyframes dogNod{0%,100%{transform:translateY(0)}50%{transform:translateY(3px)}}
+@keyframes dogWag{from{transform:rotate(-14deg)}to{transform:rotate(16deg)}}
+@keyframes dogHop{0%{transform:translateY(0) scale(1)}30%{transform:translateY(-26px) scale(.96,1.05)}60%{transform:translateY(0) scale(1.08,.92)}100%{transform:none}}
+@keyframes dogZ{0%{opacity:0;transform:translate(0,6px)}40%{opacity:1}100%{opacity:0;transform:translate(10px,-14px)}}
 .wordmark{font-size:48px;line-height:1;letter-spacing:-.02em;display:flex;gap:.25em}
 .wordmark span:first-child{color:#fff}
 .wordmark span:last-child{background:linear-gradient(90deg,var(--sun),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent}

@@ -3,7 +3,7 @@
     <item android:drawable="@color/studyhard_bg"/>
     <item
         android:width="170dp"
-        android:height="148dp"
+        android:height="170dp"
         android:gravity="center"
         android:drawable="@drawable/splash_logo"/>
 </layer-list>
