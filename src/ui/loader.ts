@@ -3,7 +3,7 @@
 // The full sequence plays on the first launch of the day; later launches show just the logo.
 
 import { html, type App, type Screen } from './app.ts';
-import { dogSvg } from './dog.ts';
+import { dogSvg, dogHeadSvg } from './dog.ts';
 import { drawOn, wait, frame, reducedMotion, EASE_OUT } from '../render/motion.ts';
 
 const ST = 'stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"';
@@ -27,8 +27,10 @@ const STAGES: { caption: string; svg: string }[] = [
   },
 ];
 
-/** The Study Hard mark: Biscuit, a very round dog (see dog.ts). */
-export const LOGO_MARK = dogSvg({ cls: 'logo-mark' });
+/** The Study Hard mark: Biscuit, a very round golden retriever (see dog.ts). */
+export const logoMark = (): string => dogSvg({ cls: 'logo-mark' });
+/** Small brand mark: just the head. */
+export const brandMark = (): string => dogHeadSvg({ cls: 'brand-mark' });
 
 export function loaderScreen(next: () => void, full: boolean): (app: App) => Screen {
   return () => {
@@ -36,7 +38,7 @@ export function loaderScreen(next: () => void, full: boolean): (app: App) => Scr
       <div class="ld-center">
         <div class="ld-icon" aria-hidden="true"></div>
         <p class="ld-caption" aria-live="polite"></p>
-        <div class="ld-logo" hidden>${LOGO_MARK}<h1 class="wordmark"><span>Study</span> <span>Hard</span></h1></div>
+        <div class="ld-logo" hidden>${logoMark()}<h1 class="wordmark"><span>Study</span> <span>Hard</span></h1></div>
       </div>
     </section>`);
     const icon = el.querySelector<HTMLElement>('.ld-icon')!;
@@ -71,8 +73,8 @@ export function loaderScreen(next: () => void, full: boolean): (app: App) => Scr
         (w as HTMLElement).animate([{ opacity: 0, transform: 'translateY(16px)', filter: 'blur(6px)' }, { opacity: 1, transform: 'none', filter: 'blur(0)' }], { duration: 700, delay: 700 + i * 160, easing: EASE_OUT, fill: 'backwards' }),
       );
       const mark = logo.querySelector<SVGElement>('svg')!;
-      await drawOn(mark, { duration: 600, stagger: 32 });
-      mark.classList.add('alive', 'hop');
+      if (!reducedMotion()) await mark.animate([{ opacity: 0, transform: 'translateY(14px) scale(.96)' }, { opacity: 1, transform: 'none' }], { duration: 650, easing: EASE_OUT }).finished.catch(() => {});
+      mark.classList.add('alive');
       await wait(reducedMotion() ? 0 : 450);
       if (!cancelled) next();
     };

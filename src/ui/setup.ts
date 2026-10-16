@@ -3,8 +3,8 @@
 import { html, esc, type App, type Screen } from './app.ts';
 import { newChild } from '../storage/save.ts';
 import { AVATARS, avatarHtml } from './icons.ts';
-import { LOGO_MARK } from './loader.ts';
-import { stagger, drawOn, popIn } from '../render/motion.ts';
+import { logoMark } from './loader.ts';
+import { stagger, popIn } from '../render/motion.ts';
 import { whosPlayingScreen } from './whos.ts';
 import { setPace } from '../core/rewards.ts';
 import { recheckJars } from '../core/economy.ts';
@@ -16,7 +16,7 @@ const near = (a: number, b: number) => Math.abs(a - b) < 0.01;
 
 export function welcomeScreen(app: App): Screen {
   const el = html(`<section class="screen welcome" aria-label="Welcome">
-    <div class="wl-hero">${LOGO_MARK}<h1 class="wordmark"><span>Study</span> <span>Hard</span></h1>
+    <div class="wl-hero">${logoMark()}<h1 class="wordmark"><span>Study</span> <span>Hard</span></h1>
     <p class="subtitle">Maths from age 3 to 16, one small step at a time.<br>Real rewards. Boss fights. Big smiles.</p></div>
     <button class="btn start">Set up for my child</button>
     <p class="fine">A grown-up sets things up. It takes 2 minutes.</p>
@@ -28,7 +28,8 @@ export function welcomeScreen(app: App): Screen {
     el,
     mounted: () => {
       const mark = el.querySelector<SVGElement>('svg')!;
-      void drawOn(mark, { duration: 550, stagger: 28 }).then(() => mark.classList.add('alive', 'hop'));
+      popIn(mark, 0, 0.9);
+      mark.classList.add('alive');
       stagger(el.querySelectorAll('.wordmark span, .subtitle, .start, .fine'), { delay: 500, gap: 120 });
     },
   };
