@@ -1,0 +1,56 @@
+[smoke] device: sdk_gphone64_x86_64, Android 15, Physical size: 1080x2400
+Performing Streamed Install
+Success
+Starting: Intent { cmp=com.studyhard.app/.MainActivity }
+Status: ok
+LaunchState: COLD
+Activity: com.studyhard.app/.MainActivity
+TotalTime: 3477
+WaitTime: 3570
+Complete
+[smoke] welcome screen is up
+[smoke] tapped "Set up for my child" at 540 1650
+[smoke] grown-up check: 84 × 6 = 504
+[smoke] tapped "5" at 540 1496
+[smoke] tapped "0" at 540 1853
+[smoke] tapped "4" at 252 1496
+[smoke] tapped "Check" at 540 2050
+[smoke] add-child screen
+[smoke] tapped "Name" at 104 683
+[smoke] tapped "Pick a buddy" at 172 1252
+[smoke] tapped "Older" at 535 1098
+[smoke] tapped "Older" at 535 1098
+[smoke] tapped "Save" at 540 2260
+[smoke] tapped "Next" at 540 1693
+[smoke] tapped "Finish setup" at 540 2260
+[smoke] who's playing
+[smoke] tapped "Aarav" at 540 795
+[smoke] placement started
+[smoke] tapped "Yes, easily" at 540 1484
+[smoke] tapped "Yes, easily" at 540 1533
+[smoke] tapped "Yes, easily" at 540 1533
+[smoke] tapped "Yes, easily" at 540 1436
+[smoke] tapped "Yes, easily" at 540 1436
+[smoke] tapped "Yes, easily" at 540 1436
+[smoke] tapped "Yes, easily" at 540 1436
+[smoke] tapped "Yes, easily" at 540 1436
+[smoke] tapped "Yes, easily" at 540 1436
+[smoke] tapped "Yes, easily" at 540 1436
+[smoke] tapped "Yes, easily" at 540 1484
+[smoke] tapped "Yes, easily" at 540 1484
+[smoke] placement done
+[smoke] tapped "Choose rewards" at 540 1688
+[smoke] treat picker
+[smoke] tapped "Milk chocolate bar" at 288 735
+[smoke] tapped "Choose this" at 540 1898
+[smoke] goal picker
+[smoke] tapped "Toy car" at 288 735
+[smoke] tapped "Choose this" at 540 1898
+[smoke] map is up
+[smoke] tapped "Play" at 629 2251
+[smoke] back paused the level
+[smoke] tapped "Leave level" at 540 2239
+[smoke] FAIL: did not return to the map
+[smoke] after second back: 
+[smoke] FAIL: child not remembered
+[smoke] FAIL: process died
