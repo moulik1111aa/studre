@@ -42,7 +42,7 @@
 /* Melted */
 .melted{align-items:center;justify-content:center;gap:14px;text-align:center}
 .melt-choc svg{width:150px;height:170px;filter:drop-shadow(0 14px 16px rgba(0,0,0,.4))}
-.drip{transform-box:fill-box;transform-origin:top center;animation:dripDown 2.6s ease-in infinite}
+.drip{transform-box:fill-box;transform-origin:top center;animation:dripDown 2.6s ease-in 3}
 .drip.d2{animation-delay:.7s}.drip.d3{animation-delay:1.4s}
 @keyframes dripDown{0%{transform:scaleY(.3)}70%{transform:scaleY(1.1)}100%{transform:scaleY(.3)}}
 .melted .jar-slot{width:100%;max-width:420px}

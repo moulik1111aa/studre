@@ -90,12 +90,12 @@ export class Fx {
     this.run();
   }
 
+  /** One drawing loop at most; it stops (and clears the canvas) as soon as the last particle fades. */
   private run(): void {
     if (this.raf) return;
     const tick = () => {
-      this.raf = 0;
       this.draw();
-      if (this.parts.length) this.raf = requestAnimationFrame(tick);
+      this.raf = this.parts.length ? requestAnimationFrame(tick) : 0;
     };
     this.raf = requestAnimationFrame(tick);
   }

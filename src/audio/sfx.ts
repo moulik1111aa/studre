@@ -4,6 +4,7 @@ export class Sfx {
   enabled: boolean;
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
+  private idle = 0;
 
   constructor(enabled: boolean) {
     this.enabled = enabled;
@@ -28,15 +29,26 @@ export class Sfx {
   }
 
   suspend(): void {
+    clearTimeout(this.idle);
     void this.ctx?.suspend().catch(() => {});
   }
-  resume(): void {
-    void this.ctx?.resume().catch(() => {});
+  /** Coming back to the app: the engine wakes on the next sound instead (see wake). */
+  resume(): void {}
+
+  /** Wake the audio engine for a sound, and put it back to sleep after 3 quiet seconds
+   *  (a running AudioContext keeps the phone's audio thread busy even in silence). */
+  private wake(): boolean {
+    const c = this.ctx;
+    if (!c || !this.master || !this.enabled) return false;
+    if (c.state === 'suspended') void c.resume().catch(() => {});
+    clearTimeout(this.idle);
+    this.idle = window.setTimeout(() => void c.suspend().catch(() => {}), 3000);
+    return true;
   }
 
   private tone(freq: number, start: number, dur: number, type: OscillatorType = 'sine', vol = 0.3, slide = 0): void {
     const c = this.ctx;
-    if (!c || !this.master || !this.enabled) return;
+    if (!c || !this.master || !this.wake()) return;
     const t = c.currentTime + start;
     const o = c.createOscillator();
     const g = c.createGain();
@@ -53,7 +65,7 @@ export class Sfx {
 
   private noise(start: number, dur: number, vol = 0.2, lowpass = 1200): void {
     const c = this.ctx;
-    if (!c || !this.master || !this.enabled) return;
+    if (!c || !this.master || !this.wake()) return;
     const len = Math.floor(c.sampleRate * dur);
     const buf = c.createBuffer(1, len, c.sampleRate);
     const d = buf.getChannelData(0);
