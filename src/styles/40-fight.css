@@ -5,16 +5,16 @@
 .boss-fight .play-top{align-items:center}
 .boss-hp{flex:1;display:flex;flex-direction:column;gap:5px}
 .boss-hp b{font-size:16px;text-align:center}
-.hp-bar{position:relative;height:18px;border-radius:999px;background:rgba(0,0,0,.4);overflow:hidden;box-shadow:inset 0 0 0 2px rgba(255,255,255,.15)}
+.hp-bar{position:relative;height:18px;border-radius:999px;background:var(--lo-40);overflow:hidden;box-shadow:inset 0 0 0 2px var(--hi-15)}
 .hp-bar i{position:absolute;inset:0;transform-origin:left center;border-radius:999px;transition:transform .45s var(--ease-out)}
 .hp-lag{background:#FFF1B5;transition-duration:.8s!important}
 .hp-fill{background:linear-gradient(90deg,#FF4D6D,#FF8A5C 60%,var(--sun))}
-.hp-bar .tick{position:absolute;top:0;bottom:0;width:2px;background:rgba(0,0,0,.45)}
+.hp-bar .tick{position:absolute;top:0;bottom:0;width:2px;background:var(--lo-45)}
 
 .boss-view{position:relative;width:min(240px,62vw);aspect-ratio:1;--boss:#fff}
 .boss-body{width:100%;height:100%;transform-origin:50% 90%}
 .boss-svg{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 16px 20px rgba(0,0,0,.45))}
-.boss-shadow{position:absolute;left:20%;right:20%;bottom:-6px;height:16px;border-radius:50%;background:rgba(0,0,0,.35);filter:blur(4px)}
+.boss-shadow{position:absolute;left:20%;right:20%;bottom:-6px;height:16px;border-radius:50%;background:var(--lo-35);filter:blur(4px)}
 .boss-fx{position:absolute;inset:0;pointer-events:none}
 .idle-float .boss-svg{animation:bFloat 3s ease-in-out infinite}
 .idle-bob .boss-svg{animation:bBob 1.2s ease-in-out infinite}

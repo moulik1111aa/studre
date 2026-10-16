@@ -19,6 +19,11 @@ interface P {
 }
 
 const PALETTE = ['#FFD25A', '#FF7AA8', '#43E0A8', '#5CC8FF', '#A879FF', '#FF8A5C', '#FFFFFF'];
+/** Confetti colours from the current theme (--fx-colors), or the default palette. */
+const palette = (): string[] => {
+  const v = getComputedStyle(document.documentElement).getPropertyValue('--fx-colors').trim();
+  return v ? v.split(/\s+/) : PALETTE;
+};
 
 export class Fx {
   readonly canvas: HTMLCanvasElement;
@@ -49,12 +54,13 @@ export class Fx {
   confetti(x: number, y: number, n = 80, spread = 1): void {
     if (reducedMotion()) return;
     const o = this.origin();
+    const colors = palette();
     for (let i = 0; i < n; i++) {
       const a = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.1 * spread;
       const v = 6 + Math.random() * 9;
       this.parts.push({
         x: x - o.x, y: y - o.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0, max: 90 + Math.random() * 60,
-        size: 6 + Math.random() * 6, color: PALETTE[i % PALETTE.length], spin: (Math.random() - 0.5) * 0.4, rot: Math.random() * 6,
+        size: 6 + Math.random() * 6, color: colors[i % colors.length], spin: (Math.random() - 0.5) * 0.4, rot: Math.random() * 6,
         shape: Math.random() < 0.7 ? 'rect' : 'circle', g: 0.28, drag: 0.985,
       });
     }

@@ -72,23 +72,20 @@ __req(${JSON.stringify(entryId)});
 /** Make a string safe to place inside an inline <script> element. */
 const scriptSafe = (s) => s.replace(/<\/(script)/gi, '<\\/$1').replace(/<!--/g, '<\\!--');
 
-/**
- * The rounded display font (Nunito) is bundled when its npm package is installed (it is in
- * CI and the APK); without it the system font is used, which is fine for local tests.
- */
+/** The theme fonts (Inter Display, TeX Gyre Schola), vendored in assets/fonts and inlined. */
+const FONT_FILES = [
+  ['Inter Display', 500, 'normal', 'inter-display-medium.woff'],
+  ['Inter Display', 600, 'normal', 'inter-display-semibold.woff'],
+  ['Inter Display', 700, 'normal', 'inter-display-bold.woff'],
+  ['Schola', 400, 'normal', 'schola-regular.woff'],
+  ['Schola', 700, 'normal', 'schola-bold.woff'],
+  ['Schola', 400, 'italic', 'schola-italic.woff'],
+];
 function fonts() {
-  const dir = join(root, 'node_modules', '@fontsource', 'nunito', 'files');
-  const faces = [];
-  for (const w of [600, 700, 800, 900]) {
-    const f = join(dir, `nunito-latin-${w}-normal.woff2`);
-    try {
-      const b64 = readFileSync(f).toString('base64');
-      faces.push(`@font-face{font-family:"Nunito";font-weight:${w};font-style:normal;font-display:block;src:url(data:font/woff2;base64,${b64}) format("woff2")}`);
-    } catch {
-      /* not installed */
-    }
-  }
-  return faces.join('');
+  return FONT_FILES.map(([family, weight, style, file]) => {
+    const b64 = readFileSync(join(root, 'assets', 'fonts', file)).toString('base64');
+    return `@font-face{font-family:"${family}";font-weight:${weight};font-style:${style};font-display:block;src:url(data:font/woff;base64,${b64}) format("woff")}`;
+  }).join('');
 }
 
 export function build() {
@@ -114,7 +111,7 @@ export function build() {
   // The shared preview link is a playtest build: it also offers preview tools.
   const previewJs = scriptFor({ ...buildInfo, preview: true });
   const artifact =
-    `<title>Study Hard</title>\n<meta name="theme-color" content="#14173A">\n<style>${fontCss}</style>\n<style>${css}</style>\n` +
+    `<title>Study Hard</title>\n<meta name="theme-color" content="#0F1530">\n<style>${fontCss}</style>\n<style>${css}</style>\n` +
     `<div id="app" aria-live="polite"></div>\n<script>${scriptSafe(previewJs)}</script>\n`;
   writeFileSync(join(dist, 'artifact.html'), artifact);
   return { bytes: Buffer.byteLength(html) };

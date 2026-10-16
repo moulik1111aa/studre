@@ -11,7 +11,7 @@ export const reducedMotion = (): boolean => {
 };
 
 export const EASE_OUT = 'cubic-bezier(.2,.8,.2,1)';
-export const EASE_SPRING = 'cubic-bezier(.3,1.4,.5,1)';
+export const EASE_SPRING = 'cubic-bezier(.2,.9,.3,1.04)';
 export const EASE_IN_OUT = 'cubic-bezier(.65,0,.35,1)';
 export const EASE_DRAW = 'cubic-bezier(.5,0,.3,1)';
 
@@ -64,12 +64,12 @@ export function stagger(els: Iterable<Element>, opts: { delay?: number; gap?: nu
 }
 
 /** Pop an element in with a soft overshoot. */
-export function popIn(el: Element, delay = 0, from = 0.6): Animation | null {
+export function popIn(el: Element, delay = 0, from = 0.92): Animation | null {
   if (reducedMotion()) return null;
   return (el as HTMLElement).animate(
     [
       { opacity: 0, transform: `scale(${from})` },
-      { opacity: 1, transform: 'scale(1.06)', offset: 0.65 },
+      { opacity: 1, transform: 'scale(1.015)', offset: 0.7 },
       { opacity: 1, transform: 'scale(1)' },
     ],
     { duration: 560, delay, easing: EASE_OUT, fill: 'backwards' },

@@ -55,7 +55,12 @@ export interface Settings {
   /** Chosen reading voice ('' = the best one automatically) and its speed. */
   voiceName: string;
   voiceRate: number;
+  /** Look of the app: 'glass' (default), 'schoolbook' or 'precision'. */
+  theme: Theme;
 }
+
+export type Theme = 'glass' | 'schoolbook' | 'precision';
+export const THEMES: Theme[] = ['glass', 'schoolbook', 'precision'];
 
 export interface SaveData {
   version: number;
@@ -85,6 +90,7 @@ export const freshSettings = (): Settings => ({
   voice: true,
   voiceName: '',
   voiceRate: 0.95,
+  theme: 'glass',
 });
 
 export function freshSave(): SaveData {
@@ -120,7 +126,7 @@ function parse(raw: string | null): SaveData | null {
       ...base,
       ...d,
       version: SAVE_VERSION,
-      settings: { ...base.settings, ...d.settings },
+      settings: { ...base.settings, ...d.settings, theme: THEMES.includes(d.settings?.theme as Theme) ? (d.settings!.theme as Theme) : 'glass' },
       faceoff: d.faceoff ?? {},
       children: d.children.map((c) => ({
         ...newChild(c.name ?? 'Champ', c.age ?? 6, c.avatar ?? 0, c.createdDay ?? ''),

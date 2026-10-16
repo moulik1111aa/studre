@@ -2,7 +2,7 @@
 // categories, sound/voice, redo placement, and a progress report per child.
 
 import { html, esc, type App, type Screen } from './app.ts';
-import type { Child, Settings } from '../storage/save.ts';
+import type { Child, Settings, Theme } from '../storage/save.ts';
 import { CATEGORIES, rewardById } from '../core/rewards.ts';
 import { AREAS } from '../core/areas/index.ts';
 import { isMastered } from '../core/path.ts';
@@ -39,6 +39,12 @@ const TOGGLES: { key: keyof Settings; label: string; note: string }[] = [
   { key: 'vibration', label: 'Vibration', note: 'Gentle buzzes on taps and answers.' },
 ];
 
+const THEME_CHOICES: { id: Theme; name: string; note: string }[] = [
+  { id: 'glass', name: 'Glass', note: 'Deep colour, frosted panels' },
+  { id: 'schoolbook', name: 'Schoolbook', note: 'Graph paper and ink' },
+  { id: 'precision', name: 'Precision', note: 'White, one strong blue' },
+];
+
 export function parentScreen(app: App): Screen {
   const st = app.save.data.settings;
   const el = html(`<section class="screen parent" aria-label="Parent area">
@@ -52,6 +58,8 @@ export function parentScreen(app: App): Screen {
       <button class="btn ghost small add-kid">+ Add a child</button>
       <h2 class="pa-h">Play time and rewards</h2>
       <button class="pa-row card limits"><b>${st.limitMinutes} minutes a day</b><small>${st.timeUpMode === 'stop' ? 'Stops when time is up' : 'Keeps playing without coins'} · treats ${paceText(st.treatPace, 'treat')}, big toy ${paceText(st.goalPace, 'goal')}</small></button>
+      <h2 class="pa-h">Look</h2>
+      <div class="themes" role="radiogroup" aria-label="Look of the app">${THEME_CHOICES.map((t) => `<button class="theme-tile th-${t.id}${st.theme === t.id ? ' on' : ''}" role="radio" aria-checked="${st.theme === t.id}" data-theme-id="${t.id}"><span class="th-swatch"><i></i><i></i><i></i></span><b>${t.name}</b><small>${t.note}</small></button>`).join('')}</div>
       <h2 class="pa-h">Settings</h2>
       <button class="pa-row card voice-row"><b>Reading voice</b><small>${st.voiceName ? 'Chosen voice' : 'Automatic (clearest)'} · ${st.voiceRate < 0.9 ? 'slow' : st.voiceRate > 1 ? 'quick' : 'normal speed'}</small></button>
       <div class="card pa-toggles">${TOGGLES.map((t) => `<label class="toggle-row"><span><b>${t.label}</b><small>${t.note}</small></span><input type="checkbox" role="switch" data-k="${t.key}" ${st[t.key] ? 'checked' : ''}></label>`).join('')}</div>
@@ -64,6 +72,17 @@ export function parentScreen(app: App): Screen {
   el.querySelector('.add-kid')!.addEventListener('click', () => void app.show(addChildScreen(false)));
   el.querySelector('.limits')!.addEventListener('click', () => void app.show(limitsScreen(false)));
   el.querySelector('.voice-row')!.addEventListener('click', () => void app.show(voiceScreen));
+  el.querySelectorAll<HTMLButtonElement>('.theme-tile').forEach((b) =>
+    b.addEventListener('click', () => {
+      const theme = b.dataset.themeId as Theme;
+      app.save.update((d) => (d.settings.theme = theme));
+      app.applyTheme(theme);
+      el.querySelectorAll('.theme-tile').forEach((x) => {
+        x.classList.toggle('on', x === b);
+        x.setAttribute('aria-checked', String(x === b));
+      });
+    }),
+  );
   el.querySelectorAll<HTMLInputElement>('[data-k]').forEach((i) =>
     i.addEventListener('change', () => {
       const k = i.dataset.k as keyof Settings;

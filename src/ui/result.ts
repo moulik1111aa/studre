@@ -1,13 +1,15 @@
 // Level complete: stars draw in, coins fly into the treat jar, then Next or the map.
 
-import { html, type App, type Screen } from './app.ts';
+import { html, esc, type App, type Screen } from './app.ts';
+import { progressMoment, MILESTONES, type Moment } from '../core/moment.ts';
+import { rewardById } from '../core/rewards.ts';
 import type { Child } from '../storage/save.ts';
 import type { Level } from '../core/path.ts';
 import { frontier } from '../core/path.ts';
 import { ICONS, coinSvg } from './icons.ts';
 import { JarBar } from './jars.ts';
 import { worldVars, ambientHtml } from './worlds.ts';
-import { countUp, flyArc, popIn, stagger, wait, EASE_SPRING, reducedMotion } from '../render/motion.ts';
+import { countUp, flyArc, popIn, stagger, wait, EASE_SPRING, EASE_OUT, reducedMotion } from '../render/motion.ts';
 import { enterChild, playLevel } from './flow.ts';
 import { unlockScreen } from './unlock.ts';
 import { timesUpScreen } from './timesup.ts';
@@ -26,30 +28,55 @@ export interface ResultInfo {
   perfectCoins?: number;
 }
 
+const pct = (p: number): string => `${Math.floor(p * 100 + 1e-9)}%`;
+const plusPct = (p: number): string => `+${Math.max(1, Math.round(p * 100))}%`;
+
+/** The progress moment: where the treat was, what this level added, what perfect adds. */
+function momentHtml(m: Moment, r: ResultInfo): string {
+  const reward = rewardById(m.rewardId)!;
+  const ticks = MILESTONES.slice(0, -1).map((t) => `<span class="mo-tick${m.after >= t ? ' passed' : ''}" style="left:${t * 100}%"></span>`).join('');
+  const rows = r.perfect
+    ? `<div class="mo-row best"><span>${r.score}/${r.total}</span><i style="--w:100%"></i><b>${plusPct(m.gain)}</b></div>`
+    : `<div class="mo-row"><span>${r.score}/${r.total}</span><i style="--w:${Math.max(6, (100 * m.gain) / m.perfectGain)}%"></i><b>${plusPct(m.gain)}</b></div>
+       <div class="mo-row best"><span>${r.total}/${r.total}</span><i style="--w:100%"></i><b>${plusPct(m.perfectGain)}</b></div>`;
+  const levels = `${m.perfectLevels} perfect level${m.perfectLevels === 1 ? '' : 's'}`;
+  const next = m.after >= 1 ? `Your ${esc(reward.name.toLowerCase())} is ready!` : m.next >= 1 ? `<b>${levels}</b> to your ${esc(reward.name.toLowerCase())}` : `<b>${levels}</b> to reach ${pct(m.next)}`;
+  return `<div class="moment card" role="group" aria-label="${esc(reward.name)}: ${pct(m.before)} to ${pct(m.after)}">
+    <div class="mo-head"><span class="mo-icon" aria-hidden="true">${reward.icon}</span><b>${esc(reward.name)}</b><span class="mo-pct">${pct(m.before)}</span></div>
+    <div class="mo-bar"><i class="mo-was" style="width:${m.before * 100}%"></i><i class="mo-new" style="left:${m.before * 100}%;--to:${(m.after - m.before) * 100}%"></i>${ticks}</div>
+    <div class="mo-sub"><span>was ${pct(m.before)}</span><span>${r.perfect ? 'Perfect score: the biggest step' : 'Perfect scores fill it fastest'}</span></div>
+    <div class="mo-rows">${rows}</div>
+    <p class="mo-next"><span aria-hidden="true">🏁</span><span>${next}</span></p>
+  </div>`;
+}
+
 const CHEERS = ['Brilliant!', 'Super work!', 'Fantastic!', 'You did it!', 'Amazing!', 'Well done!'];
 
 export function resultScreen(child: Child, level: Level, r: ResultInfo) {
   return (app: App): Screen => {
     const passed = r.stars > 0;
     const title = r.title ?? (passed ? CHEERS[(r.score + level.index) % CHEERS.length] : 'So close!');
+    const moment = r.coins > 0 ? progressMoment(child.wallet, r.coins, r.perfectCoins ?? r.coins) : null;
     const el = html(`<section class="screen result" style="${worldVars(level.stage)}" aria-label="Level result">
       ${ambientHtml(level.stage, 8)}
-      <div class="jar-slot"></div>
+      ${moment ? '' : '<div class="jar-slot"></div>'}
       <div class="res-card card">
         <h1 class="res-title">${title}</h1>
         <div class="res-stars" aria-label="${r.stars} of 3 stars">${[1, 2, 3].map((n) => `<span class="rstar${n <= r.stars ? ' on' : ''}${n === 2 ? ' mid' : ''}">${ICONS.star}</span>`).join('')}</div>
         <p class="res-score">${r.score} / ${r.total} right</p>
         ${r.coins ? `<p class="res-coins">${coinSvg}<b class="coin-count">+0</b></p>` : r.timeUp && passed ? `<p class="res-note">Time’s up for today, so no coins this time.</p>` : ''}
-        ${r.perfect ? `<p class="res-perfect">💯 Perfect score — the biggest prize!</p>` : r.perfectCoins && !r.timeUp ? `<p class="res-aim">Aim for perfect: ${coinSvg} <b>+${r.perfectCoins}</b> for ${r.total}/${r.total}</p>` : ''}
+        ${moment ? '' : r.perfect ? `<p class="res-perfect">💯 Perfect score — the biggest prize!</p>` : r.perfectCoins && !r.timeUp ? `<p class="res-aim">Aim for perfect: ${coinSvg} <b>+${r.perfectCoins}</b> for ${r.total}/${r.total}</p>` : ''}
         ${passed ? '' : `<p class="res-note">You need ${level.kind === 'skill' && level.tier === 5 ? '10 in a row' : 'a few more right'} to pass. Let’s try again!</p>`}
       </div>
+      ${moment ? momentHtml(moment, r) : ''}
       <div class="res-actions">
         <button class="btn next">${passed ? `Next ${ICONS.play}` : 'Try again'}</button>
         <button class="btn ghost home">Map</button>
       </div>
     </section>`);
     const jar = new JarBar(child);
-    el.querySelector('.jar-slot')!.appendChild(jar.el);
+    el.querySelector('.jar-slot')?.appendChild(jar.el);
+    if (moment) el.classList.add('has-moment');
     if (r.coins > 0) app.save.update(() => (child.sinceShowcase = (child.sinceShowcase ?? 0) + 1));
     const proceed = (fn: () => void) => {
       if (r.unlocked.length) return void app.show(unlockScreen(child, r.unlocked[0]));
@@ -71,49 +98,61 @@ export function resultScreen(child: Child, level: Level, r: ResultInfo) {
 
     const celebrate = async () => {
       const card = el.querySelector('.res-card')!;
-      popIn(card, 0, 0.8);
+      popIn(card, 0, 0.94);
       const stars = [...el.querySelectorAll<HTMLElement>('.rstar')];
       stars.forEach((s, k) => {
         if (reducedMotion()) return;
         s.animate(
           [
-            { transform: `${k === 1 ? 'translateY(-14px) ' : ''}scale(0) rotate(-60deg)`, opacity: 0 },
-            { transform: `${k === 1 ? 'translateY(-14px) ' : ''}scale(1.3) rotate(10deg)`, opacity: 1, offset: 0.6 },
-            { transform: `${k === 1 ? 'translateY(-14px) ' : ''}scale(1) rotate(0)`, opacity: 1 },
+            { transform: `${k === 1 ? 'translateY(-14px) ' : ''}scale(.7)`, opacity: 0 },
+            { transform: `${k === 1 ? 'translateY(-14px) ' : ''}scale(1)`, opacity: 1 },
           ],
-          { duration: 560, delay: 320 + k * 220, easing: EASE_SPRING, fill: 'backwards' },
+          { duration: 480, delay: 300 + k * 160, easing: EASE_SPRING, fill: 'backwards' },
         );
       });
       stagger(el.querySelectorAll('.res-actions .btn'), { delay: 900 });
       if (passed) {
         app.sfx.fanfare();
         await wait(300);
-        const r0 = card.getBoundingClientRect();
-        app.fx.confetti(r0.x + r0.width / 2, r0.y + 40, 70);
-        stars.filter((s) => s.classList.contains('on')).forEach((s, k) => setTimeout(() => {
-          const b = s.getBoundingClientRect();
-          app.fx.sparkle(b.x + b.width / 2, b.y + b.height / 2, 10);
-        }, 500 + k * 220));
+        // One quiet celebration per level; confetti only for a perfect score.
+        if (r.perfect) {
+          const r0 = card.getBoundingClientRect();
+          app.fx.confetti(r0.x + r0.width / 2, r0.y + 40, 48);
+        }
       } else app.sfx.sad();
+      const momentEl = el.querySelector<HTMLElement>('.moment');
+      const fillMoment = () => {
+        if (!momentEl || !moment) return;
+        const seg = momentEl.querySelector<HTMLElement>('.mo-new')!;
+        const to = getComputedStyle(seg).getPropertyValue('--to');
+        seg.style.width = to;
+        if (!reducedMotion()) seg.animate([{ width: '0%' }, { width: to }], { duration: 900, easing: EASE_OUT });
+        countUp(momentEl.querySelector<HTMLElement>('.mo-pct')!, moment.before * 100, moment.after * 100, 900, (n) => `${Math.floor(n + 1e-9)}%`);
+        momentEl.classList.add('filled');
+      };
       if (r.coins) {
-        await wait(1000);
+        await wait(reducedMotion() ? 0 : 1000);
         const counter = el.querySelector<HTMLElement>('.coin-count')!;
         countUp(counter, 0, r.coins, 700, (n) => `+${Math.round(n)}`);
         const from = counter.getBoundingClientRect();
         const n = Math.min(10, Math.max(4, Math.round(r.coins / 2)));
+        const target = (): DOMRect => {
+          if (!momentEl || !moment) return jar.target();
+          const b = momentEl.querySelector('.mo-bar')!.getBoundingClientRect();
+          return new DOMRect(b.x + b.width * moment.after - 14, b.y, 28, b.height);
+        };
         const flights: Promise<void>[] = [];
         for (let k = 0; k < n; k++) {
           const c = html(`<span class="flying-coin">${coinSvg}</span>`);
           document.body.appendChild(c);
-          flights.push(flyArc(c, from, jar.target(), 760, k * 70).then(() => {
+          flights.push(flyArc(c, from, target(), 760, k * 70).then(() => {
             c.remove();
             app.sfx.coin(k);
           }));
         }
+        if (momentEl) setTimeout(fillMoment, 500);
         await Promise.all(flights);
-        jar.update(true);
-        const t = jar.target();
-        app.fx.sparkle(t.x + t.width * Math.min(0.95, 0.1 + 0.85 * 0.5), t.y + t.height / 2, 12);
+        if (!momentEl) jar.update(true);
       }
     };
     return { el, mounted: () => void celebrate() };

@@ -1,14 +1,17 @@
 // App shell: shared services (save, sound, voice, haptics, photos), screen switching with
 // premium transitions, the Android back button, toasts and the grown-up check.
 
-import { SaveStore, browserStorage, type Child, type StorageAdapter } from '../storage/save.ts';
+import { SaveStore, browserStorage, type Child, type StorageAdapter, type Theme } from '../storage/save.ts';
+
+/** Status-bar colour for each theme. */
+const THEME_BAR: Record<Theme, string> = { glass: '#0F1530', schoolbook: '#FBFBF8', precision: '#FFFFFF' };
 import { Sfx } from '../audio/sfx.ts';
 import { Voice } from '../platform/voice.ts';
 import { Haptics } from '../platform/haptics.ts';
 import { quietly, setSystemBarStyle, type StudyHardPlugin } from '../platform/native.ts';
 import { Photos } from '../storage/photos.ts';
 import { Fx } from '../render/fx.ts';
-import { liquidWipe, reducedMotion, EASE_OUT } from '../render/motion.ts';
+import { reducedMotion, EASE_OUT } from '../render/motion.ts';
 import { dayKey } from '../core/economy.ts';
 import { AREAS } from '../core/areas/index.ts';
 import { buildPath, type Level } from '../core/path.ts';
@@ -63,8 +66,9 @@ export class App {
     this.path = buildPath(AREAS[0]);
     this.fx = new Fx(document.body);
     addEventListener('resize', () => this.fx.resize());
+    const forced = this.debug ? (new URLSearchParams(location.search).get('theme') as Theme | null) : null;
+    this.applyTheme(forced ?? st.theme);
     if (native) {
-      setSystemBarStyle(true);
       try {
         native.addListener('back', () => this.back());
       } catch {
@@ -93,6 +97,14 @@ export class App {
     });
     if (this.save.loadedFrom === 'backup') this.toast('Progress was restored from a backup copy.');
     if (this.save.loadedFrom === 'reset') this.toast('Saved progress could not be read, so the app started fresh.');
+  }
+
+  /** Switch the look of the whole app (Glass, Schoolbook or Precision). */
+  applyTheme(theme: Theme): void {
+    document.documentElement.dataset.theme = theme;
+    const dark = theme === 'glass';
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_BAR[theme]);
+    if (this.native) setSystemBarStyle(dark);
   }
 
   private setAwake(on: boolean): void {
@@ -128,12 +140,17 @@ export class App {
         this.root.appendChild(next.el);
         this.setAwake(!!next.keepAwake);
       };
-      if (how === 'liquid' && this.current) {
-        const [a, b] = next.colors ?? ['#5CC8FF', '#2457C9'];
-        await liquidWipe(this.root, a, b, swap);
-      } else {
-        swap();
-        if (!reducedMotion()) next.el.animate([{ opacity: 0, transform: 'translateY(14px)' }, { opacity: 1, transform: 'none' }], { duration: 380, easing: EASE_OUT });
+      // Calm transitions: the old screen settles back and fades, the new one rises into place.
+      const still = reducedMotion();
+      if (how === 'liquid' && this.current && !still) {
+        await this.current.el.animate([{ opacity: 1 }, { opacity: 0, transform: 'scale(.985)' }], { duration: 180, easing: EASE_OUT, fill: 'forwards' }).finished.catch(() => {});
+      }
+      swap();
+      if (!still) {
+        next.el.animate(
+          how === 'liquid' ? [{ opacity: 0, transform: 'scale(1.015)' }, { opacity: 1, transform: 'none' }] : [{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }],
+          { duration: how === 'liquid' ? 360 : 300, easing: EASE_OUT },
+        );
       }
       next.mounted?.();
     } finally {

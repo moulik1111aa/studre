@@ -187,10 +187,8 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
         app.haptics.match(streak);
         card.classList.add('right');
         btn?.classList.add('right');
-        const r = (btn ?? card).getBoundingClientRect();
-        app.fx.burst(r.x + r.width / 2, r.y + r.height / 2, '#FFD25A', 20);
         dot?.classList.add('on');
-        if (!reducedMotion()) card.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.04)' }, { transform: 'scale(1)' }], { duration: 360, easing: EASE_OUT });
+        if (!reducedMotion()) card.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.015)' }, { transform: 'scale(1)' }], { duration: 360, easing: EASE_OUT });
         await wait(650);
       } else {
         streak = 0;

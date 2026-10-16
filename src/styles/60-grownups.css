@@ -23,7 +23,7 @@
 .slider::-webkit-slider-thumb{-webkit-appearance:none;width:38px;height:38px;border-radius:50%;background:#fff;box-shadow:0 4px 12px rgba(0,0,0,.45);cursor:pointer}
 .slider::-moz-range-thumb{width:38px;height:38px;border-radius:50%;background:#fff;border:0;box-shadow:0 4px 12px rgba(0,0,0,.45)}
 .seg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.seg-b{appearance:none;border:0;cursor:pointer;color:var(--ink);padding:14px 10px;border-radius:20px;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 2px rgba(255,255,255,.12);display:flex;flex-direction:column;gap:4px;text-align:center}
+.seg-b{appearance:none;border:0;cursor:pointer;color:var(--ink);padding:14px 10px;border-radius:20px;background:var(--hi-08);box-shadow:inset 0 0 0 2px var(--hi-12);display:flex;flex-direction:column;gap:4px;text-align:center}
 .seg-b small{color:var(--ink-faint);font-weight:700;font-size:13px}
 .seg-b.on{background:rgba(67,224,168,.18);box-shadow:inset 0 0 0 3px var(--mint)}
 .limits .done{margin-top:auto}
@@ -45,7 +45,7 @@
 .rep-strands{padding:16px;display:grid;gap:12px}
 .rep-row{display:grid;grid-template-columns:110px 1fr 54px;align-items:center;gap:10px;font-weight:800;font-size:15px}
 .rep-row b{text-align:right}
-.rep-bar{height:12px;border-radius:999px;background:rgba(255,255,255,.1);display:flex;overflow:hidden}
+.rep-bar{height:12px;border-radius:999px;background:var(--hi-10);display:flex;overflow:hidden}
 .rep-bar i{display:block;height:100%;background:var(--mint)}
 .rep-bar i.sk{background:rgba(67,224,168,.35)}
 .rep-days{height:150px;padding:14px 12px 10px;display:flex;align-items:flex-end;gap:6px}
@@ -63,7 +63,7 @@
 .boss-tile small{color:var(--ink-faint);font-weight:700;font-size:12px}
 .badge-stage{padding:14px 16px}
 .badges{display:flex;flex-wrap:wrap;gap:4px;margin-top:10px}
-.badge{width:22px;height:22px;color:rgba(255,255,255,.15)}
+.badge{width:22px;height:22px;color:var(--hi-15)}
 .badge.on{color:var(--sun)}
 .badge svg{width:100%;height:100%;fill:currentColor;stroke-width:1}
 .earned{display:flex;flex-wrap:wrap;gap:10px}

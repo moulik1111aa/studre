@@ -9,6 +9,13 @@ import { welcomeScreen } from './ui/setup.ts';
 import { whosPlayingScreen } from './ui/whos.ts';
 import { seedDemo } from './ui/demo.ts';
 import { enterChild, playLevel } from './ui/flow.ts';
+import { resultScreen } from './ui/result.ts';
+import { showcaseScreen } from './ui/showcase.ts';
+import { rewardsScreen } from './ui/rewards.ts';
+import { unlockScreen } from './ui/unlock.ts';
+import { timesUpScreen } from './ui/timesup.ts';
+import { trophyScreen } from './ui/trophy.ts';
+import { parentScreen } from './ui/parent.ts';
 
 const LOADER_KEY = 'studyhard.loaderDay';
 
@@ -16,7 +23,10 @@ async function boot(): Promise<void> {
   const native = nativeBridge();
   const storage = native ? await nativeStorage(native) : browserStorage();
   const app = new App(document.getElementById('app')!, storage, native);
-  if (app.debug) (window as unknown as { __app: App }).__app = app;
+  if (app.debug) {
+    // Screen factories for screenshots and tests.
+    Object.assign(window, { __app: app, __screens: { resultScreen, showcaseScreen, rewardsScreen, unlockScreen, timesUpScreen, trophyScreen, parentScreen, welcomeScreen, whosPlayingScreen, loaderScreen } });
+  }
   const params = new URLSearchParams(location.search);
 
   let full = true;

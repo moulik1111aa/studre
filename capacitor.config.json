@@ -2,10 +2,10 @@
   "appId": "com.studyhard.app",
   "appName": "Study Hard",
   "webDir": "www",
-  "backgroundColor": "#14173A",
+  "backgroundColor": "#0F1530",
   "loggingBehavior": "production",
   "android": {
-    "backgroundColor": "#14173A",
+    "backgroundColor": "#0F1530",
     "allowMixedContent": false,
     "captureInput": false,
     "webContentsDebuggingEnabled": false
