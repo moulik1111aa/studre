@@ -4,6 +4,7 @@
 import { freshProgress, type Progress } from '../core/path.ts';
 import { freshWallet, type Wallet } from '../core/economy.ts';
 import type { UndoEntry } from '../core/undo.ts';
+import type { OwnReward } from '../core/rewards.ts';
 
 export const SAVE_VERSION = 1;
 const PRIMARY = 'studyhard.save';
@@ -57,6 +58,8 @@ export interface Settings {
   voiceRate: number;
   /** Look of the app: 'glass' (default), 'schoolbook' or 'precision'. */
   theme: Theme;
+  /** Rewards the family added themselves. */
+  ownRewards: OwnReward[];
 }
 
 export type Theme = 'glass' | 'schoolbook' | 'precision';
@@ -91,6 +94,7 @@ export const freshSettings = (): Settings => ({
   voiceName: '',
   voiceRate: 0.95,
   theme: 'glass',
+  ownRewards: [],
 });
 
 export function freshSave(): SaveData {
@@ -126,7 +130,7 @@ function parse(raw: string | null): SaveData | null {
       ...base,
       ...d,
       version: SAVE_VERSION,
-      settings: { ...base.settings, ...d.settings, theme: THEMES.includes(d.settings?.theme as Theme) ? (d.settings!.theme as Theme) : 'glass' },
+      settings: { ...base.settings, ...d.settings, ownRewards: Array.isArray(d.settings?.ownRewards) ? d.settings!.ownRewards : [], theme: THEMES.includes(d.settings?.theme as Theme) ? (d.settings!.theme as Theme) : 'glass' },
       faceoff: d.faceoff ?? {},
       children: d.children.map((c) => ({
         ...newChild(c.name ?? 'Champ', c.age ?? 6, c.avatar ?? 0, c.createdDay ?? ''),

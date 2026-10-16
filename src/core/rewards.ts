@@ -1,4 +1,4 @@
-// The reward catalogue: 128 picture-card rewards in 12 categories (spec §4).
+// The reward catalogue: picture-card rewards you buy or pay for, by category (spec §4).
 // Treats go in the treat jar; toys and dream goals in the big goal jar.
 
 export type PriceTier = 'small' | 'medium' | 'large' | 'toyS' | 'toyM' | 'toyB' | 'dream';
@@ -21,6 +21,8 @@ export interface Reward {
   tier: PriceTier;
   /** Emoji used as the drawing's base (rendered large on a styled card). */
   icon: string;
+  /** Retired from the catalogue: still resolves for children who already chose it. */
+  hidden?: boolean;
 }
 
 export interface Category {
@@ -29,66 +31,131 @@ export interface Category {
   icon: string;
 }
 
+/** Only things you buy or pay for: food, stationery, toys, paid outings and big days out. */
 export const CATEGORIES: Category[] = [
-  { id: 'sweets', name: 'Sweets', icon: '🍬' },
+  { id: 'sweets', name: 'Chocolate & sweets', icon: '🍫' },
   { id: 'snacks', name: 'Snacks', icon: '🍟' },
   { id: 'drinks', name: 'Drinks', icon: '🥤' },
   { id: 'desserts', name: 'Ice cream & desserts', icon: '🍦' },
   { id: 'meals', name: 'Treat meals', icon: '🍕' },
-  { id: 'screen', name: 'Screen time', icon: '📺' },
-  { id: 'outings', name: 'Outings', icon: '🎡' },
-  { id: 'family', name: 'Family time', icon: '👨‍👩‍👧' },
-  { id: 'little', name: 'Little things', icon: '✏️' },
+  { id: 'little', name: 'Little things', icon: '🎈' },
+  { id: 'stationery', name: 'Stationery', icon: '✏️' },
   { id: 'books', name: 'Books & kits', icon: '📚' },
+  { id: 'minitoys', name: 'Small toys', icon: '🪀' },
+  { id: 'outings', name: 'Outings', icon: '🎟️' },
   { id: 'toys', name: 'Toys', icon: '🧸' },
+  { id: 'days', name: 'Big days out', icon: '🎢' },
   { id: 'dream', name: 'Dream goals', icon: '🚲' },
+  { id: 'own', name: 'Your own', icon: '✨' },
 ];
 
 type Row = [name: string, icon: string];
 const R: Reward[] = [];
-function group(category: string, tier: PriceTier, rows: Row[]): void {
-  for (const [name, icon] of rows) R.push({ id: `${category}.${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`, name, category, tier, icon });
+const slug = (name: string): string => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+function group(category: string, tier: PriceTier, rows: Row[], hidden = false): void {
+  for (const [name, icon] of rows) {
+    const r: Reward = { id: `${category}.${slug(name)}`, name, category, tier, icon, ...(hidden ? { hidden } : {}) };
+    const at = R.findIndex((x) => x.id === r.id);
+    if (at >= 0) R[at] = r;
+    else R.push(r);
+  }
 }
 
+// Retired rewards (earlier catalogue): kept so a reward already chosen still shows.
+group('meals', 'medium', [['Choose tonight’s dinner', '🍽️'], ['Pancake breakfast', '🥞']], true);
+group('screen', 'small', [['15 extra minutes of cartoons', '📺'], ['Choose the car music', '🎵']], true);
+group('screen', 'medium', [['30 extra minutes of cartoons', '📺'], ['30 minutes of video games', '🎮'], ['Pick the family movie', '🎬'], ['Movie night with popcorn', '🍿']], true);
+group('outings', 'medium', [['Park', '🌳'], ['Playground', '🛝'], ['Cycling ride', '🚴'], ['Picnic', '🧺'], ['Swimming', '🏊'], ['Museum', '🏛️'], ['Fair', '🎡']], true);
+group('outings', 'large', [['Zoo', '🦁'], ['Aquarium', '🐠'], ['Beach', '🏖️'], ['Trampoline park', '🤸'], ['Bowling', '🎳'], ['Arcade', '🕹️'], ['Cinema', '🎟️']], true);
+group('family', 'small', [['Extra bedtime story', '📖'], ['Stay up 30 minutes late', '🌙'], ['Board game with Mummy or Papa', '🎲'], ['Paint together', '🎨']], true);
+group('family', 'medium', [['Bake together', '🧁'], ['Blanket fort', '🏰'], ['Living-room camping', '⛺'], ['Choose the weekend plan', '🗓️'], ['Kite flying', '🪁'], ['Sleepover with a cousin', '🛏️']], true);
+group('little', 'small', [['Fancy pencil', '✏️'], ['Eraser set', '🧽'], ['Balloons', '🎈'], ['Bubble wand', '🫧'], ['Stamp set', '🔖']], true);
+group('little', 'medium', [['Colouring book', '📘'], ['Crayons', '🖍️'], ['Sketch pens', '🖊️'], ['Notebook', '📓'], ['Slime', '🟢'], ['Play-dough', '🟣']], true);
+group('books', 'medium', [['Comic book', '💥'], ['Story book', '📗'], ['Puzzle book', '🧩']], true);
+group('books', 'large', [['Jigsaw puzzle', '🧩'], ['Science kit', '🔬'], ['Magic kit', '🎩']], true);
+group('toys', 'toyS', [['Toy car', '🚗'], ['Yo-yo', '🪀'], ['Puzzle cube', '🟥'], ['Skipping rope', '➰'], ['Water gun', '🔫'], ['Football', '⚽'], ['Doll', '🪆']], true);
+group('toys', 'toyM', [['Action figure', '🦸'], ['Teddy bear', '🧸'], ['Board game', '🎲'], ['Art kit', '🎨'], ['Badminton set', '🏸'], ['Cricket bat', '🏏']], true);
+group('toys', 'toyB', [['Building-brick set', '🧱'], ['Remote-control car', '🏎️'], ['Train set', '🚂'], ['Toy kitchen', '🍳'], ['Doctor set', '🩺'], ['Dollhouse', '🏠'], ['Music keyboard', '🎹'], ['Walkie-talkies', '📻'], ['Roller skates', '⛸️']], true);
+group('dream', 'dream', [['Play tent', '⛺']], true);
+group('drinks', 'small', [['Coconut water', '🥥'], ['Lemonade', '🍋'], ['Iced tea', '🧋'], ['Hot chocolate', '☕'], ['Smoothie', '🍓']], true);
+group('snacks', 'small', [['Masala puffs', '🥐'], ['Sandwich', '🥪'], ['Noodles', '🍜']], true);
+group('sweets', 'small', [['Candy buttons', '🍬'], ['Toffees', '🍬'], ['Jelly sweets', '🍬'], ['Ladoo', '🟠']], true);
+
+// Treat jar: small, about a week.
 group('sweets', 'small', [
-  ['Milk chocolate bar', '🍫'], ['Chocolate wafer', '🍫'], ['Candy buttons', '🍬'], ['Lollipop', '🍭'], ['Toffees', '🍬'], ['Jelly sweets', '🍬'],
-  ['Cotton candy', '🍭'], ['Gulab jamun', '🍮'], ['Jalebi', '🥨'], ['Ladoo', '🟠'], ['Rasgulla', '⚪'], ['Kaju katli', '🔷'],
+  ['Milk chocolate bar', '🍫'], ['Chocolate wafer', '🍫'], ['Surprise chocolate egg', '🥚'], ['Chocolate gems', '🍬'], ['Gummy bears', '🧸'], ['Lollipop', '🍭'],
+  ['Toffee pack', '🍬'], ['Cotton candy', '🍭'], ['Gulab jamun', '🍮'], ['Rasgulla', '⚪'], ['Jalebi', '🥨'], ['Kaju katli', '🔷'],
 ]);
 group('snacks', 'small', [
-  ['Chips', '🥔'], ['Nachos', '🌮'], ['Popcorn', '🍿'], ['Masala puffs', '🥐'], ['Samosa', '🥟'], ['Pani puri', '🥣'],
-  ['Momos', '🥟'], ['French fries', '🍟'], ['Sandwich', '🥪'], ['Noodles', '🍜'], ['Pav bhaji', '🍛'], ['Vada pav', '🍔'],
+  ['Chips', '🥔'], ['Nachos with dip', '🌮'], ['Popcorn', '🍿'], ['Pani puri', '🥣'], ['Momos', '🥟'], ['French fries', '🍟'],
+  ['Vada pav', '🍔'], ['Pav bhaji', '🍛'], ['Cheese sandwich', '🥪'], ['Samosa', '🥟'],
 ]);
-group('drinks', 'small', [
-  ['Cold drink', '🥤'], ['Mango shake', '🥭'], ['Chocolate milkshake', '🥛'], ['Fresh juice', '🧃'], ['Lassi', '🥛'], ['Coconut water', '🥥'],
-  ['Lemonade', '🍋'], ['Iced tea', '🧋'], ['Hot chocolate', '☕'], ['Smoothie', '🍓'],
+group('drinks', 'small', [['Cold drink', '🥤'], ['Mango shake', '🥭'], ['Chocolate milkshake', '🥛'], ['Bubble tea', '🧋'], ['Fresh juice', '🧃'], ['Lassi', '🥛']]);
+group('desserts', 'small', [['Ice-cream cone', '🍦'], ['Choco-bar', '🍫'], ['Kulfi', '🍡'], ['Ice lolly', '🍧'], ['Ice-cream cup', '🍨']]);
+group('little', 'small', [
+  ['Sticker pack', '⭐'], ['Scented eraser set', '🧽'], ['Keychain', '🔑'], ['Bouncy ball', '🔴'], ['Bubble bottle', '🫧'], ['Hair clips', '🎀'],
+  ['Trading cards pack', '🃏'], ['Mini slime tub', '🟢'], ['Temporary tattoos', '🦋'],
 ]);
-group('desserts', 'small', [['Ice-cream cone', '🍦'], ['Ice-cream cup', '🍨'], ['Kulfi', '🍡'], ['Ice lolly', '🍧']]);
-group('desserts', 'medium', [['Sundae', '🍨'], ['Brownie', '🟫'], ['Cupcake', '🧁'], ['Pastry', '🍰'], ['Doughnut', '🍩'], ['Falooda', '🥤']]);
-group('meals', 'medium', [
-  ['Pizza night', '🍕'], ['Burger meal', '🍔'], ['Pasta night', '🍝'], ['Dosa outing', '🥞'], ['Pancake breakfast', '🥞'], ['Choose tonight’s dinner', '🍽️'],
-  ['Chinese takeaway', '🥡'],
-]);
-group('meals', 'large', [['Restaurant dinner', '🍽️']]);
-group('screen', 'small', [['15 extra minutes of cartoons', '📺'], ['Choose the car music', '🎵']]);
-group('screen', 'medium', [['30 extra minutes of cartoons', '📺'], ['30 minutes of video games', '🎮'], ['Pick the family movie', '🎬'], ['Movie night with popcorn', '🍿']]);
-group('outings', 'medium', [['Park', '🌳'], ['Playground', '🛝'], ['Cycling ride', '🚴'], ['Picnic', '🧺'], ['Swimming', '🏊'], ['Museum', '🏛️'], ['Fair', '🎡']]);
-group('outings', 'large', [['Zoo', '🦁'], ['Aquarium', '🐠'], ['Beach', '🏖️'], ['Trampoline park', '🤸'], ['Bowling', '🎳'], ['Arcade', '🕹️'], ['Cinema', '🎟️']]);
-group('family', 'small', [['Extra bedtime story', '📖'], ['Stay up 30 minutes late', '🌙'], ['Board game with Mummy or Papa', '🎲'], ['Paint together', '🎨']]);
-group('family', 'medium', [['Bake together', '🧁'], ['Blanket fort', '🏰'], ['Living-room camping', '⛺'], ['Choose the weekend plan', '🗓️'], ['Kite flying', '🪁'], ['Sleepover with a cousin', '🛏️']]);
-group('little', 'small', [['Sticker pack', '⭐'], ['Fancy pencil', '✏️'], ['Eraser set', '🧽'], ['Balloons', '🎈'], ['Bubble wand', '🫧'], ['Temporary tattoos', '🦋'], ['Keychain', '🔑'], ['Stamp set', '🔖']]);
-group('little', 'medium', [['Colouring book', '📘'], ['Crayons', '🖍️'], ['Sketch pens', '🖊️'], ['Notebook', '📓'], ['Slime', '🟢'], ['Play-dough', '🟣']]);
-group('books', 'medium', [['Comic book', '💥'], ['Story book', '📗'], ['Puzzle book', '🧩']]);
-group('books', 'large', [['Jigsaw puzzle', '🧩'], ['Science kit', '🔬'], ['Magic kit', '🎩']]);
-group('toys', 'toyS', [['Toy car', '🚗'], ['Yo-yo', '🪀'], ['Puzzle cube', '🟥'], ['Skipping rope', '➰'], ['Water gun', '🔫'], ['Football', '⚽'], ['Doll', '🪆']]);
-group('toys', 'toyM', [['Action figure', '🦸'], ['Teddy bear', '🧸'], ['Board game', '🎲'], ['Art kit', '🎨'], ['Badminton set', '🏸'], ['Cricket bat', '🏏']]);
-group('toys', 'toyB', [
-  ['Building-brick set', '🧱'], ['Remote-control car', '🏎️'], ['Train set', '🚂'], ['Toy kitchen', '🍳'], ['Doctor set', '🩺'], ['Dollhouse', '🏠'],
-  ['Music keyboard', '🎹'], ['Walkie-talkies', '📻'], ['Roller skates', '⛸️'],
-]);
-group('dream', 'dream', [['Bicycle', '🚲'], ['Kick scooter', '🛴'], ['Giant brick castle', '🏰'], ['Play tent', '⛺']]);
 
+// Treat jar: medium, about two weeks.
+group('desserts', 'medium', [['Sundae', '🍨'], ['Brownie with ice cream', '🟫'], ['Waffle', '🧇'], ['Cupcake', '🧁'], ['Pastry', '🍰'], ['Doughnut box', '🍩'], ['Falooda', '🥤']]);
+group('meals', 'medium', [['Pizza night', '🍕'], ['Burger meal', '🍔'], ['Pasta night', '🍝'], ['Dosa outing', '🥞'], ['Momos platter', '🥟'], ['Chinese takeaway', '🥡']]);
+group('stationery', 'medium', [
+  ['Gel pen set', '🖊️'], ['24 crayons', '🖍️'], ['Sketch pens', '🖍️'], ['Colouring book', '📘'], ['Fancy notebook', '📓'], ['Pencil box', '✏️'],
+  ['Cartoon water bottle', '🍶'], ['Cartoon lunch box', '🍱'],
+]);
+group('books', 'medium', [['Comic book', '💥'], ['Story book', '📗'], ['Activity book', '🧩'], ['Sticker book', '📒']]);
+group('minitoys', 'medium', [['Die-cast toy car', '🚗'], ['Yo-yo', '🪀'], ['Puzzle cube', '🟥'], ['Fidget toy', '🌀'], ['Slime kit', '🧪'], ['Play-dough set', '🟣'], ['Mini figurine', '🦖']]);
+
+// Treat jar: large, about three weeks.
+group('meals', 'large', [['Restaurant dinner', '🍽️']]);
+group('outings', 'large', [['Cinema with popcorn', '🎬'], ['Soft-play area at the mall', '🛝'], ['Swimming pool session', '🏊']]);
+group('books', 'large', [['Card game set', '🃏'], ['300-piece jigsaw', '🧩'], ['Small brick set', '🧱'], ['Magic kit', '🎩'], ['Science kit', '🔬'], ['Art set', '🎨']]);
+
+// Big goal jar: toys.
+group('toys', 'toyS', [
+  ['Action figure', '🦸'], ['Doll', '🪆'], ['Small remote-control car', '🚙'], ['Water blaster', '🔫'], ['Kite with charkhi', '🪁'], ['Badminton set', '🏸'],
+  ['Cricket bat', '🏏'], ['Football', '⚽'], ['Board game', '🎲'], ['Walkie-talkies', '📻'],
+]);
+group('toys', 'toyM', [
+  ['Building-brick set', '🧱'], ['Train set', '🚂'], ['Doctor set', '🩺'], ['Toy kitchen', '🍳'], ['Mini keyboard', '🎹'], ['Foam-dart blaster', '🎯'],
+  ['Basketball and hoop', '🏀'], ['Wooden chess set', '♟️'], ['Robotics kit', '🤖'], ['Mega art kit', '🎨'], ['Mini drone', '🚁'],
+]);
+group('toys', 'toyB', [
+  ['Large brick set', '🏗️'], ['Stunt remote-control car', '🏎️'], ['Racing track set', '🏁'], ['Dollhouse', '🏠'], ['Inline skates', '⛸️'], ['Skateboard', '🛹'],
+  ['Microscope', '🔬'], ['Kids’ headphones', '🎧'], ['New console game', '🎮'],
+]);
+
+// Big goal jar: big days out (paid).
+group('days', 'toyB', [
+  ['Game zone day at the mall', '🕹️'], ['Trampoline park', '🤸'], ['Bowling and arcade', '🎳'], ['Laser tag', '🔫'], ['VR games', '🥽'], ['Go-karting', '🏎️'],
+  ['Ice skating', '⛸️'], ['Snow park', '❄️'],
+]);
+group('dream', 'dream', [
+  ['Mall day: movie, dinner and game zone', '🎢'], ['Amusement park day', '🎡'], ['Water park day', '🌊'], ['Game-zone party with 3 friends', '🎉'],
+  ['Bicycle', '🚲'], ['Gear cycle', '🚵'], ['Kick scooter', '🛴'], ['Giant brick castle', '🏰'], ['Kids’ smartwatch', '⌚'], ['Cricket kit', '🏏'], ['Football boots and jersey', '👟'],
+]);
+
+/** A reward a parent adds themselves (name, size, picture). */
+export interface OwnReward {
+  id: string;
+  name: string;
+  icon: string;
+  tier: PriceTier;
+}
+const OWN: Reward[] = [];
+/** Load the family's own rewards (from settings) into the catalogue. */
+export function setOwnRewards(list: OwnReward[]): void {
+  OWN.length = 0;
+  for (const o of list) OWN.push({ id: o.id, name: o.name, icon: o.icon, tier: o.tier, category: 'own' });
+}
+export const ownRewards = (): readonly Reward[] => OWN;
+
+/** Every reward that resolves (catalogue, retired and the family's own). */
 export const REWARDS: readonly Reward[] = R;
-export const rewardById = (id: string): Reward | undefined => R.find((r) => r.id === id);
+/** What a child can pick from now. */
+export const pickable = (): Reward[] => [...R.filter((r) => !r.hidden), ...OWN];
+export const rewardById = (id: string): Reward | undefined => R.find((r) => r.id === id) ?? OWN.find((r) => r.id === id);
 export const jarOf = (r: Reward): Jar => PRICES[r.tier].jar;
 
 /**

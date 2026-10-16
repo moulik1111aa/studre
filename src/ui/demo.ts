@@ -14,7 +14,7 @@ export function seedDemo(app: App, levelId: string, opts: { coins?: number; age?
   c.placed = true;
   for (const l of app.path.slice(0, at)) c.progress.levels[l.id] = { stars: 3, passes: 1 };
   chooseReward(c.wallet, 'sweets.milk-chocolate-bar');
-  chooseReward(c.wallet, 'toys.toy-car');
+  chooseReward(c.wallet, 'toys.small-remote-control-car');
   if (opts.coins) {
     c.wallet.treat.coins = opts.coins;
     c.wallet.goal.coins = opts.coins / 4;

@@ -4,7 +4,7 @@ import { AREAS, skillById } from '../src/core/areas/index.ts';
 import { buildPath, freshProgress, frontier, isPlayable, makeRound, recordResult, starsFor, dueForRevision, noteAsked } from '../src/core/path.ts';
 import { Placement, stageForAge, answerFromCheck } from '../src/core/placement.ts';
 import { freshWallet, addCoins, chooseReward, markGiven, applyMelt, coinsForLevel, addPlayTime, secondsLeft, jarProgress } from '../src/core/economy.ts';
-import { REWARDS, CATEGORIES, costOf } from '../src/core/rewards.ts';
+import { REWARDS, CATEGORIES, costOf, pickable, rewardById, setOwnRewards, jarOf } from '../src/core/rewards.ts';
 import { Fight, bossFor, BOSSES, FIGHT } from '../src/core/boss.ts';
 import { createRng } from '../src/core/rng.ts';
 import { isCorrect, normalise } from '../src/core/question.ts';
@@ -99,12 +99,18 @@ test('placement: age sets the stage; answers walk the strand', () => {
   assert.equal(answerFromCheck(1), 'not');
 });
 
-test('rewards: at least 100 in 12 categories, unique ids', () => {
-  assert.ok(REWARDS.length >= 100);
-  assert.equal(REWARDS.length, 128);
-  assert.equal(CATEGORIES.length, 12);
+test('rewards: things to buy or pay for, retired ones still resolve, own rewards', () => {
+  const list = pickable();
+  assert.ok(list.length >= 120);
   assert.equal(new Set(REWARDS.map((r) => r.id)).size, REWARDS.length);
-  for (const r of REWARDS) assert.ok(CATEGORIES.some((c) => c.id === r.category));
+  for (const r of list) assert.ok(CATEGORIES.some((c) => c.id === r.category), r.id);
+  assert.ok(!list.some((r) => r.category === 'family' || r.category === 'screen'), 'no family-time or screen-time rewards');
+  assert.ok(list.some((r) => r.name === 'Game zone day at the mall' && jarOf(r) === 'goal'));
+  assert.ok(rewardById('family.bake-together')?.hidden, 'a retired reward still resolves');
+  setOwnRewards([{ id: 'own.x1', name: 'Cricket gloves', icon: '🏏', tier: 'toyM' }]);
+  assert.equal(rewardById('own.x1')?.name, 'Cricket gloves');
+  assert.ok(pickable().some((r) => r.id === 'own.x1'));
+  setOwnRewards([]);
 });
 
 test('economy: coins split 80/20, unlock waits for Given, surplus carries over', () => {
