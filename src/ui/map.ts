@@ -9,7 +9,6 @@ import { bossFor } from '../core/boss.ts';
 import { secondsLeft } from '../core/economy.ts';
 import { ICONS, avatarHtml } from './icons.ts';
 import { JarBar } from './jars.ts';
-import { World3D, type StageInfo, type LevelNode } from './world3d.ts';
 import { WORLDS, worldVars } from './worlds.ts';
 import { drawOn, stagger, popIn, reducedMotion, EASE_OUT } from '../render/motion.ts';
 import { playLevel, timeState } from './flow.ts';
@@ -170,77 +169,11 @@ export function mapScreen(child: Child) {
       void app.show(mapScreen(child));
     });
 
-    // The map in 3D (stages you swipe through, each opening into its levels). The 2D trail
-    // stays underneath for phones without 3D.
-    let island: World3D | null = null;
-    if (app.use3d) {
-      const cur = next?.stage ?? stagesBuilt;
-      const stages: StageInfo[] = [];
-      for (let s = 1; s <= stagesBuilt; s++) {
-        const skills = nodes.filter((n) => n.stage === s && n.kind === 'skill');
-        const done = skills.filter((n) => n.levels.every((l) => isDone(p, l))).length;
-        const allDone = nodes.filter((n) => n.stage === s && n.kind !== 'quest').every((n) => n.levels.every((l) => isDone(p, l)));
-        stages.push({
-          stage: s,
-          name: AREAS[0].stages[s - 1].name,
-          world: WORLDS[s - 1].name,
-          done,
-          total: skills.length,
-          state: s === cur && !allDone ? 'now' : s < cur || allDone ? 'done' : 'locked',
-          boss: child.bossesBeaten.includes(bossFor(s, 'final').id),
-        });
-      }
-      const levels = (st: number): LevelNode[] => {
-        let no = 0;
-        return nodes
-          .filter((n) => n.stage === st)
-          .map((n) => {
-            if (n.kind === 'skill') no++;
-            const isNow = n.levels.some((l) => l.index === front);
-            const done = n.kind === 'quest' ? (p.levels[n.id]?.stars ?? 0) > 0 : n.levels.length > 0 && n.levels.every((l) => isDone(p, l));
-            const open = n.kind === 'quest' || n.levels.some((l) => isPlayable(path, p, l));
-            return {
-              id: n.id,
-              kind: n.kind,
-              name: n.label,
-              label: n.kind === 'skill' ? String(no) : n.kind === 'review' ? '⚔️' : n.kind === 'quest' ? '🧭' : (BOSS_EMOJI[bossFor(st, (n.levels[0] as Extract<Level, { kind: 'boss' }>).boss).id] ?? '👑'),
-              state: isNow ? 'now' : done ? 'done' : open ? 'open' : 'locked',
-            } as LevelNode;
-          });
-      };
-      const nextText = !next
-        ? 'Every stage is done!'
-        : next.kind === 'skill'
-          ? `▶ Next: <b>${esc(skillById(next.skillId)!.name)}</b> · ${TIER_NAMES[next.tier]} (${next.tier} of 5)`
-          : next.kind === 'boss'
-            ? `▶ Next: <b>Boss · ${esc(bossFor(next.stage, next.boss).name)}</b>`
-            : '▶ Next: <b>Minion fight</b>';
-      island = new World3D({
-        stages,
-        levels,
-        current: cur,
-        next: nextText,
-        onLevel: (id) => el.querySelector<HTMLElement>(`[data-node="${CSS.escape(id)}"]`)?.click(),
-        onNext: () => {
-          if (next) playLevel(app, child, next);
-        },
-      });
-      worlds.classList.add('has3d');
-      worlds.prepend(island.el);
-      island.el.addEventListener('no3d', () => {
-        worlds.classList.remove('has3d');
-        island = null;
-        layoutTrails();
-        (currentNode as HTMLElement | null)?.scrollIntoView({ block: 'center' });
-      });
-    }
-
     return {
       el,
-      destroy: () => island?.destroy(),
       mounted: () => {
         layoutTrails();
-        if (currentNode && !island) {
+        if (currentNode) {
           const cn = currentNode as HTMLElement;
           cn.scrollIntoView({ block: 'center' });
           if (!reducedMotion()) cn.animate([{ transform: 'translateX(-50%) scale(.6)', opacity: 0 }, { transform: 'translateX(-50%) scale(1)', opacity: 1 }], { duration: 700, easing: EASE_OUT });

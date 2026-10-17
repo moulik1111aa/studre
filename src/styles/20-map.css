@@ -70,16 +70,3 @@
 .nd-face.quest{width:68px;height:68px;font-size:34px;background:radial-gradient(circle at 32% 26%,rgba(255,255,255,.55),transparent 45%),linear-gradient(160deg,#5CF3C8,#1F8F8A);box-shadow:0 7px 0 #136B67,0 0 0 3px rgba(92,243,200,.45),0 16px 24px -10px rgba(0,0,0,.6);animation:questGlow 2.4s ease-in-out 3}
 @keyframes questGlow{50%{box-shadow:0 7px 0 #136B67,0 0 0 7px rgba(92,243,200,.25),0 16px 24px -10px rgba(0,0,0,.6)}}
 .nd-label small{display:block;font-size:12px;color:#7FF5D2;font-weight:800}
-
-/* 3D map (stages you swipe through, each opening into its levels) */
-.worlds.has3d{overflow:hidden;padding-bottom:0;display:flex;flex-direction:column}
-.worlds.has3d > .world{display:none}
-.world3d{position:relative;flex:1;min-height:0;margin:0}
-.world3d .gl{position:absolute;inset:0;width:100%;height:100%;display:block}
-.world3d .wv-top{position:absolute;left:18px;right:18px;top:4px;z-index:1;display:flex;align-items:center;gap:8px;pointer-events:none}
-.world3d .wv-title{font-weight:600;font-size:15px;padding:6px 12px;border-radius:12px;background:var(--surface,rgba(255,255,255,.1));box-shadow:inset 0 0 0 var(--stroke-w,1px) var(--stroke,rgba(255,255,255,.2))}
-.world3d .wv-back{pointer-events:auto;appearance:none;border:0;cursor:pointer;font:inherit;font-weight:600;font-size:15px;padding:6px 12px;border-radius:12px;color:var(--cta-ink,#0F1530);background:var(--cta-bg,#fff)}
-.world3d .wv-hint{position:absolute;left:0;right:0;top:46px;z-index:1;text-align:center;font-size:12.5px;color:var(--ink-soft);pointer-events:none}
-.world3d .wv-next{appearance:none;border:0;cursor:pointer;position:absolute;left:18px;right:18px;bottom:calc(var(--safe-bottom) + 92px);z-index:1;padding:11px 14px;border-radius:14px;font:inherit;font-size:14px;font-weight:500;text-align:left;color:var(--ink);background:var(--surface,rgba(255,255,255,.1));box-shadow:inset 0 0 0 var(--stroke-w,1px) var(--stroke,rgba(255,255,255,.2));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.world3d .wv-next b{font-weight:600}
-html[data-theme="glass"] .world3d .wv-next,html[data-theme="glass"] .world3d .wv-title{background:rgba(15,21,48,.55)}

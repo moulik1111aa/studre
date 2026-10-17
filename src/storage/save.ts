@@ -60,7 +60,7 @@ export interface Settings {
   theme: Theme;
   /** Rewards the family added themselves. */
   ownRewards: OwnReward[];
-  /** 3D island map and 3D bosses (off for slower phones). */
+  /** 3D boss fights (off for slower phones). */
   fx3d: boolean;
   /** Frame-rate readout, for testing. */
   showFps: boolean;
