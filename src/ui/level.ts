@@ -107,8 +107,15 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
       card.querySelector('.say')!.addEventListener('click', () => app.voice.say(q.speak ?? spoken(q.prompt)));
       card.querySelector('.hint')?.addEventListener('click', () => {
         const h = card.querySelector<HTMLElement>('.hint-text')!;
-        h.hidden = false;
-        popIn(h);
+        h.hidden = !h.hidden;
+        card.querySelector('.hint')!.classList.toggle('on', !h.hidden);
+        // Make room for it and bring it into view (the card was sized to fit before).
+        fitCard(card, qwrap);
+        if (!h.hidden) {
+          h.scrollIntoView({ block: 'nearest', behavior: reducedMotion() ? 'auto' : 'smooth' });
+          popIn(h);
+          app.voice.say(spoken(q.hint ?? ''));
+        }
       });
       if (little || q.speak) app.voice.say(q.speak ?? spoken(q.prompt));
       startTimer();

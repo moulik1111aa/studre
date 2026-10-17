@@ -165,3 +165,5 @@
 .moment.filled .mo-rows,.moment.filled .mo-next{opacity:1;transform:none}
 .moment .mo-next{transition-delay:1.2s}
 @media (prefers-reduced-motion: reduce){.moment .mo-rows,.moment .mo-next{opacity:1;transform:none}}
+.q-tools .icon-btn.hint.on{background:#FFF4CF;color:#6B4A00}
+html[data-theme] .q-tools .icon-btn.hint.on{background:var(--accent);color:var(--accent-ink)}

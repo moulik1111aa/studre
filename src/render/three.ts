@@ -49,8 +49,9 @@ export function makeRenderer(T: Three, host: HTMLElement): { r: any; w: number; 
   host.appendChild(r.domElement);
   const out = { r, w: 1, h: 1, resize: () => {} };
   out.resize = () => {
-    out.w = Math.max(1, host.clientWidth);
-    out.h = Math.max(1, host.clientHeight);
+    // Size to the canvas as laid out by CSS (it may not fill the whole host).
+    out.w = Math.max(1, r.domElement.clientWidth || host.clientWidth);
+    out.h = Math.max(1, r.domElement.clientHeight || host.clientHeight);
     r.setSize(out.w, out.h, false);
   };
   out.resize();
