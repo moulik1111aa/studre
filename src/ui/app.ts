@@ -11,6 +11,8 @@ import { Haptics } from '../platform/haptics.ts';
 import { quietly, setSystemBarStyle, type StudyHardPlugin } from '../platform/native.ts';
 import { Photos } from '../storage/photos.ts';
 import { Fx } from '../render/fx.ts';
+import { FpsMeter } from './fps.ts';
+import { webglOk } from '../render/three.ts';
 import { reducedMotion, EASE_OUT } from '../render/motion.ts';
 import { dayKey } from '../core/economy.ts';
 import { AREAS } from '../core/areas/index.ts';
@@ -41,6 +43,7 @@ export class App {
   readonly photos: Photos;
   readonly native: StudyHardPlugin | null;
   readonly debug: boolean;
+  readonly fps = new FpsMeter();
   readonly fx: Fx;
   readonly path: Level[];
   private current: Screen | null = null;
@@ -69,6 +72,7 @@ export class App {
     addEventListener('resize', () => this.fx.resize());
     const forced = this.debug ? (new URLSearchParams(location.search).get('theme') as Theme | null) : null;
     this.applyTheme(forced ?? st.theme);
+    this.fps.set(st.showFps);
     if (native) {
       try {
         native.addListener('back', () => this.back());
@@ -98,6 +102,11 @@ export class App {
     });
     if (this.save.loadedFrom === 'backup') this.toast('Progress was restored from a backup copy.');
     if (this.save.loadedFrom === 'reset') this.toast('Saved progress could not be read, so the app started fresh.');
+  }
+
+  /** Whether 3D scenes should be used (setting on and WebGL available). */
+  get use3d(): boolean {
+    return this.save.data.settings.fx3d && webglOk() && !new URLSearchParams(location.search).has('no3d');
   }
 
   /** Switch the look of the whole app (Glass, Schoolbook or Precision). */

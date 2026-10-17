@@ -88,6 +88,9 @@ function fonts() {
   }).join('');
 }
 
+/** three.js (r170, MIT) as inert text; parsed only when a 3D scene first opens (render/three.ts). */
+const threeTag = () => `<script type="text/plain" id="three-src">${readFileSync(join(root, 'assets', 'vendor', 'three.module.min.js'), 'utf8').replace(/<\/(script)/gi, '<\\/$1')}</script>`;
+
 export function build() {
   const css = readdirSync(join(src, 'styles'))
     .filter((f) => f.endsWith('.css'))
@@ -103,7 +106,8 @@ export function build() {
   const html = readFileSync(join(src, 'index.html'), 'utf8')
     .replace('/*__FONTS__*/', () => fontCss)
     .replace('/*__CSS__*/', () => css)
-    .replace('/*__JS__*/', () => scriptSafe(js));
+    .replace('/*__JS__*/', () => scriptSafe(js))
+    .replace('<div id="app"></div>', () => `<div id="app"></div>\n${threeTag()}`);
   mkdirSync(dist, { recursive: true });
   writeFileSync(join(dist, 'index.html'), html);
   // Artifact variant: the host wraps the page in its own document skeleton, so it
@@ -112,7 +116,7 @@ export function build() {
   const previewJs = scriptFor({ ...buildInfo, preview: true });
   const artifact =
     `<title>Study Hard</title>\n<meta name="theme-color" content="#0F1530">\n<style>${fontCss}</style>\n<style>${css}</style>\n` +
-    `<div id="app" aria-live="polite"></div>\n<script>${scriptSafe(previewJs)}</script>\n`;
+    `<div id="app" aria-live="polite"></div>\n${threeTag()}\n<script>${scriptSafe(previewJs)}</script>\n`;
   writeFileSync(join(dist, 'artifact.html'), artifact);
   return { bytes: Buffer.byteLength(html) };
 }

@@ -11,6 +11,7 @@ import { isCorrect, spoken, type Question } from '../core/question.ts';
 import { addCoins, addPlayTime, coinsForLevel, bossFraction } from '../core/economy.ts';
 import { Fight, FIGHT, bossFor, fightTime, type FightEvent } from '../core/boss.ts';
 import { BossView, minionFor, projectile } from './bosses.ts';
+import { Boss3DView } from './boss3d.ts';
 import { visualHtml, optionHtml, prettyAnswer } from './visuals.ts';
 import { ICONS } from './icons.ts';
 import { ambientHtml, worldVars } from './worlds.ts';
@@ -242,7 +243,7 @@ function bossScreen(app: App, child: Child, level: Extract<Level, { kind: 'boss'
   const rng = createRng(`${child.id}:${level.id}:${Date.now()}`);
   const phases = level.phases.map((ids) => ids.map((id) => skillById(id)!).filter(Boolean));
   const little = level.stage <= 2;
-  const view = new BossView(def.id, app.fx);
+  const view = app.use3d ? new Boss3DView(def.id, app.fx, level.stage) : new BossView(def.id, app.fx);
   const el = html(`<section class="screen fight boss-fight" style="${worldVars(level.stage)}" aria-label="Boss battle: ${esc(def.name)}">
     ${ambientHtml(level.stage, 6)}
     <header class="play-top">
@@ -471,6 +472,7 @@ function bossScreen(app: App, child: Child, level: Extract<Level, { kind: 'boss'
       clearTimeout(timeout);
       timer?.cancel();
       app.voice.stop();
+      if (view instanceof Boss3DView) view.destroy();
     },
   };
 }

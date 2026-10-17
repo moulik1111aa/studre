@@ -70,3 +70,9 @@
 .nd-face.quest{width:68px;height:68px;font-size:34px;background:radial-gradient(circle at 32% 26%,rgba(255,255,255,.55),transparent 45%),linear-gradient(160deg,#5CF3C8,#1F8F8A);box-shadow:0 7px 0 #136B67,0 0 0 3px rgba(92,243,200,.45),0 16px 24px -10px rgba(0,0,0,.6);animation:questGlow 2.4s ease-in-out 3}
 @keyframes questGlow{50%{box-shadow:0 7px 0 #136B67,0 0 0 7px rgba(92,243,200,.25),0 16px 24px -10px rgba(0,0,0,.6)}}
 .nd-label small{display:block;font-size:12px;color:#7FF5D2;font-weight:800}
+
+/* 3D island (current stage) */
+.island3d{position:relative;height:340px;margin:-6px 0 6px;cursor:pointer}
+.island3d .gl{position:absolute;inset:0;width:100%;height:100%;display:block}
+.island3d .is-name{position:absolute;left:18px;top:6px;z-index:1;padding:5px 10px;border-radius:10px;font-weight:600;font-size:13px;background:var(--hi-12);box-shadow:inset 0 0 0 1px var(--hi-20)}
+.island3d:not(.ready){background:radial-gradient(40% 30% at 50% 50%,var(--hi-08),transparent 70%)}

@@ -9,6 +9,7 @@ import { bossFor } from '../core/boss.ts';
 import { secondsLeft } from '../core/economy.ts';
 import { ICONS, avatarHtml } from './icons.ts';
 import { JarBar } from './jars.ts';
+import { Island3D } from './island3d.ts';
 import { WORLDS, worldVars } from './worlds.ts';
 import { drawOn, stagger, popIn, reducedMotion, EASE_OUT } from '../render/motion.ts';
 import { playLevel, timeState } from './flow.ts';
@@ -169,11 +170,39 @@ export function mapScreen(child: Child) {
       void app.show(mapScreen(child));
     });
 
+    // The current stage as a small 3D island at the top of the map.
+    let island: Island3D | null = null;
+    if (app.use3d) {
+      const st = next?.stage ?? stagesBuilt;
+      const inStage = nodes.filter((n) => n.stage === st && n.kind !== 'quest');
+      let no = 0;
+      const items = inStage.map((n) => {
+        if (n.kind === 'skill') no++;
+        const isNow = n.levels.some((l) => l.index === front);
+        const done = n.levels.every((l) => isDone(p, l));
+        return {
+          id: n.id,
+          boss: n.kind === 'boss',
+          label: n.kind === 'skill' ? String(no) : n.kind === 'review' ? '⚔️' : BOSS_EMOJI[bossFor(st, (n.levels[0] as Extract<Level, { kind: 'boss' }>).boss).id] ?? '👑',
+          state: (isNow ? 'now' : done ? 'done' : 'locked') as 'now' | 'done' | 'locked',
+        };
+      });
+      const cur = Math.max(0, items.findIndex((x) => x.state === 'now'));
+      const plain = items.filter((x) => !x.boss);
+      const curPlain = Math.max(0, plain.findIndex((x) => x.state === 'now'));
+      const start = Math.max(0, Math.min(curPlain - 4, plain.length - 7));
+      const shown = plain.slice(start, start + 7);
+      const boss = items.slice(cur).find((x) => x.boss) ?? items.filter((x) => x.boss).pop();
+      island = new Island3D(st, `Stage ${st} · ${AREAS[0].stages[st - 1].name}`, boss ? [...shown, boss] : shown, (id) => el.querySelector<HTMLElement>(`[data-node="${CSS.escape(id)}"]`)?.click());
+      worlds.prepend(island.el);
+    }
+
     return {
       el,
+      destroy: () => island?.destroy(),
       mounted: () => {
         layoutTrails();
-        if (currentNode) {
+        if (currentNode && !island) {
           const cn = currentNode as HTMLElement;
           cn.scrollIntoView({ block: 'center' });
           if (!reducedMotion()) cn.animate([{ transform: 'translateX(-50%) scale(.6)', opacity: 0 }, { transform: 'translateX(-50%) scale(1)', opacity: 1 }], { duration: 700, easing: EASE_OUT });

@@ -35,6 +35,8 @@ const paceText = (v: number, jar: 'treat' | 'goal'): string => {
 const TOGGLES: { key: keyof Settings; label: string; note: string }[] = [
   { key: 'holiday', label: 'Holiday mode', note: 'Rewards don’t melt while you’re away or unwell.' },
   { key: 'voice', label: 'Read questions aloud', note: 'Uses the phone’s English voice.' },
+  { key: 'fx3d', label: '3D world and bosses', note: 'Turn off if the app feels slow on this phone.' },
+  { key: 'showFps', label: 'Show frame rate', note: 'For testing: how smoothly the app runs.' },
   { key: 'sound', label: 'Sound effects', note: 'Taps, cheers and coins.' },
   { key: 'vibration', label: 'Vibration', note: 'Gentle buzzes on taps and answers.' },
 ];
@@ -90,6 +92,7 @@ export function parentScreen(app: App): Screen {
       if (k === 'sound') app.sfx.enabled = i.checked;
       if (k === 'voice') app.voice.enabled = i.checked;
       if (k === 'vibration') app.haptics.enabled = i.checked;
+      if (k === 'showFps') app.fps.set(i.checked);
     }),
   );
   el.querySelectorAll<HTMLInputElement>('[data-c]').forEach((i) =>

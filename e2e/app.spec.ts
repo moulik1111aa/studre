@@ -111,7 +111,7 @@ test('first run: setup, placement, rewards, first level', async ({ page }) => {
 });
 
 test('boss fight: win against Mr Bubbles', async ({ page }) => {
-  await page.goto('/?debug&demo=boss%3Aarithmetic%3A1%3Amid&play');
+  await page.goto('/?debug&no3d&demo=boss%3Aarithmetic%3A1%3Amid&play');
   await expect(page.locator('.boss-fight')).toBeVisible();
   await expect(page.locator('.speech')).toContainText('bubbles');
   const n = await playThrough(page, '.result');
@@ -119,6 +119,22 @@ test('boss fight: win against Mr Bubbles', async ({ page }) => {
   await expect(page.locator('.res-title')).toContainText('defeated');
   const save = await page.evaluate(() => JSON.parse(localStorage.getItem('studyhard.save')!));
   expect(save.children[0].bossesBeaten).toContain('bubbles');
+});
+
+test('3D boss arena loads and takes hits (or falls back to 2D)', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto('/?debug&demo=boss%3Aarithmetic%3A1%3Amid&play');
+  await expect(page.locator('.boss-fight')).toBeVisible();
+  await expect(page.locator('.boss3d canvas, .boss3d.flat')).toHaveCount(1, { timeout: 20000 });
+  for (let i = 0; i < 2; i++) {
+    const card = page.locator('.qcard[data-answer]');
+    await expect(card).toBeVisible({ timeout: 30000 });
+    const ans = (await card.getAttribute('data-answer'))!;
+    const vals = await page.locator('.choice').evaluateAll((bs) => bs.map((b) => decodeURIComponent((b as HTMLElement).dataset.v!)));
+    await page.locator('.choice').nth(vals.indexOf(ans)).click();
+    await page.waitForTimeout(2500);
+  }
+  await expect.poll(async () => Number(await page.locator('.hp-bar').getAttribute('aria-valuenow')), { timeout: 15000 }).toBeLessThan(100);
 });
 
 test('minion review needs all ten right', async ({ page }) => {

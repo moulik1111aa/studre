@@ -60,6 +60,10 @@ export interface Settings {
   theme: Theme;
   /** Rewards the family added themselves. */
   ownRewards: OwnReward[];
+  /** 3D island map and 3D bosses (off for slower phones). */
+  fx3d: boolean;
+  /** Frame-rate readout, for testing. */
+  showFps: boolean;
 }
 
 export type Theme = 'glass' | 'schoolbook' | 'precision';
@@ -95,6 +99,8 @@ export const freshSettings = (): Settings => ({
   voiceRate: 0.95,
   theme: 'glass',
   ownRewards: [],
+  fx3d: true,
+  showFps: false,
 });
 
 export function freshSave(): SaveData {
