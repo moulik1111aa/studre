@@ -170,3 +170,12 @@ html[data-theme] .q-tools .icon-btn.hint.on{background:var(--accent);color:var(-
 
 /* Paused: the question is hidden (and replaced with a fresh one on return). */
 .screen.paused .qwrap, .screen.paused .answers, .screen.paused .fo-q, .screen.paused .fo-choices{visibility:hidden}
+
+/* "Right! It's 42" — the answer is always shown, right or wrong. */
+.reveal.good{background:#DDFBEF;color:#0B5A3C;display:flex;align-items:center;justify-content:center;gap:8px}
+.reveal.good svg{width:22px;height:22px;flex:none}
+/* Confirm answers: the picked choice, and Check across the full width. */
+.choice.picked{outline:4px solid #FFD25A;outline-offset:2px;transform:translateY(-2px)}
+.check-btn{grid-column:1/-1;min-height:56px}
+.check-btn svg{width:22px;height:22px}
+.check-btn[disabled]{opacity:.45}

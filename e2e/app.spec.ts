@@ -41,7 +41,9 @@ async function playThrough(page: Page, done: string, max = 60): Promise<number> 
       }
     }
     answered++;
-    await page.waitForTimeout(250);
+    // The right answer is shown after every question; wait for the next one.
+    await page.waitForTimeout(150);
+    await page.waitForFunction(() => !document.querySelector('.qcard .reveal'), null, { timeout: 8000 }).catch(() => undefined);
   }
   await expect(page.locator(done)).toBeVisible({ timeout: 20_000 });
   return answered;
@@ -282,4 +284,24 @@ test('parent can start a child over, then delete the profile', async ({ page }) 
   await expect(page.locator('.toast').last()).toContainText('deleted');
   save = await page.evaluate(() => JSON.parse(localStorage.getItem('studyhard.save')!));
   expect(save.children.find((c: { id: string }) => c.id === kid.id)).toBeUndefined();
+});
+
+test('confirm answers: pick, then Check; the answer is always shown', async ({ page }) => {
+  await seeded(page, '@2', `window.__app.save.update((d) => { d.settings.confirmAnswers = true; })`);
+  await page.click('.play-next');
+  const card = page.locator('.qcard[data-answer]');
+  await expect(card).toBeVisible();
+  const ans = (await card.getAttribute('data-answer'))!;
+  const vals = await page.locator('.choice').evaluateAll((bs) => bs.map((b) => decodeURIComponent((b as HTMLElement).dataset.v!)));
+  const wrong = vals.findIndex((v) => v !== ans);
+  const right = vals.indexOf(ans);
+  await expect(page.locator('.check-btn')).toBeDisabled();
+  // A stray tap only picks; it can be changed before Check.
+  await page.locator('.choice').nth(wrong).click();
+  await expect(page.locator('.choice.picked')).toHaveCount(1);
+  await expect(page.locator('.reveal')).toHaveCount(0);
+  await page.locator('.choice').nth(right).click();
+  await expect(page.locator('.choice').nth(right)).toHaveClass(/picked/);
+  await page.click('.check-btn');
+  await expect(page.locator('.reveal.good')).toContainText(ans);
 });

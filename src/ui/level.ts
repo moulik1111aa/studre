@@ -18,6 +18,7 @@ import { resultScreen } from './result.ts';
 import { goHome, timeState } from './flow.ts';
 import { stepBackAfterPlacement } from './placement.ts';
 import { remember } from '../core/undo.ts';
+import { wireChoices, type Wired } from './confirm.ts';
 
 export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' }>, harder = false) {
   return (app: App): Screen => {
@@ -31,7 +32,6 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
     const boost = Math.min(2, (child.challenge ?? 0) + (harder ? 1 : 0));
     const round: Round = makeRound(level, skillById, child.progress, rng, earlier, warm, boost);
     const { rules, questions } = round;
-    const little = skill.stage <= 2;
     const el = html(`<section class="screen play" style="${worldVars(level.stage)}" aria-label="${skill.name}">
       ${ambientHtml(level.stage, 6)}
       <header class="play-top">
@@ -63,6 +63,8 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
     let timer: Animation | null = null;
     let timeout = 0;
     const asked: Question[] = [];
+    // What is picked or typed but not yet sent (it counts if time runs out).
+    let pending: () => string | undefined = () => undefined;
     // While paused the question is hidden, and a new one replaces it on return.
     let paused = false;
     let held = false;
@@ -139,6 +141,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
           <div class="pad">${keys.map((k) => (k === '' ? '<span></span>' : `<button type="button" class="key" data-k="${k}">${k === '⌫' ? ICONS.backspace : k}</button>`)).join('')}</div>
           <div class="pad-row">${extra.map((k) => `<button type="button" class="key small" data-k="${k}">${k === ',' ? 'and' : k}</button>`).join('')}<button type="button" class="btn mint ok">OK ${ICONS.check}</button></div>`;
         let typed = '';
+        pending = () => typed || undefined;
         const out = answers.querySelector<HTMLElement>('.typed')!;
         const paint = () => (out.innerHTML = typed ? prettyAnswer(typed.replace(/−/g, '-')) : '');
         answers.querySelector('.pad')!.addEventListener('pointerdown', (e) => {
@@ -168,11 +171,10 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
       answers.innerHTML = q.choices
         .map((c) => `<button type="button" class="choice" data-v="${encodeURIComponent(c)}" aria-label="${c}">${optionHtml(c, q.optionObject)}</button>`)
         .join('');
-      answers.querySelectorAll<HTMLButtonElement>('.choice').forEach((b) =>
-        b.addEventListener('click', () => {
-          if (!done) submit(q, decodeURIComponent(b.dataset.v!), b);
-        }),
-      );
+      const wired: Wired = wireChoices(app, answers, (v, b) => {
+        if (!done) void submit(q, v, b);
+      });
+      pending = wired.picked;
       stagger(answers.children, { gap: 70, y: 16 });
     };
 
@@ -183,7 +185,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
       timerEl.hidden = false;
       const bar = timerEl.querySelector('i')!;
       timer = bar.animate([{ transform: 'scaleX(1)' }, { transform: 'scaleX(0)' }], { duration: rules.timer * 1000, easing: 'linear', fill: 'forwards' });
-      timeout = window.setTimeout(() => submit(asked[asked.length - 1], '__timeout__'), rules.timer * 1000);
+      timeout = window.setTimeout(() => submit(asked[asked.length - 1], pending() ?? '__timeout__'), rules.timer * 1000);
     };
 
     const submit = async (q: Question, value: string, btn?: HTMLElement) => {
@@ -195,6 +197,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
       const card = qwrap.firstElementChild as HTMLElement;
       const dot = dots.children[rules.streak ? Math.min(streak, total - 1) : i] as HTMLElement | undefined;
       app.voice.stop();
+      pending = () => undefined;
       if (ok) {
         correct++;
         streak++;
@@ -204,7 +207,12 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
         btn?.classList.add('right');
         dot?.classList.add('on');
         if (!reducedMotion()) card.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.015)' }, { transform: 'scale(1)' }], { duration: 360, easing: EASE_OUT });
-        await wait(650);
+        // Always show and say the answer, right or wrong.
+        const yes = html(`<div class="reveal good">${ICONS.check} Right! It’s <b>${prettyAnswer(q.answer)}</b></div>`);
+        card.appendChild(yes);
+        popIn(yes);
+        app.voice.say(`Right! It's ${spoken(q.answer)}.`);
+        await wait(app.save.data.settings.voice ? 1500 : 900);
       } else {
         streak = 0;
         misses++;
@@ -215,14 +223,15 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
         shake(btn ?? card);
         if (rules.streak) dots.querySelectorAll('i').forEach((d) => d.classList.remove('on'));
         else dot?.classList.add('miss');
-        const reveal = html(`<div class="reveal">${value === '__timeout__' ? 'Time’s up! ' : ''}The answer is <b>${prettyAnswer(q.answer)}</b></div>`);
+        const typedNote = value !== '__timeout__' && !btn ? `You typed <b>${prettyAnswer(value.replace(/−/g, '-'))}</b>. ` : '';
+        const reveal = html(`<div class="reveal">${value === '__timeout__' ? 'Time’s up! ' : typedNote}The answer is <b>${prettyAnswer(q.answer)}</b></div>`);
         card.appendChild(reveal);
         popIn(reveal);
         answers.querySelectorAll<HTMLElement>('.choice').forEach((b) => {
           if (isCorrect(q, decodeURIComponent(b.dataset.v!))) b.classList.add('right');
         });
-        if (little) app.voice.say(`The answer is ${q.answer}.`);
-        await wait(1800);
+        app.voice.say(`${value === '__timeout__' ? 'Time is up. ' : ''}The answer is ${spoken(q.answer)}.`);
+        await wait(2000);
       }
       i++;
       const finished = rules.streak ? streak >= rules.streak || i >= rules.count : i >= questions.length;

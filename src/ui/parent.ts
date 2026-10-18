@@ -35,6 +35,7 @@ const paceText = (v: number, jar: 'treat' | 'goal'): string => {
 const TOGGLES: { key: keyof Settings; label: string; note: string }[] = [
   { key: 'holiday', label: 'Holiday mode', note: 'Rewards don’t melt while you’re away or unwell.' },
   { key: 'voice', label: 'Read questions aloud', note: 'Uses the phone’s English voice.' },
+  { key: 'confirmAnswers', label: 'Confirm answers', note: 'Tap an answer, then Check. Fewer slips from a stray tap.' },
   { key: 'fx3d', label: '3D boss fights', note: 'Turn off if fights feel slow on this phone.' },
   { key: 'showFps', label: 'Show frame rate', note: 'For testing: how smoothly the app runs.' },
   { key: 'sound', label: 'Sound effects', note: 'Taps, cheers and coins.' },

@@ -9,6 +9,7 @@ import type { Skill } from '../core/skill.ts';
 import { createRng } from '../core/rng.ts';
 import { makeQuestion } from '../core/path.ts';
 import { isCorrect, spoken } from '../core/question.ts';
+import { wireChoices } from './confirm.ts';
 import { avatarHtml } from './icons.ts';
 import { optionHtml } from './visuals.ts';
 import { stagger, popIn, wait } from '../render/motion.ts';
@@ -97,16 +98,19 @@ export function placementScreen(child: Child) {
             <div class="choices">${q.choices.map((c) => `<button class="choice" data-v="${encodeURIComponent(c)}">${optionHtml(c, q.optionObject)}</button>`).join('')}</div></div>`;
           app.voice.say(q.speak ?? spoken(q.prompt));
           stagger(body.querySelectorAll('.choice'), { gap: 60 });
-          body.querySelectorAll<HTMLButtonElement>('.choice').forEach((b) =>
-            b.addEventListener('click', async () => {
-              const ok = isCorrect(q, decodeURIComponent(b.dataset.v!));
-              if (ok) right++;
-              b.classList.add(ok ? 'right' : 'wrong');
-              ok ? app.sfx.correct() : app.sfx.wrong();
-              await wait(500);
-              void next();
-            }),
-          );
+          wireChoices(app, body.querySelector<HTMLElement>('.choices')!, async (v, b) => {
+            const ok = isCorrect(q, v);
+            if (ok) right++;
+            b.classList.add(ok ? 'right' : 'wrong');
+            ok ? app.sfx.correct() : app.sfx.wrong();
+            // Always show and say the right answer.
+            body.querySelectorAll<HTMLElement>('.choice').forEach((c) => {
+              if (isCorrect(q, decodeURIComponent(c.dataset.v!))) c.classList.add('right');
+            });
+            app.voice.say(ok ? `Right! It's ${spoken(q.answer)}.` : `The answer is ${spoken(q.answer)}.`);
+            await wait(app.save.data.settings.voice ? 1600 : 900);
+            void next();
+          });
         };
         void next();
       });

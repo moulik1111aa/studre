@@ -64,6 +64,8 @@ export interface Settings {
   fx3d: boolean;
   /** Frame-rate readout, for testing. */
   showFps: boolean;
+  /** Tap an answer to pick it, then Check (fewer slips from a stray tap). */
+  confirmAnswers: boolean;
 }
 
 export type Theme = 'glass' | 'schoolbook' | 'precision';
@@ -101,6 +103,7 @@ export const freshSettings = (): Settings => ({
   ownRewards: [],
   fx3d: true,
   showFps: false,
+  confirmAnswers: false,
 });
 
 export function freshSave(): SaveData {

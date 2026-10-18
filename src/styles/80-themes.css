@@ -319,3 +319,6 @@ html[data-theme="schoolbook"] .mo-was,html[data-theme="schoolbook"] .mo-new,html
 html[data-theme="schoolbook"] .mo-new{background:repeating-linear-gradient(-45deg,#3E5C9A 0 6px,#5674B4 6px 9px)}
 html[data-theme] .mo-tick{background:var(--bg-1)}
 html[data-theme="schoolbook"] .mo-next b,html[data-theme="schoolbook"] .mo-sub span:last-child{font-style:italic}
+html[data-theme] .reveal.good{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--ink)}
+html[data-theme] .reveal.good b{color:var(--good)}
+html[data-theme] .choice.picked{outline:3px solid var(--accent);outline-offset:2px}

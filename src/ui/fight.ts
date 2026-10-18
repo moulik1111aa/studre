@@ -20,6 +20,7 @@ import { resultScreen } from './result.ts';
 import { goHome, timeState } from './flow.ts';
 import { remember } from '../core/undo.ts';
 import { avatarHtml } from './icons.ts';
+import { wireChoices, type Wired } from './confirm.ts';
 
 type FightLevel = Exclude<Level, { kind: 'skill' }>;
 
@@ -33,7 +34,7 @@ function promptHtml(p: string): string {
   return p.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/(\d+)\/(\d+)/g, (_, a, b) => `<span class="frac"><sup>${a}</sup><sub>${b}</sub></span>`);
 }
 
-function renderQuestion(app: App, qwrap: HTMLElement, answers: HTMLElement, q: Question, onAnswer: (value: string, btn?: HTMLElement) => void, little: boolean, mode: 'attack' | 'defend' = 'attack'): void {
+function renderQuestion(app: App, qwrap: HTMLElement, answers: HTMLElement, q: Question, onAnswer: (value: string, btn?: HTMLElement) => void, little: boolean, mode: 'attack' | 'defend' = 'attack'): Wired {
   qwrap.innerHTML = `<article class="qcard fight-q ${mode}${q.visual ? ' has-vis' : ''}">
     ${mode === 'defend' ? '<p class="defend-tag">🛡️ Quick — block it!</p>' : ''}
     ${q.visual ? visualHtml(q.visual, q.key) : ''}
@@ -48,16 +49,19 @@ function renderQuestion(app: App, qwrap: HTMLElement, answers: HTMLElement, q: Q
   app.voice.say(q.speak ?? spoken(q.prompt));
   answers.className = `answers fight-answers fmt-${q.format === 'picture' ? 'picture' : 'choice'}`;
   answers.innerHTML = q.choices.map((c) => `<button type="button" class="choice" data-v="${encodeURIComponent(c)}" aria-label="${esc(c)}">${optionHtml(c, q.optionObject)}</button>`).join('');
-  let locked = false;
-  answers.querySelectorAll<HTMLButtonElement>('.choice').forEach((b) =>
-    b.addEventListener('click', () => {
-      if (locked) return;
-      locked = true;
-      onAnswer(decodeURIComponent(b.dataset.v!), b);
-    }),
-  );
+  const wired = wireChoices(app, answers, onAnswer);
   stagger(answers.children, { gap: 50, y: 12 });
   fitCard(card, qwrap);
+  void little;
+  return wired;
+}
+
+/** Show and say the right answer (always, right or wrong). */
+function tellAnswer(app: App, qwrap: HTMLElement, q: Question, ok: boolean, prefix = ''): void {
+  const r = html(ok ? `<div class="reveal good">${ICONS.check} Right! It’s <b>${prettyAnswer(q.answer)}</b></div>` : `<div class="reveal">${prefix}The answer is <b>${prettyAnswer(q.answer)}</b></div>`);
+  qwrap.firstElementChild?.appendChild(r);
+  popIn(r);
+  app.voice.say(ok ? `Right! It's ${spoken(q.answer)}.` : `${prefix ? 'Too slow. ' : ''}The answer is ${spoken(q.answer)}.`);
 }
 
 function markAnswers(answers: HTMLElement, q: Question, btn: HTMLElement | undefined, ok: boolean): void {
@@ -190,16 +194,14 @@ function minionScreen(app: App, child: Child, level: Extract<Level, { kind: 'rev
       app.fx.burst(to.x + to.width / 2, to.y + to.height / 2, '#FFD25A', 16);
       pips[i]?.classList.add('gone');
       if (!reducedMotion()) body.animate([{ transform: 'none', filter: 'brightness(1)' }, { transform: 'translateX(10px) rotate(8deg) scale(.9)', filter: 'brightness(2)' }, { transform: 'none', filter: 'brightness(1)' }], { duration: 380, easing: EASE_OUT });
-      await wait(350);
+      tellAnswer(app, qwrap, q, true);
+      await wait(app.save.data.settings.voice ? 1300 : 700);
     } else {
       app.sfx.wrong();
       pips[i]?.classList.add('miss');
       if (!reducedMotion()) body.animate([{ transform: 'none' }, { transform: 'translateY(-18px) scale(1.1)' }, { transform: 'none' }], { duration: 500, easing: EASE_OUT });
-      const reveal = html(`<div class="reveal">The answer is <b>${prettyAnswer(q.answer)}</b></div>`);
-      qwrap.firstElementChild!.appendChild(reveal);
-      popIn(reveal);
-      if (little) app.voice.say(`The answer is ${q.answer}.`);
-      await wait(1600);
+      tellAnswer(app, qwrap, q, false);
+      await wait(2000);
     }
     i++;
     busy = false;
@@ -308,6 +310,7 @@ function bossScreen(app: App, child: Child, level: Extract<Level, { kind: 'boss'
   let askedAt = 0;
   let allowed = 10;
   let current: Question | null = null;
+  let wired: Wired | null = null;
   // While paused the question is hidden, and a new one replaces it on return.
   let paused = false;
   let held = false;
@@ -343,12 +346,12 @@ function bossScreen(app: App, child: Child, level: Extract<Level, { kind: 'boss'
     current = q;
     asked.push(q);
     el.classList.toggle('defending', mode === 'defend');
-    renderQuestion(app, qwrap, answers, q, (v, b) => void answer(v, b), little, mode);
+    wired = renderQuestion(app, qwrap, answers, q, (v, b) => void answer(v, b), little, mode);
     allowed = fightTime(skill.speedSec, level.stage, mode);
     timer?.cancel();
     timer = timerBar.animate([{ transform: 'scaleX(1)' }, { transform: 'scaleX(0)' }], { duration: allowed * 1000, easing: 'linear', fill: 'forwards' });
     clearTimeout(timeout);
-    timeout = window.setTimeout(() => void answer('__timeout__'), allowed * 1000);
+    timeout = window.setTimeout(() => void answer(wired?.picked() ?? '__timeout__'), allowed * 1000);
     askedAt = performance.now();
   };
 
@@ -369,12 +372,9 @@ function bossScreen(app: App, child: Child, level: Extract<Level, { kind: 'boss'
     await play(events, mode, btn);
     if (fight.status === 'won') return win();
     if (fight.status === 'lost') return lose(q);
-    if (!ok) {
-      const reveal = html(`<div class="reveal">${value === '__timeout__' ? 'Too slow! ' : ''}It was <b>${prettyAnswer(q.answer)}</b></div>`);
-      qwrap.firstElementChild?.appendChild(reveal);
-      popIn(reveal);
-      await wait(1200);
-    }
+    tellAnswer(app, qwrap, q, ok, value === '__timeout__' ? 'Too slow! ' : '');
+    await wait(ok ? (app.save.data.settings.voice ? 1200 : 600) : 1800);
+    if (over) return;
     nextQuestion();
   };
 

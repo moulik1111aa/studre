@@ -130,6 +130,6 @@ export class Fight {
 
 /** Time allowed per fight question: generous for little ones; defend questions get half. */
 export function fightTime(speedSec: number, stage: number, mode: 'attack' | 'defend'): number {
-  const base = Math.max(6, Math.round(speedSec * (stage <= 2 ? 2 : 1.5)));
-  return mode === 'defend' ? Math.max(4, Math.round(base / 2)) : base;
+  const base = Math.max(8, Math.round(speedSec * (stage <= 2 ? 2.5 : 1.9)));
+  return mode === 'defend' ? Math.max(5, Math.round(base * 0.6)) : base;
 }

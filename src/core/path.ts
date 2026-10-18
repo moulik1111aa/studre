@@ -135,7 +135,7 @@ export function rulesFor(level: Level, skill?: Skill, boost = 0): RoundRules {
     ...base,
     hints: false,
     passMark: base.streak ? base.passMark : Math.min(base.count, base.passMark + boost),
-    timer: base.timer || (boost >= 2 ? Math.round(speed * 1.5) : 0),
+    timer: base.timer || (boost >= 2 ? Math.round(speed * 2) : 0),
   };
 }
 
@@ -151,9 +151,9 @@ function baseRules(level: Level, skill?: Skill): RoundRules {
     case 3:
       return { count: 10, passMark: 8, timer: 0, hints: false };
     case 4:
-      return { count: 10, passMark: 8, timer: speed, hints: false };
+      return { count: 10, passMark: 8, timer: Math.round(speed * 1.5), hints: false };
     case 5:
-      return { count: 15, passMark: 10, timer: Math.round(speed * 1.2), hints: false, streak: 10 };
+      return { count: 15, passMark: 10, timer: Math.round(speed * 1.8), hints: false, streak: 10 };
   }
 }
 
