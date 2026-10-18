@@ -56,7 +56,7 @@ for (const k of kids) {
   }
   const perDay = levels / played;
   const avgTreat = treatDays.reduce((a, b) => a + b, 0) / treatDays.length;
-  const pass = perDay >= 5 && perDay <= 10 && avgTreat >= 6 && avgTreat <= 9 && goalDay >= 45 && goalDay <= 75;
+  const pass = perDay >= 5 && perDay <= 10 && avgTreat >= 8.5 && avgTreat <= 12 && goalDay >= 75 && goalDay <= 105;
   ok &&= pass;
   console.log(`${pass ? '✓' : '✗'} ${k.name}: ${perDay.toFixed(1)} levels/day · treat every ${avgTreat.toFixed(1)} days · big toy on day ${goalDay}`);
 }

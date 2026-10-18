@@ -67,6 +67,8 @@ export interface Question extends Made {
   choices: string[];
   /** Identity for repeat detection. */
   key: string;
+  /** Difficulty it was made at (so a paused question can be swapped for a like one). */
+  d?: number;
 }
 
 // ── numbers ────────────────────────────────────────────────────────────────

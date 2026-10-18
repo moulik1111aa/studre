@@ -125,6 +125,22 @@ export function newChild(name: string, age: number, avatar: number, today: strin
   };
 }
 
+/**
+ * Start a child over: stars, placement, coins, jars, rewards earned and play history are
+ * cleared; name, age and picture stay (placement runs again next time they play).
+ */
+export function resetChild(c: Child, today: string): void {
+  const fresh = newChild(c.name, c.age, c.avatar, today);
+  Object.assign(c, { ...fresh, id: c.id, undo: [], sinceShowcase: 0 });
+}
+
+/** Remove a child and their face-off records. */
+export function removeChild(d: SaveData, id: string): void {
+  d.children = d.children.filter((c) => c.id !== id);
+  if (d.activeChildId === id) d.activeChildId = d.children[0]?.id ?? null;
+  for (const k of Object.keys(d.faceoff)) if (k.split('|').includes(id)) delete d.faceoff[k];
+}
+
 function parse(raw: string | null): SaveData | null {
   if (!raw) return null;
   try {

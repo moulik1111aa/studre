@@ -5,13 +5,13 @@ export type PriceTier = 'small' | 'medium' | 'large' | 'toyS' | 'toyM' | 'toyB' 
 export type Jar = 'treat' | 'goal';
 
 export const PRICES: Record<PriceTier, { coins: number; jar: Jar; about: string }> = {
-  small: { coins: 350, jar: 'treat', about: 'about 1 week' },
-  medium: { coins: 600, jar: 'treat', about: 'about 2 weeks' },
-  large: { coins: 900, jar: 'treat', about: 'about 3 weeks' },
-  toyS: { coins: 400, jar: 'goal', about: 'about 1 month' },
-  toyM: { coins: 550, jar: 'goal', about: 'about 1½ months' },
-  toyB: { coins: 700, jar: 'goal', about: 'about 2 months' },
-  dream: { coins: 1500, jar: 'goal', about: 'about 4–5 months' },
+  small: { coins: 480, jar: 'treat', about: 'about 10 days' },
+  medium: { coins: 820, jar: 'treat', about: 'about 2–3 weeks' },
+  large: { coins: 1200, jar: 'treat', about: 'about 1 month' },
+  toyS: { coins: 500, jar: 'goal', about: 'about 1½ months' },
+  toyM: { coins: 680, jar: 'goal', about: 'about 2 months' },
+  toyB: { coins: 900, jar: 'goal', about: 'about 3 months' },
+  dream: { coins: 1900, jar: 'goal', about: 'about 6 months' },
 };
 
 export interface Reward {
@@ -81,7 +81,7 @@ group('drinks', 'small', [['Coconut water', '🥥'], ['Lemonade', '🍋'], ['Ice
 group('snacks', 'small', [['Masala puffs', '🥐'], ['Sandwich', '🥪'], ['Noodles', '🍜']], true);
 group('sweets', 'small', [['Candy buttons', '🍬'], ['Toffees', '🍬'], ['Jelly sweets', '🍬'], ['Ladoo', '🟠']], true);
 
-// Treat jar: small, about a week.
+// Treat jar: small, about 10 days.
 group('sweets', 'small', [
   ['Milk chocolate bar', '🍫'], ['Chocolate wafer', '🍫'], ['Surprise chocolate egg', '🥚'], ['Chocolate gems', '🍬'], ['Gummy bears', '🧸'], ['Lollipop', '🍭'],
   ['Toffee pack', '🍬'], ['Cotton candy', '🍭'], ['Gulab jamun', '🍮'], ['Rasgulla', '⚪'], ['Jalebi', '🥨'], ['Kaju katli', '🔷'],
@@ -160,7 +160,7 @@ export const jarOf = (r: Reward): Jar => PRICES[r.tier].jar;
 
 /**
  * How fast rewards come, set by a parent (spec §4): a multiplier on every price in a jar.
- * 1 = the calibrated pace (a small treat about weekly, a big toy in about 2 months).
+ * 1 = the calibrated pace (a small treat about every 10 days, a big toy in about 3 months).
  */
 export const PACE: Record<Jar, number> = { treat: 1, goal: 1 };
 export function setPace(treat: number, goal: number): void {

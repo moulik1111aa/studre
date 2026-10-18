@@ -69,7 +69,7 @@ export const freshWallet = (): Wallet => ({
 
 /**
  * Questions take longer for the youngest (listening, counting) and in the hardest stages
- * (multi-step work), so levels there pay more. This keeps "a treat about once a week at
+ * (multi-step work), so levels there pay more. This keeps "a treat about every 10 days at
  * 30 minutes a day" true for every age (checked by `npm run simulate`).
  */
 export const STAGE_PAY = [1.85, 1.6, 1, 1.1, 1.3, 1.5, 1.6];

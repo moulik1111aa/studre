@@ -9,9 +9,9 @@ import { whosPlayingScreen } from './whos.ts';
 import { setPace } from '../core/rewards.ts';
 import { recheckJars } from '../core/economy.ts';
 
-/** [multiplier, label, note] — relative to the calibrated pace (treat ≈ weekly, big toy ≈ 2 months). */
-const TREAT_PACES: [number, string, string][] = [[0.45, '3 days', 'Often'], [1, '1 week', 'Normal'], [2, '2 weeks', 'Slower'], [4.3, '1 month', 'Rare']];
-const GOAL_PACES: [number, string, string][] = [[0.5, '1 month', 'Faster'], [1, '2 months', 'Normal'], [1.5, '3 months', 'Slower'], [3, '6 months', 'Rare']];
+/** [multiplier, label, note] — relative to the calibrated pace (treat ≈ every 10 days, big toy ≈ 3 months). */
+const TREAT_PACES: [number, string, string][] = [[0.3, '3 days', 'Often'], [0.7, '1 week', 'Faster'], [1, '10 days', 'Normal'], [3, '1 month', 'Rare']];
+const GOAL_PACES: [number, string, string][] = [[0.33, '1 month', 'Fast'], [0.67, '2 months', 'Faster'], [1, '3 months', 'Normal'], [2, '6 months', 'Rare']];
 const near = (a: number, b: number) => Math.abs(a - b) < 0.01;
 
 export function welcomeScreen(app: App): Screen {

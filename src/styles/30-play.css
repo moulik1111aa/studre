@@ -167,3 +167,6 @@
 @media (prefers-reduced-motion: reduce){.moment .mo-rows,.moment .mo-next{opacity:1;transform:none}}
 .q-tools .icon-btn.hint.on{background:#FFF4CF;color:#6B4A00}
 html[data-theme] .q-tools .icon-btn.hint.on{background:var(--accent);color:var(--accent-ink)}
+
+/* Paused: the question is hidden (and replaced with a fresh one on return). */
+.screen.paused .qwrap, .screen.paused .answers, .screen.paused .fo-q, .screen.paused .fo-choices{visibility:hidden}

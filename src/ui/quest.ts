@@ -167,6 +167,7 @@ export function questScreen(child: Child, quest: SideQuest) {
       if (over || pausedAt) return;
       pausedAt = performance.now();
       cancelAnimationFrame(tick);
+      el.classList.add('paused');
       const { result } = app.sheet(`<h2>Paused</h2><p>The clock is stopped.</p>`, [
         { label: 'Keep going', value: 'resume', kind: 'mint', back: true },
         { label: 'End the quest', value: 'end', kind: 'ghost' },
@@ -174,7 +175,10 @@ export function questScreen(child: Child, quest: SideQuest) {
       void result.then((v) => {
         pausedTotal += performance.now() - pausedAt;
         pausedAt = 0;
+        el.classList.remove('paused');
         if (v === 'end') return void finish(true);
+        // The question was on screen during the pause: ask a fresh one instead.
+        if (current) next();
         tick = requestAnimationFrame(runClock);
       });
     };

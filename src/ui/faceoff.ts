@@ -303,15 +303,20 @@ export function faceoffMatchScreen(a: Player, b: Player, mode: FaceoffMode) {
 
     const pause = () => {
       if (over) return;
+      el.classList.add('paused');
       const { result } = app.sheet(`<h2>Paused</h2><p>Both players can take a breather.</p>`, [
         { label: 'Keep playing', value: 'resume', kind: 'mint', back: true },
         { label: 'End the match', value: 'leave', kind: 'ghost' },
       ], 'Paused');
       void result.then((v) => {
+        el.classList.remove('paused');
         if (v === 'leave') {
           over = true;
           void app.show(faceoffSetupScreen({ a, b, mode }));
+          return;
         }
+        // Fresh questions for both players, so nobody works one out during the pause.
+        if (!over && current[0] && current[1]) askBoth();
       });
     };
     el.querySelector('.fo-pause')!.addEventListener('click', pause);

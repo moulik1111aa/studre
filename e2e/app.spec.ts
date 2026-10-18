@@ -225,3 +225,61 @@ test('parent can skip a level, and undo the last hour', async ({ page }) => {
   expect(save.children[0].wallet.lifetime).toBe(0);
   expect(save.children[0].progress.levels).toEqual({});
 });
+
+test('pausing hides the question and brings back a fresh one', async ({ page }) => {
+  await page.goto('/?debug&demo=%402');
+  await expect(page.locator('.map')).toBeVisible();
+  await page.click('.play-next');
+  const card = page.locator('.qcard[data-answer]');
+  await expect(card).toBeVisible();
+  await page.waitForTimeout(700);
+  const before = await card.evaluate((c) => c.querySelector('.prompt')!.textContent + '|' + (c as HTMLElement).dataset.answer + '|' + c.querySelector('.vis, svg')?.outerHTML);
+  await page.click('.quit');
+  await expect(page.locator('.qwrap')).toBeHidden();
+  await page.getByRole('button', { name: 'Keep going' }).click();
+  await expect(page.locator('.qwrap')).toBeVisible();
+  await page.waitForTimeout(700);
+  const after = await card.evaluate((c) => c.querySelector('.prompt')!.textContent + '|' + (c as HTMLElement).dataset.answer + '|' + c.querySelector('.vis, svg')?.outerHTML);
+  expect(after).not.toEqual(before);
+  // The level still plays to the end with the same number of questions.
+  await playThrough(page, '.result');
+});
+
+test('minion fight: a paused question is swapped too', async ({ page }) => {
+  await page.goto('/?debug&demo=review%3Aarithmetic%3A2%3A1&play');
+  const card = page.locator('.qcard[data-answer]');
+  await expect(card).toBeVisible();
+  const before = await card.evaluate((c) => c.querySelector('.prompt')!.textContent + '|' + (c as HTMLElement).dataset.answer);
+  await page.click('.quit');
+  await page.getByRole('button', { name: 'Keep fighting' }).click();
+  await expect(card).toBeVisible();
+  const after = await card.evaluate((c) => c.querySelector('.prompt')!.textContent + '|' + (c as HTMLElement).dataset.answer);
+  expect(after).not.toEqual(before);
+  await playThrough(page, '.result');
+  await expect(page.locator('.res-title')).toHaveText('Minion beaten!');
+});
+
+test('parent can start a child over, then delete the profile', async ({ page }) => {
+  await page.goto('/?debug&demo=%400');
+  await expect(page.locator('.map')).toBeVisible();
+  await page.click('.play-next');
+  await playThrough(page, '.result');
+  await page.click('.res-actions .home');
+  await page.click('.who');
+  await page.click('.parent-btn');
+  await grownUp(page);
+  await page.locator('.report').first().click();
+  await page.click('.reset-kid');
+  await page.getByRole('button', { name: 'Start over' }).click();
+  await expect(page.locator('.toast').last()).toContainText('starting fresh');
+  let save = await page.evaluate(() => JSON.parse(localStorage.getItem('studyhard.save')!));
+  const kid = save.children[0];
+  expect(kid.wallet.lifetime).toBe(0);
+  expect(kid.progress.levels).toEqual({});
+  expect(kid.placed).toBe(false);
+  await page.click('.delete-kid');
+  await page.getByRole('button', { name: 'Delete profile' }).click();
+  await expect(page.locator('.toast').last()).toContainText('deleted');
+  save = await page.evaluate(() => JSON.parse(localStorage.getItem('studyhard.save')!));
+  expect(save.children.find((c: { id: string }) => c.id === kid.id)).toBeUndefined();
+});

@@ -120,12 +120,12 @@ test('economy: coins split 80/20, unlock waits for Given, surplus carries over',
   assert.ok(chooseReward(w, choc.id));
   assert.ok(chooseReward(w, car.id));
   assert.ok(!chooseReward(w, REWARDS[1].id), 'locked once chosen');
-  const res = addCoins(w, 450);
+  const res = addCoins(w, 625);
   assert.deepEqual(res.unlocked, ['treat']);
-  assert.equal(w.treat.coins, 360);
-  assert.equal(w.goal.coins, 90);
+  assert.equal(w.treat.coins, 500);
+  assert.equal(w.goal.coins, 125);
   assert.ok(markGiven(w, 'treat', '2026-10-16'));
-  assert.equal(w.treat.coins, 10);
+  assert.equal(w.treat.coins, 20);
   assert.equal(w.treat.rewardId, null);
   assert.equal(w.earned.length, 1);
   // Perfect pays about 10×, 9/10 about 5×, 8/10 about 3× (a ratio, rounded).
@@ -135,7 +135,7 @@ test('economy: coins split 80/20, unlock waits for Given, surplus carries over',
   assert.equal(coinsForLevel('skill', 0.5, false, false), 0);
   assert.equal(coinsForLevel('skill', 1, true, true), 8);
   assert.equal(coinsForLevel('boss', 1, true, false), 50);
-  assert.equal(costOf(choc), 350);
+  assert.equal(costOf(choc), 480);
 });
 
 test('economy: melting per missed day, paused on holiday, never below zero', () => {
@@ -147,10 +147,10 @@ test('economy: melting per missed day, paused on holiday, never below zero', () 
   applyMelt(w, '2026-10-10', false);
   const lost = applyMelt(w, '2026-10-13', false); // missed 11 and 12
   assert.equal(lost.days, 2);
-  assert.equal(lost.treat, 35); // 2 × 5% × 350
+  assert.equal(lost.treat, 48); // 2 × 5% × 480
   assert.equal(applyMelt(w, '2026-10-13', false).days, 0);
   assert.equal(applyMelt(w, '2026-10-20', true).days, 0, 'holiday');
-  assert.equal(applyMelt(w, '2026-12-30', false).treat, 165);
+  assert.equal(applyMelt(w, '2026-12-30', false).treat, 152);
   assert.equal(w.treat.coins, 0);
   assert.equal(jarProgress(w.treat), 0);
 });

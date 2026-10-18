@@ -3,7 +3,7 @@
 
 import { html, type App, type Screen } from './app.ts';
 import type { Child } from '../storage/save.ts';
-import { type Level, makeRound, recordResult, starsFor, noteAsked, dueForRevision, TIER_NAMES, type Round } from '../core/path.ts';
+import { type Level, makeRound, replaceQuestion, recordResult, starsFor, noteAsked, dueForRevision, TIER_NAMES, type Round } from '../core/path.ts';
 import { skillById, AREAS } from '../core/areas/index.ts';
 import { createRng } from '../core/rng.ts';
 import { isCorrect, spoken, type Question } from '../core/question.ts';
@@ -63,6 +63,9 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
     let timer: Animation | null = null;
     let timeout = 0;
     const asked: Question[] = [];
+    // While paused the question is hidden, and a new one replaces it on return.
+    let paused = false;
+    let held = false;
 
     // The prize for this level, shrinking with each slip: perfect scores pay the most.
     const wasPassedBefore = (child.progress.levels[level.id]?.stars ?? 0) >= 1;
@@ -87,6 +90,10 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
     };
 
     const show = (q: Question) => {
+      if (paused) {
+        held = true;
+        return;
+      }
       asked.push(q);
       const prompt = q.prompt;
       qwrap.innerHTML = `<article class="qcard${q.visual ? ' has-vis' : ''}">
@@ -258,7 +265,10 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
     };
 
     const pause = () => {
-      if (!document.body.contains(el)) return;
+      if (!document.body.contains(el) || paused) return;
+      paused = true;
+      el.classList.add('paused');
+      app.voice.stop();
       accrue();
       timer?.pause();
       clearTimeout(timeout);
@@ -277,10 +287,17 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
           return;
         }
         activeSince = performance.now();
-        if (timer && !done) {
-          const left = (timer.effect?.getComputedTiming().duration as number) - (timer.currentTime as number);
-          timer.play();
-          timeout = window.setTimeout(() => submit(asked[asked.length - 1], '__timeout__'), Math.max(0, left));
+        paused = false;
+        el.classList.remove('paused');
+        if (held) {
+          held = false;
+          show(questions[i]);
+        } else if (!done && asked.length) {
+          // The question was on screen during the pause: ask a fresh one instead.
+          const old = asked.pop()!;
+          const s2 = skillById(old.skillId) ?? skill;
+          questions[i] = replaceQuestion(old, s2, rng, new Set([...asked.map((q) => q.key), ...(child.progress.history[s2.id] ?? [])]), questions);
+          show(questions[i]);
         }
       });
     };

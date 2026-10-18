@@ -207,14 +207,14 @@ export class App {
   }
 
   /** A sheet that slides up; resolves with the chosen action's value. */
-  sheet<T>(body: string, actions: { label: string; value: T; kind?: 'primary' | 'ghost' | 'mint'; back?: boolean }[], label: string): { el: HTMLElement; result: Promise<T> } {
+  sheet<T>(body: string, actions: { label: string; value: T; kind?: 'primary' | 'ghost' | 'mint' | 'danger'; back?: boolean }[], label: string): { el: HTMLElement; result: Promise<T> } {
     const ov = html(`<div class="overlay" role="dialog" aria-modal="true" aria-label="${label}"><div class="sheet">${body}<div class="actions"></div></div></div>`);
     const list = ov.querySelector('.actions')!;
     let done!: (v: T) => void;
     const result = new Promise<T>((r) => (done = r));
     for (const a of actions) {
       const b = document.createElement('button');
-      b.className = `btn ${a.kind === 'ghost' ? 'ghost' : a.kind === 'mint' ? 'mint' : ''}`;
+      b.className = `btn ${a.kind === 'ghost' || a.kind === 'mint' || a.kind === 'danger' ? a.kind : ''}`;
       b.textContent = a.label;
       if (a.back) b.dataset.back = '';
       b.addEventListener('click', () => {

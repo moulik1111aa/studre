@@ -200,7 +200,21 @@ export function makeQuestion(skill: Skill, rng: Rng, d: number, avoid: Set<strin
     made = make();
   }
   const n = choiceCount ?? (skill.format === 'picture' ? 3 : 4);
-  return { ...made, skillId: skill.id, format: skill.format, choices: buildChoices(rng, made.answer, made.distractors, n), key: questionKey(skill.id, made) };
+  return { ...made, skillId: skill.id, format: skill.format, choices: buildChoices(rng, made.answer, made.distractors, n), key: questionKey(skill.id, made), d };
+}
+
+/**
+ * A fresh question in place of one that was on screen when play was paused, so pausing
+ * cannot buy thinking time: same skill, difficulty and answer style, different numbers
+ * and a different answer.
+ */
+export function replaceQuestion(q: Question, skill: Skill, rng: Rng, avoid: Set<string>, round: Question[] = []): Question {
+  const others = round.filter((o) => o.key !== q.key);
+  let fresh = q;
+  for (let t = 0; t < 15 && (fresh.key === q.key || sameAnswer(fresh.answer, q.answer)); t++) {
+    fresh = makeQuestion(skill, rng, q.d ?? 0.5, new Set([...avoid, q.key]), q.choices.length, q.key, others);
+  }
+  return fresh;
 }
 
 /**

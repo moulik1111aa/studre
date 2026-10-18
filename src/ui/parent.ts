@@ -2,7 +2,7 @@
 // categories, sound/voice, redo placement, and a progress report per child.
 
 import { html, esc, type App, type Screen } from './app.ts';
-import type { Child, Settings, Theme } from '../storage/save.ts';
+import { resetChild, removeChild, type Child, type Settings, type Theme } from '../storage/save.ts';
 import { CATEGORIES, rewardById } from '../core/rewards.ts';
 import { AREAS } from '../core/areas/index.ts';
 import { isMastered } from '../core/path.ts';
@@ -28,7 +28,7 @@ export const CHALLENGE = [
 ] as const;
 
 const paceText = (v: number, jar: 'treat' | 'goal'): string => {
-  const days = (jar === 'treat' ? 7 : 60) * v;
+  const days = (jar === 'treat' ? 10 : 90) * v;
   return days < 10 ? `every ${Math.round(days)} days` : days < 26 ? `every ${Math.round(days / 7)} weeks`.replace('every 1 weeks', 'weekly') : `in ${Math.round(days / 30)} month${Math.round(days / 30) === 1 ? '' : 's'}`;
 };
 
@@ -175,6 +175,10 @@ export function reportScreen(child: Child) {
           <button class="btn ghost small undo-hour"${changesSince(child, Date.now() - 3_600_000) ? '' : ' disabled'}>Remove the last hour (${changesSince(child, Date.now() - 3_600_000)})</button>
           <button class="btn ghost small undo-today"${changesSince(child, startOfToday()) ? '' : ' disabled'}>Remove all of today (${changesSince(child, startOfToday())})</button></div>
         <button class="btn ghost small redo">Redo placement</button>
+        <h2 class="pa-h">Profile</h2>
+        <div class="card undo-card profile-card"><p class="fine">Start over clears ${esc(child.name)}’s stars, coins, jars and rewards earned, and runs placement again. Delete removes the profile completely.</p>
+          <button class="btn ghost small warn reset-kid">Start ${esc(child.name)} over</button>
+          <button class="btn ghost small warn delete-kid">Delete ${esc(child.name)}’s profile</button></div>
       </div>
     </section>`);
     el.querySelector('.back-btn')!.addEventListener('click', () => void app.show(parentScreen));
@@ -205,6 +209,30 @@ export function reportScreen(child: Child) {
           child.placed = false;
         });
         app.toast('Placement will run next time they play.');
+      });
+    });
+    el.querySelector('.reset-kid')!.addEventListener('click', () => {
+      const { result } = app.sheet(`<h2>Start ${esc(child.name)} over?</h2><p>All stars, coins, jars, rewards earned and play history are cleared. Name, age and picture stay, and placement runs again. This can’t be undone.</p>`, [
+        { label: 'Start over', value: true, kind: 'danger' },
+        { label: 'Cancel', value: false, kind: 'ghost', back: true },
+      ], 'Start over');
+      void result.then((yes) => {
+        if (!yes) return;
+        app.save.update(() => resetChild(child, app.today));
+        app.toast(`${child.name} is starting fresh.`);
+        void app.show(reportScreen(child));
+      });
+    });
+    el.querySelector('.delete-kid')!.addEventListener('click', () => {
+      const { result } = app.sheet(`<h2>Delete ${esc(child.name)}’s profile?</h2><p>${esc(child.name)}’s progress, coins, rewards and face-off scores are removed from this phone. This can’t be undone.</p>`, [
+        { label: 'Delete profile', value: true, kind: 'danger' },
+        { label: 'Cancel', value: false, kind: 'ghost', back: true },
+      ], 'Delete profile');
+      void result.then((yes) => {
+        if (!yes) return;
+        app.save.update((d) => removeChild(d, child.id));
+        app.toast(`${child.name}’s profile was deleted.`);
+        void app.show(app.save.data.children.length ? parentScreen : addChildScreen(false));
       });
     });
     return { el, mounted: () => stagger(el.querySelectorAll('.pa-body > *'), { gap: 50 }) };

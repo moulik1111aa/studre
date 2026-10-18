@@ -4,7 +4,7 @@
 
 import { html, esc, type App, type Screen } from './app.ts';
 import type { Child } from '../storage/save.ts';
-import { type Level, makeRound, makeQuestion, recordResult, starsFor, noteAsked } from '../core/path.ts';
+import { type Level, makeRound, makeQuestion, replaceQuestion, recordResult, starsFor, noteAsked } from '../core/path.ts';
 import { skillById } from '../core/areas/index.ts';
 import { createRng } from '../core/rng.ts';
 import { isCorrect, spoken, type Question } from '../core/question.ts';
@@ -109,6 +109,7 @@ function settle(app: App, child: Child, level: FightLevel, asked: Question[], co
 
 function pauseSheet(app: App, child: Child, clock: Clock, onResume: () => void, onLeave: () => void): void {
   clock.accrue();
+  app.voice.stop();
   const { result } = app.sheet(`<h2>Paused</h2><p>The battle will wait for you.</p>`, [
     { label: 'Keep fighting', value: 'resume', kind: 'mint', back: true },
     { label: 'Run away', value: 'leave', kind: 'ghost' },
@@ -161,10 +162,19 @@ function minionScreen(app: App, child: Child, level: Extract<Level, { kind: 'rev
   let i = 0;
   let correct = 0;
   let over = false;
+  // While paused the question is hidden, and a new one replaces it on return.
+  let paused = false;
+  let held = false;
+  let busy = false;
 
-  const next = () => renderQuestion(app, qwrap, answers, questions[i], (v, b) => void answer(v, b), little);
+  const next = () => {
+    if (paused) return void (held = true);
+    renderQuestion(app, qwrap, answers, questions[i], (v, b) => void answer(v, b), little);
+  };
 
   const answer = async (value: string, btn?: HTMLElement) => {
+    if (busy || paused) return;
+    busy = true;
     const q = questions[i];
     const ok = isCorrect(q, value);
     app.voice.stop();
@@ -192,6 +202,7 @@ function minionScreen(app: App, child: Child, level: Extract<Level, { kind: 'rev
       await wait(1600);
     }
     i++;
+    busy = false;
     if (i >= questions.length) return finish();
     next();
   };
@@ -214,8 +225,28 @@ function minionScreen(app: App, child: Child, level: Extract<Level, { kind: 'rev
   };
 
   const pause = () => {
-    if (over) return;
-    pauseSheet(app, child, clock, () => undefined, () => (over = true));
+    if (over || paused) return;
+    paused = true;
+    el.classList.add('paused');
+    pauseSheet(
+      app,
+      child,
+      clock,
+      () => {
+        paused = false;
+        el.classList.remove('paused');
+        if (held) {
+          held = false;
+          return next();
+        }
+        if (busy || i >= questions.length) return;
+        const old = questions[i];
+        const sk = skillById(old.skillId);
+        if (sk) questions[i] = replaceQuestion(old, sk, rng, new Set([...questions.map((q) => q.key), ...(child.progress.history[sk.id] ?? [])]), questions);
+        next();
+      },
+      () => (over = true),
+    );
   };
   el.querySelector('.quit')!.addEventListener('click', pause);
   return {
@@ -277,6 +308,9 @@ function bossScreen(app: App, child: Child, level: Extract<Level, { kind: 'boss'
   let askedAt = 0;
   let allowed = 10;
   let current: Question | null = null;
+  // While paused the question is hidden, and a new one replaces it on return.
+  let paused = false;
+  let held = false;
 
   const say = async (text: string, ms = 2200) => {
     speech.hidden = false;
@@ -299,6 +333,7 @@ function bossScreen(app: App, child: Child, level: Extract<Level, { kind: 'boss'
   };
 
   const nextQuestion = () => {
+    if (paused) return void (held = true);
     const mode = fight.mode;
     const pool = phases[Math.min(fight.phase, phases.length - 1)].length ? phases[Math.min(fight.phase, phases.length - 1)] : phases.flat();
     const skill = rng.pick(pool);
@@ -426,7 +461,9 @@ function bossScreen(app: App, child: Child, level: Extract<Level, { kind: 'boss'
   };
 
   const pause = () => {
-    if (over) return;
+    if (over || paused) return;
+    paused = true;
+    el.classList.add('paused');
     clearTimeout(timeout);
     timer?.pause();
     pauseSheet(
@@ -434,11 +471,16 @@ function bossScreen(app: App, child: Child, level: Extract<Level, { kind: 'boss'
       child,
       clock,
       () => {
-        if (!current || !timer) return;
-        const left = (timer.effect?.getComputedTiming().duration as number) - (timer.currentTime as number);
-        askedAt = performance.now() - (allowed * 1000 - left);
-        timer.play();
-        timeout = window.setTimeout(() => void answer('__timeout__'), Math.max(0, left));
+        paused = false;
+        el.classList.remove('paused');
+        if (held) {
+          held = false;
+          return nextQuestion();
+        }
+        if (!current) return;
+        // The question was on screen during the pause: ask a fresh one (full time again).
+        asked.pop();
+        nextQuestion();
       },
       () => (over = true),
     );
