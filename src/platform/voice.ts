@@ -65,11 +65,12 @@ export class Voice {
 
   say(text: string, rate = this.rate, force = false): void {
     if ((!this.enabled && !force) || !text) return;
-    this.stop();
     if (this.native) {
+      // QUEUE_FLUSH replaces whatever was being said; a separate stop could land after it.
       quietly(this.native.speak({ text, rate, pitch: 1.0, voice: this.name || undefined }));
       return;
     }
+    this.stop();
     try {
       const u = new SpeechSynthesisUtterance(text);
       u.rate = rate;

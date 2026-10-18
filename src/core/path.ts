@@ -4,6 +4,7 @@
 import type { Area } from './areas/index.ts';
 import type { Skill } from './skill.ts';
 import type { Rng } from './rng.ts';
+import { vary } from './variety.ts';
 import { buildChoices, normalise, type Question } from './question.ts';
 
 export type Tier = 1 | 2 | 3 | 4 | 5;
@@ -159,18 +160,47 @@ function baseRules(level: Level, skill?: Skill): RoundRules {
 const DIFFICULTY: Record<Tier, [number, number]> = { 1: [0, 0.3], 2: [0, 0.5], 3: [0.3, 1], 4: [0.4, 1], 5: [0.5, 1] };
 
 /** Make one question for a skill, avoiding the keys in `avoid` (retries a few times). */
-export function makeQuestion(skill: Skill, rng: Rng, d: number, avoid: Set<string>, choiceCount?: number, last?: string): Question {
-  const keyOf = (m: ReturnType<Skill['make']>) =>
-    `${skill.id}|${m.prompt}|${m.visual ? JSON.stringify(m.visual) : ''}|${m.answer}|${[...m.distractors].sort().join(',')}`;
-  let made = skill.make(rng, d);
-  // Prefer a question not seen recently; never the same as the one just asked.
-  for (let tries = 0; tries < 40; tries++) {
-    const k = keyOf(made);
-    if (k !== last && (tries >= 12 || !avoid.has(k))) break;
-    made = skill.make(rng, d);
+/** Identity of a question: what is asked and its answer (not the order of the options). */
+export const questionKey = (skillId: string, m: { prompt: string; visual?: unknown; answer: string; distractors?: string[]; optionObject?: string }): string =>
+  `${skillId}|${m.prompt}|${m.visual ? JSON.stringify(m.visual) : ''}|${m.answer}|${m.optionObject ?? ''}` +
+  // When the prompt has no numbers ("Which group has more?"), the options are the question.
+  (/\d/.test(m.prompt) ? '' : `|${[...(m.distractors ?? [])].sort().join(',')}`);
+
+const numbersIn = (q: { prompt: string; answer: string }): string[] => [...(q.prompt.match(/\d+(?:\.\d+)?/g) ?? []), q.answer];
+/**
+ * Too close to a question already in the round: shares three or more numbers (e.g.
+ * "12, 16, 20, 24" and "16, 20, 24, 28"), or is the same sum turned around.
+ */
+export function tooSimilar(a: { prompt: string; answer: string }, b: { prompt: string; answer: string }): boolean {
+  const na = numbersIn(a);
+  const nb = new Set(numbersIn(b));
+  const shared = new Set(na.filter((n) => nb.has(n))).size;
+  if (shared >= 3) return true;
+  const shape = (p: string) => p.replace(/\d+(?:\.\d+)?/g, '#');
+  return shared >= 2 && a.answer === b.answer && shape(a.prompt).length === shape(b.prompt).length;
+}
+
+/** A prompt with its numbers blanked out: its layout. */
+export const promptShape = (prompt: string): string => prompt.replace(/\d+(\.\d+)?/g, '#');
+
+export function makeQuestion(skill: Skill, rng: Rng, d: number, avoid: Set<string>, choiceCount?: number, last?: string, round: { prompt: string; answer: string; visual?: unknown; distractors?: string[]; optionObject?: string }[] = []): Question {
+  const make = () => vary(skill.make(rng, d), rng, skill.stage, d);
+  // Not three questions laid out the same way in a row ("10 = 7 + ?", "10 = 6 + ?", …),
+  // when the skill has other ways to ask.
+  const [p1, p2] = round.slice(-2).map((q) => promptShape(q.prompt));
+  const thirdInARow = (prompt: string) => round.length >= 2 && p1 === p2 && promptShape(prompt) === p1;
+  let made = make();
+  // Prefer a question not asked recently and not like one already in this round; then at
+  // least one not already in this round; never the same as the one just asked.
+  for (let tries = 0; tries < 80; tries++) {
+    const k = questionKey(skill.id, made);
+    const inRound = round.some((q) => questionKey(skill.id, q) === k);
+    const fresh = !avoid.has(k) && !round.some((q) => tooSimilar(made, q)) && !thirdInARow(made.prompt);
+    if (k !== last && (fresh || (tries >= 40 && !inRound) || tries >= 70)) break;
+    made = make();
   }
   const n = choiceCount ?? (skill.format === 'picture' ? 3 : 4);
-  return { ...made, skillId: skill.id, format: skill.format, choices: buildChoices(rng, made.answer, made.distractors, n), key: keyOf(made) };
+  return { ...made, skillId: skill.id, format: skill.format, choices: buildChoices(rng, made.answer, made.distractors, n), key: questionKey(skill.id, made) };
 }
 
 /**
@@ -185,7 +215,7 @@ export function makeRound(level: Level, skillsById: (id: string) => Skill | unde
   const histFor = (id: string) => new Set(p.history[id] ?? []);
   const add = (s: Skill, d: number) => {
     const avoid = new Set([...seen, ...histFor(s.id)]);
-    const q = makeQuestion(s, rng, d, avoid, undefined, questions.at(-1)?.key);
+    const q = makeQuestion(s, rng, d, avoid, undefined, questions.at(-1)?.key, questions);
     seen.add(q.key);
     questions.push(q);
   };

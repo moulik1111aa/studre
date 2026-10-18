@@ -29,6 +29,17 @@ function countQ(rng: Rng, lo: number, hi: number): Made {
 
 const dotsQ = (lo: number, hi: number) => (r: Rng): Made => {
   const n = r.int(lo, hi);
+  if (r.chance(0.4)) {
+    const o = obj(r);
+    return {
+      prompt: r.pick([`Count the ${thing(o, 2)}`, `How many ${thing(o, 2)} here?`]),
+      speak: `Count the ${thing(o, 2)}. How many are there?`,
+      visual: { kind: 'objects', groups: [{ object: o, count: n }] },
+      answer: num(n),
+      distractors: smallWrong(r, n, Math.max(1, lo - 1), hi + 1),
+      hint: 'Touch each one as you count.',
+    };
+  }
   return {
     prompt: 'How many dots?',
     speak: 'Count the dots. How many are there?',
@@ -46,10 +57,21 @@ add('count10s', 'number', 'Count scattered objects 1–10', dotsQ(5, 10));
 
 const glance = (hi: number) => (r: Rng): Made => {
   const n = r.int(1, hi);
+  const frame = hi >= 5 && r.chance(0.35);
+  if (!frame && r.chance(0.4)) {
+    const o = obj(r);
+    return {
+      prompt: `Quick! How many ${thing(o, 2)}?`,
+      speak: `Look quickly. How many ${thing(o, 2)}?`,
+      visual: { kind: 'objects', groups: [{ object: o, count: n }] },
+      answer: num(n),
+      distractors: smallWrong(r, n, 1, hi + 1),
+    };
+  }
   return {
-    prompt: 'How many? Quick!',
-    speak: 'Look quickly. How many dots?',
-    visual: { kind: 'dots', count: n },
+    prompt: frame ? 'Quick! How many in the frame?' : r.pick(['How many? Quick!', 'Quick look: how many?']),
+    speak: frame ? 'Look quickly. How many dots in the frame?' : 'Look quickly. How many dots?',
+    visual: frame ? { kind: 'tenframe', count: n } : { kind: 'dots', count: n },
     answer: num(n),
     distractors: smallWrong(r, n, 1, hi + 1),
   };
@@ -59,6 +81,16 @@ add('glance5', 'number', 'Recognise dots at a glance (1–5)', glance(5), { spee
 
 const numeral = (lo: number, hi: number) => (r: Rng): Made => {
   const n = r.int(lo, hi);
+  if (r.chance(0.4)) {
+    const o = obj(r);
+    return {
+      prompt: `Which number is this many ${thing(o, 2)}?`,
+      speak: `Count the ${thing(o, 2)}. Which number shows how many?`,
+      visual: { kind: 'objects', groups: [{ object: o, count: n }] },
+      answer: num(n),
+      distractors: smallWrong(r, n, Math.max(1, lo - 1), hi),
+    };
+  }
   return {
     prompt: `Find the number ${n}`,
     speak: `Can you find the number ${n}?`,
@@ -126,18 +158,38 @@ add('same', 'number', 'Same amount?', (r) => {
   };
 });
 
-add('bigger10', 'number', 'Bigger number (1–10)', (r) => {
-  const nums = r.shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).slice(0, 3);
-  const big = Math.max(...nums);
+add('bigger10', 'number', 'Bigger number (1–10)', (r, d) => {
+  const small = d >= 0.4 && r.chance(0.35);
+  let nums: number[];
+  let pick: number;
+  let extra: number | undefined;
+  do {
+    nums = r.shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).slice(0, 3);
+    pick = small ? Math.min(...nums) : Math.max(...nums);
+    const p = pick;
+    extra = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].find((n) => !nums.includes(n) && (small ? n > p : n < p));
+  } while (extra === undefined);
   return {
-    prompt: 'Which number is biggest?',
-    speak: 'Which number is the biggest?',
-    answer: num(big),
-    distractors: nums.filter((n) => n !== big).map(num).concat(num(big === 10 ? 1 : big + 1 > 10 ? 1 : 0)),
+    prompt: small ? 'Which number is smallest?' : 'Which number is biggest?',
+    speak: small ? 'Which number is the smallest?' : 'Which number is the biggest?',
+    answer: num(pick),
+    distractors: nums.filter((n) => n !== pick).map(num).concat(num(extra)),
   };
 });
 
 add('order5', 'number', 'Order numbers 1–5', (r) => {
+  if (r.chance(0.35)) {
+    const n = r.int(1, 4);
+    const o = obj(r);
+    return {
+      prompt: `What comes after ${n}?`,
+      speak: `Count on. What number comes after ${n}?`,
+      visual: { kind: 'objects', groups: [{ object: o, count: n }] },
+      answer: num(n + 1),
+      distractors: smallWrong(r, n + 1, 1, 6),
+      hint: 'One more.',
+    };
+  }
   const start = r.int(1, 2);
   const seq = [start, start + 1, start + 2, start + 3];
   const gap = r.int(1, 3);
@@ -162,15 +214,29 @@ add('line10', 'number', 'Missing number on a 1–10 line', (r) => {
   };
 });
 
-const countBack = (hi: number) => (r: Rng): Made => {
+const countBack = (hi: number) => (r: Rng, d: number): Made => {
+  if (r.chance(0.3)) {
+    const n = r.int(1, hi);
+    const o = obj(r);
+    return {
+      prompt: `What comes just before ${n}?`,
+      speak: `Count backwards. What number comes just before ${n}?`,
+      visual: { kind: 'objects', groups: [{ object: o, count: n }] },
+      answer: num(n - 1),
+      distractors: smallWrong(r, n - 1, 0, hi),
+      hint: 'One less.',
+    };
+  }
   const start = r.int(4, hi);
-  const shown = [start, start - 1, start - 2];
-  const next = start - 3;
+  const seq = [start, start - 1, start - 2, start - 3];
+  const gap = d < 0.3 || r.chance(0.5) ? 3 : r.int(1, 2);
+  const shown = gap === 3 ? seq.slice(0, 3) : seq;
+  const ans = seq[gap];
   return {
-    prompt: `${shown.join(', ')}, ?`,
-    speak: `Count backwards: ${shown.join(', ')}. What comes next?`,
-    answer: num(next),
-    distractors: smallWrong(r, next, 0, hi),
+    prompt: shown.map((n, i) => (i === gap ? '?' : String(n))).join(', ') + (gap === 3 ? ', ?' : ''),
+    speak: `Count backwards: ${shown.map((n, i) => (i === gap ? 'something' : String(n))).join(', ')}${gap === 3 ? ', something' : ''}. Which number is missing?`,
+    answer: num(ans),
+    distractors: smallWrong(r, ans, 0, hi),
     hint: 'Counting back, each number is one less.',
   };
 };
@@ -192,8 +258,18 @@ const oneMoreLess = (more: boolean) => (r: Rng): Made => {
 add('onemore', 'number', 'One more than (to 10)', oneMoreLess(true));
 add('oneless', 'number', 'One less than (to 10)', oneMoreLess(false));
 
-add('tenframe', 'number', 'Ten frame: how many?', (r) => {
+add('tenframe', 'number', 'Ten frame: how many?', (r, d) => {
   const n = r.int(3, 10);
+  if (d >= 0.4 && n < 10 && r.chance(0.4)) {
+    return {
+      prompt: 'How many more to fill the frame?',
+      speak: 'How many more dots would fill the ten frame?',
+      visual: { kind: 'tenframe', count: n },
+      answer: num(10 - n),
+      distractors: smallWrong(r, 10 - n, 1, 9),
+      hint: 'Count the empty boxes.',
+    };
+  }
   return {
     prompt: 'How many in the ten frame?',
     speak: 'How many dots are in the ten frame?',

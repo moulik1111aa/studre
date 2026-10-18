@@ -45,6 +45,10 @@ public class StudyHardPlugin extends Plugin {
     private Vibrator vibrator;
     private TextToSpeech tts;
     private boolean ttsReady = false;
+    /** A line asked for before the speech engine was ready; spoken as soon as it is. */
+    private String pendingText = null;
+    private String pendingVoice = null;
+    private float pendingRate = 0.95f;
 
     @Override
     public void load() {
@@ -69,6 +73,10 @@ public class StudyHardPlugin extends Plugin {
             }
             Voice best = bestVoice();
             if (best != null) tts.setVoice(best);
+            if (ttsReady && pendingText != null) {
+                speakNow(pendingText, pendingRate, 1.0f, pendingVoice);
+                pendingText = null;
+            }
         });
 
         AppCompatActivity activity = getActivity();
@@ -326,10 +334,23 @@ public class StudyHardPlugin extends Plugin {
         Double rate = call.getDouble("rate", 0.95);
         Double pitch = call.getDouble("pitch", 1.0);
         String voice = call.getString("voice");
-        if (tts == null || !ttsReady || text == null || text.isEmpty()) {
+        if (tts == null || text == null || text.isEmpty()) {
             call.resolve();
             return;
         }
+        if (!ttsReady) {
+            // The engine is still starting (first question after launch): say it when ready.
+            pendingText = text;
+            pendingVoice = voice;
+            pendingRate = rate == null ? 0.95f : rate.floatValue();
+            call.resolve();
+            return;
+        }
+        speakNow(text, rate == null ? 0.95f : rate.floatValue(), pitch == null ? 1.0f : pitch.floatValue(), voice);
+        call.resolve();
+    }
+
+    private void speakNow(String text, float rate, float pitch, String voice) {
         if (voice != null && !voice.isEmpty() && (tts.getVoice() == null || !voice.equals(tts.getVoice().getName()))) {
             for (Voice v : englishVoices()) {
                 if (v.getName().equals(voice)) {
@@ -338,14 +359,14 @@ public class StudyHardPlugin extends Plugin {
                 }
             }
         }
-        tts.setSpeechRate(rate == null ? 0.95f : rate.floatValue());
-        tts.setPitch(pitch == null ? 1.0f : pitch.floatValue());
+        tts.setSpeechRate(rate);
+        tts.setPitch(pitch);
         tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "q");
-        call.resolve();
     }
 
     @PluginMethod
     public void stopSpeaking(PluginCall call) {
+        pendingText = null;
         if (tts != null) tts.stop();
         call.resolve();
     }

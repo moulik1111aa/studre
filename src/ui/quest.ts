@@ -57,7 +57,7 @@ export function questScreen(child: Child, quest: SideQuest) {
       if (over) return;
       if (asked.length >= QUEST.questions) return void finish();
       const skill = rng.pick(skills);
-      const q = makeQuestion(skill, rng, 0.3 + 0.4 * rng.next(), seen, skill.format === 'picture' ? 3 : 4, current?.key);
+      const q = makeQuestion(skill, rng, 0.3 + 0.4 * rng.next(), seen, skill.format === 'picture' ? 3 : 4, current?.key, asked.slice(-8));
       seen.add(q.key);
       current = q;
       qwrap.innerHTML = `<article class="qcard quick">${q.visual ? visualHtml(q.visual, q.key) : ''}<h2 class="prompt">${q.prompt.replace(/</g, '&lt;')}</h2></article>`;

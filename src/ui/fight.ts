@@ -45,7 +45,7 @@ function renderQuestion(app: App, qwrap: HTMLElement, answers: HTMLElement, q: Q
   if (!reducedMotion()) card.animate([{ opacity: 0, transform: 'scale(.9) translateY(16px)' }, { opacity: 1, transform: 'none' }], { duration: 360, easing: EASE_OUT });
   stagger(card.querySelectorAll('.obj, .dots circle, .cell, .note, .coin-piece'), { gap: 30, y: 8, scale: 0.6 });
   card.querySelector('.say')!.addEventListener('click', () => app.voice.say(q.speak ?? spoken(q.prompt)));
-  if (little || q.speak) app.voice.say(q.speak ?? spoken(q.prompt));
+  app.voice.say(q.speak ?? spoken(q.prompt));
   answers.className = `answers fight-answers fmt-${q.format === 'picture' ? 'picture' : 'choice'}`;
   answers.innerHTML = q.choices.map((c) => `<button type="button" class="choice" data-v="${encodeURIComponent(c)}" aria-label="${esc(c)}">${optionHtml(c, q.optionObject)}</button>`).join('');
   let locked = false;
@@ -303,7 +303,7 @@ function bossScreen(app: App, child: Child, level: Extract<Level, { kind: 'boss'
     const pool = phases[Math.min(fight.phase, phases.length - 1)].length ? phases[Math.min(fight.phase, phases.length - 1)] : phases.flat();
     const skill = rng.pick(pool);
     const d = (mode === 'defend' ? 0.4 : 0.5 + 0.15 * fight.phase + 0.2 * rng.next()) + 0.15 * (child.challenge ?? 0);
-    const q = makeQuestion(skill, rng, Math.min(1, d), new Set([...seen, ...(child.progress.history[skill.id] ?? [])]), skill.format === 'picture' ? 3 : 4, asked.at(-1)?.key);
+    const q = makeQuestion(skill, rng, Math.min(1, d), new Set([...seen, ...(child.progress.history[skill.id] ?? [])]), skill.format === 'picture' ? 3 : 4, asked.at(-1)?.key, asked.slice(-10));
     seen.add(q.key);
     current = q;
     asked.push(q);

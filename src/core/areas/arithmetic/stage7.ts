@@ -36,17 +36,21 @@ const bracket = (k: number, v = 'x'): string => `(${v} ${sgn(k)})`;
 const name = (r: Rng): string => r.pick(NAMES);
 
 // ── Algebra ────────────────────────────────────────────────────────────────
+const LETTERS = ['x', 'y', 'a', 'm', 'n', 'p', 't'];
 add('sqplus', 'algebra', 'Expand (a + b)²', (r) => {
   const b = r.int(1, 12);
-  return choice(`(x + ${b})² = ?`, quad(1, 2 * b, b * b), [quad(1, 0, b * b), quad(1, b, b * b), quad(1, 2 * b, 2 * b), quad(1, b * b, 2 * b)], r, `(x + ${b})(x + ${b}): don't forget the middle term 2 × ${b}x.`);
+  const v = r.pick(LETTERS);
+  return choice(`(${v} + ${b})² = ?`, quad(1, 2 * b, b * b, v), [quad(1, 0, b * b, v), quad(1, b, b * b, v), quad(1, 2 * b, 2 * b, v), quad(1, b * b, 2 * b, v)], r, `(${v} + ${b})(${v} + ${b}): don't forget the middle term 2 × ${b}${v}.`);
 }, { format: 'choice' });
 add('sqminus', 'algebra', 'Expand (a − b)²', (r) => {
   const b = r.int(1, 12);
-  return choice(`(x − ${b})² = ?`, quad(1, -2 * b, b * b), [quad(1, 0, -(b * b)), quad(1, -2 * b, -(b * b)), quad(1, 2 * b, b * b), quad(1, -b, b * b)], r, 'The middle term is negative; the last term is positive.');
+  const v = r.pick(LETTERS);
+  return choice(`(${v} − ${b})² = ?`, quad(1, -2 * b, b * b, v), [quad(1, 0, -(b * b), v), quad(1, -2 * b, -(b * b), v), quad(1, 2 * b, b * b, v), quad(1, -b, b * b, v)], r, 'The middle term is negative; the last term is positive.');
 }, { format: 'choice' });
 add('dots', 'algebra', 'Expand (a + b)(a − b)', (r) => {
   const b = r.int(1, 15);
-  return choice(`(x + ${b})(x − ${b}) = ?`, quad(1, 0, -(b * b)), [quad(1, 0, b * b), quad(1, -2 * b, -(b * b)), quad(1, 2 * b, -(b * b)), quad(1, 0, -2 * b)], r, 'The middle terms cancel: x² − b².');
+  const v = r.pick(LETTERS);
+  return choice(`(${v} + ${b})(${v} − ${b}) = ?`, quad(1, 0, -(b * b), v), [quad(1, 0, b * b, v), quad(1, -2 * b, -(b * b), v), quad(1, 2 * b, -(b * b), v), quad(1, 0, -2 * b, v)], r, `The middle terms cancel: ${v}² − ${b * b}.`);
 }, { format: 'choice' });
 add('expand2', 'algebra', 'Expand two brackets', (r) => {
   const p = r.int(-9, 9) || 2;
@@ -102,6 +106,18 @@ add('rearrange', 'algebra', 'Rearrange formulas', (r) => {
     ['y = mx + c. Make x the subject.', 'x = (y − c) / m', ['x = y / m − c', 'x = (y + c) / m', 'x = m(y − c)', 'x = y − c − m']],
     ['F = 9C/5 + 32. Make C the subject.', 'C = 5(F − 32) / 9', ['C = 9(F − 32) / 5', 'C = 5F / 9 − 32', 'C = (F + 32) × 5 / 9', 'C = F − 32']],
     ['s = d / t. Make t the subject.', 't = d / s', ['t = s / d', 't = ds', 't = d − s', 't = s − d']],
+    ['A = lw. Make l the subject.', 'l = A / w', ['l = Aw', 'l = w / A', 'l = A − w']],
+    ['C = 2πr. Make r the subject.', 'r = C / (2π)', ['r = 2πC', 'r = C − 2π', 'r = 2C / π']],
+    ['V = IR. Make R the subject.', 'R = V / I', ['R = VI', 'R = I / V', 'R = V − I']],
+    ['P = F / A. Make F the subject.', 'F = PA', ['F = P / A', 'F = A / P', 'F = P − A']],
+    ['E = mc². Make m the subject.', 'm = E / c²', ['m = Ec²', 'm = c² / E', 'm = √(E / c)']],
+    ['y = 3x − 5. Make x the subject.', 'x = (y + 5) / 3', ['x = (y − 5) / 3', 'x = 3y + 5', 'x = y / 3 + 5']],
+    ['A = ½bh. Make h the subject.', 'h = 2A / b', ['h = A / (2b)', 'h = 2b / A', 'h = A − b / 2']],
+    ['S = 180(n − 2). Make n the subject.', 'n = S / 180 + 2', ['n = S / 180 − 2', 'n = (S − 2) / 180', 'n = 180S + 2']],
+    ['D = m / V. Make V the subject.', 'V = m / D', ['V = mD', 'V = D / m', 'V = m − D']],
+    ['v² = u² + 2as. Make s the subject.', 's = (v² − u²) / (2a)', ['s = (v − u)² / (2a)', 's = v² − u² − 2a', 's = 2a / (v² − u²)']],
+    ['y = (x + 4) / 2. Make x the subject.', 'x = 2y − 4', ['x = 2y + 4', 'x = y / 2 − 4', 'x = 2(y + 4)']],
+    ['I = PRT / 100. Make R the subject.', 'R = 100I / (PT)', ['R = IPT / 100', 'R = 100PT / I', 'R = I / (100PT)']],
   ];
   const [p, a, w] = r.pick(forms);
   return choice(p, a, w, r, 'Undo the operations in reverse order, doing the same to both sides.');

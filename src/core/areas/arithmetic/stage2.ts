@@ -2,6 +2,7 @@
 
 import { stageSkills, OBJECTS, NAMES } from '../../skill.ts';
 import { nearNumbers, num, spoken, uniqueWrong, type Made } from '../../question.ts';
+import { sequenceQ } from '../../variety.ts';
 import type { Rng } from '../../rng.ts';
 
 const { list, add } = stageSkills('arithmetic', 2, { format: 'choice', speedSec: 8 });
@@ -31,9 +32,12 @@ add('count100', 'number', 'Count to 100', countTo(100));
 const readNumeral = (lo: number, hi: number) => (r: Rng): Made => {
   const n = r.int(lo, hi);
   const words = toWords(n);
+  const tens = Math.floor(n / 10);
+  const ones = n % 10;
+  const kind = r.int(0, 2);
   return {
-    prompt: `Find ${words}`,
-    speak: `Find the number ${n}`,
+    prompt: kind === 0 ? `Find ${words}` : kind === 1 ? `Which number is ${tens} ten${tens === 1 ? '' : 's'} and ${ones} one${ones === 1 ? '' : 's'}?` : `Which number do we say as “${words}”?`,
+    speak: kind === 1 ? `Which number is ${tens} ten${tens === 1 ? '' : 's'} and ${ones} one${ones === 1 ? '' : 's'}?` : `Find the number ${n}`,
     answer: num(n),
     distractors: uniqueWrong(num(n), [num(reverse(n)), num(n + 10), num(n - 10), num(n + 1)].filter((s) => +s >= lo - 10 && +s > 0), () => num(r.int(lo, hi))),
   };
@@ -84,17 +88,8 @@ add('beforeafter', 'number', 'Before and after (to 100)', (r) => {
   const ans = after ? n + 1 : n - 1;
   return { prompt: `What comes ${after ? 'after' : 'before'} ${n}?`, speak: `What number comes ${after ? 'after' : 'before'} ${n}?`, answer: num(ans), distractors: nearNumbers(r, ans, [after ? n - 1 : n + 1, n]) };
 });
-const skip = (step: number) => (r: Rng): Made => {
-  const start = step * r.int(0, step === 10 ? 6 : 12);
-  const seq = [start, start + step, start + 2 * step];
-  const ans = start + 3 * step;
-  return {
-    prompt: `${seq.join(', ')}, ?`,
-    speak: `Count in ${step}s: ${seq.join(', ')}. What comes next?`,
-    answer: num(ans),
-    distractors: nearNumbers(r, ans, [ans + 1, ans - 1, ans + step]),
-  };
-};
+const skip = (step: number) => (r: Rng, d: number): Made =>
+  sequenceQ(r, d, { steps: [step], max: step === 10 ? Math.round(100 + 100 * d) : step * (20 + Math.round(10 * d)), back: true, offStart: true, offFrom: 0.25 });
 add('skip2', 'number', 'Count in 2s', skip(2));
 add('skip5', 'number', 'Count in 5s', skip(5));
 add('skip10', 'number', 'Count in 10s', skip(10));
@@ -150,8 +145,19 @@ add('neardoubles', 'addsub', 'Near doubles', (r) => {
   return sum(`${a} + ${a + 1} = ?`, 2 * a + 1, r, undefined, `${a} + ${a} = ${2 * a}, and one more.`, [2 * a]);
 });
 add('make10', 'addsub', 'Pairs that make 10', (r) => {
-  const a = r.int(0, 10);
-  return sum(`${a} + ? = 10`, 10 - a, r, `${a} and what make 10?`);
+  const a = r.chance(0.08) ? r.pick([0, 10]) : r.int(1, 9);
+  const b = 10 - a;
+  const story = a >= 1 && a <= 9;
+  const forms: [string, string?][] = [
+    [`${a} + ? = 10`],
+    [`? + ${a} = 10`],
+    [`10 = ${a} + ?`],
+    [`10 − ${a} = ?`],
+    [`${a} birds on a wire. How many more to make 10?`, `There are ${a} birds. How many more birds make 10?`],
+    [`You have ${a} sweets. How many more to make 10?`],
+  ];
+  const [prompt, speak] = r.pick(story ? forms : forms.slice(0, 4));
+  return sum(prompt, b, r, `${a} and what make 10? Count on from ${a}.`, speak);
 });
 add('add3nums', 'addsub', 'Add three small numbers', (r) => {
   const [a, b, c] = [r.int(1, 5), r.int(1, 5), r.int(1, 5)];

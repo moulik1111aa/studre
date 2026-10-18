@@ -3,6 +3,7 @@
 import { stageSkills, NAMES } from '../../skill.ts';
 import { nearNumbers, num, uniqueWrong, type Made } from '../../question.ts';
 import type { Rng } from '../../rng.ts';
+import { sequenceQ } from '../../variety.ts';
 
 const { list, add } = stageSkills('arithmetic', 3, { format: 'pad', speedSec: 10 });
 export const STAGE3 = list;
@@ -63,12 +64,8 @@ add('ba1000', 'number', 'Before and after to 1000', (r) => {
   const ans = up ? n + step : n - step;
   return q(`${step} ${up ? 'more' : 'less'} than ${n}?`, ans, r, undefined, [up ? n - step : n + step]);
 });
-const skipBy = (steps: number[]) => (r: Rng): Made => {
-  const step = r.pick(steps);
-  const start = step * r.int(1, step === 100 ? 5 : 8);
-  const seq = [start, start + step, start + 2 * step];
-  return q(`${seq.join(', ')}, ?`, start + 3 * step, r, `Add ${step} each time.`);
-};
+const skipBy = (steps: number[]) => (r: Rng, d: number): Made =>
+  sequenceQ(r, d, { steps, max: steps[0] === 100 ? 1000 : Math.round(50 + 50 * d), back: true, offStart: true, offFrom: 0.25 });
 add('skip34', 'number', 'Count in 3s and 4s', skipBy([3, 4]));
 add('skip100', 'number', 'Count in 100s', skipBy([100]));
 
@@ -151,8 +148,17 @@ add('miss100', 'addsub', 'Missing addend to 100', (r) => {
   return q(`${a} + ? = ${t}`, t - a, r, `Count up from ${a} to ${t}.`);
 });
 add('make100', 'mental', 'Make 100', (r) => {
-  const a = r.int(1, 99);
-  return q(`${a} + ? = 100`, 100 - a, r, 'The tens make 90 and the ones make 10.', [110 - a, 90 - a].filter((x) => x > 0));
+  const a = r.chance(0.3) ? 10 * r.int(1, 9) : r.int(1, 99);
+  const b = 100 - a;
+  const tip = a % 10 ? 'The tens make 90 and the ones make 10.' : 'Count on in tens to 100.';
+  const extras = [110 - a, 90 - a, b + 10, b - 10].filter((x) => x > 0 && x !== b);
+  const roll = r.next();
+  if (roll < 0.35) return q(`${a} + ? = 100`, b, r, tip, extras);
+  if (roll < 0.5) return q(`? + ${a} = 100`, b, r, tip, extras);
+  if (roll < 0.65) return q(`100 − ${a} = ?`, b, r, tip, extras);
+  if (roll < 0.8) return q(`Which number goes with ${a} to make 100?`, b, r, tip, extras);
+  if (roll < 0.9) return q(`A jar holds 100 sweets. It has ${a}. How many more fit?`, b, r, tip, extras);
+  return q(`A 100 cm ribbon has ${a} cm cut off. How many cm are left?`, b, r, tip, extras);
 }, { speedSec: 6 });
 
 // ── Subtract ───────────────────────────────────────────────────────────────

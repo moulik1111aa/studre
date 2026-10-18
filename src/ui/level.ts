@@ -117,7 +117,8 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
           app.voice.say(spoken(q.hint ?? ''));
         }
       });
-      if (little || q.speak) app.voice.say(q.speak ?? spoken(q.prompt));
+      // Every question is read aloud (unless the parent switched reading off).
+      app.voice.say(q.speak ?? spoken(q.prompt));
       startTimer();
     };
 

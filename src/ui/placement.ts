@@ -8,7 +8,7 @@ import { Placement, answerFromCheck, type ParentAnswer } from '../core/placement
 import type { Skill } from '../core/skill.ts';
 import { createRng } from '../core/rng.ts';
 import { makeQuestion } from '../core/path.ts';
-import { isCorrect } from '../core/question.ts';
+import { isCorrect, spoken } from '../core/question.ts';
 import { avatarHtml } from './icons.ts';
 import { optionHtml } from './visuals.ts';
 import { stagger, popIn, wait } from '../render/motion.ts';
@@ -95,7 +95,7 @@ export function placementScreen(child: Child) {
           seen.add(q.key);
           body.innerHTML = `<div class="pl-card card try-card"><p class="chip">${n} of 6</p><h2 class="pl-example"><b>${esc(q.prompt)}</b></h2>
             <div class="choices">${q.choices.map((c) => `<button class="choice" data-v="${encodeURIComponent(c)}">${optionHtml(c, q.optionObject)}</button>`).join('')}</div></div>`;
-          if (q.speak) app.voice.say(q.speak);
+          app.voice.say(q.speak ?? spoken(q.prompt));
           stagger(body.querySelectorAll('.choice'), { gap: 60 });
           body.querySelectorAll<HTMLButtonElement>('.choice').forEach((b) =>
             b.addEventListener('click', async () => {
