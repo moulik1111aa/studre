@@ -71,7 +71,7 @@ add('zeroneg', 'algebra', 'Zero and negative exponents', (r) => {
   if (r.chance(0.3)) return { prompt: `${pw(b, 0)} = ?`, answer: '1', distractors: ['0', String(b), '10'], hint: 'Anything (except 0) to the power 0 is 1.' };
   const e = b <= 5 ? r.int(1, 3) : r.int(1, 2);
   const ans = frac(1, b ** e);
-  return { prompt: `${pw(b, -e)} = ?`, answer: ans, distractors: uniqueWrong(ans, [num(-(b ** e)), frac(1, b * e), num(-b * e), frac(e, b)], () => frac(1, b ** e + 1)), hint: `A negative power means 1 over: 1/${pw(b, e)}.` };
+  return { prompt: `${pw(b, -e)} = ?`, answer: ans, distractors: uniqueWrong(ans, [num(-(b ** e)), num(b ** e), frac(1, b * e), num(-b * e), frac(e, b)], () => frac(1, b ** e + r.int(1, 9))), hint: `A negative power means 1 over: 1/${pw(b, e)}.` };
 }, { format: 'choice' });
 add('estroot', 'mental', 'Estimate square roots', (r) => {
   const n = r.int(3, 18);

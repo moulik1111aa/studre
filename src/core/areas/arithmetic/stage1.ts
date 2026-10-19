@@ -3,6 +3,7 @@
 import { stageSkills, OBJECTS, thing, type ObjectName } from '../../skill.ts';
 import { num, uniqueWrong, type Made } from '../../question.ts';
 import type { Rng } from '../../rng.ts';
+import * as C from '../../teach/count.ts';
 
 const { list, add } = stageSkills('arithmetic', 1, { format: 'picture', speedSec: 10 });
 export const STAGE1 = list;
@@ -24,6 +25,7 @@ function countQ(rng: Rng, lo: number, hi: number): Made {
     answer: num(n),
     distractors: smallWrong(rng, n, Math.max(0, lo - 1), hi + 1),
     hint: 'Touch each one as you count: one, two, three…',
+    teach: () => C.countObjects(n, o),
   };
 }
 
@@ -38,6 +40,7 @@ const dotsQ = (lo: number, hi: number) => (r: Rng): Made => {
       answer: num(n),
       distractors: smallWrong(r, n, Math.max(1, lo - 1), hi + 1),
       hint: 'Touch each one as you count.',
+      teach: () => C.countObjects(n, o),
     };
   }
   return {
@@ -47,6 +50,7 @@ const dotsQ = (lo: number, hi: number) => (r: Rng): Made => {
     answer: num(n),
     distractors: smallWrong(r, n, Math.max(1, lo - 1), hi + 1),
     hint: 'Touch each dot once as you count.',
+    teach: () => C.countObjects(n, undefined, true),
   };
 };
 add('count3', 'number', 'Count 1–3 objects', (r) => countQ(r, 1, 3));
@@ -66,6 +70,7 @@ const glance = (hi: number) => (r: Rng): Made => {
       visual: { kind: 'objects', groups: [{ object: o, count: n }] },
       answer: num(n),
       distractors: smallWrong(r, n, 1, hi + 1),
+      teach: () => C.glanceLesson(n, o),
     };
   }
   return {
@@ -74,6 +79,7 @@ const glance = (hi: number) => (r: Rng): Made => {
     visual: frame ? { kind: 'tenframe', count: n } : { kind: 'dots', count: n },
     answer: num(n),
     distractors: smallWrong(r, n, 1, hi + 1),
+    teach: () => C.glanceLesson(n, undefined, frame),
   };
 };
 add('glance3', 'number', 'Recognise dots at a glance (1–3)', glance(3), { speedSec: 4 });
@@ -89,6 +95,7 @@ const numeral = (lo: number, hi: number) => (r: Rng): Made => {
       visual: { kind: 'objects', groups: [{ object: o, count: n }] },
       answer: num(n),
       distractors: smallWrong(r, n, Math.max(1, lo - 1), hi),
+      teach: () => C.numeralLesson(n, o),
     };
   }
   return {
@@ -96,6 +103,7 @@ const numeral = (lo: number, hi: number) => (r: Rng): Made => {
     speak: `Can you find the number ${n}?`,
     answer: num(n),
     distractors: smallWrong(r, n, Math.max(1, lo - 1), hi),
+    teach: () => C.numeralLesson(n),
   };
 };
 add('numeral5', 'number', 'Recognise numerals 1–5', numeral(1, 5));
@@ -110,6 +118,7 @@ const matchGroup = (hi: number) => (r: Rng): Made => {
     answer: num(n),
     distractors: smallWrong(r, n, 1, hi + 1),
     optionObject: o,
+    teach: () => C.matchLesson(n, o),
   };
 };
 add('match5', 'number', 'Match a numeral to a group (1–5)', matchGroup(5));
@@ -127,6 +136,7 @@ add('zero', 'number', 'Zero: none left', (r) => {
     answer: num(left),
     distractors: smallWrong(r, left, 0, 5),
     hint: 'If every one has gone, the answer is zero.',
+    teach: () => C.goneLesson(n, eaten, o),
   };
 });
 
@@ -140,6 +150,7 @@ const compare = (more: boolean) => (r: Rng): Made => {
     answer: num(answer),
     distractors: counts.filter((c) => c !== answer).map(num).concat(num(answer + 1)),
     optionObject: o,
+    teach: () => C.compareGroups(counts, o, more),
   };
 };
 add('more', 'number', 'Which group has more?', compare(true));
@@ -155,6 +166,7 @@ add('same', 'number', 'Same amount?', (r) => {
     answer: num(n),
     distractors: smallWrong(r, n, 1, 8),
     optionObject: o,
+    teach: () => C.sameLesson(n, o),
   };
 });
 
@@ -174,6 +186,7 @@ add('bigger10', 'number', 'Bigger number (1–10)', (r, d) => {
     speak: small ? 'Which number is the smallest?' : 'Which number is the biggest?',
     answer: num(pick),
     distractors: nums.filter((n) => n !== pick).map(num).concat(num(extra)),
+    teach: () => C.onLine(nums, !small, 10),
   };
 });
 
@@ -188,6 +201,7 @@ add('order5', 'number', 'Order numbers 1–5', (r) => {
       answer: num(n + 1),
       distractors: smallWrong(r, n + 1, 1, 6),
       hint: 'One more.',
+      teach: () => C.oneMoreLess(n, true, o),
     };
   }
   const start = r.int(1, 2);
@@ -199,6 +213,7 @@ add('order5', 'number', 'Order numbers 1–5', (r) => {
     speak: `What number is missing? ${seq.map((n, i) => (i === gap ? 'something' : n)).join(', ')}.`,
     answer: num(missing),
     distractors: smallWrong(r, missing, 1, 6),
+    teach: () => C.missingInRun(seq, gap),
   };
 });
 
@@ -211,6 +226,7 @@ add('line10', 'number', 'Missing number on a 1–10 line', (r) => {
     speak: `Which number is missing? ${seq.map((n, i) => (i === gap ? 'something' : n)).join(', ')}.`,
     answer: num(seq[gap]),
     distractors: smallWrong(r, seq[gap], 1, 10),
+    teach: () => C.missingInRun(seq, gap),
   };
 });
 
@@ -225,6 +241,7 @@ const countBack = (hi: number) => (r: Rng, d: number): Made => {
       answer: num(n - 1),
       distractors: smallWrong(r, n - 1, 0, hi),
       hint: 'One less.',
+      teach: () => C.oneMoreLess(n, false, o),
     };
   }
   const start = r.int(4, hi);
@@ -238,6 +255,7 @@ const countBack = (hi: number) => (r: Rng, d: number): Made => {
     answer: num(ans),
     distractors: smallWrong(r, ans, 0, hi),
     hint: 'Counting back, each number is one less.',
+    teach: () => C.missingInRun(seq, gap),
   };
 };
 add('back5', 'number', 'Count back from 5', countBack(5));
@@ -253,6 +271,7 @@ const oneMoreLess = (more: boolean) => (r: Rng): Made => {
     visual: { kind: 'objects', groups: [{ object: o, count: n }] },
     answer: num(ans),
     distractors: smallWrong(r, ans, 0, 11),
+    teach: () => C.oneMoreLess(n, more, o),
   };
 };
 add('onemore', 'number', 'One more than (to 10)', oneMoreLess(true));
@@ -268,6 +287,7 @@ add('tenframe', 'number', 'Ten frame: how many?', (r, d) => {
       answer: num(10 - n),
       distractors: smallWrong(r, 10 - n, 1, 9),
       hint: 'Count the empty boxes.',
+      teach: () => C.tenFrameLesson(n, true),
     };
   }
   return {
@@ -277,6 +297,7 @@ add('tenframe', 'number', 'Ten frame: how many?', (r, d) => {
     answer: num(n),
     distractors: smallWrong(r, n, 1, 10),
     hint: 'A full row has 5.',
+    teach: () => C.tenFrameLesson(n, false),
   };
 });
 
@@ -293,6 +314,7 @@ add('pattern', 'number', 'Continue a pattern (AB, ABB)', (r) => {
     visual: { kind: 'pattern', items: shown },
     answer: next,
     distractors: [a, b, c].filter((x) => x !== next).concat(OBJECTS.find((x) => ![a, b, c].includes(x))!),
+    teach: () => C.patternLesson(shown, unit, next),
   };
 }, { speedSec: 12 });
 
@@ -308,6 +330,7 @@ const pictureSum = (hi: number, take: boolean) => (r: Rng): Made => {
       answer: num(x + y),
       distractors: smallWrong(r, x + y, 1, hi + 1),
       hint: 'Count all of them together.',
+      teach: () => C.addPictures(x, y, o),
     };
   }
   const x = r.int(2, hi);
@@ -319,6 +342,7 @@ const pictureSum = (hi: number, take: boolean) => (r: Rng): Made => {
     answer: num(x - y),
     distractors: smallWrong(r, x - y, 0, hi),
     hint: 'Count the ones that are not crossed out.',
+    teach: () => C.takePictures(x, y, o),
   };
 };
 add('add3', 'addsub', 'Add within 3 with pictures', pictureSum(3, false));
@@ -336,6 +360,7 @@ add('make5', 'addsub', 'Make 5', (r) => {
     answer: num(5 - x),
     distractors: smallWrong(r, 5 - x, 0, 5),
     hint: 'Count up from the ones you have to 5.',
+    teach: () => C.makeN(x, 5, o),
   };
 });
 
@@ -351,6 +376,7 @@ add('story5', 'word', 'Picture stories: add or take away within 5', (r) => {
       visual: { kind: 'objects', groups: [{ object: o, count: x }, { object: o, count: y }], joiner: '+' },
       answer: num(x + y),
       distractors: smallWrong(r, x + y, 1, 6),
+      teach: () => C.addPictures(x, y, o),
     };
   }
   const x = r.int(2, 5);
@@ -362,5 +388,6 @@ add('story5', 'word', 'Picture stories: add or take away within 5', (r) => {
     visual: { kind: 'objects', groups: [{ object: o, count: x, crossed: y }] },
     answer: num(x - y),
     distractors: smallWrong(r, x - y, 0, 5),
+    teach: () => C.takePictures(x, y, o),
   };
 });

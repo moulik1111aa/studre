@@ -10,6 +10,13 @@
 
 import type { Rng } from './rng.ts';
 import { nearNumbers, num, spoken, type Made } from './question.ts';
+import type { Lesson } from './teach/types.ts';
+import { reshow, lead } from './teach/build.ts';
+import * as A from './teach/addsub.ts';
+import * as M from './teach/muldiv.ts';
+import * as C from './teach/count.ts';
+import * as W from './teach/powers.ts';
+import { sequenceLesson } from './teach/place.ts';
 
 const NAMES = ['Aarav', 'Meera', 'Kabir', 'Zoya', 'Ishaan', 'Anaya', 'Vihaan', 'Diya', 'Arjun', 'Sara', 'Rohan', 'Tara', 'Dev', 'Kiara'];
 const THINGS = ['marbles', 'stickers', 'mangoes', 'pencils', 'balloons', 'sweets', 'cards', 'shells', 'beads', 'stamps', 'buttons', 'crayons'];
@@ -17,12 +24,13 @@ const BOXES = ['bags', 'boxes', 'packets', 'jars', 'baskets', 'rows', 'teams', '
 
 type Form = () => Made;
 
-const sum = (prompt: string, answer: number, r: Rng, extras: number[], hint?: string, speak?: string): Made => ({
+const sum = (prompt: string, answer: number, r: Rng, extras: number[], hint: string | undefined, teach: () => Lesson, speak?: string): Made => ({
   prompt,
   speak: speak ?? spoken(prompt),
   answer: num(answer),
   distractors: nearNumbers(r, answer, extras.filter((x) => x !== answer && x >= 0)),
   hint,
+  teach,
 });
 
 /** Other ways of asking a made question, when its prompt is one we understand. */
@@ -32,6 +40,8 @@ function formsFor(m: Made, r: Rng, stage: number, d: number): Form[] {
   const name = () => r.pick(NAMES);
   const thing = () => r.pick(THINGS);
   let x: RegExpExecArray | null;
+  // The swapped order keeps the skill's own method; only the working line is in the new order.
+  const swapped = (prompt: string, show: string, other: () => Lesson): Made => ({ ...m, prompt, speak: spoken(prompt), teach: m.teach ? () => reshow(m.teach!(), show) : other });
 
   if ((x = /^(\d+) ([+−×÷]) (\d+) = \?$/.exec(p))) {
     const a = +x[1];
@@ -43,28 +53,42 @@ function formsFor(m: Made, r: Rng, stage: number, d: number): Form[] {
     // Stories only with real amounts (no "gives away 0" or "gives away all 10").
     const small = a <= 200 && b <= 200 && c <= 1000 && a > 0 && b > 0 && c > 0;
     if (op === '+') {
-      if (a !== b) forms.push(() => ({ ...m, prompt: `${b} + ${a} = ?`, speak: spoken(`${b} + ${a} = ?`) }));
-      if (d >= 0.2) forms.push(() => sum(`${a} + ? = ${c}`, b, r, [c, a, b + 1, b - 1], `Count on from ${a} to ${c}. How many did you count?`));
-      if (d >= 0.3) forms.push(() => sum(`? + ${b} = ${c}`, a, r, [c, b, a + 1, a - 1], `Take ${b} away from ${c}.`));
-      if (words && small) forms.push(() => { const t = thing(); return sum(`${name()} has ${a} ${t} and gets ${b} more. How many ${t} now?`, c, r, [c + 1, c - 1, a, b], m.hint); });
+      if (a !== b) forms.push(() => swapped(`${b} + ${a} = ?`, `${b} + ${a} = ${c}`, () => A.addLesson(b, a)));
+      if (d >= 0.2) forms.push(() => sum(`${a} + ? = ${c}`, b, r, [c, a, b + 1, b - 1], `Count on from ${a} to ${c}. How many did you count?`, () => A.missingAddend(a, c, `${a} + ${b} = ${c}`)));
+      if (d >= 0.3) forms.push(() => sum(`? + ${b} = ${c}`, a, r, [c, b, a + 1, a - 1], `Take ${b} away from ${c}.`, () => A.missingFirst(b, c, `${a} + ${b} = ${c}`)));
+      if (words && small)
+        forms.push(() => {
+          const t = thing();
+          const who = name();
+          return sum(`${who} has ${a} ${t} and gets ${b} more. How many ${t} now?`, c, r, [c + 1, c - 1, a, b], m.hint, () => lead(`“Gets more” means add: ${a} + ${b}.`, m.teach ? m.teach() : A.addLesson(a, b)));
+        });
     } else if (op === '−') {
-      if (d >= 0.2) forms.push(() => sum(`${a} − ? = ${c}`, b, r, [c, a, b + 1, b - 1], `How many do you take from ${a} to leave ${c}?`));
-      if (d >= 0.3) forms.push(() => sum(`? − ${b} = ${c}`, a, r, [c, b, a + 1, a - 1], `Add them back: ${c} + ${b}.`));
-      forms.push(() => sum(`${c} + ? = ${a}`, b, r, [c, a, b + 1, b - 1], `Count on from ${c} to ${a}.`));
-      if (words && small) forms.push(() => { const t = thing(); return sum(`${name()} has ${a} ${t} and gives away ${b}. How many are left?`, c, r, [c + 1, c - 1, a, a + b], m.hint); });
+      if (d >= 0.2) forms.push(() => sum(`${a} − ? = ${c}`, b, r, [c, a, b + 1, b - 1], `How many do you take from ${a} to leave ${c}?`, () => A.missingSubtrahend(a, c, `${a} − ${b} = ${c}`)));
+      if (d >= 0.3) forms.push(() => sum(`? − ${b} = ${c}`, a, r, [c, b, a + 1, a - 1], `Add them back: ${c} + ${b}.`, () => A.missingMinuend(b, c, `${a} − ${b} = ${c}`)));
+      forms.push(() => sum(`${c} + ? = ${a}`, b, r, [c, a, b + 1, b - 1], `Count on from ${c} to ${a}.`, () => A.missingAddend(c, a, `${c} + ${b} = ${a}`)));
+      if (words && small)
+        forms.push(() => {
+          const t = thing();
+          return sum(`${name()} has ${a} ${t} and gives away ${b}. How many are left?`, c, r, [c + 1, c - 1, a, a + b], m.hint, () => lead(`“Gives away” means take away: ${a} − ${b}.`, m.teach ? m.teach() : A.subLesson(a, b)));
+        });
     } else if (op === '×') {
-      if (a !== b) forms.push(() => ({ ...m, prompt: `${b} × ${a} = ?`, speak: spoken(`${b} × ${a} = ?`) }));
+      if (a !== b) forms.push(() => swapped(`${b} × ${a} = ?`, `${b} × ${a} = ${c}`, () => M.mulLesson(b, a)));
       if (c > 0 && a > 0 && b > 0) {
-        forms.push(() => sum(`${a} × ? = ${c}`, b, r, [b + 1, b - 1, c - a, a], `Count in ${a}s until you reach ${c}.`));
-        if (d >= 0.3) forms.push(() => sum(`? × ${b} = ${c}`, a, r, [a + 1, a - 1, c - b, b], `How many ${b}s make ${c}?`));
-        forms.push(() => sum(`${c} ÷ ${b} = ?`, a, r, [a + 1, a - 1, b], `${a} × ${b} = ${c}, so…`));
+        forms.push(() => sum(`${a} × ? = ${c}`, b, r, [b + 1, b - 1, c - a, a], `Count in ${a}s until you reach ${c}.`, () => M.missingFactor(a, c, `${a} × ${b} = ${c}`)));
+        if (d >= 0.3) forms.push(() => sum(`? × ${b} = ${c}`, a, r, [a + 1, a - 1, c - b, b], `How many ${b}s make ${c}?`, () => M.missingFactor(b, c, `${a} × ${b} = ${c}`, { intro: `What times ${b} makes ${c}? That is: how many ${b}s make ${c}?` })));
+        forms.push(() => sum(`${c} ÷ ${b} = ?`, a, r, [a + 1, a - 1, b], `${a} × ${b} = ${c}, so…`, () => M.divLesson(c, b)));
       }
-      if (words && small && a >= 2 && b >= 2) forms.push(() => { const t = thing(); return sum(`${a} ${r.pick(BOXES)} with ${b} ${t} in each. How many ${t}?`, c, r, [c + a, c - b, a + b], m.hint); });
+      if (words && small && a >= 2 && b >= 2)
+        forms.push(() => {
+          const t = thing();
+          const box = r.pick(BOXES);
+          return sum(`${a} ${box} with ${b} ${t} in each. How many ${t}?`, c, r, [c + a, c - b, a + b], m.hint, () => lead(`${a} ${box} with ${b} in each is ${a} lots of ${b}: ${a} × ${b}.`, m.teach ? m.teach() : M.mulLesson(a, b)));
+        });
     } else if (op === '÷' && b > 0) {
-      forms.push(() => sum(`${b} × ? = ${a}`, c, r, [c + 1, c - 1, b], `Count in ${b}s up to ${a}.`));
-      if (d >= 0.3) forms.push(() => sum(`? ÷ ${b} = ${c}`, a, r, [a + b, a - b, c * (b + 1), b + c], `Multiply back: ${c} × ${b}.`));
-      if (d >= 0.3 && c > 0) forms.push(() => sum(`${a} ÷ ? = ${c}`, b, r, [b + 1, b - 1, c], `${c} × what = ${a}?`));
-      if (words && small) forms.push(() => { const t = thing(); return sum(`${a} ${t} shared equally by ${b} friends. How many each?`, c, r, [c + 1, c - 1, b], m.hint); });
+      forms.push(() => sum(`${b} × ? = ${a}`, c, r, [c + 1, c - 1, b], `Count in ${b}s up to ${a}.`, () => M.missingFactor(b, a, `${b} × ${c} = ${a}`)));
+      if (d >= 0.3) forms.push(() => sum(`? ÷ ${b} = ${c}`, a, r, [a + b, a - b, c * (b + 1), b + c], `Multiply back: ${c} × ${b}.`, () => lead(`Dividing by ${b} gave ${c}. Undo it: multiply ${c} by ${b}.`, M.mulLesson(c, b), { answer: a, show: `${a} ÷ ${b} = ${c}` })));
+      if (d >= 0.3 && c > 0) forms.push(() => sum(`${a} ÷ ? = ${c}`, b, r, [b + 1, b - 1, c], `${c} × what = ${a}?`, () => lead(`${a} split into groups of ${c}: how many groups? That is ${a} ÷ ${c}.`, M.divLesson(a, c), { answer: b, show: `${a} ÷ ${b} = ${c}` })));
+      if (words && small) forms.push(() => sum(`${a} ${thing()} shared equally by ${b} friends. How many each?`, c, r, [c + 1, c - 1, b], m.hint, () => lead(`Sharing equally between ${b} means ${a} ÷ ${b}.`, m.teach ? m.teach() : M.divLesson(a, b))));
     }
     return forms;
   }
@@ -72,52 +96,58 @@ function formsFor(m: Made, r: Rng, stage: number, d: number): Form[] {
     const n = +x[1];
     const c = n * n;
     return [
-      () => sum(`What is ${n} squared?`, c, r, [n * 2, c + n, c - n], m.hint),
-      () => sum(`${n} × ${n} = ?`, c, r, [n * 2, c + n, c - n], m.hint),
-      () => sum(`Which number squared makes ${c}?`, n, r, [n + 1, n - 1, Math.round(c / 2)], `Which number times itself is ${c}?`),
+      () => sum(`What is ${n} squared?`, c, r, [n * 2, c + n, c - n], m.hint, () => W.squareLesson(n)),
+      () => sum(`${n} × ${n} = ?`, c, r, [n * 2, c + n, c - n], m.hint, () => (n <= 12 ? M.timesFact(n, n) : M.gridMult(n, n))),
+      () => sum(`Which number squared makes ${c}?`, n, r, [n + 1, n - 1, Math.round(c / 2)], `Which number times itself is ${c}?`, () => W.sqrtLesson(c, `${n}² = ${c}`)),
     ];
   }
   if ((x = /^(\d+)³ = \?$/.exec(p))) {
     const n = +x[1];
     const c = n ** 3;
     return [
-      () => sum(`${n} × ${n} × ${n} = ?`, c, r, [n * n, n * 3, c + n * n], m.hint),
-      () => sum(`What is ${n} cubed?`, c, r, [n * n, n * 3, c - n * n], m.hint),
-      () => sum(`Which number cubed makes ${c}?`, n, r, [n + 1, n - 1, n * n], `Which number times itself, three times, is ${c}?`),
+      () => sum(`${n} × ${n} × ${n} = ?`, c, r, [n * n, n * 3, c + n * n], m.hint, () => W.cubeLesson(n, `${n} × ${n} × ${n} = ${c}`)),
+      () => sum(`What is ${n} cubed?`, c, r, [n * n, n * 3, c - n * n], m.hint, () => W.cubeLesson(n)),
+      () => sum(`Which number cubed makes ${c}?`, n, r, [n + 1, n - 1, n * n], `Which number times itself, three times, is ${c}?`, () => W.cbrtLesson(c, `${n}³ = ${c}`)),
     ];
   }
   if ((x = /^√(\d+) = \?$/.exec(p))) {
     const c = +x[1];
     const n = +m.answer;
     return [
-      () => sum(`Which number squared makes ${c}?`, n, r, [n + 1, n - 1, Math.round(c / 2)], m.hint),
-      () => sum(`? × ? = ${c} (the same number twice)`, n, r, [n + 1, n - 1, Math.round(c / 2)], m.hint),
-      () => sum(`What is the square root of ${c}?`, n, r, [n + 1, n - 1, Math.round(c / 2)], m.hint),
+      () => sum(`Which number squared makes ${c}?`, n, r, [n + 1, n - 1, Math.round(c / 2)], m.hint, () => W.sqrtLesson(c, `${n}² = ${c}`)),
+      () => sum(`? × ? = ${c} (the same number twice)`, n, r, [n + 1, n - 1, Math.round(c / 2)], m.hint, () => W.sqrtLesson(c, `${n} × ${n} = ${c}`)),
+      () => sum(`What is the square root of ${c}?`, n, r, [n + 1, n - 1, Math.round(c / 2)], m.hint, () => W.sqrtLesson(c)),
     ];
   }
   if ((x = /^∛(\d+) = \?$/.exec(p))) {
     const c = +x[1];
     const n = +m.answer;
     return [
-      () => sum(`Which number cubed makes ${c}?`, n, r, [n + 1, n - 1, Math.round(c / 3)], m.hint),
-      () => sum(`? × ? × ? = ${c} (the same number three times)`, n, r, [n + 1, n - 1, Math.round(c / 3)], m.hint),
+      () => sum(`Which number cubed makes ${c}?`, n, r, [n + 1, n - 1, Math.round(c / 3)], m.hint, () => W.cbrtLesson(c, `${n}³ = ${c}`)),
+      () => sum(`? × ? × ? = ${c} (the same number three times)`, n, r, [n + 1, n - 1, Math.round(c / 3)], m.hint, () => W.cbrtLesson(c, `${n} × ${n} × ${n} = ${c}`)),
     ];
   }
   if ((x = /^Double (\d+) = \?$/.exec(p))) {
     const n = +x[1];
     return [
-      () => sum(`${n} + ${n} = ?`, 2 * n, r, [2 * n + 1, 2 * n - 1, n + 1], m.hint),
-      () => sum(`Double ? = ${2 * n}`, n, r, [n + 1, n - 1, 2 * n], 'Which number, added to itself, makes it?'),
-      () => { const t = thing(); return sum(`Twins have ${n} ${t} each. How many ${t} altogether?`, 2 * n, r, [2 * n + 1, n + 1, 2 * n - 2], m.hint); },
+      () => sum(`${n} + ${n} = ?`, 2 * n, r, [2 * n + 1, 2 * n - 1, n + 1], m.hint, () => (m.teach ? reshow(m.teach(), `${n} + ${n} = ${2 * n}`) : C.doubleLesson(n))),
+      () => sum(`Double ? = ${2 * n}`, n, r, [n + 1, n - 1, 2 * n], 'Which number, added to itself, makes it?', () => lead(`Which number doubled makes ${2 * n}? That is half of ${2 * n}.`, C.halveLesson(2 * n), { answer: n, show: `Double ${n} = ${2 * n}` })),
+      () => {
+        const t = thing();
+        return sum(`Twins have ${n} ${t} each. How many ${t} altogether?`, 2 * n, r, [2 * n + 1, n + 1, 2 * n - 2], m.hint, () => lead(`Two lots of ${n} is double ${n}.`, m.teach ? m.teach() : C.doubleLesson(n)));
+      },
     ];
   }
   if ((x = /^Half of (\d+) = \?$/.exec(p))) {
     const c = +x[1];
     const h = +m.answer;
     return [
-      () => sum(`${c} ÷ 2 = ?`, h, r, [h + 1, h - 1, c - 2], m.hint),
-      () => sum(`Half of ? = ${h}`, c, r, [c + 2, c - 2, h + 1], 'Double it to find the whole.'),
-      () => { const t = thing(); return sum(`Share ${c} ${t} equally between 2 friends. How many each?`, h, r, [h + 1, h - 1, c], m.hint); },
+      () => sum(`${c} ÷ 2 = ?`, h, r, [h + 1, h - 1, c - 2], m.hint, () => lead('÷ 2 means half.', m.teach ? m.teach() : C.halveLesson(c), { answer: h, show: `${c} ÷ 2 = ${h}` })),
+      () => sum(`Half of ? = ${h}`, c, r, [c + 2, c - 2, h + 1], 'Double it to find the whole.', () => lead(`Half of the number is ${h}, so the number is double ${h}.`, C.doubleLesson(h), { answer: c, show: `Half of ${c} = ${h}` })),
+      () => {
+        const t = thing();
+        return sum(`Share ${c} ${t} equally between 2 friends. How many each?`, h, r, [h + 1, h - 1, c], m.hint, () => lead('Sharing between 2 means half.', m.teach ? m.teach() : C.halveLesson(c)));
+      },
     ];
   }
   return [];
@@ -162,5 +192,6 @@ export function sequenceQ(r: Rng, d: number, o: { steps: number[]; max: number; 
     answer: num(ans),
     distractors: nearNumbers(r, ans, [ans + 1, ans - 1, ans + step, ans - step].filter((x) => x >= 0 && x !== ans)),
     hint: `${back ? 'Take away' : 'Add'} ${step} each time.`,
+    teach: () => sequenceLesson(seq, gap),
   };
 }

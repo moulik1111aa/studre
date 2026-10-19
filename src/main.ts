@@ -16,6 +16,13 @@ import { unlockScreen } from './ui/unlock.ts';
 import { timesUpScreen } from './ui/timesup.ts';
 import { trophyScreen } from './ui/trophy.ts';
 import { parentScreen } from './ui/parent.ts';
+import { showLesson } from './ui/lesson.ts';
+import * as addsub from './core/teach/addsub.ts';
+import * as muldiv from './core/teach/muldiv.ts';
+import * as fractions from './core/teach/fractions.ts';
+import { skillById } from './core/areas/index.ts';
+import { makeQuestion } from './core/path.ts';
+import { createRng } from './core/rng.ts';
 
 const LOADER_KEY = 'studyhard.loaderDay';
 
@@ -26,6 +33,17 @@ async function boot(): Promise<void> {
   if (app.debug) {
     // Screen factories for screenshots and tests.
     Object.assign(window, { __app: app, __screens: { resultScreen, showcaseScreen, rewardsScreen, unlockScreen, timesUpScreen, trophyScreen, parentScreen, welcomeScreen, whosPlayingScreen, loaderScreen } });
+    // Lessons: open one for a skill's question, or for a hand-made question.
+    Object.assign(window, {
+      __T: { addsub, muldiv, fractions },
+      __showLesson: (q: Parameters<typeof showLesson>[1], given: string | null) => showLesson(app, q, given),
+      __lesson: (id: string, seed = 'demo', given: string | null = null, d = 0.6) => {
+        const s = skillById(id);
+        if (!s) throw new Error(`no skill ${id}`);
+        const q = makeQuestion(s, createRng(seed), d, new Set());
+        return { q, done: showLesson(app, q, given ?? q.distractors[0] ?? null) };
+      },
+    });
   }
   const params = new URLSearchParams(location.search);
 

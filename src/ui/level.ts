@@ -19,6 +19,7 @@ import { goHome, timeState } from './flow.ts';
 import { stepBackAfterPlacement } from './placement.ts';
 import { remember } from '../core/undo.ts';
 import { wireChoices, type Wired } from './confirm.ts';
+import { lessonFor, showLesson } from './lesson.ts';
 
 export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' }>, harder = false) {
   return (app: App): Screen => {
@@ -230,8 +231,14 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
         answers.querySelectorAll<HTMLElement>('.choice').forEach((b) => {
           if (isCorrect(q, decodeURIComponent(b.dataset.v!))) b.classList.add('right');
         });
-        app.voice.say(`${value === '__timeout__' ? 'Time is up. ' : ''}The answer is ${spoken(q.answer)}.`);
-        await wait(2000);
+        if (lessonFor(app, q)) {
+          // Show how: a short lesson, then on to the next question.
+          await wait(900);
+          await showLesson(app, q, value);
+        } else {
+          app.voice.say(`${value === '__timeout__' ? 'Time is up. ' : ''}The answer is ${spoken(q.answer)}.`);
+          await wait(2000);
+        }
       }
       i++;
       const finished = rules.streak ? streak >= rules.streak || i >= rules.count : i >= questions.length;

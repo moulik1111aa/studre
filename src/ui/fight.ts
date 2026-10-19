@@ -21,6 +21,7 @@ import { goHome, timeState } from './flow.ts';
 import { remember } from '../core/undo.ts';
 import { avatarHtml } from './icons.ts';
 import { wireChoices, type Wired } from './confirm.ts';
+import { lessonFor, showLesson } from './lesson.ts';
 
 type FightLevel = Exclude<Level, { kind: 'skill' }>;
 
@@ -56,12 +57,12 @@ function renderQuestion(app: App, qwrap: HTMLElement, answers: HTMLElement, q: Q
   return wired;
 }
 
-/** Show and say the right answer (always, right or wrong). */
-function tellAnswer(app: App, qwrap: HTMLElement, q: Question, ok: boolean, prefix = ''): void {
+/** Show and say the right answer (always, right or wrong). A lesson that follows does the talking. */
+function tellAnswer(app: App, qwrap: HTMLElement, q: Question, ok: boolean, prefix = '', speak = true): void {
   const r = html(ok ? `<div class="reveal good">${ICONS.check} Right! It’s <b>${prettyAnswer(q.answer)}</b></div>` : `<div class="reveal">${prefix}The answer is <b>${prettyAnswer(q.answer)}</b></div>`);
   qwrap.firstElementChild?.appendChild(r);
   popIn(r);
-  app.voice.say(ok ? `Right! It's ${spoken(q.answer)}.` : `${prefix ? 'Too slow. ' : ''}The answer is ${spoken(q.answer)}.`);
+  if (speak) app.voice.say(ok ? `Right! It's ${spoken(q.answer)}.` : `${prefix ? 'Too slow. ' : ''}The answer is ${spoken(q.answer)}.`);
 }
 
 function markAnswers(answers: HTMLElement, q: Question, btn: HTMLElement | undefined, ok: boolean): void {
@@ -200,8 +201,12 @@ function minionScreen(app: App, child: Child, level: Extract<Level, { kind: 'rev
       app.sfx.wrong();
       pips[i]?.classList.add('miss');
       if (!reducedMotion()) body.animate([{ transform: 'none' }, { transform: 'translateY(-18px) scale(1.1)' }, { transform: 'none' }], { duration: 500, easing: EASE_OUT });
-      tellAnswer(app, qwrap, q, false);
-      await wait(2000);
+      const teach = lessonFor(app, q);
+      tellAnswer(app, qwrap, q, false, '', !teach);
+      if (teach) {
+        await wait(900);
+        await showLesson(app, q, value);
+      } else await wait(2000);
     }
     i++;
     busy = false;
@@ -372,8 +377,14 @@ function bossScreen(app: App, child: Child, level: Extract<Level, { kind: 'boss'
     await play(events, mode, btn);
     if (fight.status === 'won') return win();
     if (fight.status === 'lost') return lose(q);
-    tellAnswer(app, qwrap, q, ok, value === '__timeout__' ? 'Too slow! ' : '');
-    await wait(ok ? (app.save.data.settings.voice ? 1200 : 600) : 1800);
+    const teach = !ok && lessonFor(app, q);
+    tellAnswer(app, qwrap, q, ok, value === '__timeout__' ? 'Too slow! ' : '', !teach);
+    if (teach) {
+      // The boss waits while you learn how.
+      await wait(900);
+      if (over) return;
+      await showLesson(app, q, value);
+    } else await wait(ok ? (app.save.data.settings.voice ? 1200 : 600) : 1800);
     if (over) return;
     nextQuestion();
   };

@@ -66,6 +66,8 @@ export interface Settings {
   showFps: boolean;
   /** Tap an answer to pick it, then Check (fewer slips from a stray tap). */
   confirmAnswers: boolean;
+  /** After a wrong answer, a short step-by-step lesson on how to work it out. */
+  teach: boolean;
 }
 
 export type Theme = 'glass' | 'schoolbook' | 'precision';
@@ -104,6 +106,7 @@ export const freshSettings = (): Settings => ({
   fx3d: true,
   showFps: false,
   confirmAnswers: false,
+  teach: true,
 });
 
 export function freshSave(): SaveData {

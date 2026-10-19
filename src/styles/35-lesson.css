@@ -1,0 +1,193 @@
+/* "Learn how" lessons after a wrong answer: a sheet with the question, a picture that builds
+   up (boards) and numbered steps. Colours come from the theme tokens. Rules sit under .lesson
+   so the sheet's own text rules (.sheet p, .sheet h2) don't reach in. */
+
+.lesson-ov{align-items:flex-end}
+.sheet.lesson{display:flex;flex-direction:column;gap:10px;text-align:left;max-height:calc(100% - var(--safe-top, 0px) - 10px);padding:16px 16px calc(var(--safe-bottom) + 12px);overflow:hidden}
+.lesson .ls-head{display:flex;align-items:center;gap:12px}
+.lesson .ls-coach{flex:none;width:48px;height:48px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#FFF4D6,#FFD58A);display:grid;place-items:center;overflow:hidden;box-shadow:0 6px 16px -8px rgba(0,0,0,.5)}
+.lesson .ls-coach .dog{width:44px;height:44px;margin-top:4px}
+.lesson .ls-titles{flex:1;min-width:0}
+.lesson .ls-kicker{margin:0;font-size:14px;font-weight:600;color:var(--accent)}
+.lesson .ls-q{margin:2px 0 0;font-size:22px;line-height:1.2;font-weight:700;letter-spacing:0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.lesson .ls-close{flex:none;width:42px;height:42px;border-radius:14px}
+.lesson .ls-close svg{width:20px;height:20px}
+.lesson .ls-said{display:flex;flex-wrap:wrap;gap:8px}
+.lesson .ls-said span{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;font-size:15px;background:var(--hi-10)}
+.lesson .ls-said b{font-size:18px;font-variant-numeric:tabular-nums}
+.lesson .ls-you b{color:var(--bad)}
+.lesson .ls-ans b{color:var(--good)}
+.lesson .ls-note{margin:0;padding:7px 12px;border-radius:12px;font-size:14px;line-height:1.35;color:var(--ink);background:color-mix(in srgb,var(--sun) 16%,transparent);border-left:3px solid var(--sun)}
+
+/* The picture */
+.lesson .ls-board{flex:none;border-radius:var(--r-card,20px);background:var(--surface);box-shadow:inset 0 0 0 var(--stroke-w,1px) var(--stroke);padding:10px 8px;overflow-x:auto;overflow-y:hidden;max-height:38vh}
+.bd{display:flex;justify-content:center;align-items:center;min-width:min-content;margin:0 auto}
+.bd p{margin:0}
+
+/* Steps */
+.lesson .ls-steps{flex:1 1 auto;min-height:70px;overflow-y:auto;margin:0;padding:2px 2px 4px;list-style:none;counter-reset:st;display:flex;flex-direction:column;gap:10px;overscroll-behavior:contain}
+.lesson .ls-step{display:none;position:relative;padding-left:38px;counter-increment:st}
+.lesson .ls-step.on{display:block;opacity:.55;transition:opacity .25s}
+.lesson .ls-step.on.now{opacity:1}
+.lesson .ls-step::before{content:counter(st);position:absolute;left:0;top:0;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:14px;font-weight:700;background:var(--hi-14);color:var(--ink)}
+.lesson .ls-step.now::before{background:var(--accent);color:var(--accent-ink)}
+.lesson .ls-step.end::before{content:'✓';background:var(--good);color:var(--good-ink)}
+.lesson .ls-say{margin:3px 0 0;font-size:17px;line-height:1.4;color:var(--ink)}
+.lesson .ls-math{display:flex;flex-direction:column;gap:2px;margin:6px 0 2px;font-family:var(--font-num,inherit);font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:.01em;line-height:1.3}
+.lesson .ls-math span{overflow-wrap:anywhere}
+.lesson .ls-step.end .ls-math{color:var(--good)}
+.lesson .ls-step.end .ls-say{font-weight:700}
+.lesson .ls-after{margin:2px 0 0;font-size:15px;color:var(--ink-soft)}
+.lesson .ls-foot{display:flex;gap:10px;align-items:center;padding-top:2px}
+.lesson .ls-foot .ls-next{flex:1;min-height:56px}
+
+/* Shared timing: items wait for their step; new ones pop in. */
+.bd [data-at]:not(.shown){opacity:0;visibility:hidden}
+.bd .fresh{animation:bd-pop .42s cubic-bezier(.2,.9,.3,1.1) both}
+@keyframes bd-pop{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:none}}
+.bd svg .fresh{transform-box:fill-box;transform-origin:center}
+
+/* Number line */
+.bd-line svg{width:100%;max-width:520px;height:auto;overflow:visible;font-family:var(--font-num,inherit)}
+.bd-line .ax{stroke:var(--ink-soft);stroke-width:2;stroke-linecap:round}
+.bd-line .tk{stroke:var(--ink-faint);stroke-width:1.5}
+.bd-line .tk.zero{stroke:var(--ink);stroke-width:2.2}
+.bd-line .tl{fill:var(--ink-faint);font-size:11px;text-anchor:middle}
+.bd-line .tl.zero{fill:var(--ink);font-weight:700}
+.bd-line .pt circle{fill:var(--bg-1,#fff);stroke:var(--ink);stroke-width:2}
+.bd-line .pt.p-start circle{fill:var(--accent);stroke:var(--accent)}
+.bd-line .pt.p-mark circle{fill:var(--bg-1,#fff);stroke:var(--accent);stroke-width:2.5}
+.bd-line .pt.p-end circle{fill:var(--good);stroke:var(--good)}
+.bd-line .pt.p-zero circle{fill:var(--ink);stroke:var(--ink)}
+.bd-line .pt.lit circle{r:8}
+.bd-line .pl{fill:var(--ink);font-size:13px;font-weight:700;text-anchor:middle}
+.bd-line .pt.p-end .pl{fill:var(--good)}
+.bd-line .hop path{fill:none;stroke:var(--accent);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.bd-line .hop.back path{stroke:var(--coral)}
+.bd-line .hl-t{fill:var(--accent);font-size:12.5px;font-weight:700;text-anchor:middle}
+.bd-line .hop.back .hl-t{fill:var(--coral)}
+.bd-line .hop.fresh path:first-child{stroke-dasharray:1;animation:bd-draw .55s cubic-bezier(.5,0,.3,1) both;animation-delay:calc(var(--k,0) * 170ms)}
+.bd-line .hop.fresh .ah,.bd-line .hop.fresh .hl-t{animation:bd-fade .3s ease-out both;animation-delay:calc(var(--k,0) * 170ms + 400ms)}
+.bd-line .hop.fresh{animation:none}
+@keyframes bd-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+@keyframes bd-fade{from{opacity:0}to{opacity:1}}
+
+/* Column methods */
+.cgrid{display:grid;grid-template-columns:24px repeat(var(--w),34px);font-family:var(--font-num,inherit);font-variant-numeric:tabular-nums;justify-content:center}
+.cgrid .cc{display:grid;place-items:center;position:relative;transition:background .25s}
+.cgrid .cc.head{font-size:12px;color:var(--ink-faint);height:18px}
+.cgrid .cc.k-small{height:20px;font-size:14px}
+.cgrid .cc.k-num{height:40px;font-size:28px;font-weight:600}
+.cgrid .cc.k-ans{height:42px;font-size:28px;font-weight:700}
+.cgrid .cc.rule{border-bottom:2.5px solid var(--ink)}
+.cgrid .cc.op{font-size:24px;font-weight:600;color:var(--ink-soft)}
+.cgrid .cc.colfocus{background:color-mix(in srgb,var(--accent) 16%,transparent)}
+.cgrid .d{font-style:normal;position:relative}
+.cgrid .d.k-carry{color:var(--accent);font-weight:700}
+.cgrid .d.k-new{color:var(--coral);font-weight:700}
+.cgrid .d.k-ans{color:var(--good)}
+.cgrid .d.k-pt{font-weight:700}
+.cgrid .d.crossed{opacity:.45}
+.cgrid .d.crossed::after{content:'';position:absolute;left:-3px;right:-3px;top:50%;border-top:2px solid var(--bad);transform:rotate(-20deg)}
+
+/* Bars */
+.bd-bars{flex-direction:column;align-items:stretch;gap:8px;width:100%;max-width:440px;padding:4px 6px}
+.bd-bars .brow{display:flex;align-items:flex-end;gap:8px}
+.bd-bars .bl{flex:none;width:64px;font-size:14px;font-weight:600;text-align:right;padding-bottom:9px;overflow-wrap:anywhere}
+.bd-bars .bwrap{display:flex;flex-direction:column;gap:3px}
+.bd-bars .btot{text-align:center;font-size:14px;font-weight:700;color:var(--ink-soft);border-bottom:2px solid var(--ink-faint);padding-bottom:2px}
+.bd-bars .bar{display:flex;height:38px;border-radius:8px;overflow:hidden;box-shadow:inset 0 0 0 2px var(--ink-soft)}
+.bd-bars .bp{position:relative;display:grid;place-items:center;min-width:0;border-right:2px solid var(--ink-soft);background:transparent;transition:background .35s}
+.bd-bars .bp:last-child{border-right:0}
+.bd-bars .bp b{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.bd-bars .bp.shaded.t1{background:color-mix(in srgb,var(--accent) 55%,transparent)}
+.bd-bars .bp.shaded.t2{background:color-mix(in srgb,var(--good) 60%,transparent)}
+.bd-bars .bp.shaded.t3{background:color-mix(in srgb,var(--bad) 45%,transparent)}
+.bd-bars .bp.crossed::after{content:'';position:absolute;inset:4px;background:linear-gradient(to top right,transparent calc(50% - 1.5px),var(--bad) calc(50% - 1.5px),var(--bad) calc(50% + 1.5px),transparent calc(50% + 1.5px))}
+.bd-bars .bp.new-shade{animation:bd-fade .4s ease-out}
+
+/* Dots and objects */
+.bd-dots{flex-direction:column;gap:4px}
+.bd-dots .dbody{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center}
+.bd-dots .grp{display:flex;flex-direction:column;align-items:center;gap:4px;border-radius:12px;transition:background .3s}
+.bd-dots .its{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;align-items:flex-start;max-width:300px}
+.bd-dots .its.per{max-width:calc(var(--per) * 34px - 4px)}
+.bd-dots.groups .grp .its{padding:8px;border-radius:14px;background:var(--hi-10);box-shadow:inset 0 0 0 1.5px var(--hi-16);max-width:148px;transition:box-shadow .3s}
+.bd-dots.groups .grp .its.per{max-width:calc(var(--per) * 34px + 12px)}
+.bd-dots .it{position:relative;display:grid;place-items:center;justify-items:center;width:30px;min-height:30px}
+.bd-dots .ib{position:relative;display:grid;place-items:center;width:30px;height:30px;border-radius:50%;transition:box-shadow .3s}
+.bd-dots .em{font-size:24px;line-height:1}
+.bd-dots .dot{width:18px;height:18px;border-radius:50%;background:var(--accent);transition:background .3s}
+.bd-dots .hole{width:18px;height:18px;border-radius:50%;border:2px dashed var(--ink-faint)}
+.bd-dots .coin{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;font-size:11px;font-weight:800;color:#5A3B00;background:radial-gradient(circle at 35% 30%,#FFE9A8,#F2B33D);box-shadow:inset 0 0 0 2px #C98A16}
+.bd-dots .it.crossed{opacity:.35}
+.bd-dots .it.crossed .ib::after{content:'';position:absolute;left:2px;right:2px;top:50%;border-top:3px solid var(--bad);transform:rotate(-35deg)}
+/* Count numbers: under an object, inside a plain dot. They appear one by one as they're counted. */
+.bd-dots .cnt{font-size:12px;font-weight:800;line-height:14px;font-variant-numeric:tabular-nums;color:var(--accent);opacity:0;transform:scale(.5)}
+.bd-dots .cnt.counted{opacity:1;transform:none;transition:opacity .2s,transform .3s cubic-bezier(.2,.9,.3,1.3);transition-delay:calc(var(--k,0) * 220ms)}
+.bd-dots .it.plain.has-n .dot,.bd-dots .it.plain.has-n .hole{width:24px;height:24px}
+.bd-dots .it.plain .cnt{position:absolute;inset:0;display:grid;place-items:center;font-size:11px;line-height:1}
+.bd-dots .it.plain .dot + .cnt{color:var(--accent-ink)}
+.bd-dots .it.plain .hole + .cnt{color:var(--ink-soft)}
+.bd-dots .glab{font-size:13px;font-weight:700;color:var(--ink-soft);transition:color .3s}
+.bd-dots .glab.fresh{animation-delay:calc(var(--k,0) * 260ms)}
+.bd-dots .cap{margin-top:4px;font-size:13px;font-weight:700;color:var(--ink-soft)}
+.bd-dots .jn{font-size:26px;font-weight:700;color:var(--ink-soft);padding:0 2px;align-self:center}
+/* A lit group: the answer, the bigger row, the odd one out. */
+.bd-dots .grp.lit .glab{color:var(--accent);font-weight:800}
+.bd-dots .grp.lit .dot{background:var(--coral)}
+.bd-dots.groups .grp.lit .its{box-shadow:inset 0 0 0 2.5px var(--accent)}
+.bd-dots.row .grp.lit .ib{box-shadow:0 0 0 2.5px var(--accent)}
+/* Rows (arrays and comparisons) start at the same place, so lengths compare at a glance. */
+.bd-dots.array .dbody{flex-direction:column;align-items:flex-start;gap:3px}
+.bd-dots.array .grp{flex-direction:row;align-items:center;gap:10px;padding:0 8px 0 2px}
+.bd-dots.array .grp.lit{background:color-mix(in srgb,var(--accent) 14%,transparent)}
+.bd-dots.array .its{flex-wrap:nowrap;max-width:none;justify-content:flex-start}
+.bd-dots.array .it,.bd-dots.array .ib{width:24px;min-height:24px;height:24px}
+.bd-dots.array .em{font-size:20px}
+.bd-dots.array .dot{width:14px;height:14px}
+.bd-dots.array .cap{align-self:center}
+.bd-dots.pairs .its{display:grid;grid-auto-flow:column;grid-template-rows:repeat(2,auto);gap:4px}
+/* Ten frame */
+.bd-dots.frame{flex-direction:column}
+.bd-dots .tf{display:grid;grid-template-columns:repeat(5,40px);grid-template-rows:repeat(2,40px);border:2.5px solid var(--ink-soft);border-radius:6px;overflow:hidden}
+.bd-dots .tf .fc{display:grid;place-items:center;border-right:1.5px solid var(--ink-faint);border-bottom:1.5px solid var(--ink-faint)}
+.bd-dots .tf .fc:nth-child(5n){border-right:0}
+.bd-dots .tf .fc:nth-child(n+6){border-bottom:0}
+
+/* Base-ten blocks */
+.bd-blocks{gap:12px;flex-wrap:wrap}
+.bd-blocks .blk{display:flex;flex-direction:column;align-items:center;gap:4px}
+.bd-blocks .blk svg{height:72px;width:auto}
+.bd-blocks .hb{fill:color-mix(in srgb,var(--accent) 30%,transparent);stroke:var(--accent);stroke-width:1.2}
+.bd-blocks .tb{fill:color-mix(in srgb,var(--accent) 60%,transparent);stroke:var(--accent);stroke-width:1.2}
+.bd-blocks .ob{fill:var(--sun);stroke:color-mix(in srgb,var(--sun) 60%,#000);stroke-width:1}
+.bd-blocks .bgl{stroke:var(--accent);stroke-width:.6;opacity:.6}
+.bd-blocks .glab{font-size:15px;font-weight:700;color:var(--ink)}
+.bd-blocks .blk-arrow{font-size:22px;color:var(--ink-faint)}
+
+/* Tables */
+.bd-table table{border-collapse:collapse;font-variant-numeric:tabular-nums;font-family:var(--font-num,inherit)}
+.bd-table th,.bd-table td{padding:6px 10px;text-align:center;font-size:18px;color:var(--ink);border:1.5px solid var(--line)}
+.bd-table .thead th{font-size:13px;font-weight:600;color:var(--ink-faint)}
+.bd-table tr th:first-child{color:var(--ink-soft)}
+.bd-table .t-key:not([data-hl]),.bd-table .t-key.lit{color:var(--accent);font-weight:800}
+.bd-table .t-key.lit{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.bd-table .t-good{color:var(--good);font-weight:800}
+.bd-table .t-bad{color:var(--bad)}
+.bd-table .t-dim{color:var(--ink-faint)}
+.bd-table .tnote{border:0;font-size:14px;font-weight:700;color:var(--accent);text-align:left;padding-left:4px;background:none}
+
+/* Short division */
+.bus{display:grid;grid-template-columns:auto repeat(var(--n),26px) auto;align-items:end;font-family:var(--font-num,inherit);font-variant-numeric:tabular-nums}
+.bus .bc{display:grid;place-items:center;height:38px;font-size:26px;font-weight:600;position:relative}
+.bus .bc.ans{color:var(--good);font-weight:700;border-bottom:2.5px solid var(--ink)}
+.bus .bc.ans i,.bus .bc.rem i{font-style:normal}
+.bus .bc.rem{font-size:18px;color:var(--good);padding-left:6px;justify-content:start}
+.bus .bc.dv{padding:0 8px 0 4px;border-right:2.5px solid var(--ink);border-radius:0 0 14px 0}
+.bus .bc.dig .cy{position:absolute;left:-2px;top:2px;font-size:12px;font-weight:800;color:var(--accent)}
+
+@media (prefers-reduced-motion:reduce){
+  .bd .fresh,.bd-line .hop.fresh path:first-child,.bd-line .hop.fresh .ah,.bd-line .hop.fresh .hl-t,.bd-bars .bp.new-shade{animation:none}
+  .bd-dots .cnt.counted{transition:none}
+}

@@ -6,6 +6,7 @@
 // Skills compute answers; nothing is hand-written.
 
 import type { Rng } from './rng.ts';
+import type { Lesson } from './teach/types.ts';
 
 export type AnswerFormat = 'picture' | 'choice' | 'pad' | 'pad-ext';
 
@@ -58,6 +59,8 @@ export interface Made {
   optionObject?: string;
   /** When true, equivalent forms are not accepted (e.g. "simplify this fraction"). */
   exactForm?: boolean;
+  /** How to work it out, step by step (built from this question's own numbers). */
+  teach?: () => Lesson;
 }
 
 export interface Question extends Made {

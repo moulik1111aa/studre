@@ -305,3 +305,80 @@ test('confirm answers: pick, then Check; the answer is always shown', async ({ p
   await page.click('.check-btn');
   await expect(page.locator('.reveal.good')).toContainText(ans);
 });
+
+/** Type a wrong answer on the pad (or tap a wrong choice). */
+async function answerWrong(page: Page): Promise<string> {
+  const card = page.locator('.qcard[data-answer]');
+  await expect(card).toBeVisible();
+  const ans = (await card.getAttribute('data-answer'))!;
+  if (await page.locator('.choice').count()) {
+    const vals = await page.locator('.choice').evaluateAll((bs) => bs.map((b) => decodeURIComponent((b as HTMLElement).dataset.v!)));
+    await page.locator('.choice').nth(vals.findIndex((v) => v !== ans)).click();
+    if (await page.locator('.check-btn').count()) await page.click('.check-btn');
+  } else {
+    const wrong = String(Number(ans) + 1);
+    for (const ch of wrong) await page.locator(`.answers [data-k="${ch}"]`).first().dispatchEvent('pointerdown');
+    await page.locator('.answers .ok').click();
+  }
+  return ans;
+}
+
+test('a wrong answer opens a step-by-step lesson, then the level goes on', async ({ page }) => {
+  await page.goto(`/?debug&demo=${encodeURIComponent('s3.a22c#1')}&play`);
+  const ans = await answerWrong(page);
+  await expect(page.locator('.lesson')).toBeVisible({ timeout: 5000 });
+  await expect(page.locator('.ls-ans')).toContainText(ans);
+  await expect(page.locator('.ls-board')).toBeVisible();
+  const steps = await page.locator('.ls-step').count();
+  expect(steps).toBeGreaterThanOrEqual(3);
+  for (let i = 1; i < steps; i++) {
+    await page.waitForTimeout(700);
+    await page.click('.ls-next');
+  }
+  await expect(page.locator('.ls-step.end')).toBeVisible();
+  await expect(page.locator('.ls-step.end')).toContainText(ans);
+  await expect(page.locator('.ls-next')).toHaveText('Got it!');
+  await page.waitForTimeout(700);
+  await page.click('.ls-next');
+  await expect(page.locator('.lesson')).toHaveCount(0);
+  // The level carries on with the next question.
+  await expect(page.locator('.dots i.miss')).toHaveCount(1);
+  await expect(page.locator('.qcard[data-answer]')).toBeVisible();
+});
+
+test('lessons can be switched off by a parent, and close with ×', async ({ page }) => {
+  await seeded(page, 's4.x7#1', `window.__app.save.update((d) => { d.settings.teach = false; })`);
+  await page.click('.play-next');
+  await answerWrong(page);
+  await page.waitForTimeout(2500);
+  await expect(page.locator('.lesson')).toHaveCount(0);
+  // On again: the lesson shows, and × closes it straight away.
+  await page.evaluate(() => (window as unknown as { __app: { save: { update: (f: (d: { settings: { teach: boolean } }) => void) => void } } }).__app.save.update((d) => { d.settings.teach = true; }));
+  await answerWrong(page);
+  await expect(page.locator('.lesson')).toBeVisible({ timeout: 5000 });
+  await page.click('.ls-close');
+  await expect(page.locator('.lesson')).toHaveCount(0);
+});
+
+test('every stage 1–4 skill shows its lesson without errors', async ({ page }) => {
+  await page.goto('/?debug&demo=%400');
+  await expect(page.locator('.map')).toBeVisible();
+  const ids = await page.evaluate(() => (window as unknown as { __app: { path: { kind: string; skillId?: string }[] } }).__app.path.filter((l) => l.kind === 'skill').map((l) => l.skillId!).filter((id, i, a) => a.indexOf(id) === i && /^s[1-4]\./.test(id)));
+  expect(ids.length).toBeGreaterThan(150);
+  for (const id of ids) {
+    const n = await page.evaluate(async (sid) => {
+      const w = window as unknown as { __lesson: (id: string, seed: string) => { done: Promise<void> } };
+      w.__lesson(sid, `e2e:${sid}`);
+      const steps = document.querySelectorAll('.lesson .ls-step').length;
+      // Step through to the end, then close.
+      for (let i = 1; i < steps; i++) {
+        (document.querySelector('.lesson .ls-next') as HTMLButtonElement).click();
+        await new Promise((r) => setTimeout(r, 0));
+      }
+      (document.querySelector('.lesson .ls-close') as HTMLButtonElement).click();
+      return steps;
+    }, id);
+    expect(n, id).toBeGreaterThanOrEqual(1);
+    await page.waitForTimeout(30);
+  }
+});

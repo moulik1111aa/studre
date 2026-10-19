@@ -4,15 +4,28 @@
 import { stageSkills, NAMES } from '../../skill.ts';
 import { clean, frac, lerp, nearNumbers, num, uniqueWrong, valueOf, type Made } from '../../question.ts';
 import type { Rng } from '../../rng.ts';
+import type { Lesson } from '../../teach/types.ts';
+import * as A from '../../teach/addsub.ts';
+import * as M from '../../teach/muldiv.ts';
+import * as P from '../../teach/place.ts';
+import * as F from '../../teach/fractions.ts';
+import * as D from '../../teach/decimals.ts';
+import * as I from '../../teach/integers.ts';
+import * as E from '../../teach/expr.ts';
+import * as T from '../../teach/tricks.ts';
+import * as N from '../../teach/theory.ts';
+import * as W from '../../teach/words.ts';
+import * as X from '../../teach/powers.ts';
 
 const { list, add } = stageSkills('arithmetic', 4, { format: 'pad', speedSec: 8 });
 export const STAGE4 = list;
 
-const q = (prompt: string, answer: number, r: Rng, hint?: string, extras: number[] = []): Made => ({
+const q = (prompt: string, answer: number, r: Rng, hint?: string, extras: number[] = [], teach?: () => Lesson): Made => ({
   prompt,
   answer: num(answer),
   distractors: nearNumbers(r, answer, extras),
   hint,
+  teach,
 });
 
 /** Wrong decimals near an answer, at the answer's own precision. */
@@ -41,9 +54,10 @@ const name = (r: Rng): string => r.pick(NAMES);
 // ── Facts ──────────────────────────────────────────────────────────────────
 const times = (n: number) => (r: Rng, d: number): Made => {
   const k = r.int(lerp(1, 3, d), 12);
+  const first = r.chance(0.5);
   return r.chance(0.75)
-    ? q(r.chance(0.5) ? `${n} × ${k} = ?` : `${k} × ${n} = ?`, n * k, r, `Count on in ${n}s, or use a fact you know: ${n} × ${k - 1} = ${n * (k - 1)}.`, [n * (k + 1), n * (k - 1), (n + 1) * k])
-    : q(`${n} × ? = ${n * k}`, k, r, `How many ${n}s make ${n * k}?`);
+    ? q(first ? `${n} × ${k} = ?` : `${k} × ${n} = ?`, n * k, r, `Count on in ${n}s, or use a fact you know: ${n} × ${k - 1} = ${n * (k - 1)}.`, [n * (k + 1), n * (k - 1), (n + 1) * k], () => (first ? M.timesFact(n, k, undefined, { table: n }) : M.timesFact(k, n, undefined, { table: n })))
+    : q(`${n} × ? = ${n * k}`, k, r, `How many ${n}s make ${n * k}?`, [], () => M.missingFactor(n, n * k));
 };
 add('x6', 'muldiv', '× 6', times(6));
 add('x7', 'muldiv', '× 7', times(7));
@@ -54,18 +68,18 @@ add('x12', 'muldiv', '× 12', times(12));
 add('xmix', 'muldiv', 'Mixed tables to 12', (r, d) => {
   const a = r.int(lerp(2, 6, d), 12);
   const b = r.int(2, 12);
-  return q(`${a} × ${b} = ?`, a * b, r, undefined, [a * (b + 1), (a - 1) * b]);
+  return q(`${a} × ${b} = ?`, a * b, r, undefined, [a * (b + 1), (a - 1) * b], () => M.timesFact(a, b));
 });
 add('squares', 'muldiv', 'Squares to 12²', (r) => {
   const n = r.int(2, 12);
   return r.chance(0.7)
-    ? { ...q(`${n}² = ?`, n * n, r, `${n}² means ${n} × ${n}.`, [2 * n, n * n + n]), speak: `${n} squared equals what?` }
-    : q(`? × ? = ${n * n} (the same number twice)`, n, r, 'Which number times itself?');
+    ? { ...q(`${n}² = ?`, n * n, r, `${n}² means ${n} × ${n}.`, [2 * n, n * n + n], () => X.squareLesson(n)), speak: `${n} squared equals what?` }
+    : q(`? × ? = ${n * n} (the same number twice)`, n, r, 'Which number times itself?', [], () => X.sqrtLesson(n * n, `${n} × ${n} = ${n * n}`));
 });
 const share = (n: number | number[]) => (r: Rng): Made => {
   const dv = Array.isArray(n) ? r.pick(n) : n;
   const k = r.int(2, 12);
-  return q(`${dv * k} ÷ ${dv} = ?`, k, r, `${dv} × what = ${dv * k}?`, [k + 1, k - 1, dv]);
+  return q(`${dv * k} ÷ ${dv} = ?`, k, r, `${dv} × what = ${dv * k}?`, [k + 1, k - 1, dv], () => M.divFact(dv * k, dv));
 };
 add('d6', 'muldiv', '÷ 6', share(6));
 add('d7', 'muldiv', '÷ 7', share(7));
@@ -80,53 +94,54 @@ add('m21nc', 'muldiv', '2-digit × 1-digit, no carrying', (r) => {
   const t = r.int(1, Math.floor(9 / b));
   const o = r.int(1, Math.floor(9 / b));
   const a = 10 * t + o;
-  return q(`${a} × ${b} = ?`, a * b, r, `${10 * t} × ${b} = ${10 * t * b}, and ${o} × ${b} = ${o * b}.`);
+  return q(`${a} × ${b} = ?`, a * b, r, `${10 * t} × ${b} = ${10 * t * b}, and ${o} × ${b} = ${o * b}.`, [], () => M.gridMult(a, b));
 });
 add('m21c', 'muldiv', '2-digit × 1-digit, carrying', (r, d) => {
   const b = r.int(lerp(3, 6, d), 9);
   const a = r.int(13, 99);
-  return q(`${a} × ${b} = ?`, a * b, r, `Split ${a}: ${Math.floor(a / 10) * 10} × ${b} + ${a % 10} × ${b}.`, [a * b + 10, a * b - 10]);
+  return q(`${a} × ${b} = ?`, a * b, r, `Split ${a}: ${Math.floor(a / 10) * 10} × ${b} + ${a % 10} × ${b}.`, [a * b + 10, a * b - 10], () => M.gridMult(a, b));
 });
 add('m10100', 'muldiv', '× 10 and × 100', (r) => {
   const a = r.int(3, 999);
   const m = r.pick([10, 100]);
-  return q(`${a} × ${m} = ?`, a * m, r, `× ${m}: every digit moves ${m === 10 ? 'one place' : 'two places'} left.`, [a * (m === 10 ? 100 : 10)]);
+  return q(`${a} × ${m} = ?`, a * m, r, `× ${m}: every digit moves ${m === 10 ? 'one place' : 'two places'} left.`, [a * (m === 10 ? 100 : 10)], () => M.timesTen(a, m));
 });
 add('mtens', 'muldiv', '× multiples of 10', (r) => {
   const a = 10 * r.int(2, 9);
   const b = r.int(2, 9);
-  return q(r.chance(0.5) ? `${a} × ${b} = ?` : `${b} × ${a} = ?`, a * b, r, `${a / 10} × ${b} = ${(a / 10) * b}, then × 10.`, [(a / 10) * b, a * b * 10]);
+  const ab = r.chance(0.5);
+  return q(ab ? `${a} × ${b} = ?` : `${b} × ${a} = ?`, a * b, r, `${a / 10} × ${b} = ${(a / 10) * b}, then × 10.`, [(a / 10) * b, a * b * 10], () => M.timesTens(a, b, ab ? `${a} × ${b} = ${a * b}` : `${b} × ${a} = ${a * b}`));
 });
 add('m31', 'muldiv', '3-digit × 1-digit', (r, d) => {
   const a = r.int(lerp(102, 300, d), 999);
   const b = r.int(2, 9);
-  return q(`${a} × ${b} = ?`, a * b, r, 'Multiply hundreds, tens and ones, then add.', [a * b + 100, a * b - 10]);
+  return q(`${a} × ${b} = ?`, a * b, r, 'Multiply hundreds, tens and ones, then add.', [a * b + 100, a * b - 10], () => M.gridMult(a, b));
 });
 add('m22', 'muldiv', '2-digit × 2-digit by partitioning', (r, d) => {
   const a = r.int(11, lerp(25, 49, d));
   const b = r.int(11, lerp(19, 39, d));
   const t = Math.floor(b / 10) * 10;
-  return q(`${a} × ${b} = ?`, a * b, r, `${a} × ${t} = ${a * t}, ${a} × ${b - t} = ${a * (b - t)}. Add them.`, [a * t, a * b + 10]);
+  return q(`${a} × ${b} = ?`, a * b, r, `${a} × ${t} = ${a * t}, ${a} × ${b - t} = ${a * (b - t)}. Add them.`, [a * t, a * b + 10], () => M.gridMult(a, b));
 });
 add('x11trick', 'mental', '2-digit × 11 trick', (r) => {
   const a = r.int(11, 99);
-  return q(`${a} × 11 = ?`, a * 11, r, `Split the digits and put their sum in the middle: ${Math.floor(a / 10)}_${a % 10}.`, [a * 10, a * 11 + 100]);
+  return q(`${a} × 11 = ?`, a * 11, r, `Split the digits and put their sum in the middle: ${Math.floor(a / 10)}_${a % 10}.`, [a * 10, a * 11 + 100], () => T.x11(a));
 });
 add('x25', 'mental', '× 25 by quartering', (r) => {
   const a = 4 * r.int(2, 25);
-  return q(`${a} × 25 = ?`, a * 25, r, `× 25 is × 100 then ÷ 4: ${a * 100} ÷ 4.`, [a * 20, a * 50]);
+  return q(`${a} × 25 = ?`, a * 25, r, `× 25 is × 100 then ÷ 4: ${a * 100} ÷ 4.`, [a * 20, a * 50], () => T.x25(a));
 });
 add('dblhalf', 'mental', 'Double-and-halve strategy', (r) => {
   const a = 2 * r.int(4, 25);
   const b = r.pick([5, 15, 25, 35, 45]);
-  return q(`${a} × ${b} = ?`, a * b, r, `Halve ${a} and double ${b}: ${a / 2} × ${2 * b}.`, [a * b + 5, (a / 2) * b]);
+  return q(`${a} × ${b} = ?`, a * b, r, `Halve ${a} and double ${b}: ${a / 2} × ${2 * b}.`, [a * b + 5, (a / 2) * b], () => T.doubleHalve(a, b));
 });
 
 // ── Divide ─────────────────────────────────────────────────────────────────
 add('d21', 'muldiv', '2-digit ÷ 1-digit, exact', (r) => {
   const dv = r.int(2, 9);
   const k = r.int(Math.ceil(12 / dv), Math.floor(99 / dv));
-  return q(`${dv * k} ÷ ${dv} = ?`, k, r, `Split ${dv * k} into easy parts of ${dv}s.`);
+  return q(`${dv * k} ÷ ${dv} = ?`, k, r, `Split ${dv * k} into easy parts of ${dv}s.`, [], () => M.busStop(dv * k, dv));
 });
 add('d21r', 'muldiv', '2-digit ÷ 1-digit with remainder', (r) => {
   const dv = r.int(3, 9);
@@ -141,17 +156,18 @@ add('d21r', 'muldiv', '2-digit ÷ 1-digit with remainder', (r) => {
     distractors: uniqueWrong(ans, [`${k} r ${rem + 1 < dv ? rem + 1 : rem - 1}`, `${k + 1} r ${rem}`, `${k - 1} r ${rem}`, `${k} r ${dv}`], () => `${k + r.int(-2, 2)} r ${r.int(1, dv - 1)}`),
     hint: `${dv} × ${k} = ${dv * k}, and ${rem} is left over.`,
     exactForm: true,
+    teach: () => M.busStop(n, dv, { remainder: true }),
   };
 }, { format: 'choice' });
 add('d31', 'muldiv', '3-digit ÷ 1-digit', (r) => {
   const dv = r.int(2, 9);
   const k = r.int(Math.ceil(100 / dv), Math.floor(999 / dv));
-  return q(`${dv * k} ÷ ${dv} = ?`, k, r, 'Divide the hundreds, then the tens, then the ones.', [k + 10, k - 10]);
+  return q(`${dv * k} ÷ ${dv} = ?`, k, r, 'Divide the hundreds, then the tens, then the ones.', [k + 10, k - 10], () => M.busStop(dv * k, dv));
 });
 add('d10100', 'muldiv', '÷ 10 and ÷ 100', (r) => {
   const m = r.pick([10, 100]);
   const k = r.int(2, 999);
-  return q(`${k * m} ÷ ${m} = ?`, k, r, `÷ ${m}: digits move ${m === 10 ? 'one place' : 'two places'} right.`, [k * 10, Math.round(k / 10) || k + 3]);
+  return q(`${k * m} ÷ ${m} = ?`, k, r, `÷ ${m}: digits move ${m === 10 ? 'one place' : 'two places'} right.`, [k * 10, Math.round(k / 10) || k + 3], () => M.divTen(k * m, m));
 });
 add('divisible', 'number', 'Divisibility by 2, 3, 5, 9, 10', (r) => {
   const by = r.pick([2, 3, 5, 9, 10]);
@@ -162,7 +178,7 @@ add('divisible', 'number', 'Divisibility by 2, 3, 5, 9, 10', (r) => {
     if (w % by !== 0 && !wrong.includes(w)) wrong.push(w);
   }
   const rule: Record<number, string> = { 2: 'Even numbers end in 0, 2, 4, 6 or 8.', 3: 'Add the digits: the sum divides by 3.', 5: 'It ends in 0 or 5.', 9: 'Add the digits: the sum divides by 9.', 10: 'It ends in 0.' };
-  return { prompt: `Which number divides exactly by ${by}?`, answer: num(ans), distractors: wrong.map(num), hint: rule[by] };
+  return { prompt: `Which number divides exactly by ${by}?`, answer: num(ans), distractors: wrong.map(num), hint: rule[by], teach: () => N.divisibleChoice(by, ans, wrong) };
 }, { format: 'choice' });
 
 // ── Big numbers ────────────────────────────────────────────────────────────
@@ -177,8 +193,8 @@ add('lakh', 'number', 'Place value to 1 lakh', (r) => {
   const [pname, pv] = r.pick(places);
   const digit = Math.floor(n / pv) % 10;
   const shown = r.chance(0.5) ? n.toLocaleString('en-IN') : n.toLocaleString('en-US');
-  if (digit === 0 || r.chance(0.25)) return q(`How many thousands make 1 lakh (1,00,000)?`, 100, r, '1 lakh = 100 thousand.', [10, 1000]);
-  return q(`In ${shown}, what is the ${pname} digit worth?`, digit * pv, r, `The ${pname} digit is ${digit}.`, [digit, digit * pv * 10]);
+  if (digit === 0 || r.chance(0.25)) return q(`How many thousands make 1 lakh (1,00,000)?`, 100, r, '1 lakh = 100 thousand.', [10, 1000], () => P.lakhThousands());
+  return q(`In ${shown}, what is the ${pname} digit worth?`, digit * pv, r, `The ${pname} digit is ${digit}.`, [digit, digit * pv * 10], () => P.digitValue(n, Math.round(Math.log10(pv))));
 });
 add('cmpbig', 'number', 'Compare and order large numbers', (r) => {
   const a = r.int(10000, 99999);
@@ -188,29 +204,29 @@ add('cmpbig', 'number', 'Compare and order large numbers', (r) => {
   const c = r.int(10000, 99999);
   const nums = r.shuffle([...new Set([a, b, c])]);
   const big = Math.max(...nums);
-  return { prompt: `Largest: ${nums.map((x) => x.toLocaleString('en-IN')).join('  ·  ')}?`, answer: num(big), distractors: uniqueWrong(num(big), nums.filter((x) => x !== big).map(num), () => num(big - r.int(1, 999))), hint: 'Compare from the left: ten thousands first.' };
+  return { prompt: `Largest: ${nums.map((x) => x.toLocaleString('en-IN')).join('  ·  ')}?`, answer: num(big), distractors: uniqueWrong(num(big), nums.filter((x) => x !== big).map(num), () => num(big - r.int(1, 999))), hint: 'Compare from the left: ten thousands first.', teach: () => P.compareNumbers(nums, true) };
 }, { format: 'choice' });
 add('round1000', 'number', 'Round to 100 and 1000', (r) => {
   const n = r.int(1050, 9949);
   const to = r.pick([100, 1000]);
   const ans = Math.round(n / to) * to;
-  return q(`Round ${n} to the nearest ${to}`, ans, r, `Look at the ${to === 100 ? 'tens' : 'hundreds'} digit: 5 or more rounds up.`, [Math.floor(n / to) * to === ans ? ans + to : Math.floor(n / to) * to, Math.round(n / 10) * 10]);
+  return q(`Round ${n} to the nearest ${to}`, ans, r, `Look at the ${to === 100 ? 'tens' : 'hundreds'} digit: 5 or more rounds up.`, [Math.floor(n / to) * to === ans ? ans + to : Math.floor(n / to) * to, Math.round(n / 10) * 10], () => P.roundLesson(n, to));
 }, { format: 'choice' });
 add('estimate', 'mental', 'Estimate sums', (r) => {
   const a = r.int(110, 890);
   const b = r.int(110, 890);
   const ans = Math.round(a / 100) * 100 + Math.round(b / 100) * 100;
-  return { prompt: `About how much is ${a} + ${b}? (round to 100s)`, answer: num(ans), distractors: uniqueWrong(num(ans), [ans + 100, ans - 100, ans + 200, a + b].map(num), () => num(ans + 100 * r.int(-3, 3))), hint: `${a} ≈ ${Math.round(a / 100) * 100}, ${b} ≈ ${Math.round(b / 100) * 100}.` };
+  return { prompt: `About how much is ${a} + ${b}? (round to 100s)`, answer: num(ans), distractors: uniqueWrong(num(ans), [ans + 100, ans - 100, ans + 200, a + b].map(num), () => num(ans + 100 * r.int(-3, 3))), hint: `${a} ≈ ${Math.round(a / 100) * 100}, ${b} ≈ ${Math.round(b / 100) * 100}.`, teach: () => P.estimateSum(a, b) };
 }, { format: 'choice' });
 add('a44', 'addsub', '4-digit addition', (r, d) => {
   const a = r.int(1000, lerp(4999, 8999, d));
   const b = r.int(1000, 9999 - a);
-  return q(`${a} + ${b} = ?`, a + b, r, 'Add ones, tens, hundreds, thousands — carry when you pass 9.', [a + b + 100, a + b - 10]);
+  return q(`${a} + ${b} = ?`, a + b, r, 'Add ones, tens, hundreds, thousands — carry when you pass 9.', [a + b + 100, a + b - 10], () => A.columnAdd([a, b]));
 });
 add('s44', 'addsub', '4-digit subtraction', (r, d) => {
   const a = r.int(lerp(3000, 5000, d), 9999);
   const b = r.int(1000, a - 100);
-  return q(`${a} − ${b} = ?`, a - b, r, 'Start with the ones; borrow from the next column when needed.', [a - b + 10, a - b - 100]);
+  return q(`${a} − ${b} = ?`, a - b, r, 'Start with the ones; borrow from the next column when needed.', [a - b + 10, a - b - 100], () => A.columnSub(a, b));
 });
 
 // ── Fractions ──────────────────────────────────────────────────────────────
@@ -224,47 +240,48 @@ add('fshape', 'fdp', 'Fraction of a shape', (r) => {
     answer: ans,
     distractors: wrongFracs(r, ans, [[parts - shaded, parts], [shaded, parts + 1], [shaded + 1, parts], [shaded, parts - shaded]], parts),
     hint: `Count the shaded parts (${shaded}) out of all the equal parts (${parts}).`,
+    teach: () => F.shapeFraction(shaded, parts),
   };
 }, { format: 'choice' });
 add('unitof', 'fdp', 'Unit fraction of a number', (r) => {
   const dn = r.int(2, 10);
   const k = r.int(2, 12);
-  return q(`1/${dn} of ${dn * k} = ?`, k, r, `1/${dn} means share into ${dn} equal parts: ${dn * k} ÷ ${dn}.`, [dn * k - dn, k * 2]);
+  return q(`1/${dn} of ${dn * k} = ?`, k, r, `1/${dn} means share into ${dn} equal parts: ${dn * k} ÷ ${dn}.`, [dn * k - dn, k * 2], () => F.fracOf(1, dn, dn * k));
 });
 add('fracof', 'fdp', 'Fraction of a number', (r) => {
   const dn = r.int(3, 10);
   const nu = r.int(2, dn - 1);
   const k = r.int(2, 10);
-  return q(`${nu}/${dn} of ${dn * k} = ?`, nu * k, r, `First 1/${dn} of ${dn * k} = ${k}, then × ${nu}.`, [k, nu * k + k]);
+  return q(`${nu}/${dn} of ${dn * k} = ?`, nu * k, r, `First 1/${dn} of ${dn * k} = ${k}, then × ${nu}.`, [k, nu * k + k], () => F.fracOf(nu, dn, dn * k));
 });
 add('equiv', 'fdp', 'Equivalent fractions', (r) => {
   const dn = r.int(2, 6);
   const nu = r.int(1, dn - 1);
   const m = r.int(2, 6);
   return r.chance(0.5)
-    ? q(`${nu}/${dn} = ?/${dn * m}`, nu * m, r, `${dn} × ${m} = ${dn * m}, so the top is × ${m} too.`, [nu + m, nu * m + 1])
-    : q(`${nu * m}/${dn * m} = ${nu}/?`, dn, r, `Divide top and bottom by ${m}.`, [dn * m, dn + 1]);
+    ? q(`${nu}/${dn} = ?/${dn * m}`, nu * m, r, `${dn} × ${m} = ${dn * m}, so the top is × ${m} too.`, [nu + m, nu * m + 1], () => F.equivLesson(nu, dn, m, true))
+    : q(`${nu * m}/${dn * m} = ${nu}/?`, dn, r, `Divide top and bottom by ${m}.`, [dn * m, dn + 1], () => F.equivLesson(nu, dn, m, false));
 });
 add('cmpfrac', 'fdp', 'Compare fractions with the same denominator', (r) => {
   const dn = r.int(4, 12);
   const a = r.int(1, dn - 1);
   let b = r.int(1, dn - 1);
   if (b === a) b = a === 1 ? 2 : a - 1;
-  return { prompt: `Bigger: ${a}/${dn} or ${b}/${dn}?`, answer: `${Math.max(a, b)}/${dn}`, distractors: [`${Math.min(a, b)}/${dn}`], hint: 'Same-size pieces: more pieces is bigger.' };
+  return { prompt: `Bigger: ${a}/${dn} or ${b}/${dn}?`, answer: `${Math.max(a, b)}/${dn}`, distractors: [`${Math.min(a, b)}/${dn}`], hint: 'Same-size pieces: more pieces is bigger.', teach: () => F.compareSameDen(a, b, dn) };
 }, { format: 'choice' });
 add('addfrac', 'fdp', 'Add fractions with the same denominator', (r) => {
   const dn = r.int(4, 12);
   const a = r.int(1, dn - 2);
   const b = r.int(1, dn - 1 - a);
   const ans = frac(a + b, dn);
-  return { prompt: `${a}/${dn} + ${b}/${dn} = ?`, answer: ans, distractors: wrongFracs(r, ans, [[a + b, 2 * dn], [a + b + 1, dn], [a + b - 1, dn], [a * b, dn]], dn), hint: 'Add the tops; the bottom stays the same.' };
+  return { prompt: `${a}/${dn} + ${b}/${dn} = ?`, answer: ans, distractors: wrongFracs(r, ans, [[a + b, 2 * dn], [a + b + 1, dn], [a + b - 1, dn], [a * b, dn]], dn), hint: 'Add the tops; the bottom stays the same.', teach: () => F.addSameDen(a, b, dn, false) };
 }, { format: 'pad-ext' });
 add('subfrac', 'fdp', 'Subtract fractions with the same denominator', (r) => {
   const dn = r.int(4, 12);
   const a = r.int(2, dn - 1);
   const b = r.int(1, a - 1);
   const ans = frac(a - b, dn);
-  return { prompt: `${a}/${dn} − ${b}/${dn} = ?`, answer: ans, distractors: wrongFracs(r, ans, [[a - b, 0], [a - b + 1, dn], [a + b, dn], [a - b - 1, dn], [a - b, dn + 1]], dn), hint: 'Take away the tops; the bottom stays the same.' };
+  return { prompt: `${a}/${dn} − ${b}/${dn} = ?`, answer: ans, distractors: wrongFracs(r, ans, [[a - b, 0], [a - b + 1, dn], [a + b, dn], [a - b - 1, dn], [a - b, dn + 1]], dn), hint: 'Take away the tops; the bottom stays the same.', teach: () => F.addSameDen(a, b, dn, true) };
 }, { format: 'pad-ext' });
 add('mixed', 'fdp', 'Mixed and improper fractions', (r) => {
   const dn = r.int(2, 8);
@@ -273,10 +290,10 @@ add('mixed', 'fdp', 'Mixed and improper fractions', (r) => {
   const imp = w * dn + nu;
   if (r.chance(0.5)) {
     const ans = `${imp}/${dn}`;
-    return { prompt: `${w} ${nu}/${dn} as an improper fraction = ?`, answer: ans, distractors: uniqueWrong(ans, [`${w * nu + dn}/${dn}`, `${imp + 1}/${dn}`, `${w + nu}/${dn}`, `${imp}/${dn + 1}`], () => `${imp + r.int(2, 5)}/${dn}`), hint: `${w} whole = ${w * dn}/${dn}; add ${nu}/${dn}.`, exactForm: true };
+    return { prompt: `${w} ${nu}/${dn} as an improper fraction = ?`, answer: ans, distractors: uniqueWrong(ans, [`${w * nu + dn}/${dn}`, `${imp + 1}/${dn}`, `${w + nu}/${dn}`, `${imp}/${dn + 1}`], () => `${imp + r.int(2, 5)}/${dn}`), hint: `${w} whole = ${w * dn}/${dn}; add ${nu}/${dn}.`, exactForm: true, teach: () => F.toImproper(w, nu, dn) };
   }
   const ans = `${w} ${nu}/${dn}`;
-  return { prompt: `${imp}/${dn} as a mixed number = ?`, answer: ans, distractors: uniqueWrong(ans, [`${w + 1} ${nu}/${dn}`, `${w} ${nu + 1 < dn ? nu + 1 : nu - 1 || 1}/${dn}`, `${nu} ${w}/${dn}`, `${w - 1 || w + 2} ${nu}/${dn}`], () => `${r.int(1, 6)} ${r.int(1, dn - 1)}/${dn}`), hint: `${imp} ÷ ${dn} = ${w} remainder ${nu}.`, exactForm: true };
+  return { prompt: `${imp}/${dn} as a mixed number = ?`, answer: ans, distractors: uniqueWrong(ans, [`${w + 1} ${nu}/${dn}`, `${w} ${nu + 1 < dn ? nu + 1 : nu - 1 || 1}/${dn}`, `${nu} ${w}/${dn}`, `${w - 1 || w + 2} ${nu}/${dn}`], () => `${r.int(1, 6)} ${r.int(1, dn - 1)}/${dn}`), hint: `${imp} ÷ ${dn} = ${w} remainder ${nu}.`, exactForm: true, teach: () => F.toMixed(imp, dn) };
 }, { format: 'choice' });
 
 // ── Decimals ───────────────────────────────────────────────────────────────
@@ -284,47 +301,47 @@ add('tenths', 'fdp', 'Tenths', (r) => {
   const n = r.int(1, 9);
   const w = r.int(0, 9);
   return r.chance(0.5)
-    ? { prompt: `${n}/10 as a decimal = ?`, answer: num(n / 10), distractors: nearDec(r, n / 10, 0.1, [n, n / 100]), hint: `${n} tenths = 0.${n}.` }
-    : { prompt: `${w} and ${n} tenths = ?`, answer: num(w + n / 10), distractors: nearDec(r, w + n / 10, 0.1, [w + n / 100, n + w / 10]), hint: `Whole ones before the point, tenths after.` };
+    ? { prompt: `${n}/10 as a decimal = ?`, answer: num(n / 10), distractors: nearDec(r, n / 10, 0.1, [n, n / 100]), hint: `${n} tenths = 0.${n}.`, teach: () => D.tenthsLesson(n) }
+    : { prompt: `${w} and ${n} tenths = ?`, answer: num(w + n / 10), distractors: nearDec(r, w + n / 10, 0.1, [w + n / 100, n + w / 10]), hint: `Whole ones before the point, tenths after.`, teach: () => D.wholeTenths(w, n) };
 }, { format: 'pad-ext' });
 add('hundredths', 'fdp', 'Hundredths', (r) => {
   const n = r.int(1, 99);
   return r.chance(0.5)
-    ? { prompt: `${n}/100 as a decimal = ?`, answer: num(n / 100), distractors: nearDec(r, n / 100, 0.01, [n / 10]), hint: 'Hundredths use two places after the point.' }
-    : q(`How many hundredths in ${num(n / 100)}?`, n, r, `0.01 is one hundredth.`, [n * 10]);
+    ? { prompt: `${n}/100 as a decimal = ?`, answer: num(n / 100), distractors: nearDec(r, n / 100, 0.01, [n / 10]), hint: 'Hundredths use two places after the point.', teach: () => D.hundredthsLesson(n) }
+    : q(`How many hundredths in ${num(n / 100)}?`, n, r, `0.01 is one hundredth.`, [n * 10], () => D.countHundredths(n));
 }, { format: 'pad-ext' });
 add('decfrac', 'fdp', 'Decimal ↔ fraction', (r) => {
   const pairs: [string, string][] = [['1/2', '0.5'], ['1/4', '0.25'], ['3/4', '0.75'], ['1/5', '0.2'], ['2/5', '0.4'], ['3/5', '0.6'], ['4/5', '0.8'], ['1/10', '0.1'], ['3/10', '0.3'], ['7/10', '0.7'], ['9/10', '0.9'], ['1/100', '0.01']];
   const [f, dcm] = r.pick(pairs);
   const others = pairs.filter((p) => p[0] !== f);
   if (r.chance(0.5)) {
-    return { prompt: `${f} as a decimal = ?`, answer: dcm, distractors: uniqueWrong(dcm, r.shuffle(others).map((p) => p[1]), () => '0.3'), hint: 'Make the bottom 10 or 100.' };
+    return { prompt: `${f} as a decimal = ?`, answer: dcm, distractors: uniqueWrong(dcm, r.shuffle(others).map((p) => p[1]), () => '0.3'), hint: 'Make the bottom 10 or 100.', teach: () => D.decFracLesson(f, dcm, true) };
   }
-  return { prompt: `${dcm} as a fraction = ?`, answer: f, distractors: uniqueWrong(f, r.shuffle(others).map((p) => p[0]), () => '1/3'), hint: 'Read the decimal: tenths or hundredths, then simplify.' };
+  return { prompt: `${dcm} as a fraction = ?`, answer: f, distractors: uniqueWrong(f, r.shuffle(others).map((p) => p[0]), () => '1/3'), hint: 'Read the decimal: tenths or hundredths, then simplify.', teach: () => D.decFracLesson(f, dcm, false) };
 }, { format: 'choice' });
 add('cmpdec', 'fdp', 'Compare decimals', (r) => {
   const a = r.int(1, 99) / 10;
   let b = r.chance(0.5) ? Math.floor(a) + r.int(1, 99) / 100 : r.int(1, 99) / 10;
   if (clean(b) === clean(a)) b = clean(a + 0.05);
   const big = Math.max(a, b);
-  return { prompt: `Bigger: ${num(a)} or ${num(b)}?`, answer: num(big), distractors: [num(Math.min(a, b))], hint: 'Line up the points; compare ones, then tenths, then hundredths.' };
+  return { prompt: `Bigger: ${num(a)} or ${num(b)}?`, answer: num(big), distractors: [num(Math.min(a, b))], hint: 'Line up the points; compare ones, then tenths, then hundredths.', teach: () => D.compareDecimals(a, b) };
 }, { format: 'choice' });
 add('adddec', 'fdp', 'Add 1-dp decimals', (r) => {
   const a = r.int(1, 99) / 10;
   const b = r.int(1, 99) / 10;
-  return { prompt: `${num(a)} + ${num(b)} = ?`, answer: num(clean(a + b)), distractors: nearDec(r, clean(a + b), 0.1), hint: 'Line up the points and add like whole numbers.' };
+  return { prompt: `${num(a)} + ${num(b)} = ?`, answer: num(clean(a + b)), distractors: nearDec(r, clean(a + b), 0.1), hint: 'Line up the points and add like whole numbers.', teach: () => A.columnAdd([a, b]) };
 }, { format: 'pad-ext' });
 add('subdec', 'fdp', 'Subtract 1-dp decimals', (r) => {
   const a = r.int(20, 99) / 10;
   const b = r.int(1, Math.round(a * 10) - 1) / 10;
-  return { prompt: `${num(a)} − ${num(b)} = ?`, answer: num(clean(a - b)), distractors: nearDec(r, clean(a - b), 0.1), hint: 'Line up the points and subtract like whole numbers.' };
+  return { prompt: `${num(a)} − ${num(b)} = ?`, answer: num(clean(a - b)), distractors: nearDec(r, clean(a - b), 0.1), hint: 'Line up the points and subtract like whole numbers.', teach: () => A.columnSub(a, b) };
 }, { format: 'pad-ext' });
 add('dec10', 'fdp', '× and ÷ decimals by 10 and 100', (r) => {
   const a = r.int(1, 999) / 100;
   const m = r.pick([10, 100]);
   const mul = r.chance(0.5);
   const ans = clean(mul ? a * m : a / m);
-  return { prompt: `${num(a)} ${mul ? '×' : '÷'} ${m} = ?`, answer: num(ans), distractors: uniqueWrong(num(ans), [mul ? a / m : a * m, mul ? a * (m === 10 ? 100 : 10) : a / (m === 10 ? 100 : 10), a].map((x) => num(clean(x))), () => num(clean(ans * 10))), hint: `The digits move ${m === 10 ? 'one place' : 'two places'} ${mul ? 'left' : 'right'}.` };
+  return { prompt: `${num(a)} ${mul ? '×' : '÷'} ${m} = ?`, answer: num(ans), distractors: uniqueWrong(num(ans), [mul ? a / m : a * m, mul ? a * (m === 10 ? 100 : 10) : a / (m === 10 ? 100 : 10), a].map((x) => num(clean(x))), () => num(clean(ans * 10))), hint: `The digits move ${m === 10 ? 'one place' : 'two places'} ${mul ? 'left' : 'right'}.`, teach: () => (mul ? M.timesTen(a, m) : M.divTen(a, m)) };
 }, { format: 'pad-ext' });
 
 // ── Mixed ──────────────────────────────────────────────────────────────────
@@ -335,11 +352,11 @@ add('paise', 'word', 'Money with paise', (r) => {
   const other = r.pick(['a sticker pack', 'a pencil box', 'a snack', 'a balloon']);
   if (r.chance(0.5)) {
     const ans = clean(a + b);
-    return { prompt: `${name(r)} buys ${shop} for ₹${a.toFixed(2)} and ${other} for ₹${b.toFixed(2)}. Total in ₹?`, answer: num(ans), distractors: nearDec(r, ans, 0.1, [ans + 1, ans - 0.01]), hint: '100 paise = ₹1. Add the rupees and the paise.' };
+    return { prompt: `${name(r)} buys ${shop} for ₹${a.toFixed(2)} and ${other} for ₹${b.toFixed(2)}. Total in ₹?`, answer: num(ans), distractors: nearDec(r, ans, 0.1, [ans + 1, ans - 0.01]), hint: '100 paise = ₹1. Add the rupees and the paise.', teach: () => A.columnAdd([a, b], { money: true }) };
   }
   const pay = Math.ceil(a / 10) * 10 + (a % 10 === 0 ? 10 : 0);
   const ans = clean(pay - a);
-  return { prompt: `${shop[0].toUpperCase() + shop.slice(1)} costs ₹${a.toFixed(2)}. ${name(r)} pays ₹${pay}. Change in ₹?`, answer: num(ans), distractors: nearDec(r, ans, 0.1, [ans + 1, clean(ans - 1)]), hint: `Count up from ₹${a.toFixed(2)} to ₹${pay}.` };
+  return { prompt: `${shop[0].toUpperCase() + shop.slice(1)} costs ₹${a.toFixed(2)}. ${name(r)} pays ₹${pay}. Change in ₹?`, answer: num(ans), distractors: nearDec(r, ans, 0.1, [ans + 1, clean(ans - 1)]), hint: `Count up from ₹${a.toFixed(2)} to ₹${pay}.`, teach: () => A.changeLesson(a, pay) };
 }, { format: 'pad-ext', speedSec: 14 });
 add('temp', 'number', 'Negative numbers via temperature', (r) => {
   const t = r.int(-5, 8);
@@ -352,6 +369,7 @@ add('temp', 'number', 'Negative numbers via temperature', (r) => {
     answer: num(ans),
     distractors: nearNumbers(r, ans, [colder ? t + ch : t - ch, -ans || ans + 2], { min: -30 }),
     hint: `Picture a thermometer: ${colder ? 'down' : 'up'} ${ch} from ${t}.`,
+    teach: () => I.tempLesson(t, ch, colder),
   };
 }, { format: 'pad-ext', speedSec: 12 });
 add('bodmas0', 'algebra', 'Order of operations without brackets', (r) => {
@@ -359,9 +377,10 @@ add('bodmas0', 'algebra', 'Order of operations without brackets', (r) => {
   const b = r.int(2, 9);
   const c = r.int(2, 9);
   const kind = r.int(0, 2);
-  if (kind === 0) return q(`${a} + ${b} × ${c} = ?`, a + b * c, r, `× before +: ${b} × ${c} = ${b * c} first.`, [(a + b) * c]);
-  if (kind === 1) return q(`${a + b * c} − ${b} × ${c} = ?`, a, r, `× before −: ${b} × ${c} = ${b * c} first.`, [(a + b * c - b) * c]);
-  return q(`${b * c * 2} ÷ ${b} + ${a} = ?`, 2 * c + a, r, `÷ before +: ${b * c * 2} ÷ ${b} = ${2 * c} first.`, [Math.round((b * c * 2) / (b + a))]);
+  const ev = (e: string) => () => E.evalLesson(e);
+  if (kind === 0) return q(`${a} + ${b} × ${c} = ?`, a + b * c, r, `× before +: ${b} × ${c} = ${b * c} first.`, [(a + b) * c], ev(`${a} + ${b} × ${c}`));
+  if (kind === 1) return q(`${a + b * c} − ${b} × ${c} = ?`, a, r, `× before −: ${b} × ${c} = ${b * c} first.`, [(a + b * c - b) * c], ev(`${a + b * c} − ${b} × ${c}`));
+  return q(`${b * c * 2} ÷ ${b} + ${a} = ?`, 2 * c + a, r, `÷ before +: ${b * c * 2} ÷ ${b} = ${2 * c} first.`, [Math.round((b * c * 2) / (b + a))], ev(`${b * c * 2} ÷ ${b} + ${a}`));
 }, { speedSec: 12 });
 add('twostep', 'word', 'Two-step word problems', (r) => {
   const who = name(r);
@@ -370,37 +389,38 @@ add('twostep', 'word', 'Two-step word problems', (r) => {
     const p = r.int(3, 9);
     const n = r.int(4, 12);
     const g = r.int(2, p * n - 2);
-    return q(`${who} has ${p} packs of ${n} stickers and gives away ${g}. How many are left?`, p * n - g, r, `First ${p} × ${n} = ${p * n}, then take away ${g}.`, [p * n + g, p * n]);
+    return q(`${who} has ${p} packs of ${n} stickers and gives away ${g}. How many are left?`, p * n - g, r, `First ${p} × ${n} = ${p * n}, then take away ${g}.`, [p * n + g, p * n], () => W.packsGiveAway(p, n, g));
   }
   if (kind === 1) {
     const price = r.int(12, 60);
     const k = r.int(2, 6);
     const note = (Math.floor((price * k) / 100) + 1) * 100 + (r.chance(0.5) ? 100 : 0);
-    return q(`${who} buys ${k} books at ₹${price} each and pays ₹${note}. Change?`, note - price * k, r, `Cost: ${k} × ${price} = ${price * k}. Then ${note} − ${price * k}.`, [price * k, note - price]);
+    return q(`${who} buys ${k} books at ₹${price} each and pays ₹${note}. Change?`, note - price * k, r, `Cost: ${k} × ${price} = ${price * k}. Then ${note} − ${price * k}.`, [price * k, note - price], () => W.booksChange(k, price, note));
   }
   if (kind === 2) {
     const kids = r.int(3, 8);
     const each = r.int(3, 9);
     const extra = r.int(1, kids - 1);
-    return q(`${kids * each + extra} sweets are shared by ${kids} children. ${extra} are left over. How many does each get?`, each, r, `Take away the ${extra} left over, then ÷ ${kids}.`, [each + 1]);
+    return q(`${kids * each + extra} sweets are shared by ${kids} children. ${extra} are left over. How many does each get?`, each, r, `Take away the ${extra} left over, then ÷ ${kids}.`, [each + 1], () => W.sweetsShare(kids * each + extra, kids, extra));
   }
   const rows = r.int(3, 9);
   const cols = r.int(4, 12);
   const empty = r.int(1, rows * cols - 1);
-  return q(`A hall has ${rows} rows of ${cols} chairs. ${empty} are empty. How many people are sitting?`, rows * cols - empty, r, `${rows} × ${cols} = ${rows * cols} chairs.`, [rows * cols + empty]);
+  return q(`A hall has ${rows} rows of ${cols} chairs. ${empty} are empty. How many people are sitting?`, rows * cols - empty, r, `${rows} × ${cols} = ${rows * cols} chairs.`, [rows * cols + empty], () => W.chairsSitting(rows, cols, empty));
 }, { speedSec: 25 });
 add('multfac', 'muldiv', 'Multiples and factors', (r) => {
   if (r.chance(0.5)) {
     const n = r.int(3, 12);
     const m = n * r.int(2, 9);
     const wrong = uniqueWrong(num(m), [m + 1, m - 1, m + n - 1, m + 2].filter((x) => x % n !== 0).map(num), () => num(n * r.int(2, 9) + r.int(1, n - 1)));
-    return { prompt: `Which is a multiple of ${n}?`, answer: num(m), distractors: wrong, hint: `Multiples of ${n} are in the ${n} times table.` };
+    return { prompt: `Which is a multiple of ${n}?`, answer: num(m), distractors: wrong, hint: `Multiples of ${n} are in the ${n} times table.`, teach: () => N.multipleChoice(n, m, wrong.map(Number)) };
   }
   const n = r.pick([12, 16, 18, 20, 24, 28, 30, 36, 40, 42, 45, 48]);
   const facs = Array.from({ length: n }, (_, i) => i + 1).filter((i) => n % i === 0 && i > 1 && i < n);
   const f = r.pick(facs);
   const non = Array.from({ length: 13 }, (_, i) => i + 2).filter((i) => n % i !== 0);
-  return { prompt: `Which is a factor of ${n}?`, answer: num(f), distractors: r.shuffle(non).slice(0, 3).map(num), hint: `A factor divides ${n} exactly.` };
+  const others = r.shuffle(non).slice(0, 3);
+  return { prompt: `Which is a factor of ${n}?`, answer: num(f), distractors: others.map(num), hint: `A factor divides ${n} exactly.`, teach: () => N.factorChoice(n, f, others) };
 }, { format: 'choice' });
 const SPEED = ['x6', 'x7', 'x8', 'x9', 'x12', 'squares', 'dmix', 'mtens', 'x25', 'm10100'];
 add('speed4', 'mental', 'Speed mix', (r, d) => {
