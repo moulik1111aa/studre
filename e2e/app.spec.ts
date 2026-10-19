@@ -360,11 +360,14 @@ test('lessons can be switched off by a parent, and close with ×', async ({ page
   await expect(page.locator('.lesson')).toHaveCount(0);
 });
 
-test('every stage 1–4 skill shows its lesson without errors', async ({ page }) => {
+test('every skill shows its lesson without errors', async ({ page }) => {
+  test.setTimeout(300_000);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/?debug&demo=%400');
   await expect(page.locator('.map')).toBeVisible();
-  const ids = await page.evaluate(() => (window as unknown as { __app: { path: { kind: string; skillId?: string }[] } }).__app.path.filter((l) => l.kind === 'skill').map((l) => l.skillId!).filter((id, i, a) => a.indexOf(id) === i && /^s[1-4]\./.test(id)));
-  expect(ids.length).toBeGreaterThan(150);
+  const ids = await page.evaluate(() => (window as unknown as { __app: { path: { kind: string; skillId?: string }[] } }).__app.path.filter((l) => l.kind === 'skill').map((l) => l.skillId!).filter((id, i, a) => a.indexOf(id) === i && /^s[1-7]\./.test(id)));
+  expect(ids.length).toBeGreaterThan(300);
   for (const id of ids) {
     const n = await page.evaluate(async (sid) => {
       const w = window as unknown as { __lesson: (id: string, seed: string) => { done: Promise<void> } };
@@ -381,4 +384,5 @@ test('every stage 1–4 skill shows its lesson without errors', async ({ page })
     expect(n, id).toBeGreaterThanOrEqual(1);
     await page.waitForTimeout(30);
   }
+  expect(errors).toEqual([]);
 });

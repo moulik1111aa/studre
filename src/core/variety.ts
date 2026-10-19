@@ -95,9 +95,11 @@ function formsFor(m: Made, r: Rng, stage: number, d: number): Form[] {
   if ((x = /^(\d+)² = \?$/.exec(p))) {
     const n = +x[1];
     const c = n * n;
+    // The skill's own method (a squaring trick, say) still works when asked another way.
+    const own = (show: string, other: () => Lesson) => (m.teach ? () => reshow(m.teach!(), show) : other);
     return [
-      () => sum(`What is ${n} squared?`, c, r, [n * 2, c + n, c - n], m.hint, () => W.squareLesson(n)),
-      () => sum(`${n} × ${n} = ?`, c, r, [n * 2, c + n, c - n], m.hint, () => (n <= 12 ? M.timesFact(n, n) : M.gridMult(n, n))),
+      () => sum(`What is ${n} squared?`, c, r, [n * 2, c + n, c - n], m.hint, own(`${n}² = ${c}`, () => W.squareLesson(n))),
+      () => sum(`${n} × ${n} = ?`, c, r, [n * 2, c + n, c - n], m.hint, own(`${n} × ${n} = ${c}`, () => (n <= 12 ? M.timesFact(n, n) : M.gridMult(n, n)))),
       () => sum(`Which number squared makes ${c}?`, n, r, [n + 1, n - 1, Math.round(c / 2)], `Which number times itself is ${c}?`, () => W.sqrtLesson(c, `${n}² = ${c}`)),
     ];
   }
@@ -113,18 +115,20 @@ function formsFor(m: Made, r: Rng, stage: number, d: number): Form[] {
   if ((x = /^√(\d+) = \?$/.exec(p))) {
     const c = +x[1];
     const n = +m.answer;
+    const own = (show: string, other: () => Lesson) => (m.teach ? () => reshow(m.teach!(), show) : other);
     return [
-      () => sum(`Which number squared makes ${c}?`, n, r, [n + 1, n - 1, Math.round(c / 2)], m.hint, () => W.sqrtLesson(c, `${n}² = ${c}`)),
-      () => sum(`? × ? = ${c} (the same number twice)`, n, r, [n + 1, n - 1, Math.round(c / 2)], m.hint, () => W.sqrtLesson(c, `${n} × ${n} = ${c}`)),
-      () => sum(`What is the square root of ${c}?`, n, r, [n + 1, n - 1, Math.round(c / 2)], m.hint, () => W.sqrtLesson(c)),
+      () => sum(`Which number squared makes ${c}?`, n, r, [n + 1, n - 1, Math.round(c / 2)], m.hint, own(`${n}² = ${c}`, () => W.sqrtLesson(c, `${n}² = ${c}`))),
+      () => sum(`? × ? = ${c} (the same number twice)`, n, r, [n + 1, n - 1, Math.round(c / 2)], m.hint, own(`${n} × ${n} = ${c}`, () => W.sqrtLesson(c, `${n} × ${n} = ${c}`))),
+      () => sum(`What is the square root of ${c}?`, n, r, [n + 1, n - 1, Math.round(c / 2)], m.hint, own(`√${c} = ${n}`, () => W.sqrtLesson(c))),
     ];
   }
   if ((x = /^∛(\d+) = \?$/.exec(p))) {
     const c = +x[1];
     const n = +m.answer;
+    const own = (show: string, other: () => Lesson) => (m.teach ? () => reshow(m.teach!(), show) : other);
     return [
-      () => sum(`Which number cubed makes ${c}?`, n, r, [n + 1, n - 1, Math.round(c / 3)], m.hint, () => W.cbrtLesson(c, `${n}³ = ${c}`)),
-      () => sum(`? × ? × ? = ${c} (the same number three times)`, n, r, [n + 1, n - 1, Math.round(c / 3)], m.hint, () => W.cbrtLesson(c, `${n} × ${n} × ${n} = ${c}`)),
+      () => sum(`Which number cubed makes ${c}?`, n, r, [n + 1, n - 1, Math.round(c / 3)], m.hint, own(`${n}³ = ${c}`, () => W.cbrtLesson(c, `${n}³ = ${c}`))),
+      () => sum(`? × ? × ? = ${c} (the same number three times)`, n, r, [n + 1, n - 1, Math.round(c / 3)], m.hint, own(`${n} × ${n} × ${n} = ${c}`, () => W.cbrtLesson(c, `${n} × ${n} × ${n} = ${c}`))),
     ];
   }
   if ((x = /^Double (\d+) = \?$/.exec(p))) {

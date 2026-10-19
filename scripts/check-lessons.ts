@@ -23,6 +23,12 @@ export function statesAnswer(q: Pick<Question, 'answer'>, l: Lesson): boolean {
   const text = [last.say, ...(last.math ?? []), last.after ?? ''].join(' ');
   const a = norm(q.answer);
   if (norm(text).includes(a)) return true;
+  // Two answers ("−3,2"): both stated.
+  const raw = q.answer.replace(/−/g, '-').replace(/\s+/g, '');
+  if (/^-?\d+(,-?\d+)+$/.test(raw)) {
+    const said = (text.replace(/−/g, '-').match(/-?\d+/g) ?? []).map(Number);
+    return raw.split(',').every((x) => said.includes(Number(x)));
+  }
   // Same value written another way (e.g. 12.50 for 12.5, 1 1/2 for 3/2).
   const va = valueOf(q.answer);
   if (!Number.isFinite(va)) return false;

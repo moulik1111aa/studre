@@ -343,5 +343,5 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
 }
 
 function escPrompt(p: string): string {
-  return p.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/(\d+)\/(\d+)/g, (_, a, b) => `<span class="frac"><sup>${a}</sup><sub>${b}</sub></span>`);
+  return p.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/(^|[^\w])-(?=\d)/g, '$1−').replace(/(\d+)\/(\d+)/g, (_, a, b) => `<span class="frac"><sup>${a}</sup><sub>${b}</sub></span>`);
 }

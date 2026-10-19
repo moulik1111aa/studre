@@ -66,3 +66,33 @@ export function chairsSitting(rows: number, cols: number, empty: number): Lesson
 }
 
 export { f };
+
+/** boxes × per, then some sold: multiply, then take away. */
+export function boxesLeft(boxes: number, per: number, sold: number): Lesson {
+  const L = new LessonBuilder();
+  const all = boxes * per;
+  L.say(`Two steps. First, how many chocolates in ${boxes} boxes of ${per}?`, `${boxes} × ${per} = ${all}`, mulHow(boxes, per));
+  L.say(`Then ${sold} are sold.`, `${all} − ${sold} = ${all - sold}`);
+  L.slip(all + sold, 'Selling takes chocolates away.');
+  return L.end(all - sold, `So ${all - sold} are left.`);
+}
+
+/** boxes × per chocolates at ₹price each. */
+export function takings(boxes: number, per: number, price: number): Lesson {
+  const L = new LessonBuilder();
+  const all = boxes * per;
+  L.say(`Two steps. First, how many chocolates in ${boxes} boxes of ${per}?`, `${boxes} × ${per} = ${all}`, mulHow(boxes, per));
+  L.say(`Each one sells for ₹${price}.`, `${all} × ₹${price} = ₹${all * price}`);
+  L.slip(all, `That is the number of chocolates. Each one earns ₹${price}.`);
+  return L.end(all * price, `So the takings are ₹${all * price}.`);
+}
+
+/** Area of an l × w room, then × the cost of a square metre. */
+export function tilesCost(l: number, w: number, tile: number): Lesson {
+  const L = new LessonBuilder();
+  const area = l * w;
+  L.say('Tiles cover the floor, so find the area first: length × width.', `${l} × ${w} = ${area} m²`);
+  L.say(`Each square metre costs ₹${tile}.`, `${area} × ₹${tile} = ₹${area * tile}`);
+  L.slip(2 * (l + w) * tile, 'That uses the distance around the room. Tiles cover the area.');
+  return L.end(area * tile, `So the tiles cost ₹${area * tile}.`);
+}

@@ -9,9 +9,9 @@ import * as M from '../src/core/teach/muldiv.ts';
 import { evalLesson } from '../src/core/teach/expr.ts';
 import type { ColsBoard, BusBoard } from '../src/core/teach/types.ts';
 
-const LESSON_STAGES = 4;
+const LESSON_STAGES = 7;
 
-test('every Stage 1–4 question has a lesson that ends with the right answer', () => {
+test('every question has a lesson that ends with the right answer', () => {
   const problems: string[] = [];
   for (const s of allSkills()) {
     const rng = createRng(`teach:${s.id}`);
@@ -92,4 +92,26 @@ test('lessons are not too long and slips never match the right answer', () => {
       assert.deepEqual(issues, []);
     }
   }
+});
+
+test('percent, factorising and equation lessons get the right answer across many cases', async () => {
+  const PC = await import('../src/core/teach/percent.ts');
+  const AL = await import('../src/core/teach/algebra.ts');
+  const last = (l: { steps: { say: string }[] }) => l.steps[l.steps.length - 1].say;
+  for (const p of [5, 10, 12, 15, 18, 20, 25, 28, 30, 35, 40, 50, 60, 75, 80, 90]) {
+    for (const n of [20, 40, 100, 160, 200, 340, 1000, 2400]) {
+      const v = (n * p) / 100;
+      assert.ok(last(PC.pctOfLesson(p, n)).includes(String(v)), `${p}% of ${n}: ${last(PC.pctOfLesson(p, n))}`);
+    }
+  }
+  for (let p = -9; p <= 9; p++)
+    for (let s = -9; s <= 9; s++) {
+      if (!p || !s || p === -s) continue;
+      const l = AL.factorQuad(p, s);
+      assert.equal(last(l), `So the answer is ${AL.bracket(p)}${AL.bracket(s)}.`);
+      // The pair the table lights adds and multiplies right.
+      const rows = (l.board as { rows: { cells: { v: string; tone?: string }[] }[] }).rows;
+      assert.ok(rows.some((r) => r.cells[0].tone === 'good'), `${p}, ${s}`);
+    }
+  for (let x = -5; x <= 9; x++) for (const a of [1, 2, 3]) for (const b of [1, 2, 4]) assert.ok(last(AL.simulLesson(x, 3 - x, a, b)).includes(`x = ${x < 0 ? '−' + -x : x}`));
 });

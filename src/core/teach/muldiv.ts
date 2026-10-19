@@ -86,7 +86,7 @@ export function missingFactor(a: number, c: number, show = `${f(a)} × ${f(c / a
   const L = new LessonBuilder();
   if (k > 12 && a > 1) {
     // Beyond the tables: it is a division.
-    L.say(`How many ${f(a)}s make ${f(c)}? That is ${f(c)} ÷ ${f(a)}.`);
+    L.say(`Finding the missing number is a division: ${f(c)} ÷ ${f(a)}.`);
     L.take(divLesson(c, a));
     return L.end(k, undefined, show);
   }

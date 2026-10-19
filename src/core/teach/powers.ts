@@ -14,6 +14,20 @@ export const sup = (n: number | string): string =>
     .join('');
 export const pw = (b: string | number, e: number): string => `${b}${sup(e)}`;
 
+/** Rows of powers of b (value v, highlighted at the last); long lists keep the start and the end. */
+function powerRows(b: number, e: number): TableBoard['rows'] {
+  const keep = (i: number) => e <= 6 || i < 2 || i >= e - 3;
+  const rows: TableBoard['rows'] = [];
+  for (let i = 0; i < e; i++) {
+    if (!keep(i)) {
+      if (keep(i - 1)) rows.push({ at: 1, cells: ['⋮', '⋮'] });
+      continue;
+    }
+    rows.push({ at: 1, cells: [pw(b, i + 1), { v: f(b ** (i + 1)), tone: i === e - 1 ? ('good' as const) : undefined }] });
+  }
+  return rows;
+}
+
 /** n² = n × n. */
 export function squareLesson(n: number, show = `${n}² = ${n * n}`): Lesson {
   const L = new LessonBuilder();
@@ -78,10 +92,10 @@ export function cbrtLesson(c: number, show = `∛${c} = ${Math.round(Math.cbrt(c
 export function powerLesson(b: number, e: number, show = `${pw(b, e)} = ${f(b ** e)}`): Lesson {
   const L = new LessonBuilder();
   const vals = Array.from({ length: e }, (_, i) => b ** (i + 1));
-  L.board = { kind: 'table', head: ['power', 'value'], rows: vals.map((v, i) => ({ at: 1, cells: [pw(b, i + 1), { v: f(v), tone: i === e - 1 ? ('good' as const) : undefined }] })) };
-  L.say(`${pw(b, e)} means ${e} ${b}s multiplied together.`, Array(e).fill(String(b)).join(' × '));
+  L.board = { kind: 'table', head: ['power', 'value'], rows: powerRows(b, e) };
+  L.say(`${pw(b, e)} means ${e} lots of ${b} multiplied together.`, Array(e).fill(String(b)).join(' × '));
   L.say(`Keep multiplying by ${b}.`, vals.map(f).join(', '));
-  L.slip(b * e, `${pw(b, e)} is not ${b} × ${e}: it is ${e} ${b}s multiplied.`);
+  L.slip(b * e, `${pw(b, e)} is not ${b} × ${e}: it is ${e} lots of ${b} multiplied together.`);
   return L.end(b ** e, undefined, show);
 }
 
@@ -91,10 +105,10 @@ export function whichPower(b: number, v: number): Lesson {
   const vals: number[] = [];
   for (let x = b; x <= v; x *= b) vals.push(x);
   const e = vals.length;
-  L.board = { kind: 'table', head: ['power', 'value'], rows: vals.map((x, i) => ({ at: 1, cells: [pw(b, i + 1), { v: f(x), tone: x === v ? ('good' as const) : undefined }] })) };
-  L.say(`How many ${b}s multiply to make ${f(v)}?`);
+  L.board = { kind: 'table', head: ['power', 'value'], rows: powerRows(b, e) };
+  L.say(`How many lots of ${b} multiply to make ${f(v)}?`);
   L.say(`Keep multiplying by ${b} until you reach ${f(v)}.`, vals.map(f).join(', '));
-  return L.end(e, `That took ${e} ${b}s, so the power is ${e}.`, `${pw(b, e)} = ${f(v)}`);
+  return L.end(e, `That took ${e} lots of ${b}, so the power is ${e}.`, `${pw(b, e)} = ${f(v)}`);
 }
 
 /** Index laws: multiply (add powers), divide (subtract), power of a power (multiply). */
@@ -104,11 +118,11 @@ export function indexLaw(kind: 'mul' | 'div' | 'pow', b: string, m: number, n: n
   const ans = pw(b, e);
   const rep = (k: number) => Array(k).fill(b).join(' × ');
   if (kind === 'mul') {
-    L.say(`${pw(b, m)} is ${m} ${b}s multiplied, and ${pw(b, n)} is ${n} more.`, m + n <= 10 ? `(${rep(m)}) × (${rep(n)})` : null);
+    L.say(`${pw(b, m)} is ${m} lots of ${b} multiplied together, and ${pw(b, n)} is ${n} more.`, m + n <= 10 ? `(${rep(m)}) × (${rep(n)})` : null);
     L.say('Same base, multiplying: add the powers.', `${m} + ${n} = ${e}`);
     L.slip(pw(b, m * n), 'When multiplying, add the powers (multiply them only for a power of a power).');
   } else if (kind === 'div') {
-    L.say(`${pw(b, m)} ÷ ${pw(b, n)}: the ${b}s on the bottom cancel ${Math.min(m, n)} ${b}s on the top.`);
+    L.say(`${pw(b, m)} ÷ ${pw(b, n)}: each ${b} on the bottom cancels one ${b} on the top, so ${Math.min(m, n)} of them cancel.`);
     L.say('Same base, dividing: subtract the powers.', `${m} − ${n} = ${f(e)}`);
     L.slip(pw(b, m + n), 'When dividing, subtract the powers.');
   } else {
@@ -116,7 +130,7 @@ export function indexLaw(kind: 'mul' | 'div' | 'pow', b: string, m: number, n: n
     L.say('A power of a power: multiply the powers.', `${m} × ${n} = ${e}`);
     L.slip(pw(b, m + n), 'For a power of a power, multiply the powers.');
   }
-  return L.end(ans);
+  return L.end(ans, e === 1 ? `So the answer is ${ans}, which is just ${b}.` : undefined);
 }
 
 /** b⁰ = 1 and b⁻ᵉ = 1/bᵉ. */
@@ -215,7 +229,7 @@ export function logLesson(b: number, v: number): Lesson {
     return L.end(0);
   }
   const vals = Array.from({ length: e }, (_, i) => b ** (i + 1));
-  L.board = { kind: 'table', head: ['power', 'value'], rows: vals.map((x, i) => ({ at: 1, cells: [pw(b, i + 1), { v: f(x), tone: i === e - 1 ? ('good' as const) : undefined }] })) };
+  L.board = { kind: 'table', head: ['power', 'value'], rows: powerRows(b, e) };
   L.say(`Count the powers of ${b}.`, vals.map(f).join(', '));
   return L.end(e, `${pw(b, e)} = ${f(v)}, so the log is ${e}.`);
 }

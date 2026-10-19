@@ -32,7 +32,7 @@ export function fightScreen(child: Child, level: FightLevel) {
 // ── shared answer UI ───────────────────────────────────────────────────────
 
 function promptHtml(p: string): string {
-  return p.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/(\d+)\/(\d+)/g, (_, a, b) => `<span class="frac"><sup>${a}</sup><sub>${b}</sub></span>`);
+  return p.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/(^|[^\w])-(?=\d)/g, '$1−').replace(/(\d+)\/(\d+)/g, (_, a, b) => `<span class="frac"><sup>${a}</sup><sub>${b}</sub></span>`);
 }
 
 function renderQuestion(app: App, qwrap: HTMLElement, answers: HTMLElement, q: Question, onAnswer: (value: string, btn?: HTMLElement) => void, little: boolean, mode: 'attack' | 'defend' = 'attack'): Wired {
