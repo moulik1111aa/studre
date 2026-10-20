@@ -38,14 +38,15 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
     const round: Round = makeRound(level, skillById, child.progress, rng, earlier, warm, boost, child.age);
     // The first few levels are played together with a grown-up: a wrong answer shows how,
     // then the child tries the same question again. No timer, nothing lost, coins still count.
-    const together = (child.together ?? 0) > 0;
+    const firstLevels = (child.together ?? 0) > 0;
+    const together = firstLevels || !!child.assisted;
     const rules = together ? { ...round.rules, timer: 0 } : round.rules;
     const { questions } = round;
     const el = html(`<section class="screen play" style="${worldVars(level.stage)}" aria-label="${skill.name}">
       ${ambientHtml(level.stage, 6)}
       <header class="play-top">
         <button class="icon-btn quit" aria-label="Pause">${ICONS.pause}</button>
-        <div class="play-title"><b>${together ? '🤝 Practice together' : TIER_NAMES[level.tier]}${boost ? ` · ${boost === 2 ? '🔥🔥 Toughest' : '🔥 Harder'}` : ''}</b><span>${skill.name}</span></div>
+        <div class="play-title"><b>${firstLevels ? '🤝 Practice together' : child.assisted ? `👪 With a grown-up · ${TIER_NAMES[level.tier]}` : TIER_NAMES[level.tier]}${boost ? ` · ${boost === 2 ? '🔥🔥 Toughest' : '🔥 Harder'}` : ''}</b><span>${skill.name}</span></div>
         <div class="dots" aria-hidden="true"></div>
       </header>
       <div class="prize" aria-live="polite"></div>
@@ -117,6 +118,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
           ${rules.hints && q.hint ? `<button class="icon-btn hint" aria-label="Hint">${ICONS.bulb}</button>` : ''}
         </div>
         <p class="hint-text" hidden>${q.hint ?? ''}</p>
+        ${child.assisted ? `<p class="coach-note"><b>👪 Grown-up:</b> ${esc(q.hint ?? 'Read it together, then let them choose. Praise the trying, not just the answer.')}</p>` : ''}
       </article>`;
       const card = qwrap.firstElementChild as HTMLElement;
       if (app.debug) card.dataset.answer = q.answer;
@@ -138,7 +140,8 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
         }
       });
       // Every question is read aloud (unless the parent switched reading off).
-      app.voice.say(again ? `Try again. ${q.speak ?? spoken(q.prompt)}` : q.speak ?? spoken(q.prompt));
+      // Assisted: always read aloud, even if reading is switched off.
+      app.voice.say(again ? `Try again. ${q.speak ?? spoken(q.prompt)}` : q.speak ?? spoken(q.prompt), undefined, !!child.assisted);
       startTimer();
     };
 
@@ -288,7 +291,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
           coins = coinsForLevel('skill', fraction, stars > 0, wasPassed, level.stage);
           unlocked = addCoins(child.wallet, coins).unlocked;
         }
-        if (together) child.together = Math.max(0, (child.together ?? 0) - 1);
+        if (firstLevels) child.together = Math.max(0, (child.together ?? 0) - 1);
         if (child.placementChecks > 0) {
           child.placementChecks--;
           if (score / scoreTotal < 0.6) stepBackAfterPlacement(child, skill);
@@ -345,7 +348,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
         stagger([el.querySelector('.play-top')!, jar.el], { gap: 80 });
         activeSince = performance.now();
         paintPrize();
-        if (together && child.together === TOGETHER_LEVELS) {
+        if (firstLevels && child.together === TOGETHER_LEVELS) {
           // The very first one: a word for the grown-up.
           const { result } = app.sheet(`<h2>🤝 Play this one together</h2><p>Sit with ${esc(child.name)} for the first ${TOGETHER_LEVELS} levels. If an answer is wrong, Biscuit shows how and ${esc(child.name)} tries again. Nothing is lost, and coins still count.</p>`, [{ label: 'Let’s play', value: true, kind: 'mint', back: true }], 'Practice together');
           void result.then(() => show(questions[0]));

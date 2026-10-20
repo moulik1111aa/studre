@@ -50,6 +50,12 @@ export interface Child {
   together?: number;
   /** The owner's tester profile: every level open, no daily limit. */
   tester?: boolean;
+  /**
+   * Assisted mode (on by default for ages 3–6): a grown-up plays alongside. Every level is
+   * like practice-together: no timers, a slip shows how and the child tries again, and each
+   * question carries a tip for the grown-up.
+   */
+  assisted?: boolean;
 }
 
 /** The first levels a new child plays together with a grown-up. */
@@ -166,6 +172,7 @@ export function newChild(name: string, age: number, avatar: number, today: strin
     createdDay: today,
     challenge: 0,
     together: TOGETHER_LEVELS,
+    assisted: age <= 6,
   };
 }
 
@@ -201,8 +208,9 @@ function parse(raw: string | null): SaveData | null {
       children: d.children.map((c) => ({
         ...newChild(c.name ?? 'Champ', c.age ?? 6, c.avatar ?? 0, c.createdDay ?? ''),
         ...c,
-        // Children from before practice-together don't need it.
-        together: c.together ?? 0,
+        // Children from before practice-together get it only if they've hardly played.
+        together: c.together ?? (Object.values(c.progress?.levels ?? {}).filter((l) => l.stars >= 1).length < 3 ? TOGETHER_LEVELS : 0),
+        assisted: c.assisted ?? (c.age ?? 6) <= 6,
         progress: { ...freshProgress(), ...c.progress },
         wallet: { ...freshWallet(), ...c.wallet },
         stats: { ...{ answered: 0, correct: 0, secondsByDay: {} }, ...c.stats },

@@ -1,5 +1,5 @@
-// A child's first stop: choose who reads the questions aloud (a woman's or a man's voice,
-// and an accent), each with a short hello. Then Biscuit's tour of the map.
+// A child's first stop: choose who reads the questions aloud, from every English voice on
+// the phone (each plays a short sample). Then Biscuit's tour of the map.
 
 import { html, esc, type App, type Screen } from './app.ts';
 import type { Child } from '../storage/save.ts';
@@ -16,43 +16,49 @@ export interface VoiceOption {
   pitch: number;
 }
 
-const REGIONS: [RegExp, string, string, string][] = [
-  // locale, accent, woman's name, man's name
-  [/-IN$/i, 'Indian', 'Asha', 'Arjun'],
-  [/-GB$/i, 'British', 'Emma', 'Oliver'],
-  [/-US$/i, 'American', 'Ava', 'Leo'],
-  [/-AU$/i, 'Australian', 'Ruby', 'Jack'],
+const ACCENTS: [RegExp, string][] = [
+  [/-IN$/i, 'Indian'],
+  [/-GB$/i, 'British'],
+  [/-US$/i, 'American'],
+  [/-AU$/i, 'Australian'],
+  [/-CA$/i, 'Canadian'],
+  [/-IE$/i, 'Irish'],
+  [/-ZA$/i, 'South African'],
+  [/-NG$/i, 'Nigerian'],
 ];
+const accentOf = (v: VoiceInfo): number => {
+  const i = ACCENTS.findIndex(([re]) => re.test((v.locale ?? '').replace('_', '-')));
+  return i < 0 ? ACCENTS.length : i;
+};
 
-/** Up to four voices to offer: the clearest woman's and man's voice, then other accents. */
+/**
+ * Every English voice on the phone, described plainly (accent, a woman's or a man's voice,
+ * numbered when there are several alike): offline ones first, Indian English first.
+ */
 export function voiceOptions(voices: VoiceInfo[]): VoiceOption[] {
-  const region = (v: VoiceInfo) => REGIONS.findIndex(([re]) => re.test((v.locale ?? '').replace('_', '-')));
-  const ranked = voices
-    .filter((v) => region(v) >= 0)
-    .sort((a, b) => Number(a.network) - Number(b.network) || region(a) - region(b));
-  const out: VoiceOption[] = [];
-  const used = new Set<string>();
-  const add = (v: VoiceInfo, g: 'f' | 'm') => {
-    const [, accent, her, him] = REGIONS[region(v)];
-    const who = g === 'f' ? her : him;
-    if (used.has(v.name) || out.some((o) => o.who === who)) return;
-    used.add(v.name);
-    out.push({ who, desc: `${accent} · ${g === 'f' ? 'woman’s voice' : 'man’s voice'}`, icon: g === 'f' ? '👩' : '👨', name: v.name, pitch: 1 });
-  };
-  for (const g of ['f', 'm'] as const) {
-    const v = ranked.find((x) => x.gender === g);
-    if (v) add(v, g);
-  }
-  // Other accents, if the phone has them.
-  for (const v of ranked) {
-    if (out.length >= 4) break;
-    if (v.gender && region(v) !== region(ranked[0])) add(v, v.gender);
-  }
-  // No man's (or woman's) voice on this phone: the same voice, deeper (or brighter).
-  const base = out[0]?.name ?? ranked[0]?.name ?? '';
-  if (!out.some((o) => o.icon === '👨')) out.push({ who: 'Arjun', desc: 'Deeper voice', icon: '👨', name: base, pitch: 0.72 });
-  if (!out.some((o) => o.icon === '👩')) out.unshift({ who: 'Asha', desc: 'Brighter voice', icon: '👩', name: base, pitch: 1.18 });
-  return out.slice(0, 4);
+  const ranked = [...voices].sort((a, b) => Number(a.network) - Number(b.network) || accentOf(a) - accentOf(b) || (a.gender ?? 'z').localeCompare(b.gender ?? 'z'));
+  const seen: Record<string, number> = {};
+  const total: Record<string, number> = {};
+  const kind = (v: VoiceInfo) => `${ACCENTS[accentOf(v)]?.[1] ?? 'English'}|${v.gender ?? ''}|${v.network ? 'n' : ''}`;
+  for (const v of ranked) total[kind(v)] = (total[kind(v)] ?? 0) + 1;
+  const out: VoiceOption[] = ranked.map((v) => {
+    const k = kind(v);
+    const n = (seen[k] = (seen[k] ?? 0) + 1);
+    const accent = ACCENTS[accentOf(v)]?.[1];
+    const who = v.gender === 'f' ? 'Woman’s voice' : v.gender === 'm' ? 'Man’s voice' : 'Voice';
+    return {
+      who: total[k] > 1 ? `${who} ${n}` : who,
+      desc: `${accent ? `${accent} English` : (v.locale ?? 'English')}${v.network ? ' · needs internet' : ''}`,
+      icon: v.gender === 'f' ? '👩' : v.gender === 'm' ? '👨' : '🗣️',
+      name: v.name,
+      pitch: 1,
+    };
+  });
+  // No man's (or woman's) voice on this phone: the clearest voice, deeper (or higher).
+  const base = ranked.find((v) => !v.network)?.name ?? ranked[0]?.name ?? '';
+  if (!out.some((o) => o.icon === '👨')) out.push({ who: 'Deeper voice', desc: 'The clearest voice, lower', icon: '👨', name: base, pitch: 0.72 });
+  if (!out.some((o) => o.icon === '👩')) out.push({ who: 'Higher voice', desc: 'The clearest voice, higher', icon: '👩', name: base, pitch: 1.18 });
+  return out;
 }
 
 /** Use a child's voice (or the parent's choice when no child is playing). */
@@ -71,6 +77,7 @@ export function voiceChoiceScreen(child: Child, then: () => void) {
       <div class="vc-list"><p class="fine">Finding voices…</p></div>
       <button class="btn mint vc-go" disabled>Choose a voice</button>
       <p class="fine vc-later">You can change it later in the parent area.</p>
+      <p class="card vc-together">🤝 <b>Grown-up:</b> please sit with ${esc(child.name)} for the first 3 levels. They’re practice rounds: a slip costs nothing, and coins still count.</p>
     </section>`);
     const list = el.querySelector<HTMLElement>('.vc-list')!;
     const go = el.querySelector<HTMLButtonElement>('.vc-go')!;
@@ -78,7 +85,7 @@ export function voiceChoiceScreen(child: Child, then: () => void) {
       const [n, p] = [app.voice.name, app.voice.pitch];
       app.voice.name = o.name;
       app.voice.pitch = o.pitch;
-      app.voice.say(`Hi ${child.name}! I'm ${o.who}. Let's learn maths together!`, undefined, true);
+      app.voice.say(`Hi ${child.name}! Shall I read your maths questions? What is 7 plus 8?`, undefined, true);
       app.voice.name = n;
       app.voice.pitch = p;
     };
@@ -95,7 +102,7 @@ export function voiceChoiceScreen(child: Child, then: () => void) {
       popIn(list.querySelector('.vc-card.on')!, 0, 0.94);
       hear(options[pick]);
       go.disabled = false;
-      go.textContent = `Choose ${options[pick].who}`;
+      go.textContent = 'Choose this voice';
     });
     go.addEventListener('click', () => {
       const o = options[pick];

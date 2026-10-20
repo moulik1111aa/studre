@@ -73,6 +73,7 @@ group('little', 'small', [['Fancy pencil', '✏️'], ['Eraser set', '🧽'], ['
 group('little', 'medium', [['Colouring book', '📘'], ['Crayons', '🖍️'], ['Sketch pens', '🖊️'], ['Notebook', '📓'], ['Slime', '🟢'], ['Play-dough', '🟣']], true);
 group('books', 'medium', [['Comic book', '💥'], ['Story book', '📗'], ['Puzzle book', '🧩']], true);
 group('books', 'large', [['Jigsaw puzzle', '🧩'], ['Science kit', '🔬'], ['Magic kit', '🎩']], true);
+// Retired (still resolve for children who chose them): doll and dollhouse were dropped as stereotyped picks.
 group('toys', 'toyS', [['Toy car', '🚗'], ['Yo-yo', '🪀'], ['Puzzle cube', '🟥'], ['Skipping rope', '➰'], ['Water gun', '🔫'], ['Football', '⚽'], ['Doll', '🪆']], true);
 group('toys', 'toyM', [['Action figure', '🦸'], ['Teddy bear', '🧸'], ['Board game', '🎲'], ['Art kit', '🎨'], ['Badminton set', '🏸'], ['Cricket bat', '🏏']], true);
 group('toys', 'toyB', [['Building-brick set', '🧱'], ['Remote-control car', '🏎️'], ['Train set', '🚂'], ['Toy kitchen', '🍳'], ['Doctor set', '🩺'], ['Dollhouse', '🏠'], ['Music keyboard', '🎹'], ['Walkie-talkies', '📻'], ['Roller skates', '⛸️']], true);
@@ -114,7 +115,7 @@ group('books', 'large', [['Card game set', '🃏'], ['300-piece jigsaw', '🧩']
 
 // Big goal jar: toys.
 group('toys', 'toyS', [
-  ['Action figure', '🦸'], ['Doll', '🪆'], ['Small remote-control car', '🚙'], ['Water blaster', '🔫'], ['Kite with charkhi', '🪁'], ['Badminton set', '🏸'],
+  ['Action figure', '🦸'], ['Soft toy', '🧸'], ['Small remote-control car', '🚙'], ['Water blaster', '🔫'], ['Kite with charkhi', '🪁'], ['Badminton set', '🏸'],
   ['Cricket bat', '🏏'], ['Football', '⚽'], ['Board game', '🎲'], ['Walkie-talkies', '📻'],
 ]);
 group('toys', 'toyM', [
@@ -122,7 +123,7 @@ group('toys', 'toyM', [
   ['Basketball and hoop', '🏀'], ['Wooden chess set', '♟️'], ['Robotics kit', '🤖'], ['Mega art kit', '🎨'], ['Mini drone', '🚁'],
 ]);
 group('toys', 'toyB', [
-  ['Large brick set', '🏗️'], ['Stunt remote-control car', '🏎️'], ['Racing track set', '🏁'], ['Dollhouse', '🏠'], ['Inline skates', '⛸️'], ['Skateboard', '🛹'],
+  ['Large brick set', '🏗️'], ['Stunt remote-control car', '🏎️'], ['Racing track set', '🏁'], ['Telescope', '🔭'], ['Inline skates', '⛸️'], ['Skateboard', '🛹'],
   ['Microscope', '🔬'], ['Kids’ headphones', '🎧'], ['New console game', '🎮'],
 ]);
 

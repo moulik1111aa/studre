@@ -53,6 +53,7 @@ export function addChildScreen(firstRun: boolean) {
         <div class="ac-preview">${avatarHtml(avatar, 96)}</div>
         <label class="field"><span>Name</span><input class="name" maxlength="20" placeholder="e.g. Riya" autocomplete="off"></label>
         <div class="field"><span>Age</span><div class="stepper"><button class="icon-btn minus" aria-label="Younger">−</button><b class="age">6</b><button class="icon-btn plus" aria-label="Older">+</button></div></div>
+        <label class="toggle-row card ac-assist"><span><b>👪 Play with a grown-up</b><small>For children who can’t read yet (usually 3–6): questions read aloud, no timers, a tip for you on every question, and a slip means try again.</small></span><input type="checkbox" role="switch" class="assist" checked></label>
         <div class="field"><span>Pick a buddy</span><div class="avatars">${AVATARS.map((_, i) => `<button class="av${i === avatar ? ' on' : ''}" data-i="${i}" aria-label="Avatar ${i + 1}">${avatarHtml(i, 52)}</button>`).join('')}</div></div>
       </div>
       <button class="btn save">Save</button>
@@ -70,8 +71,16 @@ export function addChildScreen(firstRun: boolean) {
       }
     });
     const ageEl = el.querySelector<HTMLElement>('.age')!;
-    el.querySelector('.minus')!.addEventListener('click', () => (ageEl.textContent = String((age = Math.max(3, age - 1)))));
-    el.querySelector('.plus')!.addEventListener('click', () => (ageEl.textContent = String((age = Math.min(16, age + 1)))));
+    const assist = el.querySelector<HTMLInputElement>('.assist')!;
+    let assistTouched = false;
+    assist.addEventListener('change', () => (assistTouched = true));
+    // On for 3–6 unless the grown-up changed it.
+    const ageChanged = () => {
+      ageEl.textContent = String(age);
+      if (!assistTouched) assist.checked = age <= 6;
+    };
+    el.querySelector('.minus')!.addEventListener('click', () => ((age = Math.max(3, age - 1)), ageChanged()));
+    el.querySelector('.plus')!.addEventListener('click', () => ((age = Math.min(16, age + 1)), ageChanged()));
     el.querySelector('.back-btn')!.addEventListener('click', () => void app.show(firstRun ? welcomeScreen : whosPlayingScreen));
     el.querySelector('.save')!.addEventListener('click', async () => {
       const name = el.querySelector<HTMLInputElement>('.name')!.value.trim();
@@ -83,7 +92,8 @@ export function addChildScreen(firstRun: boolean) {
       // The owner code as the name makes a tester: every level and boss open, no time limit.
       const tester = /^\d{7}$/.test(name) && (await isOwnerCode(name));
       const c = newChild(tester ? 'Tester' : name, age, avatar, app.today);
-      if (tester) Object.assign(c, { tester: true, placed: true, together: 0 });
+      c.assisted = assist.checked;
+      if (tester) Object.assign(c, { tester: true, placed: true, together: 0, assisted: false });
       app.save.update((d) => d.children.push(c));
       if (tester) app.toast('Tester made: every level is open.');
       void app.show(firstRun ? moreChildrenScreen : whosPlayingScreen);

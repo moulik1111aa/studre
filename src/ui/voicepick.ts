@@ -5,6 +5,7 @@ import { html, esc, type App, type Screen } from './app.ts';
 import { ICONS } from './icons.ts';
 import { stagger } from '../render/motion.ts';
 import { parentScreen } from './parent.ts';
+import { voiceOptions } from './voicechoice.ts';
 
 const SAMPLE = 'Hello! What is 7 plus 8? Take your time.';
 const SPEEDS: [number, string][] = [[0.8, 'Slow'], [0.95, 'Normal'], [1.1, 'Quick']];
@@ -25,8 +26,8 @@ export function voiceScreen(app: App): Screen {
   </section>`);
   const list = el.querySelector<HTMLElement>('.vp-list')!;
   const paint = async () => {
-    const voices = await app.voice.list();
-    const rows = [{ name: '', label: 'Automatic — the clearest voice on this phone', network: false }, ...voices];
+    const voices = voiceOptions(await app.voice.list()).filter((o) => o.pitch === 1);
+    const rows = [{ name: '', label: 'Automatic: the clearest voice on this phone' }, ...voices.map((o) => ({ name: o.name, label: `${o.icon} ${o.who} · ${o.desc}` }))];
     list.innerHTML = rows
       .map((v) => `<div class="vp-row${v.name === chosen ? ' on' : ''}" data-name="${esc(v.name)}"><button class="vp-pick" aria-pressed="${v.name === chosen}"><i></i><span>${esc(v.label)}</span></button><button class="btn ghost small vp-try" aria-label="Try ${esc(v.label)}">${ICONS.speaker} Try</button></div>`)
       .join('');

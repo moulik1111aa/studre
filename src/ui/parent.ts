@@ -60,7 +60,7 @@ export function parentScreen(app: App): Screen {
       <h2 class="pa-h">Children</h2>
       <div class="pa-kids">${app.save.data.children
         .map((c) => `<div class="pa-kid card">${avatarHtml(c.avatar, 52)}<div><b>${esc(c.name)}</b><small>Age ${c.age}</small></div>
-          <div class="pa-kid-btns"><button class="btn ghost small level-btn" data-id="${c.id}">${CHALLENGE[c.challenge ?? 0].icon} ${CHALLENGE[c.challenge ?? 0].name}</button><button class="btn ghost small report" data-id="${c.id}">${ICONS.chart} Report</button></div></div>`)
+          <div class="pa-kid-btns"><button class="btn ghost small level-btn" data-id="${c.id}">${CHALLENGE[c.challenge ?? 0].icon} ${CHALLENGE[c.challenge ?? 0].name}</button><button class="btn ghost small report" data-id="${c.id}">${ICONS.chart} Report</button><button class="btn ghost small assist-btn${c.assisted ? ' on' : ''}" data-id="${c.id}" aria-pressed="${!!c.assisted}">👪 With a grown-up: ${c.assisted ? 'on' : 'off'}</button></div></div>`)
         .join('')}</div>
       <button class="btn ghost small add-kid">+ Add a child</button>
       <h2 class="pa-h">Play time and rewards</h2>
@@ -138,6 +138,14 @@ export function parentScreen(app: App): Screen {
       const v = await result;
       if (v === -1) return;
       app.save.update(() => (c.challenge = v as 0 | 1 | 2));
+      void app.show(parentScreen);
+    }),
+  );
+  el.querySelectorAll<HTMLButtonElement>('.assist-btn').forEach((b) =>
+    b.addEventListener('click', () => {
+      const c = app.save.data.children.find((k) => k.id === b.dataset.id)!;
+      app.save.update(() => (c.assisted = !c.assisted));
+      app.toast(c.assisted ? `Assisted mode on: play alongside ${c.name}. No timers, and a slip means try again.` : `Assisted mode off for ${c.name}.`);
       void app.show(parentScreen);
     }),
   );

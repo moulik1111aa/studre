@@ -425,6 +425,21 @@ test('quick tour: the story from the welcome screen, then setup', async ({ page 
   await expect(page.locator('.story')).toBeVisible();
   for (let i = 1; i < 9; i++) {
     await expect(page.locator('.st-count')).toHaveText(`${i} of 9`);
+    const on = page.locator('.st-scene.on');
+    // Interactive scenes: pick a treat, answer (wrong, then right), promise to play along.
+    if (await on.locator('.tp-card').count()) {
+      await expect(page.locator('.st-next')).toBeDisabled();
+      await on.locator('.tp-card').first().click();
+    }
+    if (await on.locator('.ta-try .tl-choice').count()) {
+      await on.locator('.tl-choice', { hasText: '54' }).click();
+      await expect(on.locator('.tl-lesson')).toBeVisible();
+      await expect(on.locator('.tl-prize')).toContainText('+15');
+      await on.locator('.tl-choice', { hasText: '56' }).click();
+      await expect(on.locator('.tl-right')).toContainText('Right!');
+    }
+    if (await on.locator('.tg-pledge').count()) await on.locator('.tg-pledge').click();
+    if (await on.locator('.ta-assist .tl-choice').count()) await on.locator('.tl-choice', { hasText: '3' }).click();
     await page.click('.st-next');
   }
   await expect(page.locator('.st-next')).toHaveText('Set up for my child');
