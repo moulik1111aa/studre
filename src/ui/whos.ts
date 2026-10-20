@@ -9,6 +9,7 @@ import { parentScreen } from './parent.ts';
 import { faceoffSetupScreen } from './faceoff.ts';
 import { jarProgress } from '../core/economy.ts';
 import { rewardById } from '../core/rewards.ts';
+import { accessState, keyReminder, lockScreen } from './access.ts';
 
 export function whosPlayingScreen(app: App): Screen {
   const kids = app.save.data.children;
@@ -41,6 +42,14 @@ export function whosPlayingScreen(app: App): Screen {
       const mark = el.querySelector<SVGElement>('.brand svg')!;
       void drawOn(mark, { duration: 500, stagger: 30 }).then(() => mark.classList.add('alive'));
       stagger([el.querySelector('.title')!, ...el.querySelectorAll('.kid')], { gap: 90 });
+      // A reminder when this phone's key runs out soon.
+      void accessState(app).then((st) => {
+        const note = keyReminder(st, app.today);
+        if (!note || !el.isConnected) return;
+        const card = html(`<div class="card key-note"><p>🔑 ${esc(note)}</p><button class="btn ghost small">Enter a new key</button></div>`);
+        card.querySelector('button')!.addEventListener('click', () => void app.show(lockScreen(st, () => void app.show(whosPlayingScreen), { renew: true, back: () => void app.show(whosPlayingScreen) })));
+        el.querySelector('.title')!.after(card);
+      });
     },
   };
 }

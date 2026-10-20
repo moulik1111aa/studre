@@ -8,6 +8,7 @@ import { stagger, popIn } from '../render/motion.ts';
 import { whosPlayingScreen } from './whos.ts';
 import { setPace } from '../core/rewards.ts';
 import { recheckJars } from '../core/economy.ts';
+import { storyScreen } from './tour.ts';
 
 /** [multiplier, label, note] — relative to the calibrated pace (treat ≈ every 10 days, big toy ≈ 3 months). */
 const TREAT_PACES: [number, string, string][] = [[0.3, '3 days', 'Often'], [0.7, '1 week', 'Faster'], [1, '10 days', 'Normal'], [3, '1 month', 'Rare']];
@@ -18,19 +19,22 @@ export function welcomeScreen(app: App): Screen {
   const el = html(`<section class="screen welcome" aria-label="Welcome">
     <div class="wl-hero">${logoMark()}<h1 class="wordmark"><span>Study</span> <span>Hard</span></h1>
     <p class="subtitle">Maths from age 3 to 16, one small step at a time.<br>Real rewards. Boss fights. Big smiles.</p></div>
-    <button class="btn start">Set up for my child</button>
-    <p class="fine">A grown-up sets things up. It takes 2 minutes.</p>
+    <button class="btn tour-btn">▶ Take the 1-minute tour</button>
+    <button class="btn ghost start">Set up for my child</button>
+    <p class="fine">New here? The tour shows how Study Hard works. A grown-up sets things up, in about 2 minutes.</p>
   </section>`);
-  el.querySelector('.start')!.addEventListener('click', async () => {
+  const setUp = async () => {
     if (await app.grownUp('Setting up')) void app.show(addChildScreen(true));
-  });
+  };
+  el.querySelector('.start')!.addEventListener('click', () => void setUp());
+  el.querySelector('.tour-btn')!.addEventListener('click', () => void app.show(storyScreen({ label: 'Set up for my child', go: () => void setUp() }, welcomeScreen), 'liquid'));
   return {
     el,
     mounted: () => {
       const mark = el.querySelector<SVGElement>('svg')!;
       popIn(mark, 0, 0.9);
       mark.classList.add('alive');
-      stagger(el.querySelectorAll('.wordmark span, .subtitle, .start, .fine'), { delay: 500, gap: 120 });
+      stagger(el.querySelectorAll('.wordmark span, .subtitle, .tour-btn, .start, .fine'), { delay: 500, gap: 120 });
     },
   };
 }

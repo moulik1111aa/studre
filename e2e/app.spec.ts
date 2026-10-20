@@ -97,6 +97,10 @@ test('first run: setup, placement, rewards, first level', async ({ page }) => {
   await page.locator('.rw-card').first().click();
   await page.click('.pick');
   await expect(page.locator('.map')).toBeVisible({ timeout: 5000 });
+  // First visit: Biscuit's tips; skip them.
+  await expect(page.locator('.tips-ov')).toBeVisible({ timeout: 5000 });
+  await page.click('.tip-skip');
+  await expect(page.locator('.tips-ov')).toHaveCount(0);
   await expect(page.locator('.who small')).toContainText('45 min left');
   const save = await page.evaluate(() => JSON.parse(localStorage.getItem('studyhard.save')!));
   expect(save.settings.limitMinutes).toBe(45);
@@ -385,4 +389,55 @@ test('every skill shows its lesson without errors', async ({ page }) => {
     await page.waitForTimeout(30);
   }
   expect(errors).toEqual([]);
+});
+
+test('quick tour: the story from the welcome screen, then setup', async ({ page }) => {
+  await page.goto('/?debug&noloader');
+  await expect(page.locator('.welcome')).toBeVisible();
+  await page.click('.tour-btn');
+  await expect(page.locator('.story')).toBeVisible();
+  for (let i = 1; i < 8; i++) {
+    await expect(page.locator('.st-count')).toHaveText(`${i} of 8`);
+    await page.click('.st-next');
+  }
+  await expect(page.locator('.st-next')).toHaveText('Set up for my child');
+  await page.click('.st-next');
+  await grownUp(page);
+  await expect(page.locator('.add-child')).toBeVisible();
+  // Skip goes back to the welcome screen.
+  await page.goto('/?debug&noloader');
+  await page.click('.tour-btn');
+  await page.click('.st-skip');
+  await expect(page.locator('.welcome')).toBeVisible();
+});
+
+test('map tips: shown once, then again from the ? button', async ({ page }) => {
+  await page.goto('/?debug&demo=%4012&tips');
+  await expect(page.locator('.tips-ov')).toBeVisible({ timeout: 5000 });
+  for (let i = 0; i < 12 && (await page.locator('.tips-ov').count()); i++) {
+    await page.click('.tip-next');
+    await page.waitForTimeout(150);
+  }
+  await expect(page.locator('.tips-ov')).toHaveCount(0);
+  expect(await page.evaluate(() => (window as unknown as { __app: { child: { toured?: boolean } } }).__app.child.toured)).toBe(true);
+  await page.click('.help-btn');
+  await expect(page.locator('.tips-ov')).toBeVisible();
+  await page.click('.tip-skip');
+  await expect(page.locator('.tips-ov')).toHaveCount(0);
+});
+
+test('locked copy: phone code shown, a wrong key is refused, a wrong code is just a wrong answer', async ({ page }) => {
+  await page.goto('/?debug&noloader&lock');
+  await expect(page.locator('.lock')).toBeVisible();
+  await expect(page.locator('.lk-phone b')).toHaveText(/^[0-9A-Z]{4}-[0-9A-Z]{4}$/);
+  await page.fill('.lk-key', 'SH-0123456789ABCDEFGH');
+  await page.click('.lk-go');
+  await expect(page.locator('.lk-msg')).toContainText('doesn’t work on this phone');
+  await page.click('.lk-adult');
+  for (const d of '1234567') await page.locator(`.gu-pad [data-k="${d}"]`).click();
+  await page.locator('.grownup .ok').click();
+  await expect(page.locator('.grownup')).toBeVisible();
+  await expect(page.locator('.owner')).toHaveCount(0);
+  await page.click('.grownup [data-back]');
+  await expect(page.locator('.lock')).toBeVisible();
 });

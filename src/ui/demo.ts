@@ -7,11 +7,13 @@ import type { Level } from '../core/path.ts';
 import { newChild } from '../storage/save.ts';
 import { chooseReward } from '../core/economy.ts';
 
-export function seedDemo(app: App, levelId: string, opts: { coins?: number; age?: number } = {}): Level | null {
+export function seedDemo(app: App, levelId: string, opts: { coins?: number; age?: number; tips?: boolean } = {}): Level | null {
   const at = levelId.startsWith('@') ? Number(levelId.slice(1)) : app.path.findIndex((l) => l.id === levelId);
   if (!(at >= 0 && at < app.path.length)) return null;
   const c = newChild('Riya', opts.age ?? 8, 0, app.today);
   c.placed = true;
+  // Demo saves skip the first-visit map tips unless asked for (`&tips`).
+  c.toured = !opts.tips;
   for (const l of app.path.slice(0, at)) c.progress.levels[l.id] = { stars: 3, passes: 1 };
   chooseReward(c.wallet, 'sweets.milk-chocolate-bar');
   chooseReward(c.wallet, 'toys.small-remote-control-car');

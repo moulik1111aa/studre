@@ -12,6 +12,8 @@ import { stagger } from '../render/motion.ts';
 import { whosPlayingScreen } from './whos.ts';
 import { addChildScreen, limitsScreen } from './setup.ts';
 import { voiceScreen } from './voicepick.ts';
+import { storyScreen } from './tour.ts';
+import { accessState, lockScreen, niceDay } from './access.ts';
 import { freshProgress } from '../core/path.ts';
 import { changesSince, rollback } from '../core/undo.ts';
 
@@ -68,6 +70,11 @@ export function parentScreen(app: App): Screen {
       <button class="pa-row card voice-row"><b>Reading voice</b><small>${st.voiceName ? 'Chosen voice' : 'Automatic (clearest)'} · ${st.voiceRate < 0.9 ? 'slow' : st.voiceRate > 1 ? 'quick' : 'normal speed'}</small></button>
       <div class="card pa-toggles">${TOGGLES.map((t) => `<label class="toggle-row"><span><b>${t.label}</b><small>${t.note}</small></span><input type="checkbox" role="switch" data-k="${t.key}" ${st[t.key] ? 'checked' : ''}></label>`).join('')}</div>
       ${faceoffRows(app)}
+      <h2 class="pa-h">Access key</h2>
+      <button class="pa-row card key-row"><b>Access key</b><small class="key-left">Checking…</small></button>
+      <h2 class="pa-h">How it works</h2>
+      <button class="pa-row card story-row"><b>▶ Take the tour again</b><small>Why Study Hard works: rewards, healthy limits and lessons</small></button>
+      <button class="pa-row card tips-row"><b>Show Biscuit’s map tips again</b><small>Each child sees the tips the next time they open the map</small></button>
       <h2 class="pa-h">Reward categories</h2>
       <div class="card pa-cats">${CATEGORIES.map((c) => `<label class="toggle-row"><span><b>${c.icon} ${esc(c.name)}</b></span><input type="checkbox" role="switch" data-c="${c.id}" ${st.hiddenCategories.includes(c.id) ? '' : 'checked'}></label>`).join('')}</div>
     </div>
@@ -76,6 +83,16 @@ export function parentScreen(app: App): Screen {
   el.querySelector('.add-kid')!.addEventListener('click', () => void app.show(addChildScreen(false)));
   el.querySelector('.limits')!.addEventListener('click', () => void app.show(limitsScreen(false)));
   el.querySelector('.voice-row')!.addEventListener('click', () => void app.show(voiceScreen));
+  void accessState(app).then((st) => {
+    const small = el.querySelector('.key-left')!;
+    small.textContent = st.locked ? 'No working key' : st.owner ? 'Owner’s phone: always unlocked' : st.until !== undefined ? `Works until ${niceDay(st.until)} · phone code ${st.phone}` : `Phone code ${st.phone}`;
+    el.querySelector('.key-row')!.addEventListener('click', () => void app.show(lockScreen(st, () => void app.show(parentScreen), { renew: true, back: () => void app.show(parentScreen) })));
+  });
+  el.querySelector('.story-row')!.addEventListener('click', () => void app.show(storyScreen({ label: 'Done', go: () => void app.show(parentScreen) }, parentScreen), 'liquid'));
+  el.querySelector('.tips-row')!.addEventListener('click', () => {
+    app.save.update((d) => d.children.forEach((c) => (c.toured = false)));
+    app.toast('Done. The tips show next time each child opens the map.');
+  });
   el.querySelectorAll<HTMLButtonElement>('.theme-tile').forEach((b) =>
     b.addEventListener('click', () => {
       const theme = b.dataset.themeId as Theme;

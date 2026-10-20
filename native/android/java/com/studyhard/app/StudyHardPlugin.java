@@ -2,6 +2,7 @@ package com.studyhard.app;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.provider.Settings;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.Voice;
 import android.util.Base64;
@@ -251,6 +252,15 @@ public class StudyHardPlugin extends Plugin {
     public void exit(PluginCall call) {
         call.resolve();
         getActivity().runOnUiThread(() -> getActivity().moveTaskToBack(true));
+    }
+
+    /** A stable id for this phone and app (survives reinstalling), for access keys. */
+    @PluginMethod
+    public void deviceId(PluginCall call) {
+        String id = Settings.Secure.getString(getContext().getContentResolver(), Settings.Secure.ANDROID_ID);
+        JSObject result = new JSObject();
+        result.put("id", id == null ? "" : id);
+        call.resolve(result);
     }
 
     @PluginMethod

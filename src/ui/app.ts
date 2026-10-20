@@ -18,6 +18,7 @@ import { dayKey } from '../core/economy.ts';
 import { AREAS } from '../core/areas/index.ts';
 import { buildPath, type Level } from '../core/path.ts';
 import { setPace, setOwnRewards } from '../core/rewards.ts';
+import { isOwnerCode } from '../core/access.ts';
 
 export interface Screen {
   el: HTMLElement;
@@ -46,6 +47,8 @@ export class App {
   readonly fps = new FpsMeter();
   readonly fx: Fx;
   readonly path: Level[];
+  /** Opens the owner's hidden area (set at boot): the owner code typed into a grown-up check. */
+  ownerHook: (() => void) | null = null;
   private current: Screen | null = null;
   private exitUntil = -Infinity;
   private busy = false;
@@ -265,14 +268,21 @@ function grownUpCheck(app: App, reason: string): Promise<boolean> {
     ov.querySelector('.gu-pad')!.addEventListener('click', (e) => {
       const k = (e.target as HTMLElement).closest<HTMLElement>('[data-k]')?.dataset.k;
       if (!k) return;
-      typed = k === '⌫' ? typed.slice(0, -1) : (typed + k).slice(0, 4);
+      typed = k === '⌫' ? typed.slice(0, -1) : (typed + k).slice(0, 7);
       paint();
     });
     const finish = (ok: boolean) => {
       ov.remove();
       resolve(ok);
     };
-    ov.querySelector('.ok')!.addEventListener('click', () => {
+    ov.querySelector('.ok')!.addEventListener('click', async () => {
+      // The owner code opens the hidden area instead (it never matches an answer).
+      if (typed.length === 7 && app.ownerHook && (await isOwnerCode(typed))) {
+        misses = 0;
+        finish(false);
+        app.ownerHook();
+        return;
+      }
       if (Number(typed) === a * b) {
         misses = 0;
         finish(true);

@@ -19,6 +19,7 @@ import { whosPlayingScreen } from './whos.ts';
 import { trophyScreen } from './trophy.ts';
 import { BOSS_EMOJI } from './bosses.ts';
 import { remember } from '../core/undo.ts';
+import { showMapTips } from './tour.ts';
 
 interface Node {
   kind: 'skill' | 'review' | 'boss' | 'quest';
@@ -60,6 +61,7 @@ export function mapScreen(child: Child) {
       <header class="map-top">
         <button class="who" aria-label="Switch child">${avatarHtml(child.avatar, 46)}<span><b>${esc(child.name)}</b><small>${left > 0 ? `${left} min left today` : 'Time’s up for today'}</small></span></button>
         <div class="ring" style="--p:${Math.max(0, Math.min(1, left / limit))}" aria-hidden="true"><span>${Math.max(0, left)}</span></div>
+        <button class="icon-btn help-btn" aria-label="How it works">?</button>
         <button class="icon-btn trophy-btn" aria-label="Trophy room">${ICONS.trophy}</button>
       </header>
       <div class="jar-slot"></div>
@@ -150,6 +152,7 @@ export function mapScreen(child: Child) {
 
     el.querySelector('.who')!.addEventListener('click', () => void app.show(whosPlayingScreen));
     el.querySelector('.trophy-btn')!.addEventListener('click', () => void app.show(trophyScreen(child)));
+    el.querySelector('.help-btn')!.addEventListener('click', () => void showMapTips(app, child, el));
     el.querySelector('.play-next')!.addEventListener('click', () => {
       if (next) playLevel(app, child, next);
     });
@@ -181,6 +184,8 @@ export function mapScreen(child: Child) {
         const sec = currentNode ? (currentNode as HTMLElement).closest('.world') : null;
         if (sec) void drawOn(sec.querySelector('svg')!, { duration: 1400, fill: false });
         stagger([el.querySelector('.map-top')!, jar.el, el.querySelector('.play-bar')!], { gap: 90 });
+        // First visit: Biscuit shows the child around.
+        if (!child.toured) setTimeout(() => el.isConnected && !app.root.querySelector('.overlay') && void showMapTips(app, child, el), reducedMotion() ? 100 : 1100);
       },
     };
   };

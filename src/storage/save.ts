@@ -39,6 +39,8 @@ export interface Child {
   sinceShowcase?: number;
   /** Recent changes, so a parent can remove the last hour or today (see core/undo.ts). */
   undo?: UndoEntry[];
+  /** Has seen Biscuit's tips on the map (shown once; the map's ? button plays them again). */
+  toured?: boolean;
 }
 
 export interface Settings {
@@ -73,8 +75,29 @@ export interface Settings {
 export type Theme = 'glass' | 'schoolbook' | 'precision';
 export const THEMES: Theme[] = ['glass', 'schoolbook', 'precision'];
 
+/** A key the owner made (kept only on the owner's phone). */
+export interface IssuedKey {
+  id: string;
+  name: string;
+  phone: string;
+  /** Last day it works, as a day number (see core/access.ts). */
+  until: number;
+  key: string;
+  made: string;
+}
+
+/** Access keys: this phone's key, the latest day seen (clock check), and the owner's tools. */
+export interface Access {
+  key?: string;
+  maxDay?: string;
+  /** Owner's phone only: the master key and the keys made. */
+  master?: string;
+  issued?: IssuedKey[];
+}
+
 export interface SaveData {
   version: number;
+  access?: Access;
   setupDone: boolean;
   children: Child[];
   activeChildId: string | null;

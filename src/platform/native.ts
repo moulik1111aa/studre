@@ -12,6 +12,7 @@ export interface StudyHardPlugin {
   keepAwake(o: { on: boolean }): Promise<void>;
   exit(): Promise<void>;
   readSave(): Promise<{ values?: Record<string, string> }>;
+  deviceId?(): Promise<{ id?: string }>;
   writeSave(o: { key: string; value: string }): Promise<void>;
   speak(o: { text: string; rate?: number; pitch?: number; voice?: string }): Promise<void>;
   voices(): Promise<{ voices?: { name: string; locale: string; quality: number; network: boolean }[] }>;

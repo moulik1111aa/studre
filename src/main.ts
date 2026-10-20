@@ -17,6 +17,7 @@ import { timesUpScreen } from './ui/timesup.ts';
 import { trophyScreen } from './ui/trophy.ts';
 import { parentScreen } from './ui/parent.ts';
 import { showLesson } from './ui/lesson.ts';
+import { accessState, lockScreen, ownerScreen } from './ui/access.ts';
 import * as addsub from './core/teach/addsub.ts';
 import * as muldiv from './core/teach/muldiv.ts';
 import * as fractions from './core/teach/fractions.ts';
@@ -54,9 +55,30 @@ async function boot(): Promise<void> {
   } catch {
     /* storage blocked: always show the full loader */
   }
-  const start = () => void app.show(app.save.data.setupDone && app.save.data.children.length ? whosPlayingScreen : welcomeScreen, 'liquid');
+  const home = () => (app.save.data.setupDone && app.save.data.children.length ? whosPlayingScreen : welcomeScreen);
+  // Access keys: the app opens only with a key for this phone (or on the owner's phone).
+  // Browser test runs (?debug) skip it unless they ask for it with &lock.
+  const gated = !!native || !app.debug || params.has('lock');
+  let locked = false;
+  const gate = async (how: 'fade' | 'liquid' = 'liquid') => {
+    const st = gated ? await accessState(app) : null;
+    locked = !!st?.locked;
+    if (st?.locked) void app.show(lockScreen(st, () => void gate()), how);
+    else void app.show(home(), how);
+  };
+  const start = () => void gate();
+  app.ownerHook = () => void app.show(ownerScreen(() => void gate('fade')), 'liquid');
+  // Back from the background on a new day: check the key again.
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState !== 'visible' || !gated || locked) return;
+    const st = await accessState(app);
+    if (st.locked) {
+      locked = true;
+      void app.show(lockScreen(st, () => void gate()));
+    }
+  });
   const demo = params.get('demo');
-  const seeded = app.debug && demo ? seedDemo(app, demo, { coins: Number(params.get('coins')) || 0, age: Number(params.get('age')) || 8 }) : null;
+  const seeded = app.debug && demo ? seedDemo(app, demo, { coins: Number(params.get('coins')) || 0, age: Number(params.get('age')) || 8, tips: params.has('tips') }) : null;
   if (seeded) {
     const child = app.child!;
     if (params.has('play')) playLevel(app, child, seeded);
@@ -64,7 +86,7 @@ async function boot(): Promise<void> {
     return;
   }
   if (params.has('noloader')) {
-    void app.show(app.save.data.setupDone && app.save.data.children.length ? whosPlayingScreen : welcomeScreen);
+    void gate('fade');
     return;
   }
   void app.show(loaderScreen(start, full));
