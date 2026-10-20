@@ -17,6 +17,16 @@ export interface ChildStats {
   secondsByDay: Record<string, number>;
 }
 
+/** The child's last finished level, for Plus to talk about. */
+export interface LastPlay {
+  day: string;
+  levelId: string;
+  name: string;
+  score: number;
+  total: number;
+  stars: number;
+}
+
 export interface Child {
   id: string;
   name: string;
@@ -56,6 +66,8 @@ export interface Child {
    * question carries a tip for the grown-up.
    */
   assisted?: boolean;
+  /** The last finished level (Plus mentions it next time). */
+  lastPlay?: LastPlay;
 }
 
 /** The first levels a new child plays together with a grown-up. */

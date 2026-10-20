@@ -20,6 +20,8 @@ public class MainActivity extends BridgeActivity {
             WebView web = getBridge() != null ? getBridge().getWebView() : null;
             if (web != null) {
                 WebSettings s = web.getSettings();
+                // The opening video's voiceover starts on its own, before the first tap.
+                s.setMediaPlaybackRequiresUserGesture(false);
                 if (Build.VERSION.SDK_INT >= 33) s.setAlgorithmicDarkeningAllowed(false);
                 else if (Build.VERSION.SDK_INT >= 29) s.setForceDark(WebSettings.FORCE_DARK_OFF);
             }

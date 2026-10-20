@@ -117,3 +117,16 @@ html[data-theme] .rl-foot .btn:not(.ghost){background:#fff;color:#1E1B4B}
 html[data-theme] .rl-foot .btn.ghost{background:rgba(255,255,255,.16);color:#fff;box-shadow:inset 0 0 0 2px rgba(255,255,255,.4)}
 .rl-scene.rl-s-end{padding-bottom:calc(var(--safe-bottom) + 170px)}
 @media (prefers-reduced-motion: reduce){.reel *{animation-duration:.01s!important;animation-delay:0s!important}}
+/* Stops: Back, where you are, Next. Next lights up once the line has played. */
+.rl-scene{padding-bottom:calc(var(--safe-bottom) + 104px)}
+.rl-nav{position:absolute;z-index:6;left:16px;right:16px;bottom:calc(var(--safe-bottom) + 16px);display:flex;align-items:center;gap:12px}
+.rl-nav[hidden]{display:none}
+.rl-nav .rl-prev{height:58px;width:58px;font-size:24px;flex:none}
+.rl-nav .rl-prev[disabled]{opacity:.35}
+.rl-count{flex:1;text-align:center;font-weight:800;font-size:14px;color:rgba(255,255,255,.8)}
+html[data-theme] .rl-nav .rl-next{flex:none;min-width:150px;min-height:58px;font-size:20px;background:#fff;color:#1E1B4B;box-shadow:0 6px 0 rgba(0,0,0,.25)}
+html[data-theme] .rl-nav .rl-next[disabled]{opacity:.45;box-shadow:none}
+.rl-next.ready{animation:rl-ready 1.3s ease-in-out infinite}
+@keyframes rl-ready{0%,100%{box-shadow:0 6px 0 rgba(0,0,0,.25),0 0 0 0 rgba(255,255,255,.7)}50%{box-shadow:0 6px 0 rgba(0,0,0,.25),0 0 0 10px rgba(255,255,255,0)}}
+.rl-mark{gap:0;font-size:64px;flex-wrap:wrap;justify-content:center}
+.rl-mark small{flex-basis:100%;text-align:center;font-size:22px;font-weight:800;letter-spacing:0;opacity:0;animation:rl-word .5s .7s both}

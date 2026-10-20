@@ -76,7 +76,7 @@ export function parentScreen(app: App): Screen {
       <h2 class="pa-h">Access key</h2>
       <button class="pa-row card key-row"><b>Access key</b><small class="key-left">Checking…</small></button>
       <h2 class="pa-h">How it works</h2>
-      <button class="pa-row card story-row"><b>▶ Watch the 30-second video</b><small>What Study Hard does and how it keeps children going</small></button>
+      <button class="pa-row card story-row"><b>▶ Watch the one-minute video</b><small>What MN does and how it keeps children going</small></button>
       <button class="pa-row card tips-row"><b>Show Plus’s map tips again</b><small>Each child sees the tips the next time they open the map</small></button>
       <h2 class="pa-h">Reward categories</h2>
       <div class="card pa-cats">${CATEGORIES.map((c) => `<label class="toggle-row"><span><b>${c.icon} ${esc(c.name)}</b></span><input type="checkbox" role="switch" data-c="${c.id}" ${st.hiddenCategories.includes(c.id) ? '' : 'checked'}></label>`).join('')}</div>

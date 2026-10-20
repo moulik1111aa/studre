@@ -15,7 +15,7 @@ import { useVoice } from './voicechoice.ts';
 export function whosPlayingScreen(app: App): Screen {
   const kids = app.save.data.children;
   const el = html(`<section class="screen whos" aria-label="Who's playing">
-    <header class="topbar"><button class="icon-btn faceoff-btn" aria-label="Face-off">${ICONS.swords}</button><div class="brand">${brandMark()}<b>Study Hard</b></div><button class="icon-btn parent-btn" aria-label="Parent area">${ICONS.gear}</button></header>
+    <header class="topbar"><button class="icon-btn faceoff-btn" aria-label="Face-off">${ICONS.swords}</button><div class="brand">${brandMark()}<b>MN</b></div><button class="icon-btn parent-btn" aria-label="Parent area">${ICONS.gear}</button></header>
     <h1 class="title center">Who’s playing?</h1>
     <div class="kids">${kids
       .map((c) => {

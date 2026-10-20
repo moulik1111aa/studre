@@ -90,6 +90,8 @@ function fonts() {
 }
 
 /** three.js (r170, MIT) as inert text; parsed only when a 3D scene first opens (render/three.ts). */
+/** The opening video's voiceover (assets/audio/opening.mp3), inlined for reel.ts. */
+const audioTag = () => `<script type="text/plain" id="reel-audio">${readFileSync(join(root, 'assets', 'audio', 'opening.mp3')).toString('base64')}</script>`;
 const threeTag = () => `<script type="text/plain" id="three-src">${readFileSync(join(root, 'assets', 'vendor', 'three.module.min.js'), 'utf8').replace(/<\/(script)/gi, '<\\/$1')}</script>`;
 
 export function build() {
@@ -108,7 +110,7 @@ export function build() {
     .replace('/*__FONTS__*/', () => fontCss)
     .replace('/*__CSS__*/', () => css)
     .replace('/*__JS__*/', () => scriptSafe(js))
-    .replace('<div id="app"></div>', () => `<div id="app"></div>\n${threeTag()}`);
+    .replace('<div id="app"></div>', () => `<div id="app"></div>\n${threeTag()}\n${audioTag()}`);
   mkdirSync(dist, { recursive: true });
   writeFileSync(join(dist, 'index.html'), html);
   // Artifact variant: the host wraps the page in its own document skeleton, so it
@@ -116,8 +118,8 @@ export function build() {
   // The shared preview link is a playtest build: it also offers preview tools.
   const previewJs = scriptFor({ ...buildInfo, preview: true });
   const artifact =
-    `<title>Study Hard</title>\n<meta name="theme-color" content="#0F1530">\n<style>${fontCss}</style>\n<style>${css}</style>\n` +
-    `<div id="app" aria-live="polite"></div>\n${threeTag()}\n<script>${scriptSafe(previewJs)}</script>\n`;
+    `<title>MN · Mission Next</title>\n<meta name="theme-color" content="#0F1530">\n<style>${fontCss}</style>\n<style>${css}</style>\n` +
+    `<div id="app" aria-live="polite"></div>\n${threeTag()}\n${audioTag()}\n<script>${scriptSafe(previewJs)}</script>\n`;
   writeFileSync(join(dist, 'artifact.html'), artifact);
   return { bytes: Buffer.byteLength(html) };
 }

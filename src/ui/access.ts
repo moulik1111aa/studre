@@ -93,23 +93,23 @@ async function copy(app: App, text: string, what = 'Copied'): Promise<void> {
 }
 
 const REASON: Record<string, (until?: number) => string> = {
-  none: () => 'This app needs a key to start. Send your phone code to the person who gave you Study Hard, and they’ll send you a key.',
+  none: () => 'This app needs a key to start. Send your phone code to the person who gave you MN, and they’ll send you a key.',
   bad: () => 'That key doesn’t work on this phone. Make sure you copied all of it, and that it was made for the phone code below.',
   expired: (u) => `Your key ran out${u !== undefined ? ` on ${niceDay(u)}` : ''}. Ask for a new one. All progress is safe on this phone and carries on with the new key.`,
   revoked: () => 'This key has been switched off. Ask for a new one. All progress is safe on this phone.',
   clock: () => 'This phone’s date looks wrong. Set the correct date and time in your phone’s settings, then try again.',
-  old: () => 'This phone’s web engine is too old to check keys. Update “Android System WebView” from the Play Store, then open Study Hard again.',
+  old: () => 'This phone’s web engine is too old to check keys. Update “Android System WebView” from the Play Store, then open MN again.',
 };
 
 /** The lock screen (or, with `renew`, the "enter a new key" screen from the parent area). */
 export function lockScreen(state: AccessState, then: () => void, o: { renew?: boolean; back?: () => void } = {}) {
   return (app: App): Screen => {
     const reason = state.locked ? state.reason : 'none';
-    const el = html(`<section class="screen lock" aria-label="${o.renew ? 'New key' : 'Unlock Study Hard'}">
+    const el = html(`<section class="screen lock" aria-label="${o.renew ? 'New key' : 'Unlock MN'}">
       ${o.back ? `<header class="topbar"><button class="icon-btn back-btn" aria-label="Back">${ICONS.back}</button><span class="t">Access key</span><span style="width:50px"></span></header>` : ''}
       <div class="scroll lk-body">
         <div class="lk-coach">${plusFaceSvg({ cls: 'alive' })}</div>
-        <h1 class="lk-title">${o.renew ? 'Enter a new key' : 'Unlock Study Hard'}</h1>
+        <h1 class="lk-title">${o.renew ? 'Enter a new key' : 'Unlock MN'}</h1>
         <p class="lk-why">${o.renew ? `${!state.locked && state.until !== undefined ? `Your key works until ${niceDay(state.until)}. ` : ''}Got a new key? Paste it here. Progress carries on as it is.` : esc(REASON[reason](state.until))}</p>
         <div class="card lk-phone"><small>Your phone code</small><b>${esc(state.phone)}</b><button class="btn ghost small lk-copy">Copy code</button></div>
         <label class="field lk-field"><span>Your key</span><textarea class="lk-key" rows="3" placeholder="Paste the key here (it starts with SH-)" autocomplete="off" autocapitalize="characters" spellcheck="false"></textarea></label>
@@ -286,7 +286,7 @@ export function ownerScreen(leave: () => void) {
       stagger(body.children, { gap: 50 });
     };
 
-    const message = (k: IssuedKey) => `Your Study Hard key for ${k.name} (works until ${niceDay(k.until)}):\n${k.key}`;
+    const message = (k: IssuedKey) => `Your MN key for ${k.name} (works until ${niceDay(k.until)}):\n${k.key}`;
 
     /** Make a key (a renewed key replaces the old one in the list; the old one still runs to its date). */
     const issue = async (name: string, phone: string, until: number, replaces?: string): Promise<IssuedKey> => {

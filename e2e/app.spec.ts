@@ -26,11 +26,23 @@ async function makePin(page: Page): Promise<void> {
   }
 }
 
+/** Step through the opening video: each stop's Next unlocks once its line has played. */
+async function watchReel(page: Page): Promise<void> {
+  for (let k = 0; k < 40 && !(await page.locator('.rl-go').isVisible()); k++) {
+    const next = page.locator('.rl-next');
+    if ((await next.isVisible()) && (await next.isEnabled())) await next.click();
+    else await page.waitForTimeout(100);
+  }
+  await expect(page.locator('.rl-go')).toBeVisible();
+}
+
 /** Answer every question correctly until `done` appears. */
 async function playThrough(page: Page, done: string, max = 60): Promise<number> {
   let answered = 0;
   for (let i = 0; i < max * 8 && answered < max; i++) {
     if (await page.locator(done).count()) break;
+    // Plus's word before the level: tap it away.
+    if (await page.locator('.plus-says:not(.out)').count()) await page.locator('.plus-says').click().catch(() => undefined);
     const card = page.locator('.qcard[data-answer]');
     if (!(await card.count()) || !(await page.locator('.choice:not([disabled]), .pad .key').count())) {
       await page.waitForTimeout(200);
@@ -73,7 +85,9 @@ async function seeded(page: Page, level: string, mutate?: string): Promise<void>
   }
 }
 
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page }, info) => {
+  // Plus's word before each level is tested on its own; elsewhere it stays quiet.
+  if (!info.title.startsWith('Plus')) await page.addInitScript(() => Object.assign(window, { __quietPlus: true }));
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   (page as unknown as { errors: string[] }).errors = errors;
@@ -87,7 +101,7 @@ test('first run: setup, placement, rewards, first level', async ({ page }) => {
   // First launch: the opening video (20× faster here), then setup.
   await page.goto('/?debug&fastreel');
   await expect(page.locator('.reel.first')).toBeVisible({ timeout: 20_000 });
-  await expect(page.locator('.rl-go')).toBeVisible({ timeout: 20_000 });
+  await watchReel(page);
   await page.click('.rl-go');
   await grownUp(page);
   await makePin(page);
@@ -446,9 +460,19 @@ test('opening video: no skip the first time, skippable after', async ({ page }) 
   await expect(page.locator('.reel.first')).toBeVisible();
   // The first time there is no way round it: no Skip, and Back does nothing.
   await expect(page.locator('.rl-skip')).toHaveCount(0);
+  // Next waits for the line to play; Back from the first stop does nothing.
+  await expect(page.locator('.rl-next')).toBeDisabled();
   await page.evaluate(() => (window as unknown as { __app: { back(): void } }).__app.back());
   await expect(page.locator('.reel')).toBeVisible();
-  await expect(page.locator('.rl-go')).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('.rl-count')).toHaveText('1 of 11');
+  await expect(page.locator('.rl-next')).toBeEnabled({ timeout: 5000 });
+  await page.click('.rl-next');
+  await expect(page.locator('.rl-count')).toHaveText('2 of 11');
+  await page.click('.rl-prev');
+  await expect(page.locator('.rl-count')).toHaveText('1 of 11');
+  // A stop already heard can be passed straight away.
+  await expect(page.locator('.rl-next')).toBeEnabled();
+  await watchReel(page);
   await expect(page.locator('.rl-again')).toHaveCount(0);
   await page.click('.rl-go');
   await grownUp(page);
@@ -460,8 +484,25 @@ test('opening video: no skip the first time, skippable after', async ({ page }) 
   await page.click('.tour-btn');
   await expect(page.locator('.reel')).toBeVisible();
   await expect(page.locator('.reel.first')).toHaveCount(0);
+  await expect(page.locator('.rl-next')).toBeEnabled();
   await page.click('.rl-skip');
   await expect(page.locator('.welcome')).toBeVisible();
+});
+
+test('Plus says a word before a level, and cheers after a miss', async ({ page }) => {
+  await page.goto('/?debug&demo=%4012&play');
+  await expect(page.locator('.plus-says')).toBeVisible();
+  await expect(page.locator('.plus-says .ps-text')).toContainText('Plus');
+  await page.locator('.plus-says').click();
+  await expect(page.locator('.plus-says')).toHaveCount(0);
+  await expect(page.locator('.qcard')).toBeVisible();
+  await page.evaluate(() => {
+    const w = window as unknown as { __app: { child: unknown; path: unknown[]; show(m: unknown): void }; __screens: { resultScreen(...a: unknown[]): unknown } };
+    w.__app.show(w.__screens.resultScreen(w.__app.child, w.__app.path[12], { stars: 0, score: 5, total: 10, coins: 0, unlocked: [], timeUp: false }));
+  });
+  await expect(page.locator('.res-plus')).toBeVisible();
+  const save = await page.evaluate(() => JSON.parse(localStorage.getItem('studyhard.save')!));
+  expect(save.children[0].lastPlay.score).toBe(5);
 });
 
 test('map tips: shown once, then again from the ? button', async ({ page }) => {

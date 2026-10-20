@@ -1,8 +1,11 @@
-// The opening video: a 30-second, reel-style ad made in code. Big captions, Plus the mascot, sound,
-// and one moment to tap the answer. It says what Study Hard is for (screen time that builds
+// The opening video: a one-minute, reel-style ad made in code, with a recorded voiceover
+// (assets/audio/opening.mp3, one file). It moves in stops: each stop plays its line of the
+// voiceover and waits; Next plays the next line, Back replays the one before. One moment
+// lets the child tap the answer. It says what MN (Mission Next) is for (screen time that builds
 // something), how it keeps a child going (a treat they choose, a jar that fills with right
 // answers, lessons after mistakes, bosses) and who is in charge (the grown-up).
-// The first time it can't be skipped; afterwards (welcome screen, parent area) it can.
+// The first time it can't be skipped: Next unlocks once the line has played. Afterwards
+// (welcome screen, parent area) Skip and Next work straight away.
 
 import { html, esc, type App, type Screen } from './app.ts';
 import { plusSvg, plusFaceSvg } from './plus.ts';
@@ -39,15 +42,13 @@ function flyCoins(from: Element, to: Element, n = 6): Promise<void> {
 
 interface ReelScene {
   id: string;
-  /** How long it stays (ms). The last scene stays until the button is tapped. */
-  ms: number;
   /** Background colours (top, bottom). */
   bg: [string, string];
   caption: string;
   sub?: string;
   art: string;
   /** Runs when the scene starts; returns a clean-up. */
-  enter?: (el: HTMLElement, app: App) => (() => void) | void;
+  enter?: (el: HTMLElement, app: App, speed: number) => (() => void) | void;
 }
 
 /** A caption whose words pop in one after another. */
@@ -59,7 +60,7 @@ const words = (text: string, delay = 0.15) =>
 
 const FEED = ['🎬', '😂', '🔥', '🐱', '💃', '🎮', '🤳', '😂', '🔥', '🐶', '🎬', '😂'];
 
-function answerScene(el: HTMLElement, app: App): () => void {
+function answerScene(el: HTMLElement, app: App, speed = 1): () => void {
   const jar = el.querySelector<HTMLElement>('.rl-jar')!;
   const fill = jar.querySelector<HTMLElement>('i')!;
   let answered = false;
@@ -86,7 +87,7 @@ function answerScene(el: HTMLElement, app: App): () => void {
     }),
   );
   // Nobody tapped? The answer taps itself, so the video never waits.
-  const t = setTimeout(() => void answer(right), 2300);
+  const t = setTimeout(() => void answer(right), 3800 * speed);
   return () => clearTimeout(t);
 }
 
@@ -94,38 +95,33 @@ function scenes(): ReelScene[] {
   return [
     {
       id: 'reels',
-      ms: 3000,
       bg: ['#FF4F8B', '#5B21B6'],
       caption: 'Endless reels…',
-      sub: '…teach nothing.',
+      sub: '…nothing learned.',
       art: `<div class="rl-phone"><div class="rl-feed">${FEED.map((e) => `<b>${e}<small>♥ ${Math.floor(Math.random() * 90 + 10)}k</small></b>`).join('')}</div><span class="rl-zero">0 learned</span></div>`,
     },
     {
       id: 'whatif',
-      ms: 2800,
       bg: ['#6D5DFC', '#0EA5E9'],
       caption: 'What if screen time built something?',
       art: `<div class="rl-whatif">${['1', '+', '3', '×', '7', '½', '=', '9'].map((s, i) => `<span class="rl-orb" style="--k:${i}">${s}</span>`).join('')}<div class="rl-dog">${plusSvg({ cls: 'alive', noShadow: true })}</div></div>`,
     },
     {
       id: 'meet',
-      ms: 2400,
       bg: ['#7C3AED', '#DB2777'],
-      caption: 'Meet Study Hard',
-      sub: 'Maths from age 3 to 16.',
-      art: `<div class="rl-meet"><div class="rl-logo">${plusSvg({ cls: 'alive', noShadow: true })}</div><div class="rl-mark"><span>Study</span> <span>Hard</span></div></div>`,
+      caption: 'Meet MN',
+      sub: 'Mission Next: maths missions from age 3 to 16.',
+      art: `<div class="rl-meet"><div class="rl-logo">${plusSvg({ cls: 'alive', noShadow: true })}</div><div class="rl-mark"><span>M</span><span>N</span><small>Mission Next</small></div></div>`,
     },
     {
       id: 'treat',
-      ms: 2800,
       bg: ['#F59E0B', '#EA580C'],
       caption: 'Your child picks a treat',
-      sub: 'Locked in until it’s earned.',
+      sub: 'Locked until it’s earned.',
       art: `<div class="rl-treat"><div class="rl-cards"><b>🍦</b><b class="pick">🍫</b><b>📚</b></div><div class="rl-bigjar"><em>🍫</em><span class="rl-lock">🔒</span></div></div>`,
     },
     {
       id: 'answer',
-      ms: 4000,
       bg: ['#16A34A', '#0D9488'],
       caption: 'Right answers fill the jar',
       art: `<div class="rl-answer"><div class="rl-q"><h3>7 × 8 = ?</h3><div class="rl-choices"><button class="rl-choice">54</button><button class="rl-choice" data-right>56</button><button class="rl-choice">48</button><button class="rl-choice">64</button></div><p class="rl-tap">👆 Tap the answer!</p></div><div class="rl-jarcol"><span class="rl-jar"><i></i><em>🍫</em></span><span class="rl-plus">+30 coins</span></div></div>`,
@@ -133,22 +129,20 @@ function scenes(): ReelScene[] {
     },
     {
       id: 'lesson',
-      ms: 2800,
       bg: ['#0EA5E9', '#4F46E5'],
       caption: 'Wrong? Plus shows how.',
+      sub: 'One step at a time.',
       art: `<div class="rl-lesson"><span class="rl-coach">${plusFaceSvg({ cls: 'oops' })}</span><div class="rl-steps"><p style="--k:0"><i>1</i>45 − 10 = 35</p><p style="--k:1"><i>2</i>35 − 8 = 27</p><p class="ok" style="--k:2"><i>✓</i>So 45 − 18 = 27</p></div></div>`,
     },
     {
       id: 'days',
-      ms: 2800,
       bg: ['#E11D48', '#9333EA'],
       caption: 'A treat about every 10 days',
-      sub: 'Not a chocolate every day.',
+      sub: 'Not a chocolate every day, just steady effort.',
       art: `<div class="rl-days">${Array.from({ length: 10 }, (_, i) => `<span class="${i === 9 ? 'win' : ''}" style="--k:${i}"><small>Day ${i + 1}</small><b>${i === 9 ? '🍫' : '✓'}</b></span>`).join('')}</div>`,
     },
     {
       id: 'dream',
-      ms: 2800,
       bg: ['#2563EB', '#7C3AED'],
       caption: 'Big dreams take months',
       sub: 'Skip a day and the jar melts a little.',
@@ -156,30 +150,46 @@ function scenes(): ReelScene[] {
     },
     {
       id: 'boss',
-      ms: 2400,
       bg: ['#9333EA', '#C026D3'],
       caption: 'Beat bosses. Win trophies.',
       art: `<div class="rl-boss"><span class="rl-monster">${BOSS_EMOJI.bubbles}</span><span class="rl-hit">POW!</span><span class="rl-trophy">🏆</span></div>`,
     },
     {
       id: 'charge',
-      ms: 2800,
       bg: ['#0F766E', '#1E3A8A'],
       caption: 'And you’re in charge',
       art: `<div class="rl-chips"><p style="--k:0">⏱️ A daily time limit</p><p style="--k:1">🔒 A grown-up lock</p><p style="--k:2">🎁 You hand prizes over</p><p style="--k:3">📵 No ads, works offline</p></div>`,
     },
     {
       id: 'end',
-      ms: 0,
       bg: ['#6D5DFC', '#DB2777'],
       caption: 'Small steps. Real rewards.',
-      art: `<div class="rl-end"><div class="rl-logo">${plusSvg({ cls: 'spin', noShadow: true })}</div><div class="rl-mark"><span>Study</span> <span>Hard</span></div></div>`,
+      art: `<div class="rl-end"><div class="rl-logo">${plusSvg({ cls: 'spin', noShadow: true })}</div><div class="rl-mark"><span>M</span><span>N</span><small>Mission Next</small></div></div>`,
     },
   ];
 }
 
+/** Where each line of the voiceover starts and ends (seconds), one per scene. */
+const LINES: [number, number][] = [
+  [0, 6.28], [7.11, 9.77], [10.33, 16.82], [17.83, 22.9], [23.78, 29.98], [30.53, 34.63],
+  [35.67, 40.58], [41.47, 46.4], [47.31, 49.84], [50.49, 57.3], [58.26, 62.36],
+];
+
+/** The voiceover, inlined by the build (scripts/build.mjs) as base64 MP3. */
+let audioUrl: string | null | undefined;
+function voiceover(): HTMLAudioElement | null {
+  if (audioUrl === undefined) {
+    const b64 = document.getElementById('reel-audio')?.textContent?.trim();
+    audioUrl = b64 ? URL.createObjectURL(new Blob([Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))], { type: 'audio/mpeg' })) : null;
+  }
+  if (!audioUrl) return null;
+  const a = new Audio(audioUrl);
+  a.preload = 'auto';
+  return a;
+}
+
 export interface ReelOptions {
-  /** First time: no skipping, no tapping ahead. */
+  /** First time: no skipping; Next waits for each line. */
   first: boolean;
   /** The button at the end. */
   label: string;
@@ -190,19 +200,22 @@ export interface ReelOptions {
 
 export function reelScreen(o: ReelOptions) {
   return (app: App): Screen => {
-    // Browser tests (?debug&fastreel) play it 20 times faster.
-    const fast = app.debug && new URLSearchParams(location.search).has('fastreel') ? 0.05 : 1;
-    const list = scenes().map((s) => ({ ...s, ms: Math.round(s.ms * fast) }));
+    // Browser tests (?debug&fastreel) run it 20 times faster, without sound.
+    const fast = app.debug && new URLSearchParams(location.search).has('fastreel');
+    const speed = fast ? 0.05 : 1;
+    const list = scenes();
+    const audio = fast ? null : voiceover();
     let i = -1;
-    let narrate = app.save.data.settings.voice;
-    let timer = 0;
-    let startedAt = 0;
-    let left = 0;
+    let heard = -1; // the furthest stop whose line has finished
+    let muted = !app.save.data.settings.voice;
     let paused = false;
+    let timer = 0;
+    let frame = 0;
+    let stopAt = 0;
     let cleanup: (() => void) | void;
-    const el = html(`<section class="screen reel${o.first ? ' first' : ''}" aria-label="Study Hard in 30 seconds">
+    const el = html(`<section class="screen reel${o.first ? ' first' : ''}" aria-label="MN in one minute">
       <div class="rl-bars" aria-hidden="true">${list.map(() => '<i><b></b></i>').join('')}</div>
-      <div class="rl-top"><button class="rl-btn rl-mute" aria-label="Sound">${narrate ? '🔊' : '🔇'}</button>${o.first ? '' : '<button class="rl-btn rl-skip">Skip</button>'}</div>
+      <div class="rl-top"><button class="rl-btn rl-mute" aria-label="Sound">${muted ? '🔇' : '🔊'}</button>${o.first ? '' : '<button class="rl-btn rl-skip">Skip</button>'}</div>
       <div class="rl-stage">${list
         .map(
           (s) => `<article class="rl-scene rl-s-${s.id}" style="--a:${s.bg[0]};--b:${s.bg[1]}">
@@ -212,73 +225,116 @@ export function reelScreen(o: ReelOptions) {
           </article>`,
         )
         .join('')}</div>
+      <div class="rl-nav"><button class="rl-btn rl-prev" aria-label="Back">←</button><span class="rl-count"></span><button class="btn rl-next">Next →</button></div>
       <div class="rl-foot" hidden><button class="btn rl-go">${esc(o.label)}</button>${o.first ? '' : '<button class="btn ghost rl-again">Watch again</button>'}</div>
     </section>`);
     const sceneEls = [...el.querySelectorAll<HTMLElement>('.rl-scene')];
     const bars = [...el.querySelectorAll<HTMLElement>('.rl-bars i')];
     const foot = el.querySelector<HTMLElement>('.rl-foot')!;
+    const nav = el.querySelector<HTMLElement>('.rl-nav')!;
+    const next = el.querySelector<HTMLButtonElement>('.rl-next')!;
+    const prev = el.querySelector<HTMLButtonElement>('.rl-prev')!;
+    if (audio) audio.muted = muted;
 
-    const say = () => {
-      const s = list[i];
-      if (narrate) app.voice.say(`${s.caption.replace('…', '.')} ${s.sub ?? ''}`, undefined, true);
-    };
-    const arm = (ms: number) => {
+    const lineMs = (k: number) => (LINES[k][1] - LINES[k][0]) * 1000 * speed;
+    /** The line for this stop has finished: unlock Next (or show the end buttons). */
+    const lineDone = () => {
+      cancelAnimationFrame(frame);
       clearTimeout(timer);
-      if (!ms) return;
-      startedAt = performance.now();
-      left = ms;
-      timer = window.setTimeout(() => go(i + 1), ms);
+      audio?.pause();
+      heard = Math.max(heard, i);
+      bars[i]?.classList.add('done');
+      const last = i === list.length - 1;
+      foot.hidden = !last;
+      nav.hidden = last;
+      next.disabled = false;
+      next.classList.add('ready');
+    };
+    /** Play this stop's line; a fallback clock keeps going if the sound can't play. */
+    const playLine = () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(timer);
+      const [from, to] = LINES[i];
+      stopAt = to;
+      const ms = lineMs(i);
+      bars[i].style.setProperty('--ms', `${ms}ms`);
+      if (audio) {
+        audio.currentTime = from;
+        const watch = () => {
+          if (audio.currentTime >= stopAt - 0.03 || audio.ended) return lineDone();
+          frame = requestAnimationFrame(watch);
+        };
+        audio.play().then(
+          () => (frame = requestAnimationFrame(watch)),
+          () => (timer = window.setTimeout(lineDone, ms)),
+        );
+      } else timer = window.setTimeout(lineDone, ms);
     };
     const go = (k: number) => {
       if (k < 0 || k >= list.length) return;
       cleanup?.();
       cleanup = undefined;
       i = k;
-      const s = list[i];
+      paused = false;
+      el.classList.remove('paused');
       sceneEls.forEach((x, j) => x.classList.toggle('on', j === i));
       bars.forEach((b, j) => {
         b.classList.toggle('done', j < i);
         b.classList.toggle('now', j === i);
-        b.style.setProperty('--ms', `${s.ms || 1}ms`);
       });
+      el.querySelector('.rl-count')!.textContent = `${i + 1} of ${list.length}`;
+      prev.disabled = i === 0;
+      next.classList.remove('ready');
+      // First time, Next waits for the line; after that (or a line already heard) it's free.
+      next.disabled = o.first && heard < i;
       const last = i === list.length - 1;
-      foot.hidden = !last;
+      foot.hidden = true;
+      nav.hidden = false;
       if (last) {
         app.sfx.fanfare();
         const r = sceneEls[i].querySelector('.rl-logo')!.getBoundingClientRect();
         if (!reducedMotion()) setTimeout(() => app.fx.confetti(r.x + r.width / 2, r.y + r.height / 3, 80), 300);
       } else app.sfx.whoosh();
-      cleanup = s.enter?.(sceneEls[i], app);
-      say();
-      arm(s.ms);
+      cleanup = list[i].enter?.(sceneEls[i], app, speed);
+      playLine();
     };
     const pause = () => {
-      if (paused || !list[i]?.ms) return;
+      if (paused || next.classList.contains('ready')) return;
       paused = true;
-      clearTimeout(timer);
-      left = Math.max(400, left - (performance.now() - startedAt));
       el.classList.add('paused');
-      app.voice.stop();
+      cancelAnimationFrame(frame);
+      clearTimeout(timer);
+      audio?.pause();
     };
     const resume = () => {
       if (!paused) return;
       paused = false;
       el.classList.remove('paused');
-      arm(left);
+      if (audio && audio.currentTime < stopAt) {
+        const watch = () => {
+          if (audio.currentTime >= stopAt - 0.03 || audio.ended) return lineDone();
+          frame = requestAnimationFrame(watch);
+        };
+        audio.play().then(() => (frame = requestAnimationFrame(watch)), () => (timer = window.setTimeout(lineDone, 1500)));
+      } else timer = window.setTimeout(lineDone, 600 * speed);
     };
     const onVis = () => (document.visibilityState === 'hidden' ? pause() : resume());
     document.addEventListener('visibilitychange', onVis);
 
     el.querySelector('.rl-mute')!.addEventListener('click', (e) => {
       e.stopPropagation();
-      narrate = !narrate;
-      (e.currentTarget as HTMLElement).textContent = narrate ? '🔊' : '🔇';
-      if (narrate) say();
-      else app.voice.stop();
+      muted = !muted;
+      if (audio) audio.muted = muted;
+      (e.currentTarget as HTMLElement).textContent = muted ? '🔇' : '🔊';
     });
+    next.addEventListener('click', () => {
+      if (!next.disabled) go(i + 1);
+    });
+    prev.addEventListener('click', () => go(i - 1));
     const finish = () => {
+      cancelAnimationFrame(frame);
       clearTimeout(timer);
-      app.voice.stop();
+      audio?.pause();
       app.save.update((d) => (d.settings.tourSeen = true));
     };
     el.querySelector('.rl-go')!.addEventListener('click', () => {
@@ -290,16 +346,8 @@ export function reelScreen(o: ReelOptions) {
       finish();
       (o.leave ?? o.done)();
     });
-    // Later times: tap the right side to go on, the left side to go back. Hold to pause.
+    // Hold the picture to pause.
     const stage = el.querySelector<HTMLElement>('.rl-stage')!;
-    if (!o.first) {
-      stage.addEventListener('click', (e) => {
-        if ((e.target as HTMLElement).closest('button')) return;
-        const x = e.clientX / innerWidth;
-        if (x > 0.6 && i < list.length - 1) go(i + 1);
-        else if (x < 0.3 && i > 0) go(i - 1);
-      });
-    }
     stage.addEventListener('pointerdown', (e) => {
       if (!(e.target as HTMLElement).closest('button')) pause();
     });
@@ -309,20 +357,22 @@ export function reelScreen(o: ReelOptions) {
       el,
       keepAwake: true,
       mounted: () => go(0),
-      // First time there's no way out but through; later, back leaves.
+      // Back goes to the stop before; from the first stop it leaves (not the first time).
       back: () => {
-        if (!o.first) {
+        if (i > 0) go(i - 1);
+        else if (!o.first) {
           finish();
           (o.leave ?? o.done)();
         }
         return true;
       },
       destroy: () => {
+        cancelAnimationFrame(frame);
         clearTimeout(timer);
         cleanup?.();
+        audio?.pause();
         document.removeEventListener('visibilitychange', onVis);
         removeEventListener('pointerup', resume);
-        app.voice.stop();
       },
     };
   };

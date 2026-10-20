@@ -14,6 +14,8 @@ import { enterChild, playLevel } from './flow.ts';
 import { unlockScreen } from './unlock.ts';
 import { timesUpScreen } from './timesup.ts';
 import { showcaseScreen, SHOWCASE_EVERY } from './showcase.ts';
+import { lineAfterMiss, levelName } from './pep.ts';
+import { plusFaceSvg } from './plus.ts';
 
 export interface ResultInfo {
   stars: 0 | 1 | 2 | 3;
@@ -66,7 +68,7 @@ export function resultScreen(child: Child, level: Level, r: ResultInfo) {
         <p class="res-score">${r.score} / ${r.total} right</p>
         ${r.coins ? `<p class="res-coins">${coinSvg}<b class="coin-count">+0</b></p>` : r.timeUp && passed ? `<p class="res-note">Time’s up for today, so no coins this time.</p>` : ''}
         ${moment ? '' : r.perfect ? `<p class="res-perfect">💯 Perfect score — the biggest prize!</p>` : r.perfectCoins && !r.timeUp ? `<p class="res-aim">Aim for perfect: ${coinSvg} <b>+${r.perfectCoins}</b> for ${r.total}/${r.total}</p>` : ''}
-        ${passed ? '' : `<p class="res-note">You need ${level.kind === 'skill' && level.tier === 5 ? '10 in a row' : 'a few more right'} to pass. Let’s try again!</p>`}
+        ${passed ? '' : `<p class="res-note">You need ${level.kind === 'skill' && level.tier === 5 ? '10 in a row' : 'a few more right'} to pass.</p><div class="res-plus"><span class="ps-plus">${plusFaceSvg({ cls: 'oops' })}</span><p>${lineAfterMiss(child, r.score, r.total)}</p></div>`}
       </div>
       ${moment ? momentHtml(moment, r) : ''}
       <div class="res-actions">
@@ -78,6 +80,7 @@ export function resultScreen(child: Child, level: Level, r: ResultInfo) {
     el.querySelector('.jar-slot')?.appendChild(jar.el);
     if (moment) el.classList.add('has-moment');
     if (r.coins > 0) app.save.update(() => (child.sinceShowcase = (child.sinceShowcase ?? 0) + 1));
+    app.save.update(() => (child.lastPlay = { day: app.today, levelId: level.id, name: levelName(level), score: r.score, total: r.total, stars: r.stars }));
     const proceed = (fn: () => void) => {
       if (r.unlocked.length) return void app.show(unlockScreen(child, r.unlocked[0]));
       if (r.timeUp && app.save.data.settings.timeUpMode === 'stop') return void app.show(timesUpScreen(child));

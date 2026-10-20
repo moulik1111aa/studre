@@ -3,7 +3,7 @@
 
 import { plusSvg, plusFaceSvg } from './plus.ts';
 
-/** The Study Hard mark: Plus, a chunky yellow plus sign with a face (see plus.ts). */
+/** The MN mark: Plus, a chunky yellow plus sign with a face (see plus.ts). */
 export const logoMark = (): string => plusSvg({ cls: 'logo-mark' });
 /** Small brand mark, without the shadow. */
 export const brandMark = (): string => plusFaceSvg({ cls: 'brand-mark' });

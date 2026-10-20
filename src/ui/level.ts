@@ -1,6 +1,7 @@
 // Playing a skill level: questions one at a time, pictures and voice for little ones,
 // a number pad or big choices for older children, a timer on Speed and Master levels.
 
+import { lineBeforeLevel, plusSays } from './pep.ts';
 import { html, esc, type App, type Screen } from './app.ts';
 import { TOGETHER_LEVELS, type Child } from '../storage/save.ts';
 import { type Level, makeRound, replaceQuestion, recordResult, starsFor, noteAsked, dueForRevision, TIER_NAMES, type Round } from '../core/path.ts';
@@ -352,7 +353,12 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
           // The very first one: a word for the grown-up.
           const { result } = app.sheet(`<h2>🤝 Play this one together</h2><p>Sit with ${esc(child.name)} for the first ${TOGETHER_LEVELS} levels. If an answer is wrong, Plus shows how and ${esc(child.name)} tries again. Nothing is lost, and coins still count.</p>`, [{ label: 'Let’s play', value: true, kind: 'mint', back: true }], 'Practice together');
           void result.then(() => show(questions[0]));
-        } else show(questions[0]);
+        } else {
+          // Plus says a word first: welcome back, last time, a retry, or a bit of chat.
+          const line = app.debug && (window as { __quietPlus?: boolean }).__quietPlus ? null : lineBeforeLevel(child, level, app.today);
+          if (line) void plusSays(app, line).then(() => show(questions[0]));
+          else show(questions[0]);
+        }
       },
       back: () => {
         pause();

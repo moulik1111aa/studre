@@ -27,10 +27,10 @@ export function welcomeScreen(app: App): Screen {
   // First time: the opening video comes first (it can't be skipped), then setup.
   const seen = !!app.save.data.settings.tourSeen;
   const el = html(`<section class="screen welcome" aria-label="Welcome">
-    <div class="wl-hero">${logoMark()}<h1 class="wordmark"><span>Study</span> <span>Hard</span></h1>
+    <div class="wl-hero">${logoMark()}<h1 class="wordmark"><span>M</span><span>N</span></h1><p class="wl-full">Mission Next</p>
     <p class="subtitle">Maths from age 3 to 16, one small step at a time.<br>Real rewards. Boss fights. Big smiles.</p></div>
     ${seen ? '<button class="btn start">Set up for my child</button><button class="btn ghost tour-btn">▶ Watch the video again</button>' : '<button class="btn tour-btn">▶ Start</button>'}
-    <p class="fine">${seen ? 'A grown-up sets things up, in about 2 minutes.' : 'First, 30 seconds on how Study Hard works. Then a grown-up sets up, in about 2 minutes.'}</p>
+    <p class="fine">${seen ? 'A grown-up sets things up, in about 2 minutes.' : 'First, a one-minute video on how MN works. Then a grown-up sets up, in about 2 minutes.'}</p>
   </section>`);
   el.querySelector('.start')?.addEventListener('click', () => void startSetup(app));
   el.querySelector('.tour-btn')!.addEventListener('click', () =>
