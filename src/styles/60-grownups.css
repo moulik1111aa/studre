@@ -158,3 +158,18 @@
 .seg-grid .seg-b{position:relative;min-height:84px;justify-content:center;padding:12px 8px}
 .seg-grid .seg-b b{font-size:17px}
 .seg-grid .seg-b.on::after{content:"✓";position:absolute;right:8px;top:8px;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--mint);color:#06301f;font-weight:900;font-size:13px}
+/* School path */
+.pa-kid-btns .school-btn{flex-basis:100%}
+.sc-grades{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sc-grades .seg-b{position:relative;min-height:70px;justify-content:center}
+.sc-grades .seg-b em{font-style:normal;font-size:11px;font-weight:800;color:var(--accent)}
+.sc-h{margin:12px 0 2px;font-size:15px;color:var(--ink-soft)}
+.sc-skill{display:flex;align-items:center;gap:12px;padding:9px 2px;border-bottom:1px solid var(--line);font-weight:700;font-size:16px}
+.sc-skill input{width:22px;height:22px;flex:none;accent-color:var(--accent)}
+.sc-more{padding:14px 16px;margin-top:4px}
+.sc-more summary{display:flex;flex-direction:column;cursor:pointer;list-style:none}
+.sc-more summary small{color:var(--ink-faint);font-weight:700}
+.sc-count{text-align:left;margin:0}
+.school-chip{display:flex;align-items:center;gap:10px;margin:4px 16px 0;padding:10px 14px;flex-wrap:wrap}
+.school-chip span{font-size:22px}
+.school-chip small{flex-basis:100%;color:var(--ink-faint);font-weight:700}

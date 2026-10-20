@@ -17,6 +17,14 @@ export interface ChildStats {
   secondsByDay: Record<string, number>;
 }
 
+/** A school path: a board and class (or "custom"), and the skills the parent kept. */
+export interface SchoolPath {
+  board: string;
+  grade: string;
+  skills: string[];
+  on: boolean;
+}
+
 /** The child's last finished level, for Plus to talk about. */
 export interface LastPlay {
   day: string;
@@ -66,6 +74,8 @@ export interface Child {
    * question carries a tip for the grown-up.
    */
   assisted?: boolean;
+  /** A school path chosen by a parent; while `on`, the map shows only these skills. */
+  school?: SchoolPath;
   /** The last finished level (Plus mentions it next time). */
   lastPlay?: LastPlay;
 }

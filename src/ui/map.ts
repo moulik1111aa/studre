@@ -1,6 +1,7 @@
 // The home map: one world per stage, a winding path of skill nodes (each with its 5 levels),
 // minion and boss stops, the treat bar on top and a big Play button for the next level.
 
+import { schoolLabel } from './school.ts';
 import { html, esc, type App, type Screen } from './app.ts';
 import type { Child } from '../storage/save.ts';
 import { AREAS, skillById } from '../core/areas/index.ts';
@@ -73,8 +74,12 @@ export function mapScreen(child: Child) {
     const worlds = el.querySelector<HTMLElement>('.worlds')!;
     let currentNode: HTMLElement | null = null;
 
+    const school = child.school?.on ? child.school : null;
+    if (school) worlds.appendChild(html(`<div class="school-chip card"><span>📚</span><b>${esc(schoolLabel(school))}</b><small>${school.skills.length} skills chosen by a grown-up</small></div>`));
     for (let s = 1; s <= stagesBuilt; s++) {
       const info = AREAS[0].stages[s - 1];
+      // A school path only shows the stages it uses.
+      if (school && !nodes.some((n) => n.stage === s)) continue;
       const sec = html(`<section class="world" style="${worldVars(s)}" data-stage="${s}">
         <div class="world-head"><span class="chip">Stage ${s} · Ages ${info.ages}</span><h2>${info.name}</h2><p>${WORLDS[s - 1].name}</p></div>
         <div class="track"><svg class="trail" aria-hidden="true"><path class="trail-bg"/><path class="trail-done"/></svg></div>
@@ -120,7 +125,7 @@ export function mapScreen(child: Child) {
       });
       worlds.appendChild(sec);
     }
-    if (stagesBuilt < 7) worlds.appendChild(html(`<section class="world soon" style="${worldVars(stagesBuilt + 1)}"><div class="world-head"><span class="chip">Stage ${stagesBuilt + 1}</span><h2>${AREAS[0].stages[stagesBuilt].name}</h2><p>Coming soon</p></div></section>`));
+    if (stagesBuilt < 7 && !school) worlds.appendChild(html(`<section class="world soon" style="${worldVars(stagesBuilt + 1)}"><div class="world-head"><span class="chip">Stage ${stagesBuilt + 1}</span><h2>${AREAS[0].stages[stagesBuilt].name}</h2><p>Coming soon</p></div></section>`));
 
     const layoutTrails = () => {
       worlds.querySelectorAll<HTMLElement>('.world .track').forEach((track) => {

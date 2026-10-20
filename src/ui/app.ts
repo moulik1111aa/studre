@@ -16,7 +16,7 @@ import { webglOk } from '../render/three.ts';
 import { reducedMotion, EASE_OUT } from '../render/motion.ts';
 import { dayKey } from '../core/economy.ts';
 import { AREAS } from '../core/areas/index.ts';
-import { buildPath, type Level } from '../core/path.ts';
+import { buildPath, buildBundlePath, type Level } from '../core/path.ts';
 import { setPace, setOwnRewards } from '../core/rewards.ts';
 import { grownUpCheck } from './grownup.ts';
 
@@ -46,7 +46,17 @@ export class App {
   readonly debug: boolean;
   readonly fps = new FpsMeter();
   readonly fx: Fx;
-  readonly path: Level[];
+  /** The age path (every skill). */
+  readonly agePath: Level[];
+  private bundleCache: { key: string; path: Level[] } | null = null;
+  /** The active child's path: their school path when one is on, else the age path. */
+  get path(): Level[] {
+    const sp = this.child?.school;
+    if (!sp?.on || !sp.skills.length) return this.agePath;
+    const key = `${sp.board}-${sp.grade}:${sp.skills.join(',')}`;
+    if (this.bundleCache?.key !== key) this.bundleCache = { key, path: buildBundlePath(AREAS[0], sp.skills, `${sp.board}-${sp.grade}`) };
+    return this.bundleCache.path;
+  }
   /** Opens the owner's hidden area (set at boot): the owner code typed into a grown-up check. */
   /** Opens the owner area; `passed` is called on the way back (the owner counts as a grown-up). */
   ownerHook: ((passed: () => void) => void) | null = null;
@@ -77,7 +87,7 @@ export class App {
     this.voice = new Voice(st.voice, native, st.voiceName, st.voiceRate);
     this.haptics = new Haptics(st.vibration, native);
     this.photos = new Photos(native);
-    this.path = buildPath(AREAS[0]);
+    this.agePath = buildPath(AREAS[0]);
     this.fx = new Fx(document.body);
     addEventListener('resize', () => this.fx.resize());
     const forced = this.debug ? (new URLSearchParams(location.search).get('theme') as Theme | null) : null;

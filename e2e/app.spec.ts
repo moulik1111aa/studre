@@ -524,6 +524,40 @@ test('Plus says a word before a level, and cheers after a miss', async ({ page }
   expect(save.children[0].lastPlay.score).toBe(5);
 });
 
+test('school path: pick a board and class, edit the skills, and the map follows it', async ({ page }) => {
+  await page.goto('/?debug&demo=%4012&age=9');
+  await expect(page.locator('.map')).toBeVisible();
+  await page.evaluate(() => { const w = window as unknown as { __app: { show(m: unknown): void }; __screens: { parentScreen: unknown } }; w.__app.show(w.__screens.parentScreen); });
+  await page.click('.school-btn');
+  await page.click('[data-b="cbse"]');
+  await page.click('.school .done');
+  // The usual class for age 9 is marked.
+  await expect(page.locator('[data-g="4"] em')).toBeVisible();
+  await expect(page.locator('.school .done')).toBeDisabled();
+  await page.click('[data-g="4"]');
+  await page.click('.school .done');
+  const ticked = await page.locator('.sc-skill input:checked').count();
+  expect(ticked).toBeGreaterThan(20);
+  await page.locator('.sc-skill input:checked').first().uncheck();
+  await page.click('.school .done');
+  const save = await page.evaluate(() => JSON.parse(localStorage.getItem('studyhard.save')!));
+  expect(save.children[0].school).toMatchObject({ board: 'cbse', grade: '4', on: true });
+  expect(save.children[0].school.skills.length).toBe(ticked - 1);
+  await expect(page.locator('.school-btn')).toContainText('CBSE / NCERT · Class 4');
+  // The map shows the school path only.
+  await page.goto('/?debug&noloader');
+  await page.locator('.kid').first().click();
+  await expect(page.locator('.school-chip')).toContainText('Class 4');
+  await expect(page.locator('.world.soon')).toHaveCount(0);
+  // Back to the age path.
+  await page.evaluate(() => { const w = window as unknown as { __app: { show(m: unknown): void }; __screens: { parentScreen: unknown } }; w.__app.show(w.__screens.parentScreen); });
+  await page.click('.school-btn');
+  await page.click('[data-b=""]');
+  await page.click('.school .done');
+  const after = await page.evaluate(() => JSON.parse(localStorage.getItem('studyhard.save')!));
+  expect(after.children[0].school.on).toBe(false);
+});
+
 test('map tips: shown once, then again from the ? button', async ({ page }) => {
   await page.goto('/?debug&demo=%4012&tips');
   await expect(page.locator('.tips-ov')).toBeVisible({ timeout: 5000 });

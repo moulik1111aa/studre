@@ -22,6 +22,7 @@ export function buildPath(area: Area): Level[] {
   const levels: Level[] = [];
   const push = (l: LevelDraft) => levels.push({ ...l, index: levels.length } as Level);
   area.skills.forEach((skills, si) => {
+    if (!skills.length) return;
     const stage = si + 1;
     const midAt = Math.floor(skills.length / 2);
     let review = 0;
@@ -36,6 +37,16 @@ export function buildPath(area: Area): Level[] {
     push({ kind: 'boss', id: `boss:${area.id}:${stage}:final`, stage, boss: 'final', phases: thirds(skills) });
   });
   return levels;
+}
+
+/**
+ * A school path: only the chosen skills, in the usual order, with their own minion fights
+ * and bosses. Skill levels keep their ids, so progress is shared with the age path.
+ * `key` names the bundle (e.g. "cbse-4") so its reviews and bosses are its own.
+ */
+export function buildBundlePath(area: Area, skillIds: string[], key: string): Level[] {
+  const keep = new Set(skillIds);
+  return buildPath({ ...area, id: `${area.id}~${key}`, skills: area.skills.map((st) => st.filter((s) => keep.has(s.id))) });
 }
 
 function thirds(skills: Skill[]): string[][] {
