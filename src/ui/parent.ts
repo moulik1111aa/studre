@@ -13,7 +13,7 @@ import { whosPlayingScreen } from './whos.ts';
 import { addChildScreen, limitsScreen } from './setup.ts';
 import { voiceScreen } from './voicepick.ts';
 import { lockSetupScreen } from './grownup.ts';
-import { storyScreen } from './tour.ts';
+import { reelScreen } from './reel.ts';
 import { accessState, lockScreen, niceDay } from './access.ts';
 import { freshProgress } from '../core/path.ts';
 import { changesSince, rollback } from '../core/undo.ts';
@@ -47,6 +47,7 @@ const TOGGLES: { key: keyof Settings; label: string; note: string }[] = [
 ];
 
 const THEME_CHOICES: { id: Theme; name: string; note: string }[] = [
+  { id: 'playground', name: 'Playground', note: 'Bright sky, buttons that click like toys' },
   { id: 'glass', name: 'Glass', note: 'Deep colour, frosted panels' },
   { id: 'schoolbook', name: 'Schoolbook', note: 'Graph paper and ink' },
   { id: 'precision', name: 'Precision', note: 'White, one strong blue' },
@@ -60,7 +61,7 @@ export function parentScreen(app: App): Screen {
       <h2 class="pa-h">Children</h2>
       <div class="pa-kids">${app.save.data.children
         .map((c) => `<div class="pa-kid card">${avatarHtml(c.avatar, 52)}<div><b>${esc(c.name)}</b><small>Age ${c.age}</small></div>
-          <div class="pa-kid-btns"><button class="btn ghost small level-btn" data-id="${c.id}">${CHALLENGE[c.challenge ?? 0].icon} ${CHALLENGE[c.challenge ?? 0].name}</button><button class="btn ghost small report" data-id="${c.id}">${ICONS.chart} Report</button><button class="btn ghost small assist-btn${c.assisted ? ' on' : ''}" data-id="${c.id}" aria-pressed="${!!c.assisted}">👪 With a grown-up: ${c.assisted ? 'on' : 'off'}</button></div></div>`)
+          <div class="pa-kid-btns"><button class="btn ghost small level-btn" data-id="${c.id}">${CHALLENGE[c.challenge ?? 0].icon} ${CHALLENGE[c.challenge ?? 0].name}</button><button class="btn ghost small report" data-id="${c.id}">${ICONS.chart} Report</button><button class="btn ghost small age-btn" data-id="${c.id}">🎂 Age ${c.age}</button><button class="btn ghost small assist-btn${c.assisted ? ' on' : ''}" data-id="${c.id}" aria-pressed="${!!c.assisted}">👪 With a grown-up: ${c.assisted ? 'on' : 'off'}</button></div></div>`)
         .join('')}</div>
       <button class="btn ghost small add-kid">+ Add a child</button>
       <h2 class="pa-h">Play time and rewards</h2>
@@ -75,8 +76,8 @@ export function parentScreen(app: App): Screen {
       <h2 class="pa-h">Access key</h2>
       <button class="pa-row card key-row"><b>Access key</b><small class="key-left">Checking…</small></button>
       <h2 class="pa-h">How it works</h2>
-      <button class="pa-row card story-row"><b>▶ Take the tour again</b><small>Why Study Hard works: rewards, healthy limits and lessons</small></button>
-      <button class="pa-row card tips-row"><b>Show Biscuit’s map tips again</b><small>Each child sees the tips the next time they open the map</small></button>
+      <button class="pa-row card story-row"><b>▶ Watch the 30-second video</b><small>What Study Hard does and how it keeps children going</small></button>
+      <button class="pa-row card tips-row"><b>Show Plus’s map tips again</b><small>Each child sees the tips the next time they open the map</small></button>
       <h2 class="pa-h">Reward categories</h2>
       <div class="card pa-cats">${CATEGORIES.map((c) => `<label class="toggle-row"><span><b>${c.icon} ${esc(c.name)}</b></span><input type="checkbox" role="switch" data-c="${c.id}" ${st.hiddenCategories.includes(c.id) ? '' : 'checked'}></label>`).join('')}</div>
     </div>
@@ -91,7 +92,7 @@ export function parentScreen(app: App): Screen {
     small.textContent = st.locked ? 'No working key' : st.owner ? 'Owner’s phone: always unlocked' : st.until !== undefined ? `Works until ${niceDay(st.until)} · phone code ${st.phone}` : `Phone code ${st.phone}`;
     el.querySelector('.key-row')!.addEventListener('click', () => void app.show(lockScreen(st, () => void app.show(parentScreen), { renew: true, back: () => void app.show(parentScreen) })));
   });
-  el.querySelector('.story-row')!.addEventListener('click', () => void app.show(storyScreen({ label: 'Done', go: () => void app.show(parentScreen) }, parentScreen), 'liquid'));
+  el.querySelector('.story-row')!.addEventListener('click', () => void app.show(reelScreen({ first: false, label: 'Done', done: () => void app.show(parentScreen) }), 'liquid'));
   el.querySelector('.tips-row')!.addEventListener('click', () => {
     app.save.update((d) => d.children.forEach((c) => (c.toured = false)));
     app.toast('Done. The tips show next time each child opens the map.');
@@ -140,6 +141,9 @@ export function parentScreen(app: App): Screen {
       app.save.update(() => (c.challenge = v as 0 | 1 | 2));
       void app.show(parentScreen);
     }),
+  );
+  el.querySelectorAll<HTMLButtonElement>('.age-btn').forEach((b) =>
+    b.addEventListener('click', () => void app.show(ageScreen(app.save.data.children.find((k) => k.id === b.dataset.id)!))),
   );
   el.querySelectorAll<HTMLButtonElement>('.assist-btn').forEach((b) =>
     b.addEventListener('click', () => {
@@ -266,5 +270,42 @@ export function reportScreen(child: Child) {
       });
     });
     return { el, mounted: () => stagger(el.querySelectorAll('.pa-body > *'), { gap: 50 }) };
+  };
+}
+
+/** Change a child's age. Levels below the new age are moved out of the way; a younger age opens a redo of placement. */
+function ageScreen(child: Child) {
+  return (app: App): Screen => {
+    let age = child.age;
+    const el = html(`<section class="screen add-child age-edit" aria-label="Change age">
+      <header class="topbar"><button class="icon-btn back-btn" aria-label="Back">${ICONS.back}</button><span class="t">Change age</span><span style="width:50px"></span></header>
+      <div class="scroll ac-body">
+        <h1 class="ac-q">How old is ${esc(child.name)}?</h1>
+        <div class="ac-ages">${Array.from({ length: 14 }, (_, k) => k + 3).map((a) => `<button class="ac-age${a === age ? ' on' : ''}" data-age="${a}">${a}</button>`).join('')}</div>
+        <p class="fine">Stars, coins and rewards stay. Questions follow the new age.</p>
+      </div>
+      <button class="btn ac-next">Save</button>
+    </section>`);
+    el.querySelector('.ac-ages')!.addEventListener('click', (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLElement>('.ac-age');
+      if (!b) return;
+      age = Number(b.dataset.age);
+      el.querySelectorAll('.ac-age').forEach((x) => x.classList.toggle('on', x === b));
+    });
+    el.querySelector('.back-btn')!.addEventListener('click', () => void app.show(parentScreen));
+    el.querySelector('.ac-next')!.addEventListener('click', () => {
+      const younger = age < child.age;
+      app.save.update(() => {
+        child.age = age;
+        // Younger: look again at where to start (placement runs next time they play).
+        if (younger && child.placed) {
+          child.placed = false;
+          child.progress.skipped = freshProgress().skipped;
+        }
+      });
+      app.toast(younger ? `${child.name} is now ${age}. A few placement questions come next time they play.` : `${child.name} is now ${age}.`);
+      void app.show(parentScreen);
+    });
+    return { el, back: () => (void app.show(parentScreen), true) };
   };
 }

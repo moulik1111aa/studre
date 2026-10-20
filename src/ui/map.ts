@@ -184,7 +184,7 @@ export function mapScreen(child: Child) {
         const sec = currentNode ? (currentNode as HTMLElement).closest('.world') : null;
         if (sec) void drawOn(sec.querySelector('svg')!, { duration: 1400, fill: false });
         stagger([el.querySelector('.map-top')!, jar.el, el.querySelector('.play-bar')!], { gap: 90 });
-        // First visit: Biscuit shows the child around.
+        // First visit: Plus shows the child around.
         if (!child.toured) setTimeout(() => el.isConnected && !app.root.querySelector('.overlay') && void showMapTips(app, child, el), reducedMotion() ? 100 : 1100);
       },
     };

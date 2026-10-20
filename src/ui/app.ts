@@ -4,7 +4,7 @@
 import { SaveStore, browserStorage, type Child, type StorageAdapter, type Theme } from '../storage/save.ts';
 
 /** Status-bar colour for each theme. */
-const THEME_BAR: Record<Theme, string> = { glass: '#0F1530', schoolbook: '#FBFBF8', precision: '#FFFFFF' };
+const THEME_BAR: Record<Theme, string> = { playground: '#7CCBFF', glass: '#0F1530', schoolbook: '#FBFBF8', precision: '#FFFFFF' };
 import { Sfx } from '../audio/sfx.ts';
 import { Voice } from '../platform/voice.ts';
 import { Haptics } from '../platform/haptics.ts';
@@ -119,7 +119,7 @@ export class App {
     return this.save.data.settings.fx3d && webglOk() && !new URLSearchParams(location.search).has('no3d');
   }
 
-  /** Switch the look of the whole app (Glass, Schoolbook or Precision). */
+  /** Switch the look of the whole app (Playground, Glass, Schoolbook or Precision). */
   applyTheme(theme: Theme): void {
     document.documentElement.dataset.theme = theme;
     const dark = theme === 'glass';

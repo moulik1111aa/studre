@@ -47,21 +47,27 @@
 .ld-logo{display:flex;flex-direction:column;align-items:center;gap:14px}
 .logo-mark{width:210px;height:210px;filter:drop-shadow(0 14px 30px rgba(255,180,90,.35));overflow:visible}
 
-/* Biscuit the dog: belly wobble, tail wag, blinking, a happy hop. */
-.dog{overflow:visible}
-.dog g{transform-box:fill-box}
-.dog.alive .dog-body{transform-origin:50% 100%;animation:dogWobble 1.6s ease-in-out 4}
-.dog.alive .dog-head{transform-origin:50% 90%;animation:dogNod 1.6s ease-in-out 4}
-.dog.alive .dog-tail{transform-origin:0% 100%;animation:dogWag .5s ease-in-out 12 alternate}
-.dog.alive .dog-eyes{transform-origin:50% 50%;animation:blink 4s 3}
-.dog.alive.hop{animation:dogHop 1.1s cubic-bezier(.3,1.4,.5,1) 1}
-.dog-z{animation:dogZ 2.4s ease-in-out 8}
-.dog-z.z2{animation-delay:1.2s}
-@keyframes dogWobble{0%,100%{transform:scale(1,1)}50%{transform:scale(1.04,.96)}}
-@keyframes dogNod{0%,100%{transform:translateY(0)}50%{transform:translateY(3px)}}
-@keyframes dogWag{from{transform:rotate(-14deg)}to{transform:rotate(16deg)}}
-@keyframes dogHop{0%{transform:translateY(0) scale(1)}30%{transform:translateY(-26px) scale(.96,1.05)}60%{transform:translateY(0) scale(1.08,.92)}100%{transform:none}}
-@keyframes dogZ{0%{opacity:0;transform:translate(0,6px)}40%{opacity:1}100%{opacity:0;transform:translate(10px,-14px)}}
+/* Plus, the mascot: arms wave, a soft bob, blinking, a happy hop; tips into a × (oops) or spins (a treat). */
+.mascot{overflow:visible}
+.mascot .px-body,.mascot .px-h,.mascot .px-eyes{transform-box:view-box}
+.mascot .px-h{transform-origin:176px 84px}
+.mascot .px-body{transform-origin:100px 100px}
+.mascot .px-eyes{transform-origin:100px 82px}
+.mascot.alive .px-h{animation:pxWave 1.5s ease-in-out 4}
+.mascot.alive .px-eyes{animation:blink 4s 3}
+.mascot.alive.hop{animation:pxHop 1.1s cubic-bezier(.3,1.4,.5,1) 1}
+.mascot.oops .px-body{animation:pxOops 1.5s cubic-bezier(.3,1.5,.5,1) 1}
+.mascot.spin .px-body{animation:pxSpin .9s cubic-bezier(.4,0,.2,1) 2}
+.mascot.sleepy .px-body{transform:rotate(-10deg)}
+.px-z{animation:pxZ 2.4s ease-in-out 8}
+.px-z.z2{animation-delay:1.2s}
+@keyframes pxWave{0%,100%{transform:rotate(0)}25%{transform:rotate(-22deg)}75%{transform:rotate(14deg)}}
+@keyframes pxHop{0%{transform:translateY(0) scale(1)}30%{transform:translateY(-26px) scale(.96,1.05)}60%{transform:translateY(0) scale(1.08,.92)}100%{transform:none}}
+@keyframes pxOops{0%{transform:none}30%,72%{transform:rotate(45deg)}100%{transform:none}}
+@keyframes pxSpin{to{transform:rotate(360deg)}}
+@keyframes pxZ{0%{opacity:0;transform:translate(0,6px)}40%{opacity:1}100%{opacity:0;transform:translate(10px,-14px)}}
+/* The helper's round bubble (lessons, tips, lock screen, video) */
+:is(.tip-dog,.ls-coach,.lk-coach,.rl-coach,.st-biscuit){background:radial-gradient(circle at 40% 32%,#FFFFFF,#DCD6FF 75%)!important}
 .wordmark{font-size:48px;line-height:1;letter-spacing:-.02em;display:flex;gap:.25em}
 .wordmark span:first-child{color:#fff}
 .wordmark span:last-child{background:linear-gradient(90deg,var(--sun),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent}

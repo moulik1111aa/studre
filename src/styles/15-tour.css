@@ -16,7 +16,7 @@ html[data-theme] .screen.story{background:radial-gradient(120% 55% at 50% -8%,co
 .st-scene.on{display:flex}
 .st-say{display:flex;align-items:center;gap:10px;width:100%;max-width:440px}
 .st-biscuit{flex:none;width:58px;height:58px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#FFF4D6,#FFD58A);display:grid;place-items:center;overflow:hidden;box-shadow:0 0 0 3px color-mix(in srgb,var(--tour) 70%,transparent)}
-.st-biscuit .dog{width:66px;height:66px;margin-top:6px}
+.st-biscuit .mascot{width:48px;height:48px}
 .st-title{position:relative;flex:1;margin:0;padding:12px 16px;border-radius:20px 20px 20px 6px;font-size:23px;line-height:1.15;letter-spacing:-.02em;text-align:left;color:var(--ink);background:color-mix(in srgb,var(--tour) 22%,var(--surface));box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--tour) 55%,transparent)}
 /* The art scrolls if it is taller than the room, and never runs into the text. */
 .st-art{flex:1;min-height:0;width:100%;display:flex;overflow-y:auto;overflow-x:hidden;padding:4px 2px}
@@ -30,7 +30,7 @@ html[data-theme] .screen.story{background:radial-gradient(120% 55% at 50% -8%,co
 
 /* Shared bits */
 .ta{position:relative;display:grid;place-items:center;width:min(100%,340px);height:min(100%,300px)}
-.ta-dog .dog{width:100%;height:auto}
+.ta-dog .mascot{width:100%;height:auto}
 .ta-jar{position:relative;width:76px;height:92px;border-radius:14px 14px 22px 22px;box-shadow:inset 0 0 0 3px var(--ink-soft);overflow:hidden}
 .ta-jar::before{content:'';position:absolute;left:12px;right:12px;top:-2px;height:9px;border-radius:4px;background:var(--ink-soft);z-index:1}
 .ta-fill{position:absolute;left:0;right:0;bottom:0;height:12%;background:linear-gradient(180deg,var(--sun),#F5A524)}
@@ -114,7 +114,7 @@ html[data-theme] .screen.story{background:radial-gradient(120% 55% at 50% -8%,co
 .ta-ls.ok{color:var(--good)}
 .ta-ls.ok i{background:var(--good);color:var(--good-ink)}
 .ta-coach{position:absolute;right:-6px;bottom:-26px;width:72px;height:72px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#FFF4D6,#FFD58A);display:grid;place-items:center;overflow:hidden;animation:ta-pop .5s .2s var(--ease-spring) both}
-.ta-coach .dog{width:66px;height:66px;margin-top:6px}
+.ta-coach .mascot{width:48px;height:48px}
 
 /* 7. Grown-ups decide */
 .ta-charge{grid-template-columns:1fr 1fr;gap:10px;height:auto}
@@ -138,7 +138,7 @@ html .overlay.tips-ov,html[data-theme] .overlay.tips-ov{display:block;background
 .tip-card{position:absolute;left:16px;right:16px;max-width:440px;margin:0 auto;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:center;padding:16px;border-radius:24px;background:var(--bg-1);box-shadow:inset 0 0 0 var(--stroke-w,1px) var(--stroke),0 20px 40px -16px rgba(0,0,0,.6)}
 .tip-card:not(.above):not(.below){top:0;bottom:0;height:fit-content;margin:auto}
 .tip-dog{width:58px;height:58px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#FFF4D6,#FFD58A);display:grid;place-items:center;overflow:hidden;align-self:start}
-.tip-dog .dog{width:54px;height:54px;margin-top:5px}
+.tip-dog .mascot{width:46px;height:46px}
 .tip-text{margin:0;font-size:18px;line-height:1.4;font-weight:700;color:var(--ink)}
 .tip-foot{grid-column:1 / -1;display:flex;align-items:center;gap:8px;margin-top:8px}
 .tip-count{flex:1;font-size:13px;font-weight:800;color:var(--ink-faint)}
@@ -220,7 +220,7 @@ html[data-theme] .vc-card.on{box-shadow:inset 0 0 0 3px var(--accent),var(--surf
 /* Hello */
 .th-hello{width:min(100%,320px);aspect-ratio:1}
 .th-dog{width:150px;padding:0;border:0;background:none;cursor:pointer;animation:ta-pop .6s var(--ease-spring) both}
-.th-dog .dog{width:100%;height:auto}
+.th-dog .mascot{width:100%;height:auto}
 .th-hello .ta-orbit{transform:rotate(calc(var(--k) * 45deg)) translate(118px) rotate(calc(var(--k) * -45deg));animation:ta-orbit-in2 .5s var(--ease-spring) both,ta-float 3s ease-in-out infinite;animation-delay:calc(.3s + var(--k) * .09s),calc(1s + var(--k) * .2s)}
 @keyframes ta-orbit-in2{from{opacity:0;transform:rotate(calc(var(--k) * 45deg)) translate(40px) rotate(calc(var(--k) * -45deg)) scale(.3)}to{opacity:1;transform:rotate(calc(var(--k) * 45deg)) translate(118px) rotate(calc(var(--k) * -45deg))}}
 .th-say{position:absolute;left:50%;bottom:4%;transform:translateX(-50%);padding:6px 14px;border-radius:999px;font-weight:800;font-size:15px;white-space:nowrap;color:#3B2600;background:var(--sun)}
@@ -258,7 +258,7 @@ html[data-theme] .vc-card.on{box-shadow:inset 0 0 0 3px var(--accent),var(--surf
 .tl-hint{margin:0;font-size:14px;color:var(--ink-faint);text-align:center}
 .tl-lesson{display:flex;gap:10px;align-items:flex-start}
 .tl-coach{flex:none;width:46px;height:46px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#FFF4D6,#FFD58A);overflow:hidden;display:grid;place-items:center}
-.tl-coach .dog{width:54px;height:54px;margin-top:5px}
+.tl-coach .mascot{width:46px;height:46px}
 .ta-ls{font-size:15px}
 /* Boss */
 .tb-fight{width:min(100%,340px);display:flex;flex-direction:column;gap:10px;align-items:stretch}
@@ -297,3 +297,16 @@ html[data-theme] .vc-card.on{box-shadow:inset 0 0 0 3px var(--accent),var(--surf
 .tc-grid{width:340px;max-width:100%;place-items:stretch}
 .tc-tile{width:100%}
 .ta-assist .tl-choices{grid-template-columns:repeat(3,1fr)}
+/* Simple rows (tour stops 4 and 5) */
+.ts-rows{width:340px;max-width:100%;display:flex;flex-direction:column;gap:10px}
+.ts-row{display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border-radius:20px;text-align:left;background:var(--surface);box-shadow:inset 0 0 0 var(--stroke-w,1px) var(--stroke);animation:ta-in .4s both;animation-delay:calc(.15s + var(--k) * .12s)}
+.ts-row span{flex:none;font-size:30px;line-height:1}
+.ts-row p{margin:0;font-size:15px;line-height:1.4;color:var(--ink-soft)}
+.ts-row b{color:var(--ink)}
+.st-text{font-size:17px}
+.st-paws{gap:6px}
+.st-paws i{width:9px;height:9px;border-radius:50%;background:var(--ink-faint);opacity:.35;filter:none;transform:none}
+.st-paws i.on{opacity:1;background:var(--tour);transform:scale(1.25)}
+.ta-pick .tp-grid{grid-template-columns:repeat(3,1fr)}
+.tm-play{width:100%;display:flex;flex-direction:column;gap:10px}
+.tm-play:empty{display:none}

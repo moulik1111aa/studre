@@ -1,5 +1,5 @@
-// Renders Study Hard's Android launcher icons and splash logo from Biscuit's head
-// (src/ui/dog.ts) on the Glass colour field. Output is committed under native/android/res,
+// Renders Study Hard's Android launcher icons and splash logo from Plus, the mascot
+// (src/ui/plus.ts), on the Playground sky. Output is committed under native/android/res,
 // so the APK build needs no image tools. Re-run after changing the mark:
 //   node scripts/icons.mjs
 // Uses sharp (installed globally here: npm root -g).
@@ -17,30 +17,32 @@ try {
   sharp = require(join(execSync('npm root -g').toString().trim(), 'sharp'));
 }
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const { dogHeadSvg } = await import('../src/ui/dog.ts');
-/** Inner markup of the head (200-unit canvas), without its own <svg> wrapper. */
-const DOG = dogHeadSvg().replace(/^[\s\S]*?<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '');
+const { plusFaceSvg } = await import('../src/ui/plus.ts');
+/** Inner markup of Plus (200 × 204 canvas, middle 100 102), without its own <svg> wrapper. */
+const PLUS = plusFaceSvg().replace(/^[\s\S]*?<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '');
 const res = join(root, 'native/android/res');
 
 const DEFS = `<defs>
-  <radialGradient id="bgA" cx="12%" cy="8%" r="75%"><stop offset="0" stop-color="#4F46E5"/><stop offset="1" stop-color="#4F46E5" stop-opacity="0"/></radialGradient>
-  <radialGradient id="bgB" cx="98%" cy="58%" r="60%"><stop offset="0" stop-color="#0EA5E9" stop-opacity=".75"/><stop offset="1" stop-color="#0EA5E9" stop-opacity="0"/></radialGradient>
-  <radialGradient id="bgC" cx="25%" cy="105%" r="65%"><stop offset="0" stop-color="#F472B6" stop-opacity=".6"/><stop offset="1" stop-color="#F472B6" stop-opacity="0"/></radialGradient>
+  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6EC3FF"/><stop offset="1" stop-color="#C4EBFF"/></linearGradient>
 </defs>`;
-const FIELD = '<rect width="108" height="108" fill="#0F1530"/><rect width="108" height="108" fill="url(#bgA)"/><rect width="108" height="108" fill="url(#bgB)"/><rect width="108" height="108" fill="url(#bgC)"/>';
+// Sky, a soft cloud and two green hills along the bottom.
+const FIELD = '<rect width="108" height="108" fill="url(#sky)"/><ellipse cx="24" cy="20" rx="13" ry="5" fill="#fff" opacity=".8"/><ellipse cx="33" cy="17" rx="8" ry="4.5" fill="#fff" opacity=".8"/><ellipse cx="20" cy="112" rx="52" ry="22" fill="#6FD88A"/><ellipse cx="92" cy="114" rx="50" ry="24" fill="#55C978"/>';
 
-/** Place the 200-unit dog at size `w` centred on (cx, cy). */
-const placed = (cx, cy, w) => `<g transform="translate(${cx} ${cy}) scale(${w / 200}) translate(-100 -112)">${DOG}</g>`;
+/** Place Plus at size `w` centred on (cx, cy). */
+const placed = (cx, cy, w) => `<g transform="translate(${cx} ${cy}) scale(${w / 200}) translate(-100 -102)">${PLUS}</g>`;
 
 const background = () => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108">${DEFS}${FIELD}</svg>`;
-const foreground = () => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108">${DEFS}${placed(54, 56, 66)}</svg>`;
-// Themed icon: the dog's silhouette (every fill and stroke black).
-const monochrome = () => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108">${placed(54, 56, 66).replace(/fill="(?!none)[^"]*"/g, 'fill="#000"').replace(/stroke="[^"]*"/g, 'stroke="#000"')}</svg>`;
+const foreground = () => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108">${placed(54, 54, 64)}</svg>`;
+// Themed icon: Plus's silhouette with the eyes and smile cut out (Android uses only the alpha).
+const MONO = `<rect x="60" y="2" width="80" height="172" rx="18" fill="#fff"/><rect x="12" y="50" width="176" height="76" rx="18" fill="#fff"/><circle cx="16" cy="92" r="14" fill="#fff"/><circle cx="186" cy="66" r="14" fill="#fff"/>
+  <path d="M88 166 L84 190 M112 166 L116 190" stroke="#fff" stroke-width="8" stroke-linecap="round"/><ellipse cx="79" cy="193" rx="13" ry="7" fill="#fff"/><ellipse cx="121" cy="193" rx="13" ry="7" fill="#fff"/>
+  <ellipse cx="86" cy="82" rx="8.5" ry="10.5" fill="#000"/><ellipse cx="114" cy="82" rx="8.5" ry="10.5" fill="#000"/><path d="M85 96 Q100 119 115 96 Q100 103 85 96 Z" fill="#000"/>`;
+const monochrome = () => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108"><defs><mask id="m"><g transform="translate(54 54) scale(${64 / 200}) translate(-100 -102)">${MONO}</g></mask></defs><rect width="108" height="108" fill="#000" mask="url(#m)"/></svg>`;
 function legacy(shape) {
   const clip = shape === 'round' ? '<clipPath id="c"><circle cx="54" cy="54" r="54"/></clipPath>' : '<clipPath id="c"><rect width="108" height="108" rx="24"/></clipPath>';
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108">${DEFS}<defs>${clip}</defs><g clip-path="url(#c)">${FIELD}${placed(54, 56, 88)}</g></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108">${DEFS}<defs>${clip}</defs><g clip-path="url(#c)">${FIELD}${placed(54, 53, 84)}</g></svg>`;
 }
-const splash = () => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">${DOG}</svg>`;
+const splash = () => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 204">${PLUS}</svg>`;
 
 async function png(svg, w, h, file) {
   const out = join(res, file);

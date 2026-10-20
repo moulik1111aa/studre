@@ -39,7 +39,7 @@ export function enterChild(app: App, child: Child, how: 'fade' | 'liquid' = 'fad
   if (w.goal.waiting) return void app.show(unlockScreen(child, 'goal'), how);
   if (!child.placed) return void app.show(placementScreen(child), how);
   if (!w.treat.rewardId || !w.goal.rewardId) return void app.show(rewardsScreen(child, !w.treat.rewardId ? 'treat' : 'goal'), how);
-  // First time: the child picks who reads to them, then Biscuit shows them the map.
+  // First time: the child picks who reads to them, then Plus shows them the map.
   if (!child.voicePicked) return void app.show(voiceChoiceScreen(child, () => void app.show(mapScreen(child), 'liquid')), how);
   void app.show(mapScreen(child), how);
 }

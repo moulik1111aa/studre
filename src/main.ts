@@ -1,11 +1,11 @@
-// Boot: restore the save (native mirror on Android), show the staged loader (the full one
-// on the first launch of the day), then setup for a new install or "Who's playing?".
+// Boot: restore the save (native mirror on Android). The very first launch plays the opening
+// video (reel.ts) and then setup; later launches go straight to "Who's playing?".
 
 import { App } from './ui/app.ts';
 import { nativeBridge, nativeStorage } from './platform/native.ts';
 import { browserStorage } from './storage/save.ts';
-import { loaderScreen } from './ui/loader.ts';
-import { welcomeScreen } from './ui/setup.ts';
+import { reelScreen } from './ui/reel.ts';
+import { welcomeScreen, startSetup } from './ui/setup.ts';
 import { whosPlayingScreen } from './ui/whos.ts';
 import { seedDemo } from './ui/demo.ts';
 import { enterChild, playLevel } from './ui/flow.ts';
@@ -25,7 +25,6 @@ import { skillById } from './core/areas/index.ts';
 import { makeQuestion } from './core/path.ts';
 import { createRng } from './core/rng.ts';
 
-const LOADER_KEY = 'studyhard.loaderDay';
 
 async function boot(): Promise<void> {
   const native = nativeBridge();
@@ -33,7 +32,7 @@ async function boot(): Promise<void> {
   const app = new App(document.getElementById('app')!, storage, native);
   if (app.debug) {
     // Screen factories for screenshots and tests.
-    Object.assign(window, { __app: app, __screens: { resultScreen, showcaseScreen, rewardsScreen, unlockScreen, timesUpScreen, trophyScreen, parentScreen, welcomeScreen, whosPlayingScreen, loaderScreen } });
+    Object.assign(window, { __app: app, __screens: { resultScreen, showcaseScreen, rewardsScreen, unlockScreen, timesUpScreen, trophyScreen, parentScreen, welcomeScreen, whosPlayingScreen } });
     // Lessons: open one for a skill's question, or for a hand-made question.
     Object.assign(window, {
       __T: { addsub, muldiv, fractions },
@@ -48,14 +47,8 @@ async function boot(): Promise<void> {
   }
   const params = new URLSearchParams(location.search);
 
-  let full = true;
-  try {
-    full = localStorage.getItem(LOADER_KEY) !== app.today;
-    localStorage.setItem(LOADER_KEY, app.today);
-  } catch {
-    /* storage blocked: always show the full loader */
-  }
-  const home = () => (app.save.data.setupDone && app.save.data.children.length ? whosPlayingScreen : welcomeScreen);
+  // Once a child exists the app opens on "Who's playing?", even if setup was left half-way.
+  const home = () => (app.save.data.children.length ? whosPlayingScreen : welcomeScreen);
   // Access keys: the app opens only with a key for this phone (or on the owner's phone).
   // Browser test runs (?debug) skip it unless they ask for it with &lock.
   const gated = !!native || !app.debug || params.has('lock');
@@ -66,7 +59,6 @@ async function boot(): Promise<void> {
     if (st?.locked) void app.show(lockScreen(st, () => void gate()), how);
     else void app.show(home(), how);
   };
-  const start = () => void gate();
   app.ownerHook = (passed) => {
     // Back from the owner area: carry on where the owner was (a check that opened it counts as
     // passed), or open the app if it was locked.
@@ -101,11 +93,25 @@ async function boot(): Promise<void> {
     else enterChild(app, child);
     return;
   }
-  if (params.has('noloader')) {
-    void gate('fade');
+  // The very first launch opens with the video (it can't be skipped), then setup.
+  // Later launches go straight in. Browser tests can ask for the old start with ?noloader.
+  const firstRun = !app.save.data.settings.tourSeen && !app.save.data.children.length;
+  if (firstRun && !params.has('noloader')) {
+    void app.show(
+      reelScreen({
+        first: true,
+        label: 'Let’s set up',
+        done: () => {
+          void gate('fade').then(() => {
+            if (!locked && !app.save.data.children.length) void startSetup(app);
+          });
+        },
+      }),
+      'fade',
+    );
     return;
   }
-  void app.show(loaderScreen(start, full));
+  void gate('fade');
 }
 
 void boot();

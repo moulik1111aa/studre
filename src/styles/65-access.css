@@ -4,7 +4,7 @@
 
 .lock .lk-body{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;padding:12px 0 8px}
 .lk-coach{width:92px;height:92px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#FFF4D6,#FFD58A);display:grid;place-items:center;overflow:hidden;margin-top:8px}
-.lk-coach .dog{width:86px;height:86px;margin-top:8px}
+.lk-coach .mascot{width:72px;height:72px}
 .lk-title{margin:0;font-size:30px;letter-spacing:-.02em}
 .lk-why{margin:0;max-width:34ch;font-size:17px;line-height:1.45;color:var(--ink-soft)}
 .lk-phone{display:grid;justify-items:center;gap:6px;padding:16px 22px;min-width:260px}
@@ -59,3 +59,11 @@
 .gs-pinbox .fine{margin:0}
 .gs-pinbox .gu-pad{width:100%;margin:4px auto 8px}
 .gs-pinbox .btn{width:100%;max-width:320px}
+.gu-setup .gs-body{flex:1;min-height:0}
+.gs-foot{display:flex;gap:10px;padding-top:8px}
+.gs-foot:empty{display:none}
+.gs-foot .btn{flex:1}
+.gs-foot .gs-cancel{flex:0 0 34%}
+.gs-pinbox{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+.gs-pinbox .gu-pad{width:100%;max-width:320px}
+.gs-pinbox .gu-pad .key{min-height:52px}

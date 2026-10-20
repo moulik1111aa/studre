@@ -84,20 +84,41 @@ test.afterEach(async ({ page }) => {
 
 test('first run: setup, placement, rewards, first level', async ({ page }) => {
   test.setTimeout(180_000);
-  await page.goto('/?debug');
-  await expect(page.locator('.welcome')).toBeVisible({ timeout: 20_000 });
-  await page.click('.start');
+  // First launch: the opening video (20× faster here), then setup.
+  await page.goto('/?debug&fastreel');
+  await expect(page.locator('.reel.first')).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('.rl-go')).toBeVisible({ timeout: 20_000 });
+  await page.click('.rl-go');
   await grownUp(page);
   await makePin(page);
+  // Add a child, one stop at a time: Next waits for a name, then for an age.
+  await expect(page.locator('.stops .stop-now')).toContainText('Name');
+  await expect(page.locator('.ac-next')).toBeDisabled();
   await page.fill('.name', 'Riya');
-  await page.click('.plus');
-  await page.click('.plus');
-  await expect(page.locator('.age')).toHaveText('8');
-  await page.click('.save');
+  await page.click('.ac-next');
+  await expect(page.locator('.stops .stop-now')).toContainText('Age');
+  await expect(page.locator('.ac-next')).toBeDisabled();
+  await page.click('.ac-age[data-age="8"]');
+  await page.click('.ac-next');
+  // Age 8 is suggested to play alone.
+  await expect(page.locator('.stops .stop-now')).toContainText('Helper');
+  await expect(page.locator('[data-h="0"]')).toHaveClass(/\bon\b/);
+  await page.click('.ac-next');
+  await expect(page.locator('.ac-next')).toHaveText('Save Riya');
+  await page.click('.ac-next');
   await page.click('.more-kids .next');
+  // Play time and rewards: four stops, the button stays in the same place.
+  await expect(page.locator('.stops li')).toHaveCount(4);
   await page.locator('.slider').fill('45');
+  await page.click('.limits .done');
   await page.click('.seg-b[data-m="keep"]');
   await page.click('.limits .done');
+  await page.click('.limits .done');
+  await expect(page.locator('.limits .done')).toHaveText('Finish setup');
+  // A finished stop can be tapped to go back to it.
+  await page.click('.stops li[data-stop="1"]');
+  await expect(page.locator('.seg-b[data-m="keep"]')).toHaveClass(/\bon\b/);
+  for (let i = 0; i < 3; i++) await page.click('.limits .done');
   await page.locator('.kid').first().click();
   await expect(page.locator('.placement')).toBeVisible();
   for (let i = 0; i < 30 && !(await page.locator('.go').count()); i++) {
@@ -106,9 +127,11 @@ test('first run: setup, placement, rewards, first level', async ({ page }) => {
   }
   await page.click('.go');
   await expect(page.locator('.rewards')).toContainText('Pick your treat');
+  await page.locator('.rw-cat-head').first().click();
   await page.locator('.rw-card').first().click();
   await page.click('.pick');
   await expect(page.locator('.rewards')).toContainText('Pick a big goal', { timeout: 5000 });
+  await page.locator('.rw-cat-head').first().click();
   await page.locator('.rw-card').first().click();
   await page.click('.pick');
   // First: the child picks a reading voice.
@@ -117,7 +140,7 @@ test('first run: setup, placement, rewards, first level', async ({ page }) => {
   await page.locator('.vc-card').nth(1).click();
   await page.click('.vc-go');
   await expect(page.locator('.map')).toBeVisible({ timeout: 5000 });
-  // First visit: Biscuit's tips; skip them.
+  // First visit: Plus's tips; skip them.
   await expect(page.locator('.tips-ov')).toBeVisible({ timeout: 5000 });
   await page.click('.tip-skip');
   await expect(page.locator('.tips-ov')).toHaveCount(0);
@@ -418,52 +441,26 @@ test('every skill shows its lesson without errors', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
-test('quick tour: the story from the welcome screen, then setup', async ({ page }) => {
-  await page.goto('/?debug&noloader');
-  await expect(page.locator('.welcome')).toBeVisible();
-  await page.click('.tour-btn');
-  await expect(page.locator('.story')).toBeVisible();
-  for (let i = 1; i < 10; i++) {
-    await expect(page.locator('.st-count')).toHaveText(`${i} of 10`);
-    const on = page.locator('.st-scene.on');
-    // Hands-on stops: swap the reels, pick a treat, answer (wrong, then right), beat the boss,
-    // promise to play along, count the ducks.
-    if (await on.locator('.tr-swap').count()) {
-      await expect(page.locator('.st-next')).toBeDisabled();
-      await on.locator('.tr-phone').click();
-      await on.locator('.tr-swap').click();
-    }
-    if (await on.locator('.tb-fight').count()) {
-      for (const a of ['7', '10', '6']) {
-        await on.locator('.tl-choice:not([disabled])', { hasText: new RegExp(`^${a}$`) }).click();
-        await page.waitForTimeout(700);
-      }
-      await expect(on.locator('.tb-q')).toContainText('Boss beaten');
-    }
-    if (await on.locator('.tp-card').count()) {
-      await expect(page.locator('.st-next')).toBeDisabled();
-      await on.locator('.tp-card').first().click();
-    }
-    if (await on.locator('.ta-try .tl-choice').count()) {
-      await on.locator('.tl-choice', { hasText: '54' }).click();
-      await expect(on.locator('.tl-lesson')).toBeVisible();
-      await expect(on.locator('.tl-prize')).toContainText('+15');
-      await on.locator('.tl-choice', { hasText: '56' }).click();
-      await expect(on.locator('.tl-right')).toContainText('Right!');
-    }
-    if (await on.locator('.tg-pledge').count()) await on.locator('.tg-pledge').click();
-    if (await on.locator('.ta-assist .tl-choice').count()) await on.locator('.tl-choice', { hasText: '3' }).click();
-    await page.click('.st-next');
-  }
-  await expect(page.locator('.st-next')).toHaveText('Set up for my child');
-  await page.click('.st-next');
+test('opening video: no skip the first time, skippable after', async ({ page }) => {
+  await page.goto('/?debug&fastreel');
+  await expect(page.locator('.reel.first')).toBeVisible();
+  // The first time there is no way round it: no Skip, and Back does nothing.
+  await expect(page.locator('.rl-skip')).toHaveCount(0);
+  await page.evaluate(() => (window as unknown as { __app: { back(): void } }).__app.back());
+  await expect(page.locator('.reel')).toBeVisible();
+  await expect(page.locator('.rl-go')).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('.rl-again')).toHaveCount(0);
+  await page.click('.rl-go');
   await grownUp(page);
   await makePin(page);
   await expect(page.locator('.add-child')).toBeVisible();
-  // Skip goes back to the welcome screen.
-  await page.goto('/?debug&noloader');
+  // Once seen it doesn't play on its own; the welcome screen offers setup and the video.
+  await page.goto('/?debug&fastreel');
+  await expect(page.locator('.welcome .start')).toBeVisible();
   await page.click('.tour-btn');
-  await page.click('.st-skip');
+  await expect(page.locator('.reel')).toBeVisible();
+  await expect(page.locator('.reel.first')).toHaveCount(0);
+  await page.click('.rl-skip');
   await expect(page.locator('.welcome')).toBeVisible();
 });
 

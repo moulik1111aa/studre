@@ -40,42 +40,63 @@ export async function phoneLockAvailable(app: App): Promise<boolean> {
   }
 }
 
-async function askPhone(app: App, reason: string): Promise<boolean> {
-  try {
-    return !!(await app.native!.confirmDevice!({ title: 'Grown-ups only', text: reason })).ok;
-  } catch {
-    return false;
-  }
+/** Resolves once the app is on screen again (after the phone's own lock screen), plus a beat. */
+function whenVisible(): Promise<void> {
+  return new Promise((resolve) => {
+    const settle = () => setTimeout(resolve, 250);
+    if (document.visibilityState === 'visible') return settle();
+    const on = () => {
+      if (document.visibilityState !== 'visible') return;
+      document.removeEventListener('visibilitychange', on);
+      settle();
+    };
+    document.addEventListener('visibilitychange', on);
+    setTimeout(on, 3000);
+  });
 }
 
+async function askPhone(app: App, reason: string): Promise<boolean> {
+  let ok = false;
+  try {
+    ok = !!(await app.native!.confirmDevice!({ title: 'Grown-ups only', text: reason })).ok;
+  } catch {
+    ok = false;
+  }
+  await whenVisible();
+  return ok;
+}
+
+const padHtml = () => `<div class="pad gu-pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9, '', 0, '⌫'].map((k) => (k === '' ? '<span></span>' : `<button type="button" class="key" data-k="${k}">${k}</button>`)).join('')}</div>`;
+
+/**
+ * The grown-up check. Screen-lock mode: one button for the phone's own lock, and a small
+ * "Use a PIN" link that opens a number pad (that's also where the owner types their code).
+ * PIN mode: the pad. Neither set up: a times question.
+ */
 export async function grownUpCheck(app: App, reason: string): Promise<boolean> {
   if (Date.now() < lockedUntil) {
     app.toast(`Please wait ${Math.ceil((lockedUntil - Date.now()) / 1000)} seconds and try again.`);
     return false;
   }
   const pin = app.save.data.settings.parentPin;
-  const phone = await phoneLockAvailable(app);
-  // No PIN and no screen lock: a times question, as before.
+  const phone = !pin && (await phoneLockAvailable(app));
   const a = 12 + Math.floor(Math.random() * 87);
   const b = 3 + Math.floor(Math.random() * 7);
   const maths = !pin && !phone;
-  const title = pin ? 'Enter the parent PIN' : phone ? 'Grown-ups only' : `What is ${a} × ${b}?`;
-  const note = pin
-    ? phone
-      ? 'Or use this phone’s screen lock.'
-      : ''
-    : phone
-      ? 'Unlock with this phone’s screen lock.'
-      : 'Tip: set a parent PIN in the parent area so children can’t answer this.';
   return new Promise((resolve) => {
-    const ov = html(`<div class="overlay" role="dialog" aria-modal="true" aria-label="Grown-up check"><div class="sheet grownup${maths ? ' gu-maths' : ''}">
+    const ov = html(`<div class="overlay" role="dialog" aria-modal="true" aria-label="Grown-up check"><div class="sheet grownup">
       <p class="chip">🔒 ${reason}</p>
-      <h2>${title}</h2>
-      ${note ? `<p class="gu-note">${note}</p>` : ''}
-      ${phone ? `<button type="button" class="btn gu-phone">${ICONS.lock} Use phone screen lock</button>` : ''}
-      <div class="gu-input${maths ? '' : ' dots'}" aria-live="polite">&nbsp;</div>
-      <div class="pad gu-pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9, '', 0, '⌫'].map((k) => (k === '' ? '<span></span>' : `<button type="button" class="key" data-k="${k}">${k}</button>`)).join('')}</div>
-      <div class="actions"><button class="btn mint ok">Check</button><button class="btn ghost" data-back>Cancel</button></div>
+      ${
+        phone
+          ? `<h2>Grown-ups only</h2><p class="gu-note">Unlock with this phone’s screen lock.</p>
+             <button type="button" class="btn mint gu-phone">${ICONS.lock} Use screen lock</button>
+             <div class="gu-pinpart" hidden><div class="gu-input dots" aria-live="polite">&nbsp;</div>${padHtml()}<button class="btn ok">Check PIN</button></div>
+             <div class="actions"><button class="btn ghost small gu-usepin">Use a PIN instead</button><button class="btn ghost" data-back>Cancel</button></div>`
+          : `<h2>${pin ? 'Enter the parent PIN' : `What is ${a} × ${b}?`}</h2>
+             ${maths ? '<p class="gu-note">Tip: set a parent PIN in the parent area so children can’t answer this.</p>' : ''}
+             <div class="gu-input${maths ? '' : ' dots'}" aria-live="polite">&nbsp;</div>${padHtml()}
+             <div class="actions"><button class="btn mint ok">Check</button><button class="btn ghost" data-back>Cancel</button></div>`
+      }
     </div></div>`);
     const input = ov.querySelector<HTMLElement>('.gu-input')!;
     let typed = '';
@@ -112,6 +133,10 @@ export async function grownUpCheck(app: App, reason: string): Promise<boolean> {
         finish(true);
       }
     });
+    ov.querySelector('.gu-usepin')?.addEventListener('click', (e) => {
+      ov.querySelector<HTMLElement>('.gu-pinpart')!.hidden = false;
+      (e.currentTarget as HTMLElement).hidden = true;
+    });
     ov.querySelector('.ok')!.addEventListener('click', async () => {
       // The owner code opens the hidden area instead (it never matches a PIN or an answer).
       if (typed.length === 7 && app.ownerHook && (await isOwnerCode(typed))) {
@@ -145,19 +170,24 @@ export function lockSetupScreen(next: ScreenMaker, firstRun = false) {
         <p class="gs-lead">The parent area, prizes and settings need a grown-up. Choose how a grown-up unlocks them, so children can’t.</p>
         <div class="gs-options"></div>
       </div>
+      <footer class="gs-foot"></footer>
     </section>`);
     const body = el.querySelector<HTMLElement>('.gs-options')!;
+    const foot = el.querySelector<HTMLElement>('.gs-foot')!;
+    const lead = el.querySelector<HTMLElement>('.gs-lead')!;
     const done = (msg: string) => {
       app.toast(msg);
       void app.show(next);
     };
 
     const choose = async () => {
+      foot.innerHTML = '';
+      lead.hidden = false;
       const phone = await phoneLockAvailable(app);
       const hasPin = !!app.save.data.settings.parentPin;
       body.innerHTML = `
-        ${phone ? `<button class="card gs-opt gs-phone"><b>${ICONS.lock} This phone’s screen lock</b><span>Your usual PIN, pattern or fingerprint. Nothing new to remember.</span></button>` : '<p class="fine">This phone has no screen lock, so make a parent PIN.</p>'}
-        <button class="card gs-opt gs-pin"><b>🔢 ${hasPin ? 'Change the parent PIN' : 'A parent PIN'}</b><span>4 to 6 digits that only grown-ups know.</span></button>
+        ${phone ? `<button class="card gs-opt gs-phone"><b>${ICONS.lock} This phone’s screen lock</b><span>Use the PIN, pattern or fingerprint you already use for your phone. Nothing new to remember.</span></button>` : '<p class="fine">This phone has no screen lock, so make a parent PIN.</p>'}
+        <button class="card gs-opt gs-pin"><b>🔢 ${hasPin ? 'Change my custom PIN' : 'A custom PIN'}</b><span>4 to 6 digits that only grown-ups know.</span></button>
         ${hasPin && phone ? '<button class="btn ghost small gs-nopin">Remove the PIN (use the screen lock only)</button>' : ''}`;
       stagger(body.children, { gap: 70 });
       body.querySelector('.gs-phone')?.addEventListener('click', async () => {
@@ -174,14 +204,15 @@ export function lockSetupScreen(next: ScreenMaker, firstRun = false) {
     };
 
     const enterPin = (first?: string) => {
-      body.innerHTML = `<div class="card gs-pinbox">
-        <h2>${first ? 'Type it again' : 'Choose a parent PIN'}</h2>
+      lead.hidden = true;
+      body.innerHTML = `<div class="gs-pinbox">
+        <h2>${first ? 'Type it again' : 'Choose a custom PIN'}</h2>
         <p class="fine">${first ? 'To make sure.' : '4 to 6 digits. Don’t use a birthday the children know.'}</p>
         <div class="gu-input dots" aria-live="polite">&nbsp;</div>
         <div class="pad gu-pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9, '', 0, '⌫'].map((k) => (k === '' ? '<span></span>' : `<button type="button" class="key" data-k="${k}">${k}</button>`)).join('')}</div>
-        <button class="btn mint gs-next">${first ? 'Save PIN' : 'Next'}</button>
-        <button class="btn ghost small gs-cancel">Back</button>
       </div>`;
+      // The buttons stay at the bottom of the screen, never below the fold.
+      foot.innerHTML = `<button class="btn ghost gs-cancel">Back</button><button class="btn mint gs-next">${first ? 'Save PIN' : 'Next'}</button>`;
       const input = body.querySelector<HTMLElement>('.gu-input')!;
       let typed = '';
       const paint = () => (input.textContent = typed ? '•'.repeat(typed.length) : ' ');
@@ -191,8 +222,8 @@ export function lockSetupScreen(next: ScreenMaker, firstRun = false) {
         typed = k === '⌫' ? typed.slice(0, -1) : (typed + k).slice(0, 6);
         paint();
       });
-      body.querySelector('.gs-cancel')!.addEventListener('click', () => void choose());
-      body.querySelector('.gs-next')!.addEventListener('click', async () => {
+      foot.querySelector('.gs-cancel')!.addEventListener('click', () => void choose());
+      foot.querySelector('.gs-next')!.addEventListener('click', async () => {
         if (!validPin(typed)) return void app.toast('Use 4 to 6 digits.');
         if (!first) return enterPin(typed);
         if (typed !== first) {

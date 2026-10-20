@@ -8,7 +8,7 @@ import { lessonOf } from '../core/teach/index.ts';
 import type { Lesson, Step } from '../core/teach/types.ts';
 import { boardHtml, setBoardStep } from './boards.ts';
 import { mathHtml } from './mathtext.ts';
-import { dogHeadSvg } from './dog.ts';
+import { plusFaceSvg } from './plus.ts';
 import { ICONS } from './icons.ts';
 import { EMOJI, prettyAnswer } from './visuals.ts';
 import { reducedMotion, EASE_OUT } from '../render/motion.ts';
@@ -72,7 +72,7 @@ export function showLesson(app: App, q: Question, given: string | null): Promise
   const ov = html(`<div class="overlay lesson-ov" role="dialog" aria-modal="true" aria-label="Learn how">
     <div class="sheet lesson">
       <header class="ls-head">
-        <span class="ls-coach">${dogHeadSvg()}</span>
+        <span class="ls-coach">${plusFaceSvg({ cls: given && !timeout ? 'oops' : 'alive' })}</span>
         <div class="ls-titles"><p class="ls-kicker">${given ? 'Let’s learn how' : 'Here’s how'}</p><h2 class="ls-q">${prompt}</h2></div>
         <button class="icon-btn ls-close" data-back aria-label="Close">${ICONS.cross}</button>
       </header>

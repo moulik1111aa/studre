@@ -3,6 +3,9 @@
 // Everything animates transform/opacity (or SVG dash offsets) for smooth 120 Hz motion.
 
 export const reducedMotion = (): boolean => {
+  // While the app is behind another screen (e.g. the phone's own lock screen), animations
+  // don't run, and an entrance held at its first frame would leave a screen blank.
+  if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return true;
   try {
     return matchMedia('(prefers-reduced-motion: reduce)').matches;
   } catch {

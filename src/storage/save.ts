@@ -39,7 +39,7 @@ export interface Child {
   sinceShowcase?: number;
   /** Recent changes, so a parent can remove the last hour or today (see core/undo.ts). */
   undo?: UndoEntry[];
-  /** Has seen Biscuit's tips on the map (shown once; the map's ? button plays them again). */
+  /** Has seen Plus's tips on the map (shown once; the map's ? button plays them again). */
   toured?: boolean;
   /** This child's reading voice (none: the parent's choice) and its pitch. */
   voiceName?: string;
@@ -76,7 +76,7 @@ export interface Settings {
   /** Chosen reading voice ('' = the best one automatically) and its speed. */
   voiceName: string;
   voiceRate: number;
-  /** Look of the app: 'glass' (default), 'schoolbook' or 'precision'. */
+  /** Look of the app: 'playground' (default for new installs), 'glass', 'schoolbook' or 'precision'. */
   theme: Theme;
   /** Rewards the family added themselves. */
   ownRewards: OwnReward[];
@@ -88,12 +88,14 @@ export interface Settings {
   confirmAnswers: boolean;
   /** After a wrong answer, a short step-by-step lesson on how to work it out. */
   teach: boolean;
+  /** The grown-up has been through the quick tour once (it can't be skipped before that). */
+  tourSeen?: boolean;
   /** Parent PIN for the grown-up check, as "salt:hash" (none: the phone's screen lock). */
   parentPin?: string;
 }
 
-export type Theme = 'glass' | 'schoolbook' | 'precision';
-export const THEMES: Theme[] = ['glass', 'schoolbook', 'precision'];
+export type Theme = 'playground' | 'glass' | 'schoolbook' | 'precision';
+export const THEMES: Theme[] = ['playground', 'glass', 'schoolbook', 'precision'];
 
 /** A key the owner made (kept only on the owner's phone). */
 export interface IssuedKey {
@@ -144,7 +146,7 @@ export const freshSettings = (): Settings => ({
   voice: true,
   voiceName: '',
   voiceRate: 0.95,
-  theme: 'glass',
+  theme: 'playground',
   ownRewards: [],
   fx3d: true,
   showFps: false,

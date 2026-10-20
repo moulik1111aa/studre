@@ -1,8 +1,32 @@
-/* Themes: Glass (default), Schoolbook and Precision, set on <html data-theme>.
+/* Themes: Playground (default for new installs), Glass, Schoolbook and Precision, set on <html data-theme>.
    Each theme sets tokens; the shared rules below read them, so every screen follows the
    theme. Each theme's own touches (graph paper, frosted fields, hairlines) come last. */
 
 /* ---------- Tokens ---------- */
+html[data-theme="playground"]{
+  --font:"Inter Display",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--font-num:var(--font);
+  --bg-1:#9BDCFF;--bg-2:#C4EBFF;--bg-3:#FFFFFF;
+  --ink:#1A1446;--ink-soft:rgba(26,20,70,.8);--ink-faint:rgba(26,20,70,.62);--line:rgba(26,20,70,.16);
+  --accent:#5B3DF5;--accent-ink:#FFFFFF;
+  --progress:repeating-linear-gradient(-45deg,#FFC531 0 9px,#FFAE1A 9px 18px);--progress-2:repeating-linear-gradient(-45deg,#FF5C9A 0 9px,#F43F86 9px 18px);
+  --good:#2ED47A;--good-ink:#0B3B22;--bad:#FF5A5F;--sun:#D97F00;--mint:#2ED47A;--danger:#F23B4C;--pink:#FF4F8B;--violet:#5B3DF5;--sky:#1E9BFF;--coral:#FF7A45;
+  --surface:#FFFFFF;--surface-2:#F1EEFF;--stroke:#1A1446;--stroke-w:2.5px;--surface-shadow:0 5px 0 #1A1446;
+  --track:#E4E0FA;--r-card:24px;--r-btn:20px;--r-key:18px;
+  --cta-bg:#FFC531;--cta-ink:#1A1446;--cta-shadow:inset 0 0 0 2.5px #1A1446,0 6px 0 #1A1446;
+  --ghost-bg:#FFFFFF;--ghost-stroke:#1A1446;
+  --q-bg:#FFFFFF;--q-ink:#1A1446;--q-stroke:#1A1446;--q-weight:900;--q-soft:#F1EEFF;
+  --key-bg:#FFFFFF;--key-ink:#1A1446;--key-stroke:#1A1446;--key-shadow:0 5px 0 #1A1446;--key-weight:900;
+  --tray:transparent;--tray-stroke:transparent;
+  --entry-bg:#FFFFFF;--entry-ink:#1A1446;--entry-stroke:#1A1446;
+  --sheet-bg:#FFFFFF;--overlay:rgba(26,20,70,.45);--toast-bg:#1A1446;--toast-ink:#FFFFFF;
+  --node-bg:#FFFFFF;--node-ink:#1A1446;--node-stroke:#1A1446;--node-done:#2ED47A;--node-done-ink:#0B3B22;
+  --node-now:#5B3DF5;--node-now-ink:#FFFFFF;--boss-bg:#FF4F8B;
+  --fx-colors:#FFC531 #5B3DF5 #FF4F8B #2ED47A #1E9BFF;
+  --hi-08:rgba(26,20,70,.05);--hi-10:rgba(26,20,70,.06);--hi-12:rgba(26,20,70,.08);--hi-14:rgba(26,20,70,.1);--hi-15:rgba(26,20,70,.1);
+  --hi-16:rgba(26,20,70,.12);--hi-18:rgba(26,20,70,.14);--hi-20:rgba(26,20,70,.16);--hi-22:rgba(26,20,70,.18);--hi-25:rgba(26,20,70,.2);
+  --lo-35:#E4E0FA;--lo-40:#E4E0FA;--lo-45:#E4E0FA;
+  color-scheme:light;
+}
 html[data-theme="glass"]{
   --font:"Inter Display",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--font-num:var(--font);
   --bg-1:#0F1530;--bg-2:#151C40;--bg-3:#1B2452;
@@ -242,13 +266,17 @@ html[data-theme] .hp-bar{background:var(--track);box-shadow:none;height:12px}
 html[data-theme] .speech{background:var(--q-bg);color:var(--q-ink);font-weight:600;box-shadow:inset 0 0 0 var(--stroke-w) var(--q-stroke),var(--surface-shadow)}
 
 /* Theme picker (parent area) */
-.themes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.themes{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 .theme-tile{appearance:none;border:0;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:10px 10px 12px;border-radius:var(--r-card,20px);text-align:left;color:var(--ink);background:var(--surface,rgba(255,255,255,.08));box-shadow:inset 0 0 0 var(--stroke-w,1px) var(--stroke,rgba(255,255,255,.16))}
 .theme-tile.on{box-shadow:inset 0 0 0 2px var(--accent,#38BDF8)}
 .theme-tile b{font-size:16px;font-weight:600}
 .theme-tile small{font-size:12px;line-height:1.25;color:var(--ink-soft)}
 .th-swatch{display:block;width:100%;height:58px;border-radius:12px;position:relative;overflow:hidden}
 .th-swatch i{position:absolute;display:block}
+.th-playground .th-swatch{background:radial-gradient(90% 60% at 20% 125%,#7EE08A 0 60%,transparent 61%),linear-gradient(180deg,#7CCBFF,#C4EBFF);box-shadow:inset 0 0 0 2px #1A1446}
+.th-playground .th-swatch i:nth-child(1){left:12px;right:30px;top:12px;height:20px;border-radius:10px;background:#FFC531;box-shadow:inset 0 0 0 2px #1A1446,0 4px 0 #1A1446}
+.th-playground .th-swatch i:nth-child(2){right:10px;top:12px;width:20px;height:20px;border-radius:7px;background:#fff;box-shadow:inset 0 0 0 2px #1A1446,0 3px 0 #1A1446}
+.th-playground .th-swatch i:nth-child(3){left:12px;width:46%;bottom:9px;height:6px;border-radius:6px;background:repeating-linear-gradient(-45deg,#5B3DF5 0 4px,#7C63FF 4px 8px)}
 .th-glass .th-swatch{background:radial-gradient(70% 70% at 15% 10%,#4338CA,transparent 70%),radial-gradient(60% 60% at 95% 50%,#0EA5E9aa,transparent 70%),radial-gradient(70% 60% at 30% 110%,#F472B699,transparent 70%),#0F1530}
 .th-glass .th-swatch i:nth-child(1){left:10px;right:10px;top:12px;height:20px;border-radius:8px;background:#ffffff1f;box-shadow:inset 0 0 0 1px #ffffff40}
 .th-glass .th-swatch i:nth-child(2){left:10px;width:46%;bottom:10px;height:5px;border-radius:9px;background:linear-gradient(90deg,#38BDF8,#F472B6)}
@@ -310,6 +338,60 @@ html[data-theme="precision"] .dots i{border-radius:0;width:14px;height:3px}
 html[data-theme="precision"] .card{box-shadow:inset 0 0 0 1px var(--stroke)}
 html[data-theme="precision"] .res-title,html[data-theme="precision"] .title{letter-spacing:-.035em}
 html[data-theme="precision"] .sc-card.goal .sc-bar i{background:#111827}
+
+
+/* ---------- Playground ----------
+   A bright sky over green hills. Everything a child taps is a chunky toy key with a dark
+   outline and a solid edge underneath, and it presses down when tapped. */
+html[data-theme="playground"] body{background:
+  radial-gradient(70% 9% at 12% 100%,#6FD88A 0 98%,transparent 100%),
+  radial-gradient(80% 11% at 88% 100%,#55C978 0 98%,transparent 100%),
+  radial-gradient(14% 4% at 16% 9%,rgba(255,255,255,.85) 0 96%,transparent 100%),
+  radial-gradient(10% 3.4% at 25% 7.6%,rgba(255,255,255,.85) 0 96%,transparent 100%),
+  radial-gradient(12% 3.6% at 84% 15%,rgba(255,255,255,.7) 0 96%,transparent 100%),
+  linear-gradient(180deg,#7CCBFF,#C4EBFF 78%) fixed}
+html[data-theme="playground"] :is(h1,h2,h3,.title,.res-title,.wordmark,.ac-q){font-weight:900;letter-spacing:-.025em}
+html[data-theme="playground"] .btn{font-weight:900;font-size:19px;transition:transform .08s,box-shadow .08s}
+html[data-theme="playground"] .btn:active{transform:translateY(4px);opacity:1;box-shadow:inset 0 0 0 2.5px #1A1446,0 2px 0 #1A1446}
+html[data-theme="playground"] .btn.ghost{box-shadow:inset 0 0 0 2.5px #1A1446,0 4px 0 #1A1446}
+html[data-theme="playground"] .btn.ghost:active{transform:translateY(3px);box-shadow:inset 0 0 0 2.5px #1A1446,0 1px 0 #1A1446}
+html[data-theme="playground"] .btn.mint{background:var(--good);color:var(--good-ink);box-shadow:inset 0 0 0 2.5px #1A1446,0 6px 0 #1A1446}
+html[data-theme="playground"] .btn.danger{background:var(--danger);color:#fff;box-shadow:inset 0 0 0 2.5px #1A1446,0 5px 0 #1A1446}
+html[data-theme="playground"] .btn[disabled]{opacity:.55;box-shadow:inset 0 0 0 2.5px rgba(26,20,70,.5);background:#E8E6F5;transform:none}
+html[data-theme="playground"] .icon-btn{background:#fff;color:var(--ink);box-shadow:inset 0 0 0 2.5px #1A1446,0 3px 0 #1A1446}
+html[data-theme="playground"] .icon-btn:active{transform:translateY(2px);box-shadow:inset 0 0 0 2.5px #1A1446,0 1px 0 #1A1446}
+html[data-theme="playground"] .choice:active,html[data-theme="playground"] .key:active{transform:translateY(4px);opacity:1;box-shadow:inset 0 0 0 2.5px #1A1446,0 1px 0 #1A1446}
+html[data-theme="playground"] .choice.right{background:var(--good);color:var(--good-ink);box-shadow:inset 0 0 0 2.5px #1A1446,0 5px 0 #1A1446}
+html[data-theme="playground"] .choice.wrong{background:var(--bad);color:#fff;box-shadow:inset 0 0 0 2.5px #1A1446,0 5px 0 #1A1446}
+html[data-theme="playground"] .key.small,html[data-theme="playground"] .key[data-k="⌫"]{background:#F1EEFF}
+html[data-theme="playground"] .qcard.right{box-shadow:inset 0 0 0 4px var(--good),0 5px 0 #1A1446}
+html[data-theme="playground"] .entry{box-shadow:inset 0 0 0 2.5px #1A1446}
+html[data-theme="playground"] .tr-track,html[data-theme="playground"] .sc-bar,html[data-theme="playground"] .mo-bar{box-shadow:inset 0 0 0 2px #1A1446}
+html[data-theme="playground"] .tr-track{height:14px}
+html[data-theme="playground"] .tr-fill,html[data-theme="playground"] .sc-bar i{box-shadow:inset 0 0 0 2px #1A1446;animation:pgStripes 1.2s linear infinite}
+@keyframes pgStripes{to{background-position:25.5px 0}}
+html[data-theme="playground"] .nd-face,html[data-theme="playground"] .nd-face.minion,html[data-theme="playground"] .nd-face.quest{font-weight:900;box-shadow:inset 0 0 0 2.5px #1A1446,0 5px 0 #1A1446}
+html[data-theme="playground"] .node.done .nd-face:not(.boss),html[data-theme="playground"] .node.current .nd-face:not(.boss){box-shadow:inset 0 0 0 2.5px #1A1446,0 5px 0 #1A1446}
+html[data-theme="playground"] .nd-face.boss{box-shadow:inset 0 0 0 3px #1A1446,0 6px 0 #1A1446}
+html[data-theme="playground"] .node.current::before{border:3px solid #5B3DF5}
+html[data-theme="playground"] .node.locked .nd-face{opacity:.6}
+html[data-theme="playground"] .trail-bg{stroke:#fff;stroke-width:8}
+html[data-theme="playground"] .trail-done{stroke:#5B3DF5;stroke-width:8}
+html[data-theme="playground"] .world + .world{border-top:2.5px dashed rgba(26,20,70,.25)}
+html[data-theme="playground"] .world-head h2{font-weight:900;font-size:30px}
+html[data-theme="playground"] .play-bar{background:linear-gradient(180deg,transparent,rgba(196,235,255,.95) 42%)}
+html[data-theme="playground"] .seg-b.on{background:#EEE9FF;box-shadow:inset 0 0 0 3px #5B3DF5,0 4px 0 #5B3DF5}
+html[data-theme="playground"] .seg-b{box-shadow:inset 0 0 0 2.5px #1A1446,0 4px 0 #1A1446}
+html[data-theme="playground"] .rstar.on{color:#FFC531;-webkit-text-stroke:2px #1A1446;paint-order:stroke fill}
+html[data-theme="playground"] .rw-cost,html[data-theme="playground"] .res-aim b,html[data-theme="playground"] .sc-rung b{color:#B86A00}
+html[data-theme="playground"] .chip{background:#fff;box-shadow:inset 0 0 0 2px #1A1446}
+html[data-theme="playground"] .toast{box-shadow:0 5px 0 rgba(26,20,70,.35)}
+html[data-theme="playground"] .sheet{box-shadow:inset 0 2.5px 0 #1A1446,0 -10px 30px -10px rgba(26,20,70,.35)}
+html[data-theme="playground"] .wordmark span:last-child{color:#5B3DF5}
+html[data-theme="playground"] .av.on{box-shadow:0 0 0 3px #fff,0 0 0 6px #5B3DF5}
+html[data-theme="playground"] .field input{box-shadow:inset 0 0 0 2.5px #1A1446}
+html[data-theme="playground"] .field input:focus{box-shadow:inset 0 0 0 3px #5B3DF5}
+@media (prefers-reduced-motion:reduce){html[data-theme="playground"] .tr-fill,html[data-theme="playground"] .sc-bar i{animation:none}}
 
 /* Progress moment */
 html[data-theme] .mo-bar{background:var(--track)}

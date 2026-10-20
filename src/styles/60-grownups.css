@@ -95,3 +95,66 @@
 .vp-try{min-height:40px!important;font-size:14px!important;padding:0 12px!important;flex:none}
 .vp-try svg{width:18px;height:18px}
 .voicepick .save{margin-top:10px}
+
+/* Add a child: one question per step */
+.add-child .ac-body{display:flex;flex-direction:column;gap:14px}
+.ac-q{margin:8px 0 0;font-size:28px;line-height:1.2}
+.ac-name{width:100%;font-size:22px}
+.ac-ages{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.ac-age{min-height:64px;border-radius:18px;font:inherit;font-size:26px;font-weight:800;color:var(--ink);background:var(--surface);box-shadow:inset 0 0 0 var(--stroke-w,1px) var(--stroke)}
+.ac-age.on{background:var(--accent);color:var(--accent-ink);box-shadow:none}
+.add-child .ac-preview{display:flex;justify-content:center}
+.add-child .ac-next{margin-top:8px}
+.add-child .ac-next[disabled]{opacity:.5}
+/* Daily play time: the settings scroll, the button stays put */
+.screen.limits{overflow:hidden}
+.lim-body{flex:1;min-height:0;display:flex;flex-direction:column;gap:16px;padding-bottom:12px}
+.lim-body .lim-card{flex:none}
+/* Placement: everything fits on a small phone */
+.placement .pl-head .title{font-size:22px}
+.placement .pl-body{min-height:0;overflow-y:auto}
+.pl-card{padding:16px 14px;gap:8px}
+.pl-example{padding:12px 14px}
+.pl-example b{font-size:26px}
+.pl-answers{gap:8px}
+.pl-answers .btn{min-height:50px;font-size:17px}
+.pl-card .try{min-height:40px}
+/* Children list: grows inside, buttons stay visible */
+.more-kids .kids{flex:0 1 auto;min-height:0;overflow-y:auto}
+.add-child .ac-preview .avatar{flex:none}
+/* Train stops: a line of stations, the current one lit */
+.stops{list-style:none;margin:2px 0 10px;padding:0 4px;display:flex;justify-content:space-between;position:relative;flex:none}
+.stops::before{content:"";position:absolute;left:28px;right:28px;top:16px;height:4px;border-radius:4px;background:var(--track)}
+.stops li{position:relative;display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;min-width:0;font-size:12px;font-weight:800;color:var(--ink-faint)}
+.stops li:not(:first-child)::before{content:"";position:absolute;right:50%;width:100%;top:16px;height:4px;background:transparent}
+.stops li.stop-past:not(:first-child)::before,.stops li.stop-now:not(:first-child)::before{background:var(--mint)}
+.stops i{position:relative;z-index:1;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:15px;background:var(--surface,#222);box-shadow:inset 0 0 0 3px var(--track);color:var(--ink-faint)}
+.stops li span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.stops li.stop-past{color:var(--ink-soft);cursor:pointer}
+.stops li.stop-past i{background:var(--mint);box-shadow:none;color:#06301f}
+.stops li.stop-now{color:var(--ink)}
+.stops li.stop-now i{background:var(--accent);color:var(--accent-ink);box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 55%,transparent);animation:stopPulse 1.6s ease-out infinite}
+@keyframes stopPulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 55%,transparent)}100%{box-shadow:0 0 0 12px transparent}}
+@media (prefers-reduced-motion:reduce){.stops li.stop-now i{animation:none}}
+/* One question per stop, big tappable answers */
+.seg.seg-col{grid-template-columns:1fr;gap:10px}
+.seg-col .seg-b{flex-direction:column;align-items:flex-start;text-align:left;padding:14px 16px;position:relative;min-height:60px}
+.seg-col .seg-b b{font-size:18px}
+.seg-col .seg-b small{font-size:13.5px;line-height:1.35}
+.seg-col .seg-b em{position:absolute;top:10px;right:12px;font-style:normal;font-size:11px;font-weight:800;padding:3px 8px;border-radius:999px;background:var(--hi-12);color:var(--ink-soft)}
+.seg-col .seg-b.on::after{content:"✓";position:absolute;right:14px;bottom:12px;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--mint);color:#06301f;font-weight:900;font-size:14px}
+.lim-one{gap:14px}
+.lim-one .ac-q{margin:0;font-size:24px}
+.lim-foot{flex:none;padding-top:8px}
+.lim-foot .btn{width:100%}
+.add-child .ac-body{min-height:0;flex:1}
+.add-child .ac-next{flex:none}
+/* Parent area: a child's buttons sit in a tidy grid under the name */
+.pa-kid > .pa-kid-btns{flex:1 1 100%;display:flex;flex-direction:row;flex-wrap:wrap;gap:8px}
+.pa-kid-btns .btn{flex:1 1 auto;min-height:44px;font-size:14px;padding:0 10px;white-space:nowrap}
+.pa-kid-btns .assist-btn{flex-basis:100%}
+/* Reward pace: four choices in a 2 × 2 grid so all fit without scrolling */
+.seg.seg-grid{grid-template-columns:1fr 1fr;gap:10px}
+.seg-grid .seg-b{position:relative;min-height:84px;justify-content:center;padding:12px 8px}
+.seg-grid .seg-b b{font-size:17px}
+.seg-grid .seg-b.on::after{content:"✓";position:absolute;right:8px;top:8px;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--mint);color:#06301f;font-weight:900;font-size:13px}

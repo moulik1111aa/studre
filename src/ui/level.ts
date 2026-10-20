@@ -350,7 +350,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
         paintPrize();
         if (firstLevels && child.together === TOGETHER_LEVELS) {
           // The very first one: a word for the grown-up.
-          const { result } = app.sheet(`<h2>🤝 Play this one together</h2><p>Sit with ${esc(child.name)} for the first ${TOGETHER_LEVELS} levels. If an answer is wrong, Biscuit shows how and ${esc(child.name)} tries again. Nothing is lost, and coins still count.</p>`, [{ label: 'Let’s play', value: true, kind: 'mint', back: true }], 'Practice together');
+          const { result } = app.sheet(`<h2>🤝 Play this one together</h2><p>Sit with ${esc(child.name)} for the first ${TOGETHER_LEVELS} levels. If an answer is wrong, Plus shows how and ${esc(child.name)} tries again. Nothing is lost, and coins still count.</p>`, [{ label: 'Let’s play', value: true, kind: 'mint', back: true }], 'Practice together');
           void result.then(() => show(questions[0]));
         } else show(questions[0]);
       },

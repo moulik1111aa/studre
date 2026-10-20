@@ -14,33 +14,44 @@ export function rewardsScreen(child: Child, jar: Jar) {
     const hidden = new Set(app.save.data.settings.hiddenCategories);
     let list = pickable().filter((r) => jarOf(r) === jar && !hidden.has(r.category));
     const cats = CATEGORIES.filter((c) => c.id === 'own' ? !hidden.has('own') : list.some((r) => r.category === c.id));
-    let active = cats[0]?.id;
+    // Categories as a list: tap one to open it and see what's inside (one open at a time).
+    let active: string | undefined;
     const el = html(`<section class="screen rewards" aria-label="Choose a reward">
       <header class="rw-head">${avatarHtml(child.avatar, 48)}<div><h1 class="title">${jar === 'treat' ? 'Pick your treat!' : 'Pick a big goal!'}</h1>
-        <p class="subtitle">${jar === 'treat' ? 'Play every day to fill the bar.' : 'Save up slowly for something special.'}</p></div></header>
-      <nav class="cats scroll" aria-label="Categories">${cats.map((c) => `<button class="cat" data-c="${c.id}">${c.icon} ${esc(c.name)}</button>`).join('')}</nav>
-      <div class="rw-grid scroll"></div>
+        <p class="subtitle">${jar === 'treat' ? 'Tap a group to see what’s inside.' : 'Something special to save up for. Tap a group to see what’s inside.'}</p></div></header>
+      <div class="rw-list scroll"></div>
     </section>`);
-    const grid = el.querySelector<HTMLElement>('.rw-grid')!;
+    const listEl = el.querySelector<HTMLElement>('.rw-list')!;
+    const quickest = (items: Reward[]) => (items.length ? aboutOf(items.reduce((a, b) => (costOf(a) <= costOf(b) ? a : b))) : '');
     const paint = () => {
-      el.querySelectorAll<HTMLElement>('.cat').forEach((b) => b.classList.toggle('on', b.dataset.c === active));
-      grid.innerHTML =
-        list
-          .filter((r) => r.category === active)
-          .map((r) => `<button class="rw-card" data-r="${r.id}"><span class="rw-icon">${r.icon}</span><b>${esc(r.name)}</b><span class="rw-cost">${coinSvg}${costOf(r)}</span><small>${aboutOf(r)}</small></button>`)
-          .join('') + (active === 'own' ? `<button class="rw-card rw-add"><span class="rw-icon">＋</span><b>Add your own</b><small>A grown-up names it and picks its size</small></button>` : '');
-      stagger(grid.children, { gap: 40, y: 14 });
-      grid.querySelectorAll<HTMLButtonElement>('.rw-card[data-r]').forEach((b) => b.addEventListener('click', () => confirm(rewardById(b.dataset.r!)!)));
-      grid.querySelector('.rw-add')?.addEventListener('click', async () => {
+      listEl.innerHTML = cats
+        .map((c) => {
+          const items = list.filter((r) => r.category === c.id);
+          const open = c.id === active;
+          const cards = items.map((r) => `<button class="rw-card" data-r="${r.id}"><span class="rw-icon">${r.icon}</span><b>${esc(r.name)}</b><span class="rw-cost">${coinSvg}${costOf(r)}</span><small>${aboutOf(r)}</small></button>`).join('') + (c.id === 'own' ? `<button class="rw-card rw-add"><span class="rw-icon">＋</span><b>Add your own</b><small>A grown-up names it and picks its size</small></button>` : '');
+          const note = c.id === 'own' ? 'Something of your own' : `${items.length} to choose from · from ${quickest(items)}`;
+          return `<section class="rw-cat${open ? ' open' : ''}" data-c="${c.id}">
+            <button class="rw-cat-head" aria-expanded="${open}"><span class="rw-cat-ic">${c.icon}</span><span class="rw-cat-t"><b>${esc(c.name)}</b><small>${esc(note)}</small></span><i class="rw-chev">${open ? '−' : '+'}</i></button>
+            ${open ? `<div class="rw-grid">${cards}</div>` : ''}
+          </section>`;
+        })
+        .join('');
+      const body = listEl.querySelector<HTMLElement>('.rw-cat.open .rw-grid');
+      if (body) stagger(body.children, { gap: 35, y: 12 });
+      listEl.querySelectorAll<HTMLButtonElement>('.rw-card[data-r]').forEach((b) => b.addEventListener('click', () => confirm(rewardById(b.dataset.r!)!)));
+      listEl.querySelector('.rw-add')?.addEventListener('click', async () => {
         if (await app.grownUp('Add your own reward')) addOwn();
       });
     };
-    el.querySelector('.cats')!.addEventListener('click', (e) => {
-      const c = (e.target as HTMLElement).closest<HTMLElement>('.cat')?.dataset.c;
-      if (c) {
-        active = c;
-        paint();
-      }
+    listEl.addEventListener('click', (e) => {
+      const head = (e.target as HTMLElement).closest<HTMLElement>('.rw-cat-head');
+      if (!head) return;
+      const c = head.parentElement!.dataset.c!;
+      active = active === c ? undefined : c;
+      app.sfx.tap();
+      paint();
+      const sec = listEl.querySelector<HTMLElement>(`.rw-cat[data-c="${CSS.escape(c)}"]`);
+      sec?.scrollIntoView({ block: 'start', behavior: reducedMotion() ? 'auto' : 'smooth' });
     });
 
     /** A grown-up adds a reward that is not in the list: name, picture and size. */
@@ -134,8 +145,8 @@ export function rewardsScreen(child: Child, jar: Jar) {
     return {
       el,
       mounted: () => {
-        stagger([el.querySelector('.rw-head')!, el.querySelector('.cats')!], { gap: 90 });
         paint();
+        stagger([el.querySelector('.rw-head')!, ...listEl.children], { gap: 60 });
       },
     };
   };

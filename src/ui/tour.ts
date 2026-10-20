@@ -1,17 +1,14 @@
 // The quick tour, in two parts.
-//  1. The story (for grown-ups): a hands-on walk with Biscuit, in story.ts.
-//  2. Map tips (for the child, the first time they reach the map): Biscuit points at the
+//  1. For grown-ups: the opening video, in reel.ts.
+//  2. Map tips (for the child, the first time they reach the map): Plus points at the
 //     treat jar, the big goal, the path, a boss, the timer, Play and the trophy room, and
 //     reads each tip aloud. A "?" button on the map plays them again.
 
 import { html, type App } from './app.ts';
 import type { Child } from '../storage/save.ts';
-import { dogHeadSvg } from './dog.ts';
+import { plusFaceSvg } from './plus.ts';
 import { rewardById } from '../core/rewards.ts';
 import { reducedMotion, wait, EASE_OUT } from '../render/motion.ts';
-
-// ── 1. The story: see story.ts ─────────────────────────────────────────────
-export { storyScreen } from './story.ts';
 
 // ── 2. Map tips ────────────────────────────────────────────────────────────
 
@@ -26,7 +23,7 @@ function tipsFor(child: Child, el: HTMLElement): Tip[] {
   const treat = w.treat.rewardId ? rewardById(w.treat.rewardId)?.name : undefined;
   const goal = w.goal.rewardId ? rewardById(w.goal.rewardId)?.name : undefined;
   const tips: Tip[] = [
-    { text: `Hi ${child.name}! I’m Biscuit. Let me show you around!` },
+    { text: `Hi ${child.name}! I’m Plus. Let me show you around!` },
     { at: '.jarbar .treat', text: `This is your treat jar. Every level you finish adds coins. Fill it all the way to win ${treat ? `your ${treat.toLowerCase()}` : 'a treat'}!` },
     { at: '.jarbar .goal', text: `This big jar is for your dream${goal ? `: ${goal.toLowerCase()}` : ''}. It fills up slowly, so keep going!` },
     { at: '.node.current', text: 'This is where you are on the path. Each stop has 5 levels. Finish them to move on.' },
@@ -54,7 +51,7 @@ export function showMapTips(app: App, child: Child, el: HTMLElement): Promise<vo
   const ov = html(`<div class="overlay tips-ov" role="dialog" aria-modal="true" aria-label="How it works">
     <div class="tip-hole"></div>
     <div class="tip-card">
-      <div class="tip-dog">${dogHeadSvg({ cls: 'alive' })}</div>
+      <div class="tip-dog">${plusFaceSvg({ cls: 'alive' })}</div>
       <p class="tip-text" aria-live="polite"></p>
       <div class="tip-foot"><span class="tip-count"></span><button class="btn ghost small tip-skip" data-back>Skip</button><button class="btn small tip-next">Next</button></div>
     </div>

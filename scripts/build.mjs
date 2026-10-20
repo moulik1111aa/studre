@@ -77,6 +77,7 @@ const FONT_FILES = [
   ['Inter Display', 500, 'normal', 'inter-display-medium.woff'],
   ['Inter Display', 600, 'normal', 'inter-display-semibold.woff'],
   ['Inter Display', 700, 'normal', 'inter-display-bold.woff'],
+  ['Inter Display', 900, 'normal', 'inter-display-black.woff'],
   ['Schola', 400, 'normal', 'schola-regular.woff'],
   ['Schola', 700, 'normal', 'schola-bold.woff'],
   ['Schola', 400, 'italic', 'schola-italic.woff'],

@@ -5,7 +5,7 @@
 import { html, esc, type App, type Screen } from './app.ts';
 import { checkKey, dayNo, dayOf, isOwnerCode, makeKey, phoneCode, signingKey, tidyPhone, type KeyCheck } from '../core/access.ts';
 import type { Access, IssuedKey } from '../storage/save.ts';
-import { dogHeadSvg } from './dog.ts';
+import { plusFaceSvg } from './plus.ts';
 import { ICONS } from './icons.ts';
 import { stagger, popIn } from '../render/motion.ts';
 
@@ -108,7 +108,7 @@ export function lockScreen(state: AccessState, then: () => void, o: { renew?: bo
     const el = html(`<section class="screen lock" aria-label="${o.renew ? 'New key' : 'Unlock Study Hard'}">
       ${o.back ? `<header class="topbar"><button class="icon-btn back-btn" aria-label="Back">${ICONS.back}</button><span class="t">Access key</span><span style="width:50px"></span></header>` : ''}
       <div class="scroll lk-body">
-        <div class="lk-coach">${dogHeadSvg({ cls: 'alive' })}</div>
+        <div class="lk-coach">${plusFaceSvg({ cls: 'alive' })}</div>
         <h1 class="lk-title">${o.renew ? 'Enter a new key' : 'Unlock Study Hard'}</h1>
         <p class="lk-why">${o.renew ? `${!state.locked && state.until !== undefined ? `Your key works until ${niceDay(state.until)}. ` : ''}Got a new key? Paste it here. Progress carries on as it is.` : esc(REASON[reason](state.until))}</p>
         <div class="card lk-phone"><small>Your phone code</small><b>${esc(state.phone)}</b><button class="btn ghost small lk-copy">Copy code</button></div>

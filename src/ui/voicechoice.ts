@@ -1,5 +1,5 @@
 // A child's first stop: choose who reads the questions aloud, from every English voice on
-// the phone (each plays a short sample). Then Biscuit's tour of the map.
+// the phone (each plays a short sample). Then Plus's tour of the map.
 
 import { html, esc, type App, type Screen } from './app.ts';
 import type { Child } from '../storage/save.ts';
