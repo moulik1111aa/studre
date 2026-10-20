@@ -423,10 +423,23 @@ test('quick tour: the story from the welcome screen, then setup', async ({ page 
   await expect(page.locator('.welcome')).toBeVisible();
   await page.click('.tour-btn');
   await expect(page.locator('.story')).toBeVisible();
-  for (let i = 1; i < 9; i++) {
-    await expect(page.locator('.st-count')).toHaveText(`${i} of 9`);
+  for (let i = 1; i < 10; i++) {
+    await expect(page.locator('.st-count')).toHaveText(`${i} of 10`);
     const on = page.locator('.st-scene.on');
-    // Interactive scenes: pick a treat, answer (wrong, then right), promise to play along.
+    // Hands-on stops: swap the reels, pick a treat, answer (wrong, then right), beat the boss,
+    // promise to play along, count the ducks.
+    if (await on.locator('.tr-swap').count()) {
+      await expect(page.locator('.st-next')).toBeDisabled();
+      await on.locator('.tr-phone').click();
+      await on.locator('.tr-swap').click();
+    }
+    if (await on.locator('.tb-fight').count()) {
+      for (const a of ['7', '10', '6']) {
+        await on.locator('.tl-choice:not([disabled])', { hasText: new RegExp(`^${a}$`) }).click();
+        await page.waitForTimeout(700);
+      }
+      await expect(on.locator('.tb-q')).toContainText('Boss beaten');
+    }
     if (await on.locator('.tp-card').count()) {
       await expect(page.locator('.st-next')).toBeDisabled();
       await on.locator('.tp-card').first().click();

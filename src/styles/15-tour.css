@@ -1,23 +1,32 @@
 /* The quick tour: the story for grown-ups (eight animated scenes, with a jar at the bottom
    that fills as you go) and Biscuit's tips on the map (a spotlight and a speech card). */
 
-/* ── The story ── */
-.story{gap:8px;overflow:hidden}
-.st-top{display:flex;align-items:center;justify-content:space-between;min-height:46px}
-.st-count{font-weight:800;font-size:14px;color:var(--ink-faint);letter-spacing:.02em}
+/* ── The story: one coloured stop at a time, Biscuit speaking at the top ── */
+@property --tour{syntax:'<color>';inherits:true;initial-value:#7C6CFF}
+.story{gap:6px;overflow:hidden;--tour:#7C6CFF;transition:--tour .7s ease}
+html[data-theme] .screen.story{background:radial-gradient(120% 55% at 50% -8%,color-mix(in srgb,var(--tour) 55%,transparent),transparent 70%),radial-gradient(90% 40% at 50% 112%,color-mix(in srgb,var(--tour) 35%,transparent),transparent 70%)}
+.st-top{display:flex;align-items:center;gap:8px;min-height:46px}
+.st-paws{display:flex;gap:3px;flex:1;min-width:0}
+.st-paws i{font-style:normal;font-size:13px;opacity:.22;filter:grayscale(1);transition:opacity .3s,filter .3s,transform .3s}
+.st-paws i.on{opacity:1;filter:none;transform:rotate(-12deg)}
+.st-count{font-weight:800;font-size:13px;color:var(--ink-faint);white-space:nowrap}
+.st-mute{width:42px;height:42px;font-size:18px}
 .st-stage{flex:1;position:relative;min-height:0;touch-action:pan-y}
 .st-scene{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;text-align:center;gap:10px}
 .st-scene.on{display:flex}
-.st-art{flex:1;min-height:0;width:100%;display:grid;place-items:center}
-.st-title{margin:0;font-size:30px;line-height:1.12;letter-spacing:-.02em;max-width:16ch}
-.st-text{margin:0 0 6px;font-size:18px;line-height:1.45;color:var(--ink-soft);max-width:32ch}
+.st-say{display:flex;align-items:center;gap:10px;width:100%;max-width:440px}
+.st-biscuit{flex:none;width:58px;height:58px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#FFF4D6,#FFD58A);display:grid;place-items:center;overflow:hidden;box-shadow:0 0 0 3px color-mix(in srgb,var(--tour) 70%,transparent)}
+.st-biscuit .dog{width:66px;height:66px;margin-top:6px}
+.st-title{position:relative;flex:1;margin:0;padding:12px 16px;border-radius:20px 20px 20px 6px;font-size:23px;line-height:1.15;letter-spacing:-.02em;text-align:left;color:var(--ink);background:color-mix(in srgb,var(--tour) 22%,var(--surface));box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--tour) 55%,transparent)}
+/* The art scrolls if it is taller than the room, and never runs into the text. */
+.st-art{flex:1;min-height:0;width:100%;display:flex;overflow-y:auto;overflow-x:hidden;padding:4px 2px}
+.st-art>.ta{margin:auto}
+.st-text{margin:0;font-size:16px;line-height:1.45;color:var(--ink-soft);max-width:36ch}
 .st-foot{display:flex;align-items:center;gap:12px;padding-top:6px}
-.st-foot .st-next{flex:1;min-height:58px}
-.st-progress{display:flex;align-items:center;gap:8px}
-.st-pjar{position:relative;width:30px;height:38px;border-radius:7px 7px 11px 11px;box-shadow:inset 0 0 0 2.5px var(--ink-soft);overflow:hidden}
-.st-pjar::before{content:'';position:absolute;left:5px;right:5px;top:-1px;height:5px;border-radius:2px;background:var(--ink-soft)}
-.st-pjar i{position:absolute;left:0;right:0;bottom:0;height:0;background:linear-gradient(180deg,var(--sun),var(--sun-deep,var(--sun)));transition:height .6s var(--ease-spring)}
-.st-dots{display:none}
+.st-foot .st-next{flex:1;min-height:58px;font-size:18px}
+.st-next[disabled]{opacity:.55}
+.fly-coin{position:fixed;left:0;top:0;z-index:9500;width:22px;height:22px;border-radius:50%;pointer-events:none;background:radial-gradient(circle at 35% 30%,#FFE9A8,#F2B33D);box-shadow:inset 0 0 0 2px #C98A16}
+.fly-treat{position:fixed;left:0;top:0;z-index:9500;font-size:34px;pointer-events:none}
 
 /* Shared bits */
 .ta{position:relative;display:grid;place-items:center;width:min(100%,340px);height:min(100%,300px)}
@@ -205,3 +214,86 @@ html[data-theme] .vc-card.on{box-shadow:inset 0 0 0 3px var(--accent),var(--surf
 .as-ducks{font-size:46px;letter-spacing:.1em;margin-bottom:4px}
 .as-choices{grid-template-columns:repeat(3,1fr)}
 .ta-assist .coach-note{margin-top:12px}
+
+/* ── Story stops (story.ts) ── */
+.st-art .ta{height:auto}
+/* Hello */
+.th-hello{width:min(100%,320px);aspect-ratio:1}
+.th-dog{width:150px;padding:0;border:0;background:none;cursor:pointer;animation:ta-pop .6s var(--ease-spring) both}
+.th-dog .dog{width:100%;height:auto}
+.th-hello .ta-orbit{transform:rotate(calc(var(--k) * 45deg)) translate(118px) rotate(calc(var(--k) * -45deg));animation:ta-orbit-in2 .5s var(--ease-spring) both,ta-float 3s ease-in-out infinite;animation-delay:calc(.3s + var(--k) * .09s),calc(1s + var(--k) * .2s)}
+@keyframes ta-orbit-in2{from{opacity:0;transform:rotate(calc(var(--k) * 45deg)) translate(40px) rotate(calc(var(--k) * -45deg)) scale(.3)}to{opacity:1;transform:rotate(calc(var(--k) * 45deg)) translate(118px) rotate(calc(var(--k) * -45deg))}}
+.th-say{position:absolute;left:50%;bottom:4%;transform:translateX(-50%);padding:6px 14px;border-radius:999px;font-weight:800;font-size:15px;white-space:nowrap;color:#3B2600;background:var(--sun)}
+/* Reels */
+.tr-reels{width:min(100%,330px);display:grid;grid-template-columns:1fr auto;grid-template-areas:"phone goal" "seen seen" "swap swap";gap:12px;align-items:center;justify-items:center}
+.tr-phone{grid-area:phone;position:relative;width:130px;height:210px;padding:0;border:0;border-radius:24px;box-shadow:inset 0 0 0 4px var(--ink-soft);overflow:hidden;background:var(--surface);cursor:pointer;transition:filter .5s,transform .5s}
+.tr-strip{display:flex;flex-direction:column;transition:transform .35s var(--ease-out)}
+.tr-strip b{height:52.5px;flex:none;margin:0 8px 0;display:grid;place-items:center;font-size:30px;border-bottom:1px solid var(--line);position:relative}
+.tr-strip b small{position:absolute;bottom:3px;right:4px;font-size:10px;font-weight:800;color:var(--pink)}
+.tr-x{position:absolute;inset:0;display:grid;place-items:center;font-size:56px;font-weight:900;color:#fff;opacity:0;transform:scale(.4);transition:opacity .3s,transform .4s var(--ease-spring);text-shadow:0 4px 20px rgba(0,0,0,.5)}
+.tr-reels.swapped .tr-phone{filter:grayscale(1) brightness(.55);transform:scale(.88) rotate(-6deg)}
+.tr-reels.swapped .tr-x{opacity:1;transform:none}
+.tr-goal{grid-area:goal;display:grid;justify-items:center;gap:6px}
+.tr-goal b{font-size:34px}
+.tr-jar{position:relative;width:70px;height:86px;border-radius:12px 12px 20px 20px;box-shadow:inset 0 0 0 3px var(--sun);overflow:hidden;animation:ta-glow 1.6s ease-in-out infinite}
+.tr-jar i{position:absolute;left:0;right:0;bottom:0;height:0;background:linear-gradient(180deg,var(--sun),#F5A524);animation:tr-rise 1.4s .3s var(--ease-out) forwards}
+@keyframes tr-rise{to{height:45%}}
+.tr-seen{grid-area:seen;margin:0;font-size:14px;color:var(--ink-soft)}
+.tr-seen b{color:var(--ink)}
+.tr-swap{grid-area:swap;width:100%}
+.tr-reels.swapped .tr-swap{display:none}
+/* Pick a treat */
+.tp-row{display:flex;align-items:center;gap:12px;margin-top:4px}
+.tp-jar{position:relative;flex:none;width:58px;height:70px;border-radius:11px 11px 17px 17px;box-shadow:inset 0 0 0 3px var(--ink-soft);overflow:hidden}
+.tp-jar i{position:absolute;left:0;right:0;bottom:0;height:8%;background:linear-gradient(180deg,var(--sun),#F5A524)}
+.tp-jar em{position:absolute;inset:0;display:grid;place-items:center;font-style:normal;font-size:28px;color:var(--ink-faint)}
+.tp-row .tp-chosen{margin:0;min-height:0;text-align:left}
+/* Play a level */
+.tl-dots{display:flex;gap:6px}
+.tl-dots i{width:10px;height:10px;border-radius:50%;background:var(--track)}
+.tl-dots i.on{background:var(--good)}
+.tl-dots i.now{background:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 30%,transparent)}
+.tl-prize.shrunk b{color:var(--bad)}
+.tl-prize b{color:var(--sun)}
+.tl-hint{margin:0;font-size:14px;color:var(--ink-faint);text-align:center}
+.tl-lesson{display:flex;gap:10px;align-items:flex-start}
+.tl-coach{flex:none;width:46px;height:46px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#FFF4D6,#FFD58A);overflow:hidden;display:grid;place-items:center}
+.tl-coach .dog{width:54px;height:54px;margin-top:5px}
+.ta-ls{font-size:15px}
+/* Boss */
+.tb-fight{width:min(100%,340px);display:flex;flex-direction:column;gap:10px;align-items:stretch}
+.tb-top{display:flex;align-items:center;justify-content:center;gap:12px;min-height:110px}
+.tb-boss{font-size:84px;line-height:1;animation:ta-float 2.4s ease-in-out infinite;filter:drop-shadow(0 10px 20px color-mix(in srgb,var(--tour) 60%,transparent))}
+.tb-say{padding:8px 14px;border-radius:18px 18px 18px 4px;font-weight:800;font-size:15px;color:var(--ink);background:var(--surface-2)}
+.tb-hp{height:14px;border-radius:999px;background:var(--track);overflow:hidden}
+.tb-hp i{display:block;height:100%;width:100%;border-radius:999px;background:linear-gradient(90deg,#FB7185,#F472B6);transition:width .5s var(--ease-spring)}
+.tb-q h3{margin:0 0 10px;font-size:28px}
+.tb-q .tl-choices{grid-template-columns:repeat(3,1fr)}
+/* Dream */
+.td-dream{width:min(100%,330px);display:flex;flex-direction:column;align-items:center;gap:10px}
+.td-side{position:relative}
+.td-jar{position:relative;display:block;width:120px;height:160px;border-radius:20px 20px 32px 32px;box-shadow:inset 0 0 0 4px var(--ink-soft);overflow:hidden}
+.td-jar i{position:absolute;left:0;right:0;bottom:0;height:0;background:linear-gradient(180deg,#C9A6FF,#7B4BFF);transition:height .5s var(--ease-out)}
+.td-jar b{position:absolute;inset:0;display:grid;place-items:center;font-size:56px}
+.td-drop{position:absolute;left:50%;bottom:-8px;width:12px;height:16px;margin-left:-6px;border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;background:#8B5A2B;opacity:0}
+.td-label{margin:0;font-size:15px;line-height:1.4;color:var(--ink-soft);min-height:42px}
+.td-label b{color:var(--ink)}
+.td-slide{width:100%;display:grid;gap:4px;font-size:13px;font-weight:700;color:var(--ink-faint)}
+.td-slide .slider{width:100%}
+/* In charge: tiles that flip */
+.tc-grid{width:min(100%,340px);display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tc-tile{position:relative;min-height:118px;padding:0;border:0;border-radius:20px;font:inherit;color:var(--ink);background:none;perspective:600px;cursor:pointer;animation:ta-pop .45s var(--ease-spring) both;animation-delay:calc(.15s + var(--k) * .12s)}
+.tc-front,.tc-back{position:absolute;inset:0;display:grid;place-items:center;align-content:center;gap:4px;padding:10px;border-radius:20px;background:var(--surface);box-shadow:inset 0 0 0 var(--stroke-w,1px) var(--stroke);backface-visibility:hidden;transition:transform .5s var(--ease-out)}
+.tc-front span{font-size:32px}
+.tc-front b{font-size:15px}
+.tc-back{transform:rotateY(180deg);font-size:13px;line-height:1.35;color:var(--ink-soft);background:color-mix(in srgb,var(--tour) 18%,var(--surface))}
+.tc-tile.flip .tc-front{transform:rotateY(-180deg)}
+.tc-tile.flip .tc-back{transform:none}
+/* Together */
+.tg-wrap{width:min(100%,340px);display:flex;flex-direction:column;gap:12px}
+/* Ducks */
+.as-ducks span{display:inline-block}
+@media (prefers-reduced-motion: reduce){.story{transition:none}}
+.tc-grid{width:340px;max-width:100%;place-items:stretch}
+.tc-tile{width:100%}
+.ta-assist .tl-choices{grid-template-columns:repeat(3,1fr)}

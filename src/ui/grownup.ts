@@ -116,8 +116,10 @@ export async function grownUpCheck(app: App, reason: string): Promise<boolean> {
       // The owner code opens the hidden area instead (it never matches a PIN or an answer).
       if (typed.length === 7 && app.ownerHook && (await isOwnerCode(typed))) {
         misses = 0;
-        finish(false);
-        app.ownerHook();
+        // The owner counts as a grown-up: back from the owner area, whatever was asked goes ahead.
+        ov.remove();
+        open = false;
+        app.ownerHook(() => resolve(true));
         return;
       }
       const ok = maths ? Number(typed) === a * b : !!pin && validPin(typed) && (await pinMatches(typed, pin));

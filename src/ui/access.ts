@@ -308,10 +308,10 @@ export function ownerScreen(leave: () => void) {
     };
 
     el.querySelector('.back-btn')!.addEventListener('click', leave);
-    if (a.master) paint();
-    else paintSetup();
     return {
       el,
+      // Paint once on screen: the entrance animation on a detached list left it invisible.
+      mounted: () => (a.master ? paint() : paintSetup()),
       back: () => {
         leave();
         return true;

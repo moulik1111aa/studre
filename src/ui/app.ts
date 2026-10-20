@@ -48,8 +48,15 @@ export class App {
   readonly fx: Fx;
   readonly path: Level[];
   /** Opens the owner's hidden area (set at boot): the owner code typed into a grown-up check. */
-  ownerHook: (() => void) | null = null;
+  /** Opens the owner area; `passed` is called on the way back (the owner counts as a grown-up). */
+  ownerHook: ((passed: () => void) => void) | null = null;
   private current: Screen | null = null;
+  /** How the screen on show was made (to come back to it, e.g. from the owner area). */
+  maker: ScreenMaker | null = null;
+  /** The screen on show. */
+  get screen(): Screen | null {
+    return this.current;
+  }
   private exitUntil = -Infinity;
   private busy = false;
   /** Screen-on is released after this long without a touch, even mid-level (battery). */
@@ -150,6 +157,7 @@ export class App {
         this.current?.el.remove();
         this.voice.stop();
         this.current = next;
+        this.maker = make;
         this.root.appendChild(next.el);
         this.setAwake(!!next.keepAwake);
       };

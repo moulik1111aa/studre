@@ -67,7 +67,23 @@ async function boot(): Promise<void> {
     else void app.show(home(), how);
   };
   const start = () => void gate();
-  app.ownerHook = () => void app.show(ownerScreen(() => void gate('fade')), 'liquid');
+  app.ownerHook = (passed) => {
+    // Back from the owner area: carry on where the owner was (a check that opened it counts as
+    // passed), or open the app if it was locked.
+    const back = app.maker;
+    const fromLock = !!app.screen?.el.classList.contains('lock');
+    void app.show(
+      ownerScreen(() => {
+        const owner = app.screen;
+        if (fromLock || !back) return void gate('fade');
+        passed();
+        setTimeout(() => {
+          if (app.screen === owner) void app.show(back, 'fade');
+        }, 120);
+      }),
+      'liquid',
+    );
+  };
   // Back from the background on a new day: check the key again.
   document.addEventListener('visibilitychange', async () => {
     if (document.visibilityState !== 'visible' || !gated || locked) return;
