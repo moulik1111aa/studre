@@ -4,7 +4,7 @@
 import { html, esc, type App, type Screen } from './app.ts';
 import type { Child } from '../storage/save.ts';
 import { AREAS } from '../core/areas/index.ts';
-import { Placement, answerFromCheck, type ParentAnswer } from '../core/placement.ts';
+import { Placement, answerFromCheck, stageForAge, type ParentAnswer } from '../core/placement.ts';
 import type { Skill } from '../core/skill.ts';
 import { createRng } from '../core/rng.ts';
 import { makeQuestion } from '../core/path.ts';
@@ -42,7 +42,7 @@ export function placementScreen(child: Child) {
         child.placed = true;
         child.placementChecks = plan.skipped.length ? 3 : 0;
       });
-      body.innerHTML = `<div class="pl-done card"><div class="big-emoji">🗺️</div><h2>All set!</h2><p>${esc(child.name)}’s path is ready. Next: choose the rewards to work towards.</p><button class="btn go">Choose rewards</button></div>`;
+      body.innerHTML = `<div class="pl-done card"><div class="big-emoji">🗺️</div><h2>All set!</h2><p>${esc(child.name)}’s path is ready. Next: choose the rewards to work towards. Then ${esc(child.name)} picks a reading voice, and you play the first few levels together.</p><button class="btn go">Choose rewards</button></div>`;
       popIn(body.firstElementChild!);
       body.querySelector('.go')!.addEventListener('click', () => enterChild(app, child, 'fade', false));
     };
@@ -139,6 +139,8 @@ export function stepBackAfterPlacement(child: Child, skill: Skill): void {
   const i = strandSkills.findIndex((s) => s.id === startId);
   if (i <= 0) return;
   const prev = strandSkills[i - 1];
+  // Never back below the child's age.
+  if (prev.stage < stageForAge(child.age)) return;
   delete child.progress.skipped[prev.id];
   child.placedAt[skill.strand] = prev.id;
 }

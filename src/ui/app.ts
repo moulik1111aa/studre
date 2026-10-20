@@ -18,7 +18,7 @@ import { dayKey } from '../core/economy.ts';
 import { AREAS } from '../core/areas/index.ts';
 import { buildPath, type Level } from '../core/path.ts';
 import { setPace, setOwnRewards } from '../core/rewards.ts';
-import { isOwnerCode } from '../core/access.ts';
+import { grownUpCheck } from './grownup.ts';
 
 export interface Screen {
   el: HTMLElement;
@@ -238,71 +238,10 @@ export class App {
     return { el: ov, result };
   }
 
-  /** The grown-up check: type the answer to a 2-digit × 1-digit sum. Three misses lock it for 30 s. */
+  /** The grown-up check: the phone's screen lock or the parent PIN (see grownup.ts). Three misses lock it for 30 s. */
   grownUp(reason = 'For grown-ups'): Promise<boolean> {
     return grownUpCheck(this, reason);
   }
-}
-
-let lockedUntil = 0;
-let misses = 0;
-
-function grownUpCheck(app: App, reason: string): Promise<boolean> {
-  if (Date.now() < lockedUntil) {
-    app.toast(`Please wait ${Math.ceil((lockedUntil - Date.now()) / 1000)} seconds and try again.`);
-    return Promise.resolve(false);
-  }
-  const a = 12 + Math.floor(Math.random() * 87);
-  const b = 3 + Math.floor(Math.random() * 7);
-  return new Promise((resolve) => {
-    const ov = html(`<div class="overlay" role="dialog" aria-modal="true" aria-label="Grown-up check"><div class="sheet grownup">
-      <p class="chip">🔒 ${reason}</p>
-      <h2>What is ${a} × ${b}?</h2>
-      <div class="gu-input" aria-live="polite">&nbsp;</div>
-      <div class="pad gu-pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9, '', 0, '⌫'].map((k) => (k === '' ? '<span></span>' : `<button type="button" class="key" data-k="${k}">${k}</button>`)).join('')}</div>
-      <div class="actions"><button class="btn mint ok">Check</button><button class="btn ghost" data-back>Cancel</button></div>
-    </div></div>`);
-    const input = ov.querySelector<HTMLElement>('.gu-input')!;
-    let typed = '';
-    const paint = () => (input.textContent = typed || ' ');
-    ov.querySelector('.gu-pad')!.addEventListener('click', (e) => {
-      const k = (e.target as HTMLElement).closest<HTMLElement>('[data-k]')?.dataset.k;
-      if (!k) return;
-      typed = k === '⌫' ? typed.slice(0, -1) : (typed + k).slice(0, 7);
-      paint();
-    });
-    const finish = (ok: boolean) => {
-      ov.remove();
-      resolve(ok);
-    };
-    ov.querySelector('.ok')!.addEventListener('click', async () => {
-      // The owner code opens the hidden area instead (it never matches an answer).
-      if (typed.length === 7 && app.ownerHook && (await isOwnerCode(typed))) {
-        misses = 0;
-        finish(false);
-        app.ownerHook();
-        return;
-      }
-      if (Number(typed) === a * b) {
-        misses = 0;
-        finish(true);
-      } else {
-        misses++;
-        if (misses >= 3) {
-          misses = 0;
-          lockedUntil = Date.now() + 30_000;
-          app.toast('Too many tries. Locked for 30 seconds.');
-          finish(false);
-        } else {
-          typed = '';
-          paint();
-          input.animate([{ transform: 'translateX(-8px)' }, { transform: 'translateX(8px)' }, { transform: 'none' }], { duration: 300 });
-        }
-      }
-    });
-    ov.querySelector('[data-back]')!.addEventListener('click', () => finish(false));
-    app.root.appendChild(ov);
-  });
 }
 
 /** Build an element from an HTML string. */

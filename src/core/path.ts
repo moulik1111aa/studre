@@ -157,6 +157,17 @@ function baseRules(level: Level, skill?: Skill): RoundRules {
   }
 }
 
+/** Years a child is older than a skill's ages (stage s is for ages 2s+1 and 2s+2). */
+export const yearsOlder = (age: number, stage: number): number => Math.max(0, age - (2 * stage + 2));
+/**
+ * Levels follow age: an older child playing a younger skill gets its harder end
+ * (two years older → from halfway up; four years → three quarters up).
+ */
+export function forAge(d: number, age: number | undefined, stage: number): number {
+  const y = age ? yearsOlder(age, stage) : 0;
+  return y ? Math.min(1, 1 - (1 - d) * 0.5 ** (y / 2)) : d;
+}
+
 const DIFFICULTY: Record<Tier, [number, number]> = { 1: [0, 0.3], 2: [0, 0.5], 3: [0.3, 1], 4: [0.4, 1], 5: [0.5, 1] };
 
 /** Make one question for a skill, avoiding the keys in `avoid` (retries a few times). */
@@ -222,14 +233,14 @@ export function replaceQuestion(q: Question, skill: Skill, rng: Rng, avoid: Set<
  * `earlier` are skills before this one on the path (for Practise-more mix-ins);
  * `warmup` are mastered skills due for revision (at most 2 are added at the start).
  */
-export function makeRound(level: Level, skillsById: (id: string) => Skill | undefined, p: Progress, rng: Rng, earlier: Skill[] = [], warmup: Skill[] = [], boost = 0): Round {
+export function makeRound(level: Level, skillsById: (id: string) => Skill | undefined, p: Progress, rng: Rng, earlier: Skill[] = [], warmup: Skill[] = [], boost = 0, age?: number): Round {
   if (level.kind === 'boss') throw new Error('boss levels use the fight engine');
   const questions: Question[] = [];
   const seen = new Set<string>();
   const histFor = (id: string) => new Set(p.history[id] ?? []);
   const add = (s: Skill, d: number) => {
     const avoid = new Set([...seen, ...histFor(s.id)]);
-    const q = makeQuestion(s, rng, d, avoid, undefined, questions.at(-1)?.key, questions);
+    const q = makeQuestion(s, rng, forAge(d, age, s.stage), avoid, undefined, questions.at(-1)?.key, questions);
     seen.add(q.key);
     questions.push(q);
   };

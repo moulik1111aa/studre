@@ -13,6 +13,8 @@ export interface StudyHardPlugin {
   exit(): Promise<void>;
   readSave(): Promise<{ values?: Record<string, string> }>;
   deviceId?(): Promise<{ id?: string }>;
+  deviceSecure?(): Promise<{ secure?: boolean }>;
+  confirmDevice?(o: { title: string; text?: string }): Promise<{ ok?: boolean; none?: boolean }>;
   writeSave(o: { key: string; value: string }): Promise<void>;
   speak(o: { text: string; rate?: number; pitch?: number; voice?: string }): Promise<void>;
   voices(): Promise<{ voices?: { name: string; locale: string; quality: number; network: boolean }[] }>;

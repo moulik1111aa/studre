@@ -78,7 +78,7 @@ export function likeTerms(a: number, b: number, c: number, d: number): Lesson {
   L.say('Collect the x terms and the numbers.', `${term(a, 'x', true)} ${term(c, 'x', false)} = ${lin(a + c, 0)}`, `${term(b, '', true)} ${term(d, '', false)} = ${f(b + d)}`);
   L.say('Put them together.', ans);
   L.slip(lin(a + c + b + d, 0), 'x terms and numbers are different kinds: they can’t be added together.');
-  L.slip(lin(a - c, b + d), `Keep the sign in front of ${Math.abs(c)}x: it is ${c < 0 ? '−' : '+'}.`);
+  L.slip(lin(a - c, b + d), `Keep the sign in front of ${Math.abs(c) === 1 ? "" : Math.abs(c)}x: it is ${c < 0 ? '−' : '+'}.`);
   return L.end(ans, `So the answer is ${ans}.`);
 }
 

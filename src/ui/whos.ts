@@ -10,6 +10,7 @@ import { faceoffSetupScreen } from './faceoff.ts';
 import { jarProgress } from '../core/economy.ts';
 import { rewardById } from '../core/rewards.ts';
 import { accessState, keyReminder, lockScreen } from './access.ts';
+import { useVoice } from './voicechoice.ts';
 
 export function whosPlayingScreen(app: App): Screen {
   const kids = app.save.data.children;
@@ -39,6 +40,7 @@ export function whosPlayingScreen(app: App): Screen {
   return {
     el,
     mounted: () => {
+      useVoice(app);
       const mark = el.querySelector<SVGElement>('.brand svg')!;
       void drawOn(mark, { duration: 500, stagger: 30 }).then(() => mark.classList.add('alive'));
       stagger([el.querySelector('.title')!, ...el.querySelectorAll('.kid')], { gap: 90 });

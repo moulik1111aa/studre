@@ -19,7 +19,7 @@ export function voiceScreen(app: App): Screen {
       <div class="seg seg3">${SPEEDS.map(([v, t]) => `<button class="seg-b${Math.abs(v - rate) < 0.01 ? ' on' : ''}" data-rate="${v}"><b>${t}</b></button>`).join('')}</div>
       <h2 class="pa-h">Voice</h2>
       <div class="card vp-list"><p class="fine">Finding voices…</p></div>
-      <p class="fine">More voices: phone Settings → Text-to-speech → install voice data (Speech Recognition &amp; Synthesis by Google sounds most natural).</p>
+      <p class="fine">This voice is used for every child. More voices: phone Settings → Text-to-speech → install voice data (Speech Recognition &amp; Synthesis by Google sounds most natural).</p>
     </div>
     <button class="btn save">Save</button>
   </section>`);
@@ -58,10 +58,13 @@ export function voiceScreen(app: App): Screen {
   );
   el.querySelector('.back-btn')!.addEventListener('click', () => void app.show(parentScreen));
   el.querySelector('.save')!.addEventListener('click', () => {
+    // One choice for everyone (each child can still pick their own voice when they start).
     app.save.update((d) => {
       d.settings.voiceName = chosen;
       d.settings.voiceRate = rate;
+      for (const c of d.children) if (c.voicePicked) Object.assign(c, { voiceName: chosen, voicePitch: 1 });
     });
+    app.voice.pitch = 1;
     app.voice.name = chosen;
     app.voice.rate = rate;
     app.toast('Voice saved.');

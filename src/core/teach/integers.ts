@@ -28,3 +28,19 @@ export function tempLesson(t: number, ch: number, colder: boolean): Lesson {
   if (ans !== 0) L.slip(-ans, 'Check which side of zero you end on.');
   return L.end(ans, `So it is ${f(ans)}°C.`);
 }
+
+/** The gap between a temperature below zero (lo) and one above it (hi): count through 0. */
+export function tempGapLesson(lo: number, hi: number, warmer: boolean): Lesson {
+  const L = new LessonBuilder();
+  const gap = hi - lo;
+  const line = new Line('linear', { min: lo - 1, max: hi + 1, tick: 1, labelEvery: hi - lo <= 22 ? 1 : 5 });
+  L.board = line.b;
+  line.pt(0, 0, { tone: 'zero' }).pt(lo, 0, { tone: 'start' }).pt(hi, 0, { tone: 'end' });
+  L.say(`${warmer ? 'Warmer' : 'Colder'} by how much? Find the distance between ${f(lo)}°C and ${f(hi)}°C on the thermometer.`);
+  line.hop(lo, 0, L.i);
+  L.say(`From ${f(lo)} up to 0 is ${f(-lo)} degrees.`, `${f(-lo)}`);
+  line.hop(0, hi, L.i);
+  L.say(`From 0 up to ${f(hi)} is ${f(hi)} more.`, `${f(-lo)} + ${f(hi)} = ${f(gap)}`);
+  L.slip(hi + lo, 'Across zero, add the two distances: don’t take one from the other.');
+  return L.end(gap, `So it is ${f(gap)} degrees ${warmer ? 'warmer' : 'colder'}.`);
+}

@@ -76,7 +76,7 @@ const SCENES: Scene[] = [
     text: 'You set the daily time and the prizes. Only a grown-up can hand a prize over, so every promise is kept. No ads, no sign-up, and nothing leaves this phone.',
     art: `<div class="ta ta-charge">${[
       ['⏱️', '30 min a day', 'or what you choose'],
-      ['🔒', 'Grown-up check', 'for settings and prizes'],
+      ['🔒', 'Grown-up lock', 'your screen lock or a PIN'],
       ['🎁', 'You hand it over', 'real rewards, real promises'],
       ['📵', 'No ads, offline', 'private by design'],
     ]
@@ -84,8 +84,19 @@ const SCENES: Scene[] = [
       .join('')}</div>`,
   },
   {
+    title: 'Start together',
+    text: 'Your child picks a reading voice, then plays the first 3 levels with you beside them. A slip there costs nothing: Biscuit shows how and they try again, and coins still count.',
+    art: `<div class="ta ta-together">${[
+      ['🗣️', 'Pick a voice', 'a man’s or a woman’s'],
+      ['🤝', '3 levels together', 'learn how to play'],
+      ['🪙', 'Coins still count', 'no marks lost'],
+    ]
+      .map(([e, b, s], i) => `<div class="ta-tile" style="--k:${i}"><span>${e}</span><b>${b}</b><small>${s}</small></div>`)
+      .join('')}</div>`,
+  },
+  {
     title: 'Ready, set, learn!',
-    text: 'Setting up takes about 2 minutes. Then Biscuit will show your child around the map.',
+    text: 'Setting up takes about 2 minutes. Then sit with your child for their first few levels.',
     art: `<div class="ta ta-ready"><div class="ta-dog">${dogSvg({ cls: 'alive', noShadow: true })}</div><div class="ta-jar full"><i class="ta-fill"></i><b>⭐</b></div></div>`,
   },
 ];

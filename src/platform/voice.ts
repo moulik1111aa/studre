@@ -6,6 +6,28 @@ export interface VoiceInfo {
   name: string;
   label: string;
   network: boolean;
+  /** Language tag, e.g. "en-IN". */
+  locale?: string;
+  /** Woman's or man's voice, when it can be told from the voice's name. */
+  gender?: 'f' | 'm';
+}
+
+/**
+ * Google's Android voices are named "en-in-x-ena-local": the three letters tell the
+ * speaker. Known ones, and browser voices that say so in their names.
+ */
+const ANDROID_GENDER: Record<string, 'f' | 'm'> = {
+  ena: 'f', ahp: 'f', cxx: 'f', enc: 'm', end: 'm',
+  gba: 'f', gbc: 'f', gbg: 'f', fis: 'f', gbb: 'm', gbd: 'm', rjs: 'm',
+  iob: 'f', iog: 'f', sfg: 'f', tpc: 'f', tpf: 'f', iol: 'm', iom: 'm', tpd: 'm',
+  afh: 'f', aua: 'f', auc: 'f', aub: 'm', aud: 'm',
+};
+export function genderOf(name: string): 'f' | 'm' | undefined {
+  const id = /-x-([a-z]{3})[-_]/i.exec(name)?.[1]?.toLowerCase();
+  if (id && ANDROID_GENDER[id]) return ANDROID_GENDER[id];
+  if (/\b(female|woman|zira|samantha|heera|veena|susan|hazel|libby|sonia|natasha|aria|jenny|karen|moira|tessa|serena|kate|fiona|neerja)\b/i.test(name)) return 'f';
+  if (/\b(male|man|david|mark|daniel|ravi|george|ryan|thomas|guy|prabhat|rishi|oliver|arthur|aaron|fred)\b/i.test(name)) return 'm';
+  return undefined;
 }
 
 /** Rank browser voices: natural/neural first, then Indian, British, American English. */
@@ -25,6 +47,8 @@ export class Voice {
   /** Parent's choice: a voice name ('' = automatic) and speed (0.75–1.15). */
   name = '';
   rate = 0.95;
+  /** 1 is the voice's own pitch; a little lower or higher gives a deeper or brighter voice. */
+  pitch = 1;
   private readonly native: StudyHardPlugin | null;
   private webVoices: SpeechSynthesisVoice[] = [];
 
@@ -55,26 +79,26 @@ export class Voice {
     if (this.native) {
       try {
         const r = await this.native.voices();
-        return (r.voices ?? []).map((v) => ({ name: v.name, label: describe(v.name, v.locale), network: v.network }));
+        return (r.voices ?? []).map((v) => ({ name: v.name, label: describe(v.name, v.locale), network: v.network, locale: v.locale, gender: genderOf(v.name) }));
       } catch {
         return [];
       }
     }
-    return this.webVoices.map((v) => ({ name: v.name, label: `${v.name.replace(/^(Microsoft|Google)\s*/, '')} (${v.lang})`, network: !v.localService }));
+    return this.webVoices.map((v) => ({ name: v.name, label: `${v.name.replace(/^(Microsoft|Google)\s*/, '')} (${v.lang})`, network: !v.localService, locale: v.lang, gender: genderOf(v.name) }));
   }
 
   say(text: string, rate = this.rate, force = false): void {
     if ((!this.enabled && !force) || !text) return;
     if (this.native) {
       // QUEUE_FLUSH replaces whatever was being said; a separate stop could land after it.
-      quietly(this.native.speak({ text, rate, pitch: 1.0, voice: this.name || undefined }));
+      quietly(this.native.speak({ text, rate, pitch: this.pitch, voice: this.name || undefined }));
       return;
     }
     this.stop();
     try {
       const u = new SpeechSynthesisUtterance(text);
       u.rate = rate;
-      u.pitch = 1;
+      u.pitch = this.pitch;
       const v = this.webVoices.find((x) => x.name === this.name) ?? this.webVoices[0];
       if (v) {
         u.voice = v;

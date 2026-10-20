@@ -70,7 +70,8 @@ add('pow2310', 'algebra', 'Powers of 2, 3 and 10', (r) => {
 const lawQ = (kind: 'mul' | 'div' | 'pow') => (r: Rng): Made => {
   const b = r.pick(['a', 'x', 'y', '2', '5', '7']);
   const m = r.int(2, 9);
-  const n = r.int(2, kind === 'div' ? m + 3 : 6);
+  // Dividing stays at whole powers (negative powers come later, in Zero and negative exponents).
+  const n = r.int(2, kind === 'div' ? m : 6);
   const e = kind === 'mul' ? m + n : kind === 'div' ? m - n : m * n;
   const prompt = kind === 'mul' ? `${pw(b, m)} × ${pw(b, n)} = ?` : kind === 'div' ? `${pw(b, m)} ÷ ${pw(b, n)} = ?` : `(${pw(b, m)})${sup(n)} = ?`;
   const wrong = [m * n, m + n, m - n, n - m, m + n + 1].filter((x) => x !== e).map((x) => pw(b, x));
@@ -109,7 +110,7 @@ add('subst', 'algebra', 'Substitute into expressions', (r) => {
 add('liketerms', 'algebra', 'Collect like terms', (r) => {
   const [a, b, c, d] = [r.int(2, 9), r.int(1, 9), r.int(-6, 6) || 2, r.int(-9, 9) || 3];
   const ans = lin(a + c, b + d);
-  const m: Made = choice(`${lin(a, b)} ${c < 0 ? '−' : '+'} ${Math.abs(c)}x ${d < 0 ? '−' : '+'} ${Math.abs(d)} = ?`, ans, [lin(a + c, b - d), lin(a - c, b + d), lin(a + c + b + d, 0), lin(a + b, c + d)], r, 'Add the x terms; add the numbers.');
+  const m: Made = choice(`${lin(a, b)} ${c < 0 ? '−' : '+'} ${Math.abs(c) === 1 ? '' : Math.abs(c)}x ${d < 0 ? '−' : '+'} ${Math.abs(d)} = ?`, ans, [lin(a + c, b - d), lin(a - c, b + d), lin(a + c + b + d, 0), lin(a + b, c + d)], r, 'Add the x terms; add the numbers.');
   m.teach = () => AL.likeTerms(a, b, c, d);
   return m;
 }, { format: 'choice' });
@@ -337,7 +338,7 @@ add('x11any', 'mental', '× 11 for any 2-digit number', (r) => {
 add('x525125', 'mental', '× 5, × 25 and × 125 tricks', (r) => {
   const m = r.pick([5, 25, 125]);
   const k = m === 5 ? 2 : m === 25 ? 4 : 8;
-  const a = k * r.int(3, 40);
+  const a = k * (m === 5 ? r.int(8, 49) : r.int(3, 40));
   return q(`${a} × ${m} = ?`, a * m, r, `× ${m} = × ${m * k} ÷ ${k}.`, [a * m * 2, a * (m + 5)], () => MT.timesFriendly(a, m));
 }, { format: 'pad' });
 add('div525', 'mental', '÷ 5 and ÷ 25 tricks', (r) => {
@@ -355,7 +356,8 @@ add('twostep6', 'word', 'Two-step word problems', (r) => {
   const boxes = r.int(3, 9);
   const per = r.int(12, 48);
   const price = r.pick([2, 5, 10]);
-  const sold = r.int(1, boxes * per - 1);
+  // Sell a real share of them (not 6 out of 60).
+  const sold = r.int(Math.round(boxes * per * 0.3), Math.round(boxes * per * 0.85));
   return r.chance(0.5)
     ? q(`${who} buys ${boxes} boxes of ${per} chocolates and sells ${sold}. How many are left?`, boxes * per - sold, r, `${boxes} × ${per} = ${boxes * per}.`, [boxes * per + sold], () => W.boxesLeft(boxes, per, sold))
     : q(`${who} sells ${boxes} boxes of ${per} chocolates at ₹${price} each chocolate. Takings?`, boxes * per * price, r, `${boxes * per} chocolates × ₹${price}.`, [boxes * per, boxes * price], () => W.takings(boxes, per, price));
@@ -374,7 +376,7 @@ add('digitsum', 'mental', 'Digit-sum checks', (r) => {
   const wrong = [right + 9 * r.int(1, 3) + r.int(1, 8), right + 10, right - 1].filter((w) => w % 9 !== right % 9);
   return { prompt: `${a} × ${b}: which answer passes the digit-sum check?`, answer: num(right), distractors: wrong.map(num), hint: `Digit sum of ${a} × digit sum of ${b} should match the answer's digit sum (mod 9).`, teach: () => NU.digitSumChoice(a, b, [right, ...wrong]) };
 }, { format: 'choice', speedSec: 20 });
-const SPEED = ['cubes', 'sqrt', 'pow2310', 'eq1', 'eq2', 'sq2130', 'x525125', 'div525', 'discount'];
+const SPEED = ['cubes', 'sqrt', 'cbrt', 'zeroneg', 'sq2130', 'x11any', 'x525125', 'div525', 'discount', 'pctshort'];
 add('speed6', 'mental', 'Speed mix', (r, d) => {
   const id = `s6.${r.pick(SPEED)}`;
   return list.find((x) => x.id === id)!.make(r, d);

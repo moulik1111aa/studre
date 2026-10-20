@@ -42,3 +42,20 @@
 
 .whos .key-note{display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 16px;text-align:center;margin:0 auto 6px;max-width:420px}
 .whos .key-note p{margin:0;font-size:15px;font-weight:700}
+
+/* Grown-up lock: phone screen lock or a parent PIN */
+.grownup .gu-note{margin:-2px 0 12px;font-size:16px}
+.grownup .gu-phone{width:100%;max-width:320px;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;gap:8px}
+.grownup .gu-phone svg,.gs-opt b svg{width:20px;height:20px;flex:none}
+.gu-input.dots{letter-spacing:.3em}
+.gs-body{display:flex;flex-direction:column;gap:14px;padding-bottom:24px}
+.gs-lead{margin:4px 2px 0;font-size:17px;line-height:1.45;color:var(--ink-soft)}
+.gs-options{display:flex;flex-direction:column;gap:12px}
+.gs-opt{display:grid;gap:4px;padding:18px;text-align:left;color:var(--ink);font:inherit}
+.gs-opt b{display:flex;align-items:center;gap:8px;font-size:19px}
+.gs-opt span{color:var(--ink-soft);font-size:15px;line-height:1.4}
+.gs-pinbox{display:flex;flex-direction:column;align-items:center;gap:10px;padding:20px 16px;text-align:center}
+.gs-pinbox h2{font-size:24px;margin:0}
+.gs-pinbox .fine{margin:0}
+.gs-pinbox .gu-pad{width:100%;margin:4px auto 8px}
+.gs-pinbox .btn{width:100%;max-width:320px}

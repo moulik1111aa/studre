@@ -12,6 +12,7 @@ import { stagger } from '../render/motion.ts';
 import { whosPlayingScreen } from './whos.ts';
 import { addChildScreen, limitsScreen } from './setup.ts';
 import { voiceScreen } from './voicepick.ts';
+import { lockSetupScreen } from './grownup.ts';
 import { storyScreen } from './tour.ts';
 import { accessState, lockScreen, niceDay } from './access.ts';
 import { freshProgress } from '../core/path.ts';
@@ -70,6 +71,7 @@ export function parentScreen(app: App): Screen {
       <button class="pa-row card voice-row"><b>Reading voice</b><small>${st.voiceName ? 'Chosen voice' : 'Automatic (clearest)'} · ${st.voiceRate < 0.9 ? 'slow' : st.voiceRate > 1 ? 'quick' : 'normal speed'}</small></button>
       <div class="card pa-toggles">${TOGGLES.map((t) => `<label class="toggle-row"><span><b>${t.label}</b><small>${t.note}</small></span><input type="checkbox" role="switch" data-k="${t.key}" ${st[t.key] ? 'checked' : ''}></label>`).join('')}</div>
       ${faceoffRows(app)}
+      <button class="pa-row card lock-row"><b>Grown-up lock</b><small>${st.parentPin ? 'Parent PIN' : 'This phone’s screen lock'}</small></button>
       <h2 class="pa-h">Access key</h2>
       <button class="pa-row card key-row"><b>Access key</b><small class="key-left">Checking…</small></button>
       <h2 class="pa-h">How it works</h2>
@@ -83,6 +85,7 @@ export function parentScreen(app: App): Screen {
   el.querySelector('.add-kid')!.addEventListener('click', () => void app.show(addChildScreen(false)));
   el.querySelector('.limits')!.addEventListener('click', () => void app.show(limitsScreen(false)));
   el.querySelector('.voice-row')!.addEventListener('click', () => void app.show(voiceScreen));
+  el.querySelector('.lock-row')!.addEventListener('click', () => void app.show(lockSetupScreen(parentScreen)));
   void accessState(app).then((st) => {
     const small = el.querySelector('.key-left')!;
     small.textContent = st.locked ? 'No working key' : st.owner ? 'Owner’s phone: always unlocked' : st.until !== undefined ? `Works until ${niceDay(st.until)} · phone code ${st.phone}` : `Phone code ${st.phone}`;

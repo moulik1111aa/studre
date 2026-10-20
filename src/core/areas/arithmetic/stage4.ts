@@ -98,7 +98,9 @@ add('m21nc', 'muldiv', '2-digit × 1-digit, no carrying', (r) => {
 });
 add('m21c', 'muldiv', '2-digit × 1-digit, carrying', (r, d) => {
   const b = r.int(lerp(3, 6, d), 9);
-  const a = r.int(13, 99);
+  // The ones always carry into the tens.
+  let a = r.int(13, 99);
+  while ((a % 10) * b < 10) a = r.int(13, 99);
   return q(`${a} × ${b} = ?`, a * b, r, `Split ${a}: ${Math.floor(a / 10) * 10} × ${b} + ${a % 10} × ${b}.`, [a * b + 10, a * b - 10], () => M.gridMult(a, b));
 });
 add('m10100', 'muldiv', '× 10 and × 100', (r) => {
@@ -243,9 +245,9 @@ add('fshape', 'fdp', 'Fraction of a shape', (r) => {
     teach: () => F.shapeFraction(shaded, parts),
   };
 }, { format: 'choice' });
-add('unitof', 'fdp', 'Unit fraction of a number', (r) => {
-  const dn = r.int(2, 10);
-  const k = r.int(2, 12);
+add('unitof', 'fdp', 'Unit fraction of a number', (r, d) => {
+  const dn = r.int(2, lerp(5, 12, d));
+  const k = r.int(lerp(2, 6, d), lerp(10, 25, d));
   return q(`1/${dn} of ${dn * k} = ?`, k, r, `1/${dn} means share into ${dn} equal parts: ${dn * k} ÷ ${dn}.`, [dn * k - dn, k * 2], () => F.fracOf(1, dn, dn * k));
 });
 add('fracof', 'fdp', 'Fraction of a number', (r) => {
@@ -319,9 +321,10 @@ add('decfrac', 'fdp', 'Decimal ↔ fraction', (r) => {
   }
   return { prompt: `${dcm} as a fraction = ?`, answer: f, distractors: uniqueWrong(f, r.shuffle(others).map((p) => p[0]), () => '1/3'), hint: 'Read the decimal: tenths or hundredths, then simplify.', teach: () => D.decFracLesson(f, dcm, false) };
 }, { format: 'choice' });
-add('cmpdec', 'fdp', 'Compare decimals', (r) => {
+add('cmpdec', 'fdp', 'Compare decimals', (r, d) => {
   const a = r.int(1, 99) / 10;
-  let b = r.chance(0.5) ? Math.floor(a) + r.int(1, 99) / 100 : r.int(1, 99) / 10;
+  // Nearer the hard end, the same whole number with different lengths (0.5 or 0.48).
+  let b = r.chance(0.3 + 0.6 * d) ? Math.floor(a) + r.int(1, 99) / 100 : r.int(1, 99) / 10;
   if (clean(b) === clean(a)) b = clean(a + 0.05);
   const big = Math.max(a, b);
   return { prompt: `Bigger: ${num(a)} or ${num(b)}?`, answer: num(big), distractors: [num(Math.min(a, b))], hint: 'Line up the points; compare ones, then tenths, then hundredths.', teach: () => D.compareDecimals(a, b) };
@@ -358,12 +361,49 @@ add('paise', 'word', 'Money with paise', (r) => {
   const ans = clean(pay - a);
   return { prompt: `${shop[0].toUpperCase() + shop.slice(1)} costs ₹${a.toFixed(2)}. ${name(r)} pays ₹${pay}. Change in ₹?`, answer: num(ans), distractors: nearDec(r, ans, 0.1, [ans + 1, clean(ans - 1)]), hint: `Count up from ₹${a.toFixed(2)} to ₹${pay}.`, teach: () => A.changeLesson(a, pay) };
 }, { format: 'pad-ext', speedSec: 14 });
-add('temp', 'number', 'Negative numbers via temperature', (r) => {
-  const t = r.int(-5, 8);
-  const ch = r.int(2, 10);
-  const colder = r.chance(0.6);
-  const ans = colder ? t - ch : t + ch;
+add('temp', 'number', 'Negative numbers via temperature', (r, d) => {
   const city = r.pick(['Shimla', 'Leh', 'Manali', 'Gulmarg', 'Darjeeling']);
+  // Every question goes below zero; temperatures and changes grow towards the hard end.
+  const big = Math.round(lerp(6, 20, d));
+  if (d > 0.4 && r.chance(0.35)) {
+    // The gap between a night below zero and a day above it.
+    const lo = -r.int(2, big);
+    const hi = r.int(1, big);
+    const warmer = r.chance(0.5);
+    return {
+      prompt: warmer ? `At night it was ${lo}°C in ${city}. By noon it was ${hi}°C. How many degrees warmer?` : `It was ${hi}°C in ${city} at noon and ${lo}°C at night. How many degrees colder?`,
+      answer: num(hi - lo),
+      distractors: nearNumbers(r, hi - lo, [hi + lo, Math.abs(hi + lo) + 1].filter((x) => x > 0 && x !== hi - lo)),
+      hint: `From ${lo} up to 0 is ${-lo}, then up to ${hi} is ${hi} more.`,
+      teach: () => I.tempGapLesson(lo, hi, warmer),
+    };
+  }
+  let t: number;
+  let ch: number;
+  let colder: boolean;
+  const kind = r.int(0, 3);
+  if (kind === 0) {
+    // Down through zero.
+    t = r.int(1, Math.max(2, big - 4));
+    ch = r.int(t + 1, t + big);
+    colder = true;
+  } else if (kind === 1) {
+    // Up through zero.
+    t = -r.int(1, big - 2);
+    ch = r.int(-t + 1, -t + big);
+    colder = false;
+  } else if (kind === 2) {
+    // Colder still.
+    t = -r.int(1, big);
+    ch = r.int(2, big);
+    colder = true;
+  } else {
+    // Warmer, but still below zero.
+    t = -r.int(3, big);
+    ch = r.int(1, -t - 1);
+    colder = false;
+  }
+  const ans = colder ? t - ch : t + ch;
   return {
     prompt: `It is ${t}°C in ${city}. It gets ${ch}° ${colder ? 'colder' : 'warmer'}. Now?`,
     answer: num(ans),
@@ -388,7 +428,8 @@ add('twostep', 'word', 'Two-step word problems', (r) => {
   if (kind === 0) {
     const p = r.int(3, 9);
     const n = r.int(4, 12);
-    const g = r.int(2, p * n - 2);
+    // Give away a real share, so the answer isn't 1 or 2.
+    const g = r.int(Math.round(p * n * 0.25), Math.round(p * n * 0.75));
     return q(`${who} has ${p} packs of ${n} stickers and gives away ${g}. How many are left?`, p * n - g, r, `First ${p} × ${n} = ${p * n}, then take away ${g}.`, [p * n + g, p * n], () => W.packsGiveAway(p, n, g));
   }
   if (kind === 1) {
@@ -405,7 +446,7 @@ add('twostep', 'word', 'Two-step word problems', (r) => {
   }
   const rows = r.int(3, 9);
   const cols = r.int(4, 12);
-  const empty = r.int(1, rows * cols - 1);
+  const empty = r.int(Math.round(rows * cols * 0.15), Math.round(rows * cols * 0.6));
   return q(`A hall has ${rows} rows of ${cols} chairs. ${empty} are empty. How many people are sitting?`, rows * cols - empty, r, `${rows} × ${cols} = ${rows * cols} chairs.`, [rows * cols + empty], () => W.chairsSitting(rows, cols, empty));
 }, { speedSec: 25 });
 add('multfac', 'muldiv', 'Multiples and factors', (r) => {

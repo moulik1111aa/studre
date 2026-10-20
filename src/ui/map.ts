@@ -50,7 +50,7 @@ export function mapScreen(child: Child) {
     const nodes = nodesFor(path).flatMap((n) => {
       if (n.kind !== 'boss') return [n];
       const q = quests.find((x) => x.bossLevelId === n.levels[0].id)!;
-      return questUnlocked(path, p, q) ? [n, { kind: 'quest' as const, stage: n.stage, levels: [], label: 'Side quest', id: q.id }] : [n];
+      return child.tester || questUnlocked(path, p, q) ? [n, { kind: 'quest' as const, stage: n.stage, levels: [], label: 'Side quest', id: q.id }] : [n];
     });
     const front = frontier(path, p);
     const next = path[front];
@@ -86,7 +86,7 @@ export function mapScreen(child: Child) {
         if (n.kind === 'skill') skillNo++;
         const qbest = n.kind === 'quest' ? (p.questBest?.[n.id] ?? 0) : 0;
         const done = n.kind === 'quest' ? (p.levels[n.id]?.stars ?? 0) > 0 : n.levels.every((l) => isDone(p, l));
-        const playable = n.kind === 'quest' || n.levels.some((l) => isPlayable(path, p, l));
+        const playable = n.kind === 'quest' || !!child.tester || n.levels.some((l) => isPlayable(path, p, l));
         const skipped = n.kind !== 'quest' && n.levels.every((l) => isSkipped(p, l)) && !n.levels.some((l) => isPassed(p, l));
         const isCurrent = n.levels.some((l) => l.index === front);
         const x = 50 + Math.sin(k * 0.9) * 30;
@@ -195,7 +195,7 @@ function openSkill(app: App, child: Child, n: Node, path: Level[]): void {
   const p = child.progress;
   const rows = n.levels
     .map((l) => {
-      const playable = isPlayable(path, p, l);
+      const playable = !!child.tester || isPlayable(path, p, l);
       const stars = p.levels[l.id]?.stars ?? 0;
       const tier = (l as Extract<Level, { kind: 'skill' }>).tier;
       return `<button class="tier-row${playable ? '' : ' locked'}" data-l="${l.index}" ${playable ? '' : 'disabled'}>

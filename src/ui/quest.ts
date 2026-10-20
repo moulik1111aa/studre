@@ -4,7 +4,7 @@
 import { html, esc, type App, type Screen } from './app.ts';
 import type { Child } from '../storage/save.ts';
 import { skillById } from '../core/areas/index.ts';
-import { makeQuestion, recordResult, noteAsked } from '../core/path.ts';
+import { makeQuestion, recordResult, noteAsked, forAge } from '../core/path.ts';
 import { createRng } from '../core/rng.ts';
 import { isCorrect, type Question } from '../core/question.ts';
 import { addCoins, addPlayTime, coinsForLevel } from '../core/economy.ts';
@@ -57,7 +57,7 @@ export function questScreen(child: Child, quest: SideQuest) {
       if (over) return;
       if (asked.length >= QUEST.questions) return void finish();
       const skill = rng.pick(skills);
-      const q = makeQuestion(skill, rng, 0.3 + 0.4 * rng.next(), seen, skill.format === 'picture' ? 3 : 4, current?.key, asked.slice(-8));
+      const q = makeQuestion(skill, rng, forAge(0.3 + 0.4 * rng.next(), child.age, skill.stage), seen, skill.format === 'picture' ? 3 : 4, current?.key, asked.slice(-8));
       seen.add(q.key);
       current = q;
       qwrap.innerHTML = `<article class="qcard quick">${q.visual ? visualHtml(q.visual, q.key) : ''}<h2 class="prompt">${q.prompt.replace(/</g, '&lt;')}</h2></article>`;

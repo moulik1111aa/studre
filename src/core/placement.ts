@@ -17,6 +17,8 @@ interface Walk {
   strand: Strand;
   skills: Skill[]; // this strand's skills in path order
   pos: number;
+  /** Never below this index: the first skill at the child's age. */
+  floor: number;
   asked: number;
   last: ParentAnswer | null;
   placed: number | null; // index in `skills` where the child starts
@@ -43,11 +45,13 @@ export class Placement {
     if (stage <= 1) return; // 3–4 year olds simply start at the beginning
     for (const strand of PLACEMENT_STRANDS) {
       const skills = pathSkills.filter((s) => s.strand === strand && s.stage <= Math.min(7, stage + 1));
+      // Levels follow age: a strand never starts below the child's own stage. A strand with
+      // nothing at this age is skipped up to here, like the mental and word skills.
+      const floor = skills.findIndex((s) => s.stage >= stage);
+      if (floor < 0) continue;
       const inStage = skills.map((s, k) => [s, k] as const).filter(([s]) => s.stage === stage);
-      const near = inStage.length ? inStage : skills.map((s, k) => [s, k] as const).filter(([s]) => s.stage === stage - 1);
-      if (!near.length) continue;
-      const pos = near[Math.floor(near.length / 2)][1];
-      this.walks.push({ strand, skills, pos, asked: 0, last: null, placed: null });
+      const pos = inStage.length ? inStage[Math.floor(inStage.length / 2)][1] : floor;
+      this.walks.push({ strand, skills, pos, floor, asked: 0, last: null, placed: null });
     }
   }
 
@@ -81,14 +85,14 @@ export class Placement {
       w.pos = Math.min(max, w.pos + (prev === 'effort' ? 2 : 5));
     } else {
       if (prev === 'yes') {
-        w.placed = Math.max(0, w.pos - 2);
+        w.placed = Math.max(w.floor, w.pos - 2);
         return;
       }
-      if (w.pos === 0) {
-        w.placed = 0;
+      if (w.pos <= w.floor) {
+        w.placed = w.floor;
         return;
       }
-      w.pos = Math.max(0, w.pos - 2);
+      w.pos = Math.max(w.floor, w.pos - 2);
     }
     if (w.asked >= 3) w.placed = w.pos;
   }
@@ -107,11 +111,8 @@ export class Placement {
       for (let k = 0; k < placed; k++) skipped.add(w.skills[k].id);
       startAt[w.strand] = w.skills[placed]?.id;
     }
-    // Strands not walked (and mental/word skills): skip whatever sits in stages below the child's.
-    const walked = new Set(this.walks.map((w) => w.strand));
-    for (const s of this.all) {
-      if (!walked.has(s.strand) && s.stage < stage) skipped.add(s.id);
-    }
+    // Everything below the child's age is open on the map but not in the way.
+    for (const s of this.all) if (s.stage < stage) skipped.add(s.id);
     return { skipped: [...skipped], startAt };
   }
 }
@@ -121,4 +122,10 @@ export function answerFromCheck(correct: number, total = 6): ParentAnswer {
   if (correct >= total - 1) return 'yes';
   if (correct >= Math.ceil(total / 2)) return 'effort';
   return 'not';
+}
+
+/** The child's age stage: skills below it are skipped (open on the map, not in the way). */
+export function belowAge(age: number, skills: Skill[]): string[] {
+  const stage = stageForAge(age);
+  return skills.filter((s) => s.stage < stage).map((s) => s.id);
 }

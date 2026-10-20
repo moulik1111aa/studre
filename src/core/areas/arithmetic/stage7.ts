@@ -363,7 +363,8 @@ add('multistep', 'word', 'Multi-step problems', (r) => {
   }
   if (kind === 1) {
     const s1 = 10 * r.int(3, 8);
-    const s2 = 10 * r.int(3, 8);
+    let s2 = 10 * r.int(3, 8);
+    if (s2 === s1) s2 = s1 === 80 ? 40 : s1 + 20; // two different speeds
     const t = r.pick([1, 2, 3]);
     return q(`${who} drives ${t} h at ${s1} km/h, then ${t} h at ${s2} km/h. Average speed?`, (s1 + s2) / 2, r, 'Total distance ÷ total time.', [s1 + s2], () => R.averageSpeed(t, s1, s2));
   }
@@ -399,7 +400,7 @@ add('missingop7', 'algebra', 'Missing-operator puzzles', (r) => {
 }, { format: 'choice', speedSec: 25 });
 add('grand', 'mental', 'Grand review', (r, d) => {
   // The toughest Stage 7 skills, all answered as choices.
-  const own = ['solvequad', 'factquad', 'simpsurd', 'logs', 'compoundn', 'cross', 'recurring', 'expand2', 'rearrange', 'sq100'];
+  const own = ['solvequad', 'factquad', 'simpsurd', 'logs', 'compoundn', 'cross', 'recurring', 'fracind', 'rearrange', 'sq100'];
   const id = `s7.${r.pick(own)}`;
   return list.find((x) => x.id === id)!.make(r, d);
 }, { format: 'choice', speedSec: 25 });

@@ -1,6 +1,9 @@
 package com.studyhard.app;
 
+import android.app.Activity;
+import android.app.KeyguardManager;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.provider.Settings;
 import android.speech.tts.TextToSpeech;
@@ -29,7 +32,9 @@ import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
+import com.getcapacitor.annotation.ActivityCallback;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import androidx.activity.result.ActivityResult;
 import java.util.Map;
 
 /**
@@ -261,6 +266,39 @@ public class StudyHardPlugin extends Plugin {
         JSObject result = new JSObject();
         result.put("id", id == null ? "" : id);
         call.resolve(result);
+    }
+
+    /** Whether the phone has a screen lock (PIN, pattern, password or fingerprint). */
+    @PluginMethod
+    public void deviceSecure(PluginCall call) {
+        KeyguardManager km = (KeyguardManager) getContext().getSystemService(Context.KEYGUARD_SERVICE);
+        JSObject result = new JSObject();
+        result.put("secure", km != null && km.isDeviceSecure());
+        call.resolve(result);
+    }
+
+    /** The grown-up check: the phone's own screen lock. Resolves { ok } once it closes. */
+    @PluginMethod
+    @SuppressWarnings("deprecation")
+    public void confirmDevice(PluginCall call) {
+        KeyguardManager km = (KeyguardManager) getContext().getSystemService(Context.KEYGUARD_SERVICE);
+        Intent intent = km == null ? null : km.createConfirmDeviceCredentialIntent(call.getString("title", "Grown-ups only"), call.getString("text", ""));
+        if (intent == null) {
+            JSObject result = new JSObject();
+            result.put("ok", false);
+            result.put("none", true);
+            call.resolve(result);
+            return;
+        }
+        startActivityForResult(call, intent, "confirmDeviceDone");
+    }
+
+    @ActivityCallback
+    private void confirmDeviceDone(PluginCall call, ActivityResult result) {
+        if (call == null) return;
+        JSObject r = new JSObject();
+        r.put("ok", result.getResultCode() == Activity.RESULT_OK);
+        call.resolve(r);
     }
 
     @PluginMethod

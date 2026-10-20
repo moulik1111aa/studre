@@ -9,6 +9,8 @@ import { whosPlayingScreen } from './whos.ts';
 import { setPace } from '../core/rewards.ts';
 import { recheckJars } from '../core/economy.ts';
 import { storyScreen } from './tour.ts';
+import { lockSetupScreen } from './grownup.ts';
+import { isOwnerCode } from '../core/access.ts';
 
 /** [multiplier, label, note] — relative to the calibrated pace (treat ≈ every 10 days, big toy ≈ 3 months). */
 const TREAT_PACES: [number, string, string][] = [[0.3, '3 days', 'Often'], [0.7, '1 week', 'Faster'], [1, '10 days', 'Normal'], [3, '1 month', 'Rare']];
@@ -24,7 +26,9 @@ export function welcomeScreen(app: App): Screen {
     <p class="fine">New here? The tour shows how Study Hard works. A grown-up sets things up, in about 2 minutes.</p>
   </section>`);
   const setUp = async () => {
-    if (await app.grownUp('Setting up')) void app.show(addChildScreen(true));
+    if (!(await app.grownUp('Setting up'))) return;
+    // First, how grown-ups unlock the parent area from now on (not a times question).
+    void app.show(app.save.data.settings.parentPin ? addChildScreen(true) : lockSetupScreen(addChildScreen(true), true));
   };
   el.querySelector('.start')!.addEventListener('click', () => void setUp());
   el.querySelector('.tour-btn')!.addEventListener('click', () => void app.show(storyScreen({ label: 'Set up for my child', go: () => void setUp() }, welcomeScreen), 'liquid'));
@@ -69,15 +73,19 @@ export function addChildScreen(firstRun: boolean) {
     el.querySelector('.minus')!.addEventListener('click', () => (ageEl.textContent = String((age = Math.max(3, age - 1)))));
     el.querySelector('.plus')!.addEventListener('click', () => (ageEl.textContent = String((age = Math.min(16, age + 1)))));
     el.querySelector('.back-btn')!.addEventListener('click', () => void app.show(firstRun ? welcomeScreen : whosPlayingScreen));
-    el.querySelector('.save')!.addEventListener('click', () => {
+    el.querySelector('.save')!.addEventListener('click', async () => {
       const name = el.querySelector<HTMLInputElement>('.name')!.value.trim();
       if (!name) {
         app.toast('Please type a name.');
         el.querySelector<HTMLInputElement>('.name')!.focus();
         return;
       }
-      const c = newChild(name, age, avatar, app.today);
+      // The owner code as the name makes a tester: every level and boss open, no time limit.
+      const tester = /^\d{7}$/.test(name) && (await isOwnerCode(name));
+      const c = newChild(tester ? 'Tester' : name, age, avatar, app.today);
+      if (tester) Object.assign(c, { tester: true, placed: true, together: 0 });
       app.save.update((d) => d.children.push(c));
+      if (tester) app.toast('Tester made: every level is open.');
       void app.show(firstRun ? moreChildrenScreen : whosPlayingScreen);
     });
     return { el, mounted: () => stagger(el.querySelectorAll('.ac-preview, .field, .save'), { gap: 80 }) };

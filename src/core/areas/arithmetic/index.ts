@@ -25,5 +25,50 @@ export const ARITHMETIC_STAGES: StageInfo[] = [
   { n: 7, name: 'Maths Ninja', ages: '15–16', world: 'mountain' },
 ];
 
-/** Skills per stage, in path order. Stages not yet built are empty. */
-export const ARITHMETIC_SKILLS: Skill[][] = [STAGE1, STAGE2, STAGE3, STAGE4, STAGE5, STAGE6, STAGE7];
+/**
+ * Skills that suit a younger age than the file they are written in (checked against the
+ * school year for each age: NCERT class ≈ age − 5). Ids never change, so progress stays;
+ * only the stage they are played in does. Each goes in after `after`, in this order.
+ */
+export const MOVES: { id: string; after: string }[] = [
+  // Stage 5 → 4 (ages 9–10): small-number puzzles and strategies.
+  { id: 's5.compens', after: 's4.estimate' },
+  { id: 's5.inverse', after: 's4.d10100' },
+  { id: 's5.missingop', after: 's4.bodmas0' },
+  // Stage 6 → 5 (ages 11–12): class 7 work on profit, interest, HCF/LCM, algebra and powers.
+  { id: 's6.profit', after: 's5.pctinc' },
+  { id: 's6.simpleint', after: 's6.profit' },
+  { id: 's6.subst', after: 's5.brackets' },
+  { id: 's6.liketerms', after: 's6.subst' },
+  { id: 's6.eq1', after: 's6.liketerms' },
+  { id: 's6.eq2', after: 's6.eq1' },
+  { id: 's6.hcflcmword', after: 's5.lcm' },
+  { id: 's6.pow2310', after: 's5.sq20' },
+  { id: 's6.powmul', after: 's6.pow2310' },
+  { id: 's6.powdiv', after: 's6.powmul' },
+  { id: 's6.powpow', after: 's6.powdiv' },
+  // Stage 7 → 6 (ages 13–14): class 8 identities and first factorising.
+  { id: 's7.sqplus', after: 's6.expand1' },
+  { id: 's7.sqminus', after: 's7.sqplus' },
+  { id: 's7.dots', after: 's7.sqminus' },
+  { id: 's7.expand2', after: 's7.dots' },
+  { id: 's7.factcommon', after: 's7.expand2' },
+  { id: 's7.diffsq', after: 's7.factcommon' },
+];
+
+function arrange(stages: Skill[][]): Skill[][] {
+  const out = stages.map((st) => [...st]);
+  for (const m of MOVES) {
+    const from = out.findIndex((st) => st.some((s) => s.id === m.id));
+    const to = out.findIndex((st) => st.some((s) => s.id === m.after));
+    if (from < 0 || to < 0) throw new Error(`skill move ${m.id} → after ${m.after}: not found`);
+    const skill = out[from].find((s) => s.id === m.id)!;
+    out[from] = out[from].filter((s) => s !== skill);
+    const at = out[to].findIndex((s) => s.id === m.after);
+    out[to].splice(at + 1, 0, { ...skill, stage: to + 1 });
+  }
+  return out;
+}
+
+/** Skills per stage, in path order. */
+export const ARITHMETIC_SKILLS: Skill[][] = arrange([STAGE1, STAGE2, STAGE3, STAGE4, STAGE5, STAGE6, STAGE7]);

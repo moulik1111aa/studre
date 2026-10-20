@@ -41,7 +41,19 @@ export interface Child {
   undo?: UndoEntry[];
   /** Has seen Biscuit's tips on the map (shown once; the map's ? button plays them again). */
   toured?: boolean;
+  /** This child's reading voice (none: the parent's choice) and its pitch. */
+  voiceName?: string;
+  voicePitch?: number;
+  /** Has picked a voice (asked once, before the first map). */
+  voicePicked?: boolean;
+  /** Practice-together levels left (the first few levels, played with a grown-up). */
+  together?: number;
+  /** The owner's tester profile: every level open, no daily limit. */
+  tester?: boolean;
 }
+
+/** The first levels a new child plays together with a grown-up. */
+export const TOGETHER_LEVELS = 3;
 
 export interface Settings {
   limitMinutes: number;
@@ -70,6 +82,8 @@ export interface Settings {
   confirmAnswers: boolean;
   /** After a wrong answer, a short step-by-step lesson on how to work it out. */
   teach: boolean;
+  /** Parent PIN for the grown-up check, as "salt:hash" (none: the phone's screen lock). */
+  parentPin?: string;
 }
 
 export type Theme = 'glass' | 'schoolbook' | 'precision';
@@ -151,6 +165,7 @@ export function newChild(name: string, age: number, avatar: number, today: strin
     bossesBeaten: [],
     createdDay: today,
     challenge: 0,
+    together: TOGETHER_LEVELS,
   };
 }
 
@@ -186,6 +201,8 @@ function parse(raw: string | null): SaveData | null {
       children: d.children.map((c) => ({
         ...newChild(c.name ?? 'Champ', c.age ?? 6, c.avatar ?? 0, c.createdDay ?? ''),
         ...c,
+        // Children from before practice-together don't need it.
+        together: c.together ?? 0,
         progress: { ...freshProgress(), ...c.progress },
         wallet: { ...freshWallet(), ...c.wallet },
         stats: { ...{ answered: 0, correct: 0, secondsByDay: {} }, ...c.stats },

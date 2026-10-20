@@ -14,6 +14,9 @@ export function seedDemo(app: App, levelId: string, opts: { coins?: number; age?
   c.placed = true;
   // Demo saves skip the first-visit map tips unless asked for (`&tips`).
   c.toured = !opts.tips;
+  // …and the first-run voice choice and practice-together levels.
+  c.voicePicked = true;
+  c.together = 0;
   for (const l of app.path.slice(0, at)) c.progress.levels[l.id] = { stars: 3, passes: 1 };
   chooseReward(c.wallet, 'sweets.milk-chocolate-bar');
   chooseReward(c.wallet, 'toys.small-remote-control-car');

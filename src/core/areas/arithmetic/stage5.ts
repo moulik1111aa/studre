@@ -234,10 +234,10 @@ add('pctany', 'fdp', 'Any % of', (r) => {
   return q(`${p}% of ${n} = ?`, ans, r, `10% of ${n} is ${n / 10}. Build ${p}% from that.`, [n / 10, ans + n / 10], undefined, () => PC.pctOfLesson(p, n));
 });
 add('pcttotal', 'fdp', 'What percent of the total?', (r) => {
-  const total = r.pick([20, 25, 40, 50, 80, 200]);
-  const p = r.pick([10, 20, 25, 40, 50, 60, 75, 80]);
+  // Only whole-number parts ("12.5 out of 25" is not a thing to count).
+  const pairs = [20, 25, 40, 50, 80, 200, 250, 400].flatMap((total) => [10, 20, 25, 40, 50, 60, 75, 80, 35, 15].filter((p) => Number.isInteger((total * p) / 100)).map((p) => [total, p] as const));
+  const [total, p] = r.pick(pairs);
   const part = (total * p) / 100;
-  if (!Number.isInteger(part)) return q(`${total / 2} out of ${total} = ?%`, 50, r, 'Half is 50%.', [25, 75], undefined, () => PC.pctOfTotal(total / 2, total));
   return q(`${part} out of ${total} = ?%`, p, r, `${part}/${total}, then make it out of 100.`, [part, Math.round(100 - p)], undefined, () => PC.pctOfTotal(part, total));
 });
 add('pctinc', 'fdp', 'Simple percentage increase', (r) => {
@@ -294,15 +294,22 @@ add('numline', 'number', 'Negatives on a number line', (r) => {
   const ans = right ? a + step : a - step;
   return q(`Start at ${a}. Move ${step} to the ${right ? 'right' : 'left'}. Where are you?`, ans, r, 'Right is bigger, left is smaller.', [right ? a - step : a + step], -40, () => NU.moveLesson(a, step, right));
 });
-const intOp = (op: '+' | '−' | '×' | '÷') => (r: Rng): Made => {
+const intOp = (op: '+' | '−' | '×' | '÷') => (r: Rng, d = 0.5): Made => {
   const s = () => (r.chance(0.5) ? -1 : 1);
-  let a = s() * r.int(1, 15);
-  const b = s() * r.int(1, op === '×' || op === '÷' ? 9 : 15);
-  let ans: number;
-  if (op === '÷') {
-    ans = s() * r.int(1, 9);
-    a = ans * b;
-  } else ans = op === '+' ? a + b : op === '−' ? a - b : a * b;
+  // Bigger numbers nearer the hard end; at least one negative every time.
+  const big = Math.round(lerp(12, 40, d));
+  const small = op === '×' || op === '÷' ? Math.round(lerp(9, 15, d)) : big;
+  let a = 0;
+  let b = 0;
+  let ans = 0;
+  do {
+    a = s() * r.int(2, op === '×' || op === '÷' ? Math.min(big, 25) : big);
+    b = s() * r.int(2, small);
+    if (op === '÷') {
+      ans = s() * r.int(2, 12);
+      a = ans * b;
+    } else ans = op === '+' ? a + b : op === '−' ? a - b : a * b;
+  } while (a > 0 && b > 0 && (op !== '÷' || ans > 0));
   const show = (x: number) => (x < 0 ? `(−${-x})` : String(x));
   const rule = op === '+' || op === '−' ? 'Use a number line; subtracting a negative is adding.' : 'Same signs give +, different signs give −.';
   return { prompt: `${a < 0 ? `−${-a}` : a} ${op} ${show(b)} = ?`, answer: num(ans), distractors: nearNumbers(r, ans, [-ans || 1, op === '−' ? a + b : op === '+' ? a - b : -ans], { min: -500 }), hint: rule, teach: () => (op === '+' || op === '−' ? NU.intAddSub(a, b, op) : NU.intMulDiv(a, b, op)) };
@@ -377,10 +384,14 @@ add('hcf', 'muldiv', 'HCF', (r) => {
   if (a === b) a++;
   return q(`HCF of ${g * a} and ${g * b} = ?`, g, r, 'The biggest number that divides both.', [g * a, gcd(g * a, g * b) * 2], undefined, () => NU.hcfLesson(g * a, g * b));
 });
-add('lcm', 'muldiv', 'LCM', (r) => {
-  const a = r.int(2, 12);
-  let b = r.int(2, 12);
-  if (b === a) b++;
+add('lcm', 'muldiv', 'LCM', (r, d) => {
+  // Mostly pairs that share a factor (LCM of 12 and 18 is 36, not 216).
+  let a = 0;
+  let b = 0;
+  do {
+    a = r.int(2, Math.round(lerp(12, 24, d)));
+    b = r.int(2, Math.round(lerp(12, 30, d)));
+  } while (b === a || (gcd(a, b) === 1 && !r.chance(0.25)));
   const L = lcm(a, b);
   return q(`LCM of ${a} and ${b} = ?`, L, r, 'The smallest number both go into.', [a * b === L ? L * 2 : a * b, gcd(a, b)], undefined, () => NU.lcmLesson(a, b));
 });

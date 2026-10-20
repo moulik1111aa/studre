@@ -5,11 +5,25 @@
 
 import { test, expect, type Page } from 'playwright/test';
 
+const PIN = '2468';
+/** The grown-up check: the parent PIN once set, else the times question. */
 async function grownUp(page: Page): Promise<void> {
   const t = (await page.locator('.grownup h2').textContent()) ?? '';
-  const [, a, b] = /(\d+) × (\d+)/.exec(t)!;
-  for (const d of String(Number(a) * Number(b))) await page.locator(`.gu-pad [data-k="${d}"]`).click();
+  const m = /(\d+) × (\d+)/.exec(t);
+  const typed = m ? String(Number(m[1]) * Number(m[2])) : PIN;
+  for (const d of typed) await page.locator(`.gu-pad [data-k="${d}"]`).click();
   await page.locator('.grownup .ok').click();
+}
+
+/** Setup's grown-up lock: make the parent PIN (this browser has no screen lock). */
+async function makePin(page: Page): Promise<void> {
+  await expect(page.locator('.gu-setup')).toBeVisible();
+  await page.click('.gs-pin');
+  for (const round of [0, 1]) {
+    for (const d of PIN) await page.locator(`.gs-pinbox [data-k="${d}"]`).click();
+    await page.click('.gs-next');
+    if (!round) await expect(page.locator('.gs-pinbox h2')).toHaveText('Type it again');
+  }
 }
 
 /** Answer every question correctly until `done` appears. */
@@ -74,6 +88,7 @@ test('first run: setup, placement, rewards, first level', async ({ page }) => {
   await expect(page.locator('.welcome')).toBeVisible({ timeout: 20_000 });
   await page.click('.start');
   await grownUp(page);
+  await makePin(page);
   await page.fill('.name', 'Riya');
   await page.click('.plus');
   await page.click('.plus');
@@ -96,6 +111,11 @@ test('first run: setup, placement, rewards, first level', async ({ page }) => {
   await expect(page.locator('.rewards')).toContainText('Pick a big goal', { timeout: 5000 });
   await page.locator('.rw-card').first().click();
   await page.click('.pick');
+  // First: the child picks a reading voice.
+  await expect(page.locator('.voicechoice')).toBeVisible({ timeout: 5000 });
+  await expect(page.locator('.vc-go')).toBeDisabled();
+  await page.locator('.vc-card').nth(1).click();
+  await page.click('.vc-go');
   await expect(page.locator('.map')).toBeVisible({ timeout: 5000 });
   // First visit: Biscuit's tips; skip them.
   await expect(page.locator('.tips-ov')).toBeVisible({ timeout: 5000 });
@@ -107,9 +127,16 @@ test('first run: setup, placement, rewards, first level', async ({ page }) => {
   expect(save.settings.timeUpMode).toBe('keep');
   expect(save.children[0].placed).toBe(true);
   expect(Object.keys(save.children[0].progress.skipped).length).toBeGreaterThan(0);
+  expect(save.children[0].voicePicked).toBe(true);
+  expect(save.children[0].together).toBe(3);
+  // A parent PIN, not a times question, from now on.
+  expect(save.settings.parentPin).toMatch(/:/);
 
+  // The first level is practice together: a word for the grown-up first.
   await page.click('.play-next');
   await expect(page.locator('.play')).toBeVisible();
+  await expect(page.locator('.play-title b')).toContainText('Practice together');
+  await page.click('.sheet .btn.mint');
   await playThrough(page, '.result');
   await expect(page.locator('.res-title')).not.toHaveText('So close!');
   await expect(page.locator('.rstar.on')).toHaveCount(3);
@@ -396,13 +423,14 @@ test('quick tour: the story from the welcome screen, then setup', async ({ page 
   await expect(page.locator('.welcome')).toBeVisible();
   await page.click('.tour-btn');
   await expect(page.locator('.story')).toBeVisible();
-  for (let i = 1; i < 8; i++) {
-    await expect(page.locator('.st-count')).toHaveText(`${i} of 8`);
+  for (let i = 1; i < 9; i++) {
+    await expect(page.locator('.st-count')).toHaveText(`${i} of 9`);
     await page.click('.st-next');
   }
   await expect(page.locator('.st-next')).toHaveText('Set up for my child');
   await page.click('.st-next');
   await grownUp(page);
+  await makePin(page);
   await expect(page.locator('.add-child')).toBeVisible();
   // Skip goes back to the welcome screen.
   await page.goto('/?debug&noloader');

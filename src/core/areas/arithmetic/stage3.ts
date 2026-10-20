@@ -146,9 +146,26 @@ add('a33nc', 'addsub', '3-digit + 3-digit, no carrying', (r) => {
   const b = 100 * h2 + 10 * t2 + o2;
   return q(`${a} + ${b} = ?`, a + b, r, undefined, [], () => A.columnAdd([a, b]));
 });
-add('a33c', 'addsub', '3-digit + 3-digit, carrying', (r) => {
-  const a = r.int(105, 599);
-  const b = r.int(105, 399);
+add('a33c', 'addsub', '3-digit + 3-digit, carrying', (r, d) => {
+  // Always at least one carry; nearer the hard end, the ones and the tens both carry.
+  const both = r.chance(0.2 + 0.6 * d);
+  const onesCarry = both || r.chance(0.7);
+  const [o1, o2] = pairOnes(r, onesCarry);
+  const c = onesCarry ? 1 : 0;
+  const tensCarry = both || !onesCarry;
+  let t1: number;
+  let t2: number;
+  if (tensCarry) {
+    t1 = r.int(1, 9);
+    t2 = r.int(Math.max(0, 10 - c - t1), 9);
+  } else {
+    t1 = r.int(0, 9 - c);
+    t2 = r.int(0, 9 - c - t1);
+  }
+  const h1 = r.int(1, 5);
+  const h2 = r.int(1, Math.min(3, 8 - h1));
+  const a = 100 * h1 + 10 * t1 + o1;
+  const b = 100 * h2 + 10 * t2 + o2;
   return q(`${a} + ${b} = ?`, a + b, r, 'Line up ones, tens, hundreds; carry when a column passes 9.', [a + b - 10, a + b - 100], () => A.columnAdd([a, b]));
 });
 add('miss100', 'addsub', 'Missing addend to 100', (r) => {
@@ -226,9 +243,22 @@ add('s33nb', 'addsub', '3-digit − 3-digit, no borrowing', (r) => {
   const b = 100 * db[0] + 10 * db[1] + db[2];
   return q(`${a} − ${b} = ?`, a - b, r, undefined, [], () => A.columnSub(a, b));
 });
-add('s33b', 'addsub', '3-digit − 3-digit, borrowing', (r) => {
-  const a = r.int(300, 999);
-  const b = r.int(101, a - 50);
+add('s33b', 'addsub', '3-digit − 3-digit, borrowing', (r, d) => {
+  // Always at least one borrow; nearer the hard end, two (sometimes across a zero: 503 − 267).
+  const want = r.chance(0.2 + 0.6 * d) ? 2 : 1;
+  const borrows = (x: number, y: number) => {
+    const ones = x % 10 < y % 10 ? 1 : 0;
+    const tens = Math.floor(x / 10) % 10 - ones < Math.floor(y / 10) % 10 ? 1 : 0;
+    return ones + tens;
+  };
+  let a = 0;
+  let b = 0;
+  for (let t = 0; t < 400; t++) {
+    a = r.int(300, 999);
+    if (want === 2 && d > 0.6 && r.chance(0.3)) a = 100 * Math.floor(a / 100) + (a % 10); // a zero in the tens
+    b = r.int(101, a - 50);
+    if (borrows(a, b) === want) break;
+  }
   return q(`${a} − ${b} = ?`, a - b, r, 'Borrow from the next column when the top digit is smaller.', [a - b + 10, a - b - 10], () => A.columnSub(a, b));
 });
 add('howmanymore', 'word', 'How many more?', (r) => {

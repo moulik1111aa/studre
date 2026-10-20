@@ -4,7 +4,7 @@
 
 import { html, esc, type App, type Screen } from './app.ts';
 import type { Child } from '../storage/save.ts';
-import { type Level, makeRound, makeQuestion, replaceQuestion, recordResult, starsFor, noteAsked } from '../core/path.ts';
+import { type Level, makeRound, makeQuestion, replaceQuestion, recordResult, starsFor, noteAsked, forAge } from '../core/path.ts';
 import { skillById } from '../core/areas/index.ts';
 import { createRng } from '../core/rng.ts';
 import { isCorrect, spoken, type Question } from '../core/question.ts';
@@ -139,7 +139,7 @@ function pauseSheet(app: App, child: Child, clock: Clock, onResume: () => void, 
 
 function minionScreen(app: App, child: Child, level: Extract<Level, { kind: 'review' }>): Screen {
   const rng = createRng(`${child.id}:${level.id}:${Date.now()}`);
-  const round = makeRound(level, skillById, child.progress, rng, [], [], child.challenge ?? 0);
+  const round = makeRound(level, skillById, child.progress, rng, [], [], child.challenge ?? 0, child.age);
   const first = skillById(level.skillIds[0])!;
   const little = first.stage <= 2;
   const minion = minionFor(level.stage, level.n);
@@ -346,7 +346,7 @@ function bossScreen(app: App, child: Child, level: Extract<Level, { kind: 'boss'
     const pool = phases[Math.min(fight.phase, phases.length - 1)].length ? phases[Math.min(fight.phase, phases.length - 1)] : phases.flat();
     const skill = rng.pick(pool);
     const d = (mode === 'defend' ? 0.4 : 0.5 + 0.15 * fight.phase + 0.2 * rng.next()) + 0.15 * (child.challenge ?? 0);
-    const q = makeQuestion(skill, rng, Math.min(1, d), new Set([...seen, ...(child.progress.history[skill.id] ?? [])]), skill.format === 'picture' ? 3 : 4, asked.at(-1)?.key, asked.slice(-10));
+    const q = makeQuestion(skill, rng, forAge(Math.min(1, d), child.age, skill.stage), new Set([...seen, ...(child.progress.history[skill.id] ?? [])]), skill.format === 'picture' ? 3 : 4, asked.at(-1)?.key, asked.slice(-10));
     seen.add(q.key);
     current = q;
     asked.push(q);
