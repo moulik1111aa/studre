@@ -38,7 +38,8 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
     const boost = Math.min(2, (child.challenge ?? 0) + (harder ? 1 : 0));
     const round: Round = makeRound(level, skillById, child.progress, rng, earlier, warm, boost, child.age);
     // The first few levels are played together with a grown-up: a wrong answer shows how,
-    // then the child tries the same question again. No timer, nothing lost, coins still count.
+    // then the child tries a twin question (same kind, new numbers, so the answer can't just
+    // be copied). No timer. Only first tries count towards the score and coins.
     const firstLevels = (child.together ?? 0) > 0;
     const together = firstLevels || !!child.assisted;
     const rules = together ? { ...round.rules, timer: 0 } : round.rules;
@@ -85,6 +86,8 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
     const prizeEl = el.querySelector<HTMLElement>('.prize')!;
     let misses = 0;
     let retries = 0;
+    // Answering a twin after a slip: it's practice, not score.
+    let retrying = false;
     const paintPrize = () => {
       let best: number;
       if (rules.streak) best = masterFraction(Math.max(10, i - streak + 10));
@@ -112,7 +115,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
       const prompt = q.prompt;
       qwrap.innerHTML = `<article class="qcard${q.visual ? ' has-vis' : ''}">
         ${q.visual ? visualHtml(q.visual, q.key) : ''}
-        ${again ? '<p class="again-note">🤝 Try it again together</p>' : ''}
+        ${again ? '<p class="again-note">🤝 Now try one like it</p>' : ''}
         <h2 class="prompt${prompt.length > 34 ? ' long' : ''}${prompt.length > 70 ? ' xlong' : ''}">${escPrompt(prompt)}</h2>
         <div class="q-tools">
           <button class="icon-btn say" aria-label="Read it again">${ICONS.speaker}</button>
@@ -142,7 +145,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
       });
       // Every question is read aloud (unless the parent switched reading off).
       // Assisted: always read aloud, even if reading is switched off.
-      app.voice.say(again ? `Try again. ${q.speak ?? spoken(q.prompt)}` : q.speak ?? spoken(q.prompt), undefined, !!child.assisted);
+      app.voice.say(again ? `Now try this one. ${q.speak ?? spoken(q.prompt)}` : q.speak ?? spoken(q.prompt), undefined, !!child.assisted);
       startTimer();
     };
 
@@ -214,13 +217,13 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
       app.voice.stop();
       pending = () => undefined;
       if (ok) {
-        correct++;
+        if (!retrying) correct++;
         streak++;
         app.sfx.correct(streak);
         app.haptics.match(streak);
         card.classList.add('right');
         btn?.classList.add('right');
-        dot?.classList.add('on');
+        if (!retrying) dot?.classList.add('on');
         if (!reducedMotion()) card.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.015)' }, { transform: 'scale(1)' }], { duration: 360, easing: EASE_OUT });
         // Always show and say the answer, right or wrong.
         const yes = html(`<div class="reveal good">${ICONS.check} Right! It’s <b>${prettyAnswer(q.answer)}</b></div>`);
@@ -230,14 +233,14 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
         await wait(app.save.data.settings.voice ? 1500 : 900);
       } else {
         streak = 0;
-        if (!together) misses++;
+        if (!retrying) misses++;
         paintPrize();
         if (!reducedMotion()) prizeEl.animate([{ transform: 'scale(1)' }, { transform: 'scale(.9)' }, { transform: 'scale(1)' }], { duration: 300 });
         app.sfx.wrong();
         btn?.classList.add('wrong');
         shake(btn ?? card);
         if (rules.streak) dots.querySelectorAll('i').forEach((d) => d.classList.remove('on'));
-        else if (!together) dot?.classList.add('miss');
+        else if (!retrying) dot?.classList.add('miss');
         const typedNote = value !== '__timeout__' && !btn ? `You typed <b>${prettyAnswer(value.replace(/−/g, '-'))}</b>. ` : '';
         const reveal = html(`<div class="reveal">${value === '__timeout__' ? 'Time’s up! ' : typedNote}The answer is <b>${prettyAnswer(q.answer)}</b></div>`);
         card.appendChild(reveal);
@@ -254,14 +257,19 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
           await wait(2000);
         }
       }
-      // Together: the same question once more after a slip (twice at most), then move on.
+      // Together: a twin question after a slip (twice at most), then move on.
       if (!ok && together && retries < 2) {
         retries++;
+        retrying = true;
         done = false;
-        show(q, true);
+        const s2 = skillById(q.skillId) ?? skill;
+        const twin = replaceQuestion(q, s2, rng, new Set([...asked.map((x) => x.key), ...(child.progress.history[s2.id] ?? [])]), questions);
+        asked.push(twin);
+        show(twin, true);
         return;
       }
       retries = 0;
+      retrying = false;
       i++;
       const finished = rules.streak ? streak >= rules.streak || i >= rules.count : i >= questions.length;
       if (finished) return finish();
@@ -351,7 +359,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
         paintPrize();
         if (firstLevels && child.together === TOGETHER_LEVELS) {
           // The very first one: a word for the grown-up.
-          const { result } = app.sheet(`<h2>🤝 Play this one together</h2><p>Sit with ${esc(child.name)} for the first ${TOGETHER_LEVELS} levels. If an answer is wrong, Plus shows how and ${esc(child.name)} tries again. Nothing is lost, and coins still count.</p>`, [{ label: 'Let’s play', value: true, kind: 'mint', back: true }], 'Practice together');
+          const { result } = app.sheet(`<h2>🤝 Play this one together</h2><p>Sit with ${esc(child.name)} for the first ${TOGETHER_LEVELS} levels. If an answer is wrong, Plus shows how and ${esc(child.name)} tries one like it. Only first tries count for coins, so help them think, not answer.</p>`, [{ label: 'Let’s play', value: true, kind: 'mint', back: true }], 'Practice together');
           void result.then(() => show(questions[0]));
         } else {
           // Plus says a word first: welcome back, last time, a retry, or a bit of chat.

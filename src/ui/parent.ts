@@ -149,7 +149,7 @@ export function parentScreen(app: App): Screen {
     b.addEventListener('click', () => {
       const c = app.save.data.children.find((k) => k.id === b.dataset.id)!;
       app.save.update(() => (c.assisted = !c.assisted));
-      app.toast(c.assisted ? `Assisted mode on: play alongside ${c.name}. No timers, and a slip means try again.` : `Assisted mode off for ${c.name}.`);
+      app.toast(c.assisted ? `Assisted mode on: play alongside ${c.name}. No timers; after a slip they try one like it.` : `Assisted mode off for ${c.name}.`);
       void app.show(parentScreen);
     }),
   );

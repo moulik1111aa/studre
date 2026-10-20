@@ -77,7 +77,7 @@ export function voiceChoiceScreen(child: Child, then: () => void) {
       <div class="vc-list"><p class="fine">Finding voices…</p></div>
       <button class="btn mint vc-go" disabled>Choose a voice</button>
       <p class="fine vc-later">You can change it later in the parent area.</p>
-      <p class="card vc-together">🤝 <b>Grown-up:</b> please sit with ${esc(child.name)} for the first 3 levels. They’re practice rounds: a slip costs nothing, and coins still count.</p>
+      <p class="card vc-together">🤝 <b>Grown-up:</b> please sit with ${esc(child.name)} for the first 3 levels. They’re practice rounds: after a slip Plus shows how and they try one like it. Only first tries earn coins.</p>
     </section>`);
     const list = el.querySelector<HTMLElement>('.vc-list')!;
     const go = el.querySelector<HTMLButtonElement>('.vc-go')!;
