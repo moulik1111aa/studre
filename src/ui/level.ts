@@ -42,7 +42,9 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
     // be copied). No timer. Only first tries count towards the score and coins.
     const firstLevels = (child.together ?? 0) > 0;
     const together = firstLevels || !!child.assisted;
-    const rules = together ? { ...round.rules, timer: 0 } : round.rules;
+    // Timed questions follow the parent's setting (more time, or none).
+    const scale = app.save.data.settings.timerScale ?? 1;
+    const rules = { ...round.rules, timer: together || !scale ? 0 : Math.round(round.rules.timer * scale) };
     const { questions } = round;
     const el = html(`<section class="screen play" style="${worldVars(level.stage)}" aria-label="${skill.name}">
       ${ambientHtml(level.stage, 6)}

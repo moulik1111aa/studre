@@ -98,6 +98,8 @@ export interface Settings {
   /** Chosen reading voice ('' = the best one automatically) and its speed. */
   voiceName: string;
   voiceRate: number;
+  /** Time on timed questions: 1 normal, 1.5 relaxed, 2 extra time, 0 no timer (boss fights then get 3×). */
+  timerScale: number;
   /** Look of the app: 'playground' (default for new installs), 'glass', 'schoolbook' or 'precision'. */
   theme: Theme;
   /** Rewards the family added themselves. */
@@ -168,6 +170,7 @@ export const freshSettings = (): Settings => ({
   voice: true,
   voiceName: '',
   voiceRate: 0.95,
+  timerScale: 1.5,
   theme: 'playground',
   ownRewards: [],
   fx3d: true,

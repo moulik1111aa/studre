@@ -36,6 +36,8 @@ const paceText = (v: number, jar: 'treat' | 'goal'): string => {
   return days < 10 ? `every ${Math.round(days)} days` : days < 26 ? `every ${Math.round(days / 7)} weeks`.replace('every 1 weeks', 'weekly') : `in ${Math.round(days / 30)} month${Math.round(days / 30) === 1 ? '' : 's'}`;
 };
 
+const TIMER_CHOICES: [number, string][] = [[1, 'Normal'], [1.5, 'Relaxed'], [2, 'Extra time'], [0, 'No timer']];
+
 const TOGGLES: { key: keyof Settings; label: string; note: string }[] = [
   { key: 'holiday', label: 'Holiday mode', note: 'Rewards don’t melt while you’re away or unwell.' },
   { key: 'voice', label: 'Read questions aloud', note: 'Uses the phone’s English voice.' },
@@ -71,6 +73,8 @@ export function parentScreen(app: App): Screen {
       <div class="themes" role="radiogroup" aria-label="Look of the app">${THEME_CHOICES.map((t) => `<button class="theme-tile th-${t.id}${st.theme === t.id ? ' on' : ''}" role="radio" aria-checked="${st.theme === t.id}" data-theme-id="${t.id}"><span class="th-swatch"><i></i><i></i><i></i></span><b>${t.name}</b><small>${t.note}</small></button>`).join('')}</div>
       <h2 class="pa-h">Settings</h2>
       <button class="pa-row card voice-row"><b>Reading voice</b><small>${st.voiceName ? 'Chosen voice' : 'Automatic (clearest)'} · ${st.voiceRate < 0.9 ? 'slow' : st.voiceRate > 1 ? 'quick' : 'normal speed'}</small></button>
+      <div class="card pa-timer"><b>Time on timed questions</b><small>Speed and Master levels have a timer. Give more time if it feels rushed.</small>
+        <div class="seg seg4">${TIMER_CHOICES.map(([v, t]) => `<button class="seg-b${(st.timerScale ?? 1) === v ? ' on' : ''}" data-ts="${v}"><b>${t}</b></button>`).join('')}</div></div>
       <div class="card pa-toggles">${TOGGLES.map((t) => `<label class="toggle-row"><span><b>${t.label}</b><small>${t.note}</small></span><input type="checkbox" role="switch" data-k="${t.key}" ${st[t.key] ? 'checked' : ''}></label>`).join('')}</div>
       ${faceoffRows(app)}
       <button class="pa-row card lock-row"><b>Grown-up lock</b><small>${st.parentPin ? 'Parent PIN' : 'This phone’s screen lock'}</small></button>
@@ -87,6 +91,12 @@ export function parentScreen(app: App): Screen {
   el.querySelector('.add-kid')!.addEventListener('click', () => void app.show(addChildScreen(false)));
   el.querySelector('.limits')!.addEventListener('click', () => void app.show(limitsScreen(false)));
   el.querySelector('.voice-row')!.addEventListener('click', () => void app.show(voiceScreen));
+  el.querySelectorAll<HTMLElement>('[data-ts]').forEach((b) =>
+    b.addEventListener('click', () => {
+      app.save.update((d) => (d.settings.timerScale = Number(b.dataset.ts)));
+      el.querySelectorAll('[data-ts]').forEach((x) => x.classList.toggle('on', x === b));
+    }),
+  );
   el.querySelector('.lock-row')!.addEventListener('click', () => void app.show(lockSetupScreen(parentScreen)));
   void accessState(app).then((st) => {
     const small = el.querySelector('.key-left')!;

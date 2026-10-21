@@ -352,7 +352,8 @@ function bossScreen(app: App, child: Child, level: Extract<Level, { kind: 'boss'
     asked.push(q);
     el.classList.toggle('defending', mode === 'defend');
     wired = renderQuestion(app, qwrap, answers, q, (v, b) => void answer(v, b), little, mode);
-    allowed = fightTime(skill.speedSec, level.stage, mode);
+    // Parent's timer setting: more time; with "no timer" a fight still needs one, so 3×.
+    allowed = Math.round(fightTime(skill.speedSec, level.stage, mode) * (app.save.data.settings.timerScale || 3));
     timer?.cancel();
     timer = timerBar.animate([{ transform: 'scaleX(1)' }, { transform: 'scaleX(0)' }], { duration: allowed * 1000, easing: 'linear', fill: 'forwards' });
     clearTimeout(timeout);

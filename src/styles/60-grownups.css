@@ -173,3 +173,6 @@
 .school-chip{display:flex;align-items:center;gap:10px;margin:4px 16px 0;padding:10px 14px;flex-wrap:wrap}
 .school-chip span{font-size:22px}
 .school-chip small{flex-basis:100%;color:var(--ink-faint);font-weight:700}
+.pa-timer{padding:14px 16px;display:grid;gap:8px}
+.pa-timer small{color:var(--ink-soft);font-weight:600}
+.pa-timer .seg-b b{font-size:14px}

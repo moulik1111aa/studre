@@ -558,6 +558,16 @@ test('school path: pick a board and class, edit the skills, and the map follows 
   expect(after.children[0].school.on).toBe(false);
 });
 
+test('parents choose how long timed questions last', async ({ page }) => {
+  await page.goto('/?debug&demo=%4012');
+  await expect(page.locator('.map')).toBeVisible();
+  await page.evaluate(() => { const w = window as unknown as { __app: { show(m: unknown): void }; __screens: { parentScreen: unknown } }; w.__app.show(w.__screens.parentScreen); });
+  await expect(page.locator('[data-ts="1.5"]')).toHaveClass(/\bon\b/);
+  await page.click('[data-ts="0"]');
+  const save = await page.evaluate(() => JSON.parse(localStorage.getItem('studyhard.save')!));
+  expect(save.settings.timerScale).toBe(0);
+});
+
 test('map tips: shown once, then again from the ? button', async ({ page }) => {
   await page.goto('/?debug&demo=%4012&tips');
   await expect(page.locator('.tips-ov')).toBeVisible({ timeout: 5000 });
