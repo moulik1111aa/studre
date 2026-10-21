@@ -2,6 +2,7 @@
 // streak, the jar, a retry, or just a bit of chat) and a pep talk after a low score.
 // Lines are picked from what the child actually did, so it feels like someone is with them.
 
+import { FACTS } from '../core/facts/index.ts';
 import { html, esc, type App } from './app.ts';
 import type { Child } from '../storage/save.ts';
 import type { Level } from '../core/path.ts';
@@ -29,6 +30,8 @@ function streak(child: Child, today: string): number {
   }
   return n;
 }
+
+const FACT_OPENERS = ['Fun fact!', 'Did you know?', 'Plus fact!', 'Here’s a cool one:', 'Guess what?'];
 
 const CHAT = [
   'Fun fact: a day has 86,400 seconds. Let’s make a few of them count!',
@@ -74,6 +77,8 @@ export function lineBeforeLevel(child: Child, level: Level, today: string): stri
   const jar = child.wallet.treat;
   const reward = jar.rewardId ? rewardById(jar.rewardId) : null;
   const pct = reward ? Math.floor((100 * jar.coins) / costOf(reward)) : 0;
+  // Mostly a fun fact from the big list (science, nature, space…), sometimes Plus's own chat.
+  if (Math.random() < 0.6) return `${pick(FACT_OPENERS)} ${esc(pick(FACTS))}`;
   const options: string[] = [...CHAT, ...CHAT];
   if (reward && pct >= 50 && pct < 100) options.push(`Your ${esc(reward.name.toLowerCase())} jar is ${pct}% full! Perfect scores fill it fastest.`);
   if (level.kind !== 'skill') options.push(`A big one! Remember: read each question twice. ${pick(GO)}`);

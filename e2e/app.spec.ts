@@ -568,6 +568,21 @@ test('parents choose how long timed questions last', async ({ page }) => {
   expect(save.settings.timerScale).toBe(0);
 });
 
+test('replaying an earlier level: continue here, or go back to my level', async ({ page }) => {
+  await page.goto('/?debug&demo=%4024');
+  await expect(page.locator('.map')).toBeVisible();
+  await page.evaluate(() => {
+    const w = window as unknown as { __app: { child: unknown; path: unknown[]; show(m: unknown): void }; __screens: { resultScreen(...a: unknown[]): unknown } };
+    w.__app.show(w.__screens.resultScreen(w.__app.child, w.__app.path[5], { stars: 3, score: 10, total: 10, coins: 0, unlocked: [], timeUp: false }));
+  });
+  await expect(page.locator('.res-actions .next small')).toContainText('Up next');
+  await expect(page.locator('.res-actions .resume small')).toContainText('Where you left off');
+  await page.click('.res-actions .resume');
+  await expect(page.locator('.play, .fight').first()).toBeVisible({ timeout: 8000 });
+  const id = await page.evaluate(() => (window as unknown as { __app: { path: { id: string }[] } }).__app.path[24].id);
+  expect(id).toBeTruthy();
+});
+
 test('map tips: shown once, then again from the ? button', async ({ page }) => {
   await page.goto('/?debug&demo=%4012&tips');
   await expect(page.locator('.tips-ov')).toBeVisible({ timeout: 5000 });

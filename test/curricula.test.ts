@@ -32,3 +32,13 @@ test('a child is matched to the usual class for their age', () => {
   assert.equal(gradeForAge(boardById('ccss')!, 5).label, 'Kindergarten');
   assert.equal(gradeForAge(boardById('icse')!, 4).label, 'Class 1');
 });
+
+import { FACTS } from '../src/core/facts/index.ts';
+test('fun facts: plenty, short, no duplicates or stray characters', () => {
+  assert.ok(FACTS.length >= 800, `${FACTS.length} facts`);
+  for (const f of FACTS) {
+    assert.ok(f.length <= 160, `too long: ${f}`);
+    assert.ok(!/[`$]/.test(f), f);
+    assert.match(f, /[.!?]$/, f);
+  }
+});

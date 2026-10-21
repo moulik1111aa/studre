@@ -15,7 +15,17 @@ import { unlockScreen } from './unlock.ts';
 import { timesUpScreen } from './timesup.ts';
 import { showcaseScreen, SHOWCASE_EVERY } from './showcase.ts';
 import { lineAfterMiss, levelName } from './pep.ts';
+import { TIER_NAMES } from '../core/path.ts';
+import { bossFor } from '../core/boss.ts';
+
 import { plusFaceSvg } from './plus.ts';
+
+/** A short name for a level: "× 7 · Speed", "Minion fight", or the boss. */
+function levelLabel(l: Level): string {
+  if (l.kind === 'skill') return `${levelName(l)} · ${TIER_NAMES[l.tier]}`;
+  if (l.kind === 'review') return 'Minion fight';
+  return `Boss: ${bossFor(l.stage, l.boss).name}`;
+}
 
 export interface ResultInfo {
   stars: 0 | 1 | 2 | 3;
@@ -58,6 +68,10 @@ export function resultScreen(child: Child, level: Level, r: ResultInfo) {
   return (app: App): Screen => {
     const passed = r.stars > 0;
     const title = r.title ?? (passed ? CHEERS[(r.score + level.index) % CHEERS.length] : 'So close!');
+    // Replaying an earlier level: carry on from here, or jump back to where they were.
+    const front = app.path[frontier(app.path, child.progress)];
+    const after = app.path[level.index + 1];
+    const twoWays = passed && !!after && !!front && after.id !== front.id && after.index < front.index;
     const moment = r.coins > 0 ? progressMoment(child.wallet, r.coins, r.perfectCoins ?? r.coins) : null;
     const el = html(`<section class="screen result" style="${worldVars(level.stage)}" aria-label="Level result">
       ${ambientHtml(level.stage, 8)}
@@ -72,7 +86,12 @@ export function resultScreen(child: Child, level: Level, r: ResultInfo) {
       </div>
       ${moment ? momentHtml(moment, r) : ''}
       <div class="res-actions">
-        <button class="btn next">${passed ? `Next ${ICONS.play}` : 'Try again'}</button>
+        ${
+          twoWays
+            ? `<button class="btn next two"><b>Continue here ${ICONS.play}</b><small>Up next: ${esc(levelLabel(after!))}</small></button>
+               <button class="btn ghost resume two"><b>Back to my level</b><small>Where you left off: ${esc(levelLabel(front!))}</small></button>`
+            : `<button class="btn next">${passed ? `Next ${ICONS.play}` : 'Try again'}</button>`
+        }
         <button class="btn ghost home">Map</button>
       </div>
     </section>`);
@@ -92,11 +111,12 @@ export function resultScreen(child: Child, level: Level, r: ResultInfo) {
     };
     el.querySelector('.next')!.addEventListener('click', () =>
       proceed(() => {
-        const target = passed ? app.path[frontier(app.path, child.progress)] : level;
+        const target = passed ? (twoWays ? after : app.path[frontier(app.path, child.progress)]) : level;
         if (target) playLevel(app, child, target);
         else enterChild(app, child);
       }),
     );
+    el.querySelector('.resume')?.addEventListener('click', () => proceed(() => playLevel(app, child, front!)));
     el.querySelector('.home')!.addEventListener('click', () => proceed(() => enterChild(app, child, 'fade', false)));
 
     const celebrate = async () => {

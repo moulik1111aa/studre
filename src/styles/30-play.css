@@ -179,3 +179,6 @@ html[data-theme] .q-tools .icon-btn.hint.on{background:var(--accent);color:var(-
 .check-btn{grid-column:1/-1;min-height:56px}
 .check-btn svg{width:22px;height:22px}
 .check-btn[disabled]{opacity:.45}
+/* Result: two ways on after replaying an earlier level */
+.res-actions .btn.two{display:flex;flex-direction:column;gap:2px;min-height:64px;line-height:1.15}
+.res-actions .btn.two small{font-size:13px;font-weight:700;opacity:.75}
