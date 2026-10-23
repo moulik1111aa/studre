@@ -98,8 +98,10 @@ export interface Settings {
   /** Chosen reading voice ('' = the best one automatically) and its speed. */
   voiceName: string;
   voiceRate: number;
-  /** Time on timed questions: 1 normal, 1.5 relaxed, 2 extra time, 0 no timer (boss fights then get 3×). */
-  timerScale: number;
+  /** Seconds per timed question (Speed and Master levels, boss fights); 0 = no timer. */
+  timerSeconds: number;
+  /** Build 37's timer choice (1, 1.5, 2 or 0); read once to set timerSeconds. */
+  timerScale?: number;
   /** Look of the app: 'playground' (default for new installs), 'glass', 'schoolbook' or 'precision'. */
   theme: Theme;
   /** Rewards the family added themselves. */
@@ -157,6 +159,15 @@ export interface StorageAdapter {
   set(key: string, value: string): void;
 }
 
+/** Seconds per timed question for new installs. */
+export const TIMER_DEFAULT = 20;
+/** The saved timer setting, carried over from build 37's choices when needed. */
+function timerFrom(s: Partial<Settings> | undefined): number {
+  if (typeof s?.timerSeconds === 'number' && s.timerSeconds >= 0) return s.timerSeconds;
+  if (typeof s?.timerScale === 'number') return ({ 0: 0, 1: 15, 1.5: 20, 2: 30 } as Record<number, number>)[s.timerScale] ?? TIMER_DEFAULT;
+  return TIMER_DEFAULT;
+}
+
 export const freshSettings = (): Settings => ({
   limitMinutes: 30,
   timeUpMode: 'stop',
@@ -170,7 +181,7 @@ export const freshSettings = (): Settings => ({
   voice: true,
   voiceName: '',
   voiceRate: 0.95,
-  timerScale: 1.5,
+  timerSeconds: TIMER_DEFAULT,
   theme: 'playground',
   ownRewards: [],
   fx3d: true,
@@ -230,7 +241,7 @@ function parse(raw: string | null): SaveData | null {
       ...base,
       ...d,
       version: SAVE_VERSION,
-      settings: { ...base.settings, ...d.settings, ownRewards: Array.isArray(d.settings?.ownRewards) ? d.settings!.ownRewards : [], theme: THEMES.includes(d.settings?.theme as Theme) ? (d.settings!.theme as Theme) : 'glass' },
+      settings: { ...base.settings, ...d.settings, timerSeconds: timerFrom(d.settings), ownRewards: Array.isArray(d.settings?.ownRewards) ? d.settings!.ownRewards : [], theme: THEMES.includes(d.settings?.theme as Theme) ? (d.settings!.theme as Theme) : 'glass' },
       faceoff: d.faceoff ?? {},
       children: d.children.map((c) => ({
         ...newChild(c.name ?? 'Champ', c.age ?? 6, c.avatar ?? 0, c.createdDay ?? ''),
@@ -252,6 +263,9 @@ export interface LoadResult {
   data: SaveData;
   source: 'primary' | 'backup' | 'new' | 'reset';
 }
+
+/** Read a saved file (exported for tests). */
+export const parseSave = (raw: string): SaveData | null => parse(raw);
 
 export class SaveStore {
   private readonly store: StorageAdapter;

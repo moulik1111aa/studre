@@ -355,7 +355,8 @@ test('parent can start a child over, then delete the profile', async ({ page }) 
 });
 
 test('confirm answers: pick, then Check; the answer is always shown', async ({ page }) => {
-  await seeded(page, '@2', `window.__app.save.update((d) => { d.settings.confirmAnswers = true; })`);
+  // A tap-the-answer level (confirming only applies to choices).
+  await seeded(page, 's3.compare3#1', `window.__app.save.update((d) => { d.settings.confirmAnswers = true; })`);
   await page.click('.play-next');
   const card = page.locator('.qcard[data-answer]');
   await expect(card).toBeVisible();
@@ -562,10 +563,19 @@ test('parents choose how long timed questions last', async ({ page }) => {
   await page.goto('/?debug&demo=%4012');
   await expect(page.locator('.map')).toBeVisible();
   await page.evaluate(() => { const w = window as unknown as { __app: { show(m: unknown): void }; __screens: { parentScreen: unknown } }; w.__app.show(w.__screens.parentScreen); });
-  await expect(page.locator('[data-ts="1.5"]')).toHaveClass(/\bon\b/);
-  await page.click('[data-ts="0"]');
-  const save = await page.evaluate(() => JSON.parse(localStorage.getItem('studyhard.save')!));
-  expect(save.settings.timerScale).toBe(0);
+  await expect(page.locator('.pt-val')).toHaveText('20 seconds');
+  await page.locator('.pt-slider').fill('35');
+  await page.locator('.pt-slider').dispatchEvent('change');
+  await expect(page.locator('.pt-val')).toHaveText('35 seconds');
+  await expect(page.locator('.pt-note')).toContainText('Easy');
+  let save = await page.evaluate(() => JSON.parse(localStorage.getItem('studyhard.save')!));
+  expect(save.settings.timerSeconds).toBe(35);
+  // The far end switches the timer off.
+  await page.locator('.pt-slider').fill('65');
+  await page.locator('.pt-slider').dispatchEvent('change');
+  await expect(page.locator('.pt-val')).toHaveText('No timer');
+  save = await page.evaluate(() => JSON.parse(localStorage.getItem('studyhard.save')!));
+  expect(save.settings.timerSeconds).toBe(0);
 });
 
 test('replaying an earlier level: continue here, or go back to my level', async ({ page }) => {
@@ -575,8 +585,13 @@ test('replaying an earlier level: continue here, or go back to my level', async 
     const w = window as unknown as { __app: { child: unknown; path: unknown[]; show(m: unknown): void }; __screens: { resultScreen(...a: unknown[]): unknown } };
     w.__app.show(w.__screens.resultScreen(w.__app.child, w.__app.path[5], { stars: 3, score: 10, total: 10, coins: 0, unlocked: [], timeUp: false }));
   });
-  await expect(page.locator('.res-actions .next small')).toContainText('Up next');
-  await expect(page.locator('.res-actions .resume small')).toContainText('Where you left off');
+  await expect(page.locator('.res-actions .next')).toHaveText(/^Next/);
+  await expect(page.locator('.res-actions .resume')).toHaveText('My level ↩');
+  // The little ? says where each one goes.
+  await page.locator('.tw-q').first().click();
+  await expect(page.locator('.tw-tip')).toContainText('Next:');
+  await page.locator('.tw-q').nth(1).click();
+  await expect(page.locator('.tw-tip')).toContainText('Your level:');
   await page.click('.res-actions .resume');
   await expect(page.locator('.play, .fight').first()).toBeVisible({ timeout: 8000 });
   const id = await page.evaluate(() => (window as unknown as { __app: { path: { id: string }[] } }).__app.path[24].id);

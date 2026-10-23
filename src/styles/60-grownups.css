@@ -173,6 +173,19 @@
 .school-chip{display:flex;align-items:center;gap:10px;margin:4px 16px 0;padding:10px 14px;flex-wrap:wrap}
 .school-chip span{font-size:22px}
 .school-chip small{flex-basis:100%;color:var(--ink-faint);font-weight:700}
-.pa-timer{padding:14px 16px;display:grid;gap:8px}
+.pa-timer{padding:14px 16px 12px;display:grid;gap:8px}
 .pa-timer small{color:var(--ink-soft);font-weight:600}
-.pa-timer .seg-b b{font-size:14px}
+.pt-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.pt-val{font-weight:900;font-size:20px;color:var(--accent);font-variant-numeric:tabular-nums}
+.pt-slider{width:100%;margin:6px 0 0}
+/* Marks under the slider: harder on the left, more relaxed to the right. */
+.pt-marks{position:relative;height:30px;margin:0 19px}
+.pt-marks span{position:absolute;left:var(--at);transform:translateX(-50%);top:0;font-size:11.5px;font-weight:800;color:var(--ink-faint);white-space:nowrap;padding-top:8px}
+.pt-marks span::before{content:"";position:absolute;left:50%;top:0;width:2px;height:6px;border-radius:1px;background:var(--ink-faint)}
+.pt-marks span:first-child{transform:none;left:-19px}
+.pt-marks span:last-child{transform:none;left:auto;right:-19px}
+.pt-marks span:first-child::before{left:19px}
+.pt-marks span:last-child::before{left:auto;right:19px}
+/* The track shades from hard (red) to relaxed (blue), then grey for no timer. */
+html .pa-timer .pt-slider,html[data-theme] .pa-timer .pt-slider{height:10px;background:linear-gradient(90deg,#FF6B6B,#FFC531 22%,#43E0A8 45%,#5CC8FF 80%,#B8C2D6 92%)}
+.pt-note{margin:0;font-size:14px;font-weight:700;color:var(--ink-soft)}

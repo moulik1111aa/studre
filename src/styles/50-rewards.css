@@ -58,9 +58,17 @@
 .timesup .btn{min-width:220px}
 
 /* Big progress showcase (every few levels). */
-.showcase{gap:14px;justify-content:center;overflow-y:auto}
+/* The heading stays at the top, the cards scroll between, the button stays at the bottom.
+   (Centring a scrolling column pushed the top out of reach on short screens.) */
+.showcase{gap:12px;overflow:hidden}
+.showcase .sc-title{flex:none;margin:4px 0 0;line-height:1.15}
+.sc-body{flex:1;min-height:0;display:flex;flex-direction:column;gap:14px;padding:2px 2px 8px}
+.sc-body > :first-child{margin-top:auto}
+.sc-body > :last-child{margin-bottom:auto}
+.sc-body > *{flex:none}
+.showcase .sc-go{flex:none}
 .sc-glow{position:absolute;inset:-20%;background:radial-gradient(circle at 50% 30%,rgba(255,210,90,.25),transparent 55%);z-index:0!important;pointer-events:none}
-.showcase .title{font-size:30px}
+.showcase .title{font-size:clamp(22px,7vw,30px)}
 .sc-card{padding:18px;display:flex;flex-direction:column;gap:12px}
 .sc-head{display:flex;align-items:center;gap:12px}
 .sc-head > div{flex:1;display:flex;flex-direction:column}
@@ -79,7 +87,7 @@
 .sc-rung i{display:block;height:14px;width:var(--w);border-radius:999px;background:linear-gradient(90deg,var(--mint),var(--sun));transform-origin:left center}
 .sc-rung b{display:flex;align-items:center;gap:4px;color:var(--sun);justify-content:flex-end}
 .sc-rung svg{width:18px;height:18px}
-.sc-go{margin-top:4px}
+.sc-go{margin-top:0}
 .moon span{left:72%!important;top:30%!important;font-size:70px!important}
 .moon .sleepy{position:absolute;left:50%;bottom:-6px;width:170px;height:170px;transform:translateX(-50%)}
 
@@ -105,3 +113,10 @@
 .rw-cat.open{box-shadow:inset 0 0 0 2px var(--accent)}
 .rw-cat.open .rw-chev{background:var(--accent);color:var(--accent-ink)}
 .rw-cat .rw-grid{padding:0 12px 14px;flex:none;grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+@media (max-width:380px){
+  .sc-card{padding:14px;gap:10px}
+  .sc-icon{font-size:44px}
+  .sc-head b{font-size:18px;line-height:1.2}
+  .sc-pct{font-size:28px}
+  .sc-note{font-size:14px}
+}

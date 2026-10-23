@@ -26,7 +26,8 @@ export function showcaseScreen(child: Child, stage: number, then: () => void) {
     }).join('');
     const el = html(`<section class="screen showcase" aria-label="Your rewards">
       <div class="sc-glow" aria-hidden="true"></div>
-      <h1 class="title center">Look how far you’ve come, ${esc(child.name)}!</h1>
+      <h1 class="title center sc-title">Look how far you’ve come, ${esc(child.name)}!</h1>
+      <div class="scroll sc-body">
       ${treat ? `<div class="card sc-card">
         <div class="sc-head"><span class="sc-icon">${treat.icon}</span><div><small>Your treat</small><b>${esc(treat.name)}</b></div><span class="sc-pct" data-to="${Math.floor(tp * 100)}">0%</span></div>
         <div class="sc-bar"><i style="--to:${Math.max(3, tp * 100)}%"></i></div>
@@ -38,6 +39,7 @@ export function showcaseScreen(child: Child, stage: number, then: () => void) {
         <p class="sc-note">Saving up slowly · about <b>${toGo(goal, w.goal.coins, 1 - TREAT_SHARE)}</b> perfect levels to go</p>
       </div>` : ''}
       <div class="card sc-ladder"><p><b>Perfect scores fill it fastest!</b></p>${ladder}</div>
+      </div>
       <button class="btn sc-go">Keep going!</button>
     </section>`);
     el.querySelector('.sc-go')!.addEventListener('click', then);

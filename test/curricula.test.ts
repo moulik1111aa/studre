@@ -35,7 +35,7 @@ test('a child is matched to the usual class for their age', () => {
 
 import { FACTS } from '../src/core/facts/index.ts';
 test('fun facts: plenty, short, no duplicates or stray characters', () => {
-  assert.ok(FACTS.length >= 800, `${FACTS.length} facts`);
+  assert.ok(FACTS.length >= 1800, `${FACTS.length} facts`);
   for (const f of FACTS) {
     assert.ok(f.length <= 160, `too long: ${f}`);
     assert.ok(!/[`$]/.test(f), f);

@@ -49,29 +49,82 @@ add('pv3', 'number', '3-digit place value', (r) => {
   const value = place === 'hundreds' ? digit * 100 : place === 'tens' ? digit * 10 : digit;
   return q(`What is the ${place} digit worth in ${n}?`, value, r, `In ${n}, the ${place} digit is ${digit}.`, [digit], () => P.digitValue(n, place === 'hundreds' ? 2 : place === 'tens' ? 1 : 0));
 });
-add('compare3', 'number', 'Compare 3-digit numbers', (r) => {
-  const a = r.int(100, 999);
-  let b = r.chance(0.5) ? Number(String(a).split('').reverse().join('')) : r.int(100, 999);
+add('compare3', 'number', 'Compare 3-digit numbers', (r, d) => {
+  // Easy end: different hundreds. Then the same hundreds (look at the tens), then the same
+  // hundreds and tens with one number written in expanded form.
+  const big = d < 0.3 || r.chance(0.6);
+  let a: number;
+  let b: number;
+  if (d < 0.3) {
+    a = r.int(100, 999);
+    b = r.chance(0.5) ? Number(String(a).split('').reverse().join('')) : r.int(100, 999);
+  } else if (d < 0.65) {
+    const h = r.int(1, 9);
+    a = 100 * h + r.int(0, 99);
+    b = 100 * h + r.int(0, 99);
+  } else {
+    const ht = r.int(10, 99);
+    a = 10 * ht + r.int(0, 9);
+    b = 10 * ht + r.int(0, 9);
+  }
   if (b === a || b < 100) b = a + r.int(1, 9);
-  const ans = Math.max(a, b);
-  return { prompt: `Bigger: ${a} or ${b}?`, answer: num(ans), distractors: [num(Math.min(a, b)), num(ans + 1), num(ans - 10)], hint: 'Compare the hundreds first.', teach: () => P.compareNumbers([a, b], true) };
+  const ans = big ? Math.max(a, b) : Math.min(a, b);
+  const other = big ? Math.min(a, b) : Math.max(a, b);
+  // Hardest: one of them in expanded form (jumbled at the very top), so the child has to
+  // put it together first.
+  const parts = (n: number) => [100 * Math.floor(n / 100), 10 * (Math.floor(n / 10) % 10), n % 10];
+  const show = (n: number) => {
+    if (d < 0.65 || n !== b) return String(n);
+    const [h, t, o] = parts(n);
+    return (d >= 0.85 ? [o, h, t] : [h, t, o]).join(' + ');
+  };
+  return {
+    prompt: `${big ? 'Bigger' : 'Smaller'}: ${show(a)} or ${show(b)}?`,
+    answer: num(ans),
+    distractors: [num(other), num(ans + 1), num(ans - 10)],
+    hint: d < 0.3 ? 'Compare the hundreds first.' : 'Same hundreds? Then compare the tens, then the ones.',
+    teach: () => P.compareNumbers([a, b], big),
+  };
 }, { format: 'choice' });
-add('order3d', 'number', 'Order 3-digit numbers', (r) => {
-  const nums = [r.int(100, 999), r.int(100, 999), r.int(100, 999)];
-  const sorted = [...new Set(nums)].sort((a, b) => a - b);
-  return { prompt: `Smallest of ${nums.join(', ')}?`, answer: num(sorted[0]), distractors: uniqueWrong(num(sorted[0]), sorted.slice(1).map(num), () => num(r.int(100, 999))), teach: () => P.compareNumbers(nums, false) };
+add('order3d', 'number', 'Order 3-digit numbers', (r, d) => {
+  // Harder: the numbers share their hundreds digit, then four of them, biggest or smallest.
+  const count = d >= 0.7 ? 4 : 3;
+  const h = r.int(1, 9);
+  const pickN = () => (d < 0.35 ? r.int(100, 999) : 100 * h + r.int(0, 99));
+  const nums: number[] = [];
+  for (let t = 0; nums.length < count && t < 50; t++) {
+    const n = pickN();
+    if (!nums.includes(n)) nums.push(n);
+  }
+  const big = d >= 0.5 && r.chance(0.5);
+  const ans = big ? Math.max(...nums) : Math.min(...nums);
+  return {
+    prompt: `${big ? 'Biggest' : 'Smallest'} of ${nums.join(', ')}?`,
+    answer: num(ans),
+    distractors: uniqueWrong(num(ans), nums.filter((n) => n !== ans).map(num), () => num(pickN())),
+    teach: () => P.compareNumbers(nums, big),
+  };
 }, { format: 'choice' });
 add('round10', 'number', 'Round to the nearest 10', (r) => {
   const n = r.int(11, 999);
   const ans = Math.round(n / 10) * 10;
   return q(`Round ${n} to the nearest 10`, ans, r, 'Look at the ones: 5 or more rounds up.', [Math.floor(n / 10) * 10, ans + 10].filter((x) => x !== ans), () => P.roundLesson(n, 10));
 }, { format: 'choice' });
-add('ba1000', 'number', 'Before and after to 1000', (r) => {
-  const n = r.int(100, 998);
+add('ba1000', 'number', 'Before and after to 1000', (r, d) => {
   const step = r.pick([1, 10, 100]);
   const up = r.chance(0.5);
+  let n = r.int(100, 998);
+  // Harder: steps that cross into the next ten or hundred (395 + 10, 300 − 1, 403 − 10).
+  if (d >= 0.45 && step < 100 && r.chance(0.7)) {
+    const h = r.int(1, 8);
+    if (step === 1) n = up ? 100 * h + 99 : 100 * (h + 1);
+    else n = up ? 100 * h + 90 + r.int(0, 9) : 100 * (h + 1) + r.int(0, 9);
+  }
+  // Stay within 0–1000.
+  if (up && n + step > 1000) n -= step;
+  if (!up && n - step < 0) n += step;
   const ans = up ? n + step : n - step;
-  return q(`${step} ${up ? 'more' : 'less'} than ${n}?`, ans, r, undefined, [up ? n - step : n + step], () => P.stepMoreLess(n, step, up));
+  return q(`${step} ${up ? 'more' : 'less'} than ${n}?`, ans, r, d >= 0.45 ? 'Watch out when a digit goes past 9 or below 0.' : undefined, [up ? n - step : n + step, up ? n + step - 100 * Number(step === 10) : n - step + 100 * Number(step === 10)].filter((x) => x !== ans), () => P.stepMoreLess(n, step, up));
 });
 const skipBy = (steps: number[]) => (r: Rng, d: number): Made =>
   sequenceQ(r, d, { steps, max: steps[0] === 100 ? 1000 : Math.round(50 + 50 * d), back: true, offStart: true, offFrom: 0.25 });

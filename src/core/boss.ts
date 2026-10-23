@@ -129,6 +129,12 @@ export class Fight {
 }
 
 /** Time allowed per fight question: generous for little ones; defend questions get half. */
+/** Seconds for a fight question from the parent's setting: blocking gets a bit less. */
+export function fightSeconds(setting: number, mode: 'attack' | 'defend'): number {
+  const secs = setting > 0 ? setting : 60;
+  return mode === 'defend' ? Math.max(4, Math.round(secs * 0.7)) : secs;
+}
+
 export function fightTime(speedSec: number, stage: number, mode: 'attack' | 'defend'): number {
   const base = Math.max(8, Math.round(speedSec * (stage <= 2 ? 2.5 : 1.9)));
   return mode === 'defend' ? Math.max(5, Math.round(base * 0.6)) : base;

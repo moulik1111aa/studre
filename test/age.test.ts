@@ -45,11 +45,16 @@ test('moved skills keep their ids and play at their new age', () => {
     assert.ok(s, m.id);
     const at = AREAS[0].skills.findIndex((st) => st.some((x) => x.id === m.id));
     assert.equal(s.stage, at + 1, m.id);
-    assert.ok(s.stage < Number(m.id[1]), `${m.id} moved to a younger stage`);
+    assert.notEqual(s.stage, Number(m.id[1]), `${m.id} plays at a different stage than its file`);
   }
   assert.equal(skillById('s6.eq1')!.stage, 5);
   assert.equal(skillById('s7.sqplus')!.stage, 6);
   assert.equal(skillById('s5.missingop')!.stage, 4);
+  // The age audit (October): tables to 10 by ages 7–8, 2-digit basics at 5–6, negatives at 11–12.
+  assert.equal(skillById('s4.x7')!.stage, 3);
+  assert.equal(skillById('s3.tensones')!.stage, 2);
+  assert.equal(skillById('s4.temp')!.stage, 5);
+  assert.equal(skillById('s7.recurring')!.stage, 6);
   assert.equal(new Set(skills.map((s) => s.id)).size, skills.length);
 });
 
@@ -67,4 +72,18 @@ test('temperatures always go below zero; integers always use a negative', () => 
     const pt = skillById('s5.pcttotal')!.make(r, d);
     assert.doesNotMatch(pt.prompt, /\d\.\d/, pt.prompt);
   }
+});
+
+import { parseSave, freshSave } from '../src/storage/save.ts';
+import { fightSeconds } from '../src/core/boss.ts';
+test('timer setting: seconds per question, carried over from the old four choices', () => {
+  const old = (scale: number) => parseSave(JSON.stringify({ ...freshSave(), settings: { ...freshSave().settings, timerSeconds: undefined, timerScale: scale } }))!.settings.timerSeconds;
+  assert.equal(old(0), 0);
+  assert.equal(old(1), 15);
+  assert.equal(old(1.5), 20);
+  assert.equal(old(2), 30);
+  assert.equal(freshSave().settings.timerSeconds, 20);
+  assert.equal(fightSeconds(20, 'attack'), 20);
+  assert.equal(fightSeconds(20, 'defend'), 14);
+  assert.equal(fightSeconds(0, 'attack'), 60);
 });

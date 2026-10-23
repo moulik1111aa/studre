@@ -76,6 +76,7 @@ export function resultScreen(child: Child, level: Level, r: ResultInfo) {
     const el = html(`<section class="screen result" style="${worldVars(level.stage)}" aria-label="Level result">
       ${ambientHtml(level.stage, 8)}
       ${moment ? '' : '<div class="jar-slot"></div>'}
+      <div class="scroll res-body">
       <div class="res-card card">
         <h1 class="res-title">${title}</h1>
         <div class="res-stars" aria-label="${r.stars} of 3 stars">${[1, 2, 3].map((n) => `<span class="rstar${n <= r.stars ? ' on' : ''}${n === 2 ? ' mid' : ''}">${ICONS.star}</span>`).join('')}</div>
@@ -85,11 +86,13 @@ export function resultScreen(child: Child, level: Level, r: ResultInfo) {
         ${passed ? '' : `<p class="res-note">You need ${level.kind === 'skill' && level.tier === 5 ? '10 in a row' : 'a few more right'} to pass.</p><div class="res-plus"><span class="ps-plus">${plusFaceSvg({ cls: 'oops' })}</span><p>${lineAfterMiss(child, r.score, r.total)}</p></div>`}
       </div>
       ${moment ? momentHtml(moment, r) : ''}
+      </div>
       <div class="res-actions">
         ${
           twoWays
-            ? `<button class="btn next two"><b>Continue here ${ICONS.play}</b><small>Up next: ${esc(levelLabel(after!))}</small></button>
-               <button class="btn ghost resume two"><b>Back to my level</b><small>Where you left off: ${esc(levelLabel(front!))}</small></button>`
+            ? `<div class="tw-row"><button class="btn next">Next ${ICONS.play}</button><button class="tw-q" aria-label="Where Next goes" data-tip="Next: ${esc(levelLabel(after!))}">?</button></div>
+               <div class="tw-row"><button class="btn ghost resume">My level ↩</button><button class="tw-q" aria-label="Where My level goes" data-tip="Your level: ${esc(levelLabel(front!))}">?</button></div>
+               <p class="tw-tip" role="status" hidden></p>`
             : `<button class="btn next">${passed ? `Next ${ICONS.play}` : 'Try again'}</button>`
         }
         <button class="btn ghost home">Map</button>
@@ -117,6 +120,23 @@ export function resultScreen(child: Child, level: Level, r: ResultInfo) {
       }),
     );
     el.querySelector('.resume')?.addEventListener('click', () => proceed(() => playLevel(app, child, front!)));
+    // The little ? beside each button says which level it goes to.
+    const tip = el.querySelector<HTMLElement>('.tw-tip');
+    let tipTimer = 0;
+    el.querySelectorAll<HTMLElement>('.tw-q').forEach((q) =>
+      q.addEventListener('click', () => {
+        if (!tip) return;
+        const same = !tip.hidden && tip.dataset.from === q.dataset.tip;
+        clearTimeout(tipTimer);
+        tip.hidden = same;
+        tip.textContent = q.dataset.tip ?? '';
+        tip.dataset.from = q.dataset.tip ?? '';
+        if (!same) {
+          popIn(tip, 0, 0.9);
+          tipTimer = window.setTimeout(() => (tip.hidden = true), 4000);
+        }
+      }),
+    );
     el.querySelector('.home')!.addEventListener('click', () => proceed(() => enterChild(app, child, 'fade', false)));
 
     const celebrate = async () => {

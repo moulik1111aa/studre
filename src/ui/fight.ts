@@ -9,7 +9,7 @@ import { skillById } from '../core/areas/index.ts';
 import { createRng } from '../core/rng.ts';
 import { isCorrect, spoken, type Question } from '../core/question.ts';
 import { addCoins, addPlayTime, coinsForLevel, bossFraction } from '../core/economy.ts';
-import { Fight, FIGHT, bossFor, fightTime, type FightEvent } from '../core/boss.ts';
+import { Fight, FIGHT, bossFor, fightSeconds, type FightEvent } from '../core/boss.ts';
 import { BossView, minionFor, projectile } from './bosses.ts';
 import { Boss3DView } from './boss3d.ts';
 import { visualHtml, optionHtml, prettyAnswer } from './visuals.ts';
@@ -352,8 +352,9 @@ function bossScreen(app: App, child: Child, level: Extract<Level, { kind: 'boss'
     asked.push(q);
     el.classList.toggle('defending', mode === 'defend');
     wired = renderQuestion(app, qwrap, answers, q, (v, b) => void answer(v, b), little, mode);
-    // Parent's timer setting: more time; with "no timer" a fight still needs one, so 3×.
-    allowed = Math.round(fightTime(skill.speedSec, level.stage, mode) * (app.save.data.settings.timerScale || 3));
+    // The parent's seconds per question (a little less when blocking an attack). With "no
+    // timer" a fight still needs one, so it gets a full minute.
+    allowed = fightSeconds(app.save.data.settings.timerSeconds, mode);
     timer?.cancel();
     timer = timerBar.animate([{ transform: 'scaleX(1)' }, { transform: 'scaleX(0)' }], { duration: allowed * 1000, easing: 'linear', fill: 'forwards' });
     clearTimeout(timeout);
