@@ -141,3 +141,4 @@
 .res-plus{display:flex;align-items:center;gap:12px;text-align:left;margin-top:6px;padding:10px 12px;border-radius:18px;background:var(--hi-08,rgba(255,255,255,.08))}
 .res-plus p{margin:0;font-size:16px;line-height:1.35;font-weight:700}
 .res-plus .ps-plus{width:54px;height:54px}.res-plus .ps-plus .mascot{width:44px;height:44px}
+.wl-restore{border:0;background:none;font:inherit;font-size:14px;font-weight:800;color:var(--ink-soft);text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:6px}

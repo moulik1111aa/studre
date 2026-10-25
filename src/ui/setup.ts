@@ -1,5 +1,6 @@
 // First-run setup (grown-up): add children, set the daily limit and what happens at time-up.
 
+import { restoreFromFile } from './restore.ts';
 import { html, esc, type App, type Screen } from './app.ts';
 import { newChild } from '../storage/save.ts';
 import { AVATARS, avatarHtml } from './icons.ts';
@@ -31,8 +32,14 @@ export function welcomeScreen(app: App): Screen {
     <p class="subtitle">Maths from age 3 to 16, one small step at a time.<br>Real rewards. Boss fights. Big smiles.</p></div>
     ${seen ? '<button class="btn start">Set up for my child</button><button class="btn ghost tour-btn">▶ Watch the video again</button>' : '<button class="btn tour-btn">▶ Start</button>'}
     <p class="fine">${seen ? 'A grown-up sets things up, in about 2 minutes.' : 'First, a one-minute video on how MN works. Then a grown-up sets up, in about 2 minutes.'}</p>
+    ${seen ? '<button class="wl-restore">New phone? Restore from a report card</button>' : ''}
   </section>`);
   el.querySelector('.start')?.addEventListener('click', () => void startSetup(app));
+  // Moving to a new phone: bring a child across from their saved report card.
+  el.querySelector('.wl-restore')?.addEventListener('click', async () => {
+    if (!(await app.grownUp('Restoring a child'))) return;
+    await restoreFromFile(app, () => void app.show(app.save.data.settings.parentPin ? whosPlayingScreen : lockSetupScreen(whosPlayingScreen, true)));
+  });
   el.querySelector('.tour-btn')!.addEventListener('click', () =>
     void app.show(reelScreen({ first: !seen, label: 'Set up for my child', done: () => (void app.show(welcomeScreen), void startSetup(app)), leave: () => void app.show(welcomeScreen) }), 'liquid'),
   );

@@ -5,6 +5,7 @@ import { freshProgress, type Progress } from '../core/path.ts';
 import { freshWallet, type Wallet } from '../core/economy.ts';
 import type { UndoEntry } from '../core/undo.ts';
 import type { OwnReward } from '../core/rewards.ts';
+import type { PlayEntry, Tally } from '../core/stats.ts';
 
 export const SAVE_VERSION = 1;
 const PRIMARY = 'studyhard.save';
@@ -76,6 +77,9 @@ export interface Child {
   assisted?: boolean;
   /** A school path chosen by a parent; while `on`, the map shows only these skills. */
   school?: SchoolPath;
+  /** Play log and per-skill answer tallies for the parent report (core/stats.ts). */
+  log?: PlayEntry[];
+  tally?: Tally;
   /** The last finished level (Plus mentions it next time). */
   lastPlay?: LastPlay;
 }
@@ -220,7 +224,7 @@ export function newChild(name: string, age: number, avatar: number, today: strin
  */
 export function resetChild(c: Child, today: string): void {
   const fresh = newChild(c.name, c.age, c.avatar, today);
-  Object.assign(c, { ...fresh, id: c.id, undo: [], sinceShowcase: 0 });
+  Object.assign(c, { ...fresh, id: c.id, undo: [], sinceShowcase: 0, log: [], tally: {}, lastPlay: undefined });
 }
 
 /** Remove a child and their face-off records. */

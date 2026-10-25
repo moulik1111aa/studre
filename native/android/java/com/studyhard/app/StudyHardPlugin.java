@@ -5,6 +5,9 @@ import android.app.KeyguardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import android.provider.Settings;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.Voice;
@@ -266,6 +269,41 @@ public class StudyHardPlugin extends Plugin {
         JSObject result = new JSObject();
         result.put("id", id == null ? "" : id);
         call.resolve(result);
+    }
+
+    /** Text waiting to be written once the parent picks where to save the file. */
+    private String pendingFileText = null;
+
+    /** Save a text file where the parent chooses (Downloads, Drive…). Resolves { saved }. */
+    @PluginMethod
+    public void saveFile(PluginCall call) {
+        pendingFileText = call.getString("text", "");
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType(call.getString("mime", "text/html"));
+        intent.putExtra(Intent.EXTRA_TITLE, call.getString("name", "MN-report.html"));
+        startActivityForResult(call, intent, "saveFileDone");
+    }
+
+    @ActivityCallback
+    private void saveFileDone(PluginCall call, ActivityResult result) {
+        if (call == null) return;
+        JSObject r = new JSObject();
+        Uri uri = result.getResultCode() == Activity.RESULT_OK && result.getData() != null ? result.getData().getData() : null;
+        if (uri == null || pendingFileText == null) {
+            r.put("saved", false);
+        } else {
+            try (OutputStream out = getContext().getContentResolver().openOutputStream(uri, "wt")) {
+                if (out == null) throw new java.io.IOException("no stream");
+                out.write(pendingFileText.getBytes(StandardCharsets.UTF_8));
+                r.put("saved", true);
+            } catch (Exception e) {
+                r.put("saved", false);
+                r.put("error", String.valueOf(e.getMessage()));
+            }
+        }
+        pendingFileText = null;
+        call.resolve(r);
     }
 
     /** Whether the phone has a screen lock (PIN, pattern, password or fingerprint). */

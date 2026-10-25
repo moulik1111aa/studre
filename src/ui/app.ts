@@ -51,7 +51,11 @@ export class App {
   private bundleCache: { key: string; path: Level[] } | null = null;
   /** The active child's path: their school path when one is on, else the age path. */
   get path(): Level[] {
-    const sp = this.child?.school;
+    return this.pathFor(this.child);
+  }
+  /** A child's path: their school path when one is on, else the age path. */
+  pathFor(child: Child | undefined): Level[] {
+    const sp = child?.school;
     if (!sp?.on || !sp.skills.length) return this.agePath;
     const key = `${sp.board}-${sp.grade}:${sp.skills.join(',')}`;
     if (this.bundleCache?.key !== key) this.bundleCache = { key, path: buildBundlePath(AREAS[0], sp.skills, `${sp.board}-${sp.grade}`) };

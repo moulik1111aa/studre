@@ -287,6 +287,7 @@ test('parent can skip a level, and undo the last hour', async ({ page }) => {
   await page.click('.parent-btn');
   await grownUp(page);
   await page.locator('.report').first().click();
+  await page.click('[data-tab="manage"]');
   await page.click('.undo-hour');
   await page.getByRole('button', { name: 'Remove', exact: true }).click();
   await expect(page.locator('.toast')).toContainText('Removed');
@@ -339,6 +340,7 @@ test('parent can start a child over, then delete the profile', async ({ page }) 
   await page.click('.parent-btn');
   await grownUp(page);
   await page.locator('.report').first().click();
+  await page.click('[data-tab="manage"]');
   await page.click('.reset-kid');
   await page.getByRole('button', { name: 'Start over' }).click();
   await expect(page.locator('.toast').last()).toContainText('starting fresh');
@@ -596,6 +598,58 @@ test('replaying an earlier level: continue here, or go back to my level', async 
   await expect(page.locator('.play, .fight').first()).toBeVisible({ timeout: 8000 });
   const id = await page.evaluate(() => (window as unknown as { __app: { path: { id: string }[] } }).__app.path[24].id);
   expect(id).toBeTruthy();
+});
+
+test('report: tabs with statistics, saved as a report card that restores on another phone', async ({ page, browser }) => {
+  // Play one level so the play log has something in it.
+  await page.goto('/?debug&demo=s3.compare3%231&play');
+  await playThrough(page, '.result');
+  await page.evaluate(() => { const w = window as unknown as { __app: { show(m: unknown): void }; __screens: { parentScreen: unknown } }; w.__app.show(w.__screens.parentScreen); });
+  await page.locator('.report').first().click();
+  await expect(page.locator('.rp-kpi')).toHaveCount(6);
+  await page.click('[data-tab="skills"]');
+  await expect(page.locator('.rp-stage').first()).toBeVisible();
+  await page.click('[data-tab="activity"]');
+  await expect(page.locator('.rp-recent li')).toHaveCount(1);
+  await expect(page.locator('.rp-recent')).toContainText('Compare 3-digit numbers · Learn');
+  await page.click('[data-tab="rewards"]');
+  await expect(page.locator('.rp-jar').first()).toBeVisible();
+  // Save the report card.
+  await page.click('.rp-export');
+  const file = await page.evaluate(() => (window as unknown as { __lastExport: { name: string; text: string } }).__lastExport);
+  expect(file.name).toMatch(/^MN-.+-report-\d{4}-\d{2}-\d{2}\.html$/);
+  expect(file.text).toContain('report card');
+  expect(file.text).toContain('id="mn-backup"');
+  const childId = await page.evaluate(() => (window as unknown as { __app: { child: { id: string } } }).__app.child.id);
+
+  // Another phone with its own child: restore adds this one.
+  const other = await (await browser.newContext({ viewport: { width: 412, height: 915 } })).newPage();
+  await other.goto('/?debug&demo=%4012');
+  await expect(other.locator('.map')).toBeVisible();
+  await other.evaluate(() => { const w = window as unknown as { __app: { show(m: unknown): void }; __screens: { parentScreen: unknown } }; w.__app.show(w.__screens.parentScreen); });
+  const restore = async () => {
+    const chooser = other.waitForEvent('filechooser');
+    await other.click('.restore-kid');
+    await (await chooser).setFiles({ name: file.name, mimeType: 'text/html', buffer: Buffer.from(file.text) });
+  };
+  await restore();
+  await other.locator('.sheet .btn.mint').click();
+  let save = await other.evaluate(() => JSON.parse(localStorage.getItem('studyhard.save')!));
+  const restored = save.children.find((c: { id: string }) => c.id === childId);
+  expect(restored).toBeTruthy();
+  expect(restored.log.length).toBe(1);
+  // Restoring the same child again combines instead of adding a copy.
+  await restore();
+  await expect(other.locator('.sheet h2')).toContainText('already on this phone');
+  await other.locator('.sheet .btn.mint').click();
+  save = await other.evaluate(() => JSON.parse(localStorage.getItem('studyhard.save')!));
+  expect(save.children.filter((c: { id: string }) => c.id === childId).length).toBe(1);
+  expect(save.children.find((c: { id: string }) => c.id === childId).log.length).toBe(1);
+  // An edited file is refused.
+  file.text = file.text.replace('"lifetime":', '"lifetime":9');
+  await restore();
+  await expect(other.locator('.toast').last()).toContainText('changed since it was saved');
+  await other.close();
 });
 
 test('map tips: shown once, then again from the ? button', async ({ page }) => {

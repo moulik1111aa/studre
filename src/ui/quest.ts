@@ -1,6 +1,7 @@
 // Side quest: 100 quick questions against a 300-second clock. No waiting between questions —
 // tap, a flash of green or red, and the next one is already there.
 
+import { logPlay, type Tally } from '../core/stats.ts';
 import { html, esc, type App, type Screen } from './app.ts';
 import type { Child } from '../storage/save.ts';
 import { skillById } from '../core/areas/index.ts';
@@ -128,6 +129,7 @@ export function questScreen(child: Child, quest: SideQuest) {
           coins = coinsForLevel('skill', correct / QUEST.questions, true, replay, quest.stage);
           unlocked = addCoins(child.wallet, coins).unlocked;
         }
+        logPlay(child, { t: Date.now(), d: app.today, id: quest.id, k: 'quest', st: quest.stage, sc: correct, of: asked.length, s: stars, sec: seconds, c: coins, a: questTally(asked, correct) });
       });
       const record = correct > best;
       const jar = new JarBar(child);
@@ -210,3 +212,16 @@ export function questScreen(child: Child, quest: SideQuest) {
   };
 }
 
+
+/** A side quest doesn't track each answer, so its right answers are shared out by skill. */
+function questTally(asked: { skillId: string }[], correct: number): Tally {
+  const t: Tally = {};
+  for (const q of asked) (t[q.skillId] ??= [0, 0, 0])[0]++;
+  let left = correct;
+  for (const row of Object.values(t)) {
+    const share = Math.min(row[0], Math.round((correct * row[0]) / Math.max(1, asked.length)), left);
+    row[1] = share;
+    left -= share;
+  }
+  return t;
+}

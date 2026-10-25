@@ -15,6 +15,7 @@ export interface StudyHardPlugin {
   deviceId?(): Promise<{ id?: string }>;
   deviceSecure?(): Promise<{ secure?: boolean }>;
   confirmDevice?(o: { title: string; text?: string }): Promise<{ ok?: boolean; none?: boolean }>;
+  saveFile?(o: { name: string; mime: string; text: string }): Promise<{ saved?: boolean; error?: string }>;
   writeSave(o: { key: string; value: string }): Promise<void>;
   speak(o: { text: string; rate?: number; pitch?: number; voice?: string }): Promise<void>;
   voices(): Promise<{ voices?: { name: string; locale: string; quality: number; network: boolean }[] }>;

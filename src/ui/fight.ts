@@ -2,6 +2,7 @@
 // battles driven by the Fight engine — attack questions hit the boss, every third question
 // the boss attacks and a quick "block" question decides whether you lose a heart.
 
+import { addAnswer, logPlay, type Tally } from '../core/stats.ts';
 import { html, esc, type App, type Screen } from './app.ts';
 import type { Child } from '../storage/save.ts';
 import { type Level, makeRound, makeQuestion, replaceQuestion, recordResult, starsFor, noteAsked, forAge } from '../core/path.ts';
@@ -91,7 +92,7 @@ class Clock {
   }
 }
 
-function settle(app: App, child: Child, level: FightLevel, asked: Question[], correct: number, stars: 0 | 1 | 2 | 3, seconds: number, fraction: number, beaten?: string): { coins: number; unlocked: ('treat' | 'goal')[] } {
+function settle(app: App, child: Child, level: FightLevel, asked: Question[], correct: number, stars: 0 | 1 | 2 | 3, seconds: number, fraction: number, tally: Tally, beaten?: string): { coins: number; unlocked: ('treat' | 'goal')[] } {
   let coins = 0;
   let unlocked: ('treat' | 'goal')[] = [];
   app.save.update(() => {
@@ -108,6 +109,7 @@ function settle(app: App, child: Child, level: FightLevel, asked: Question[], co
       coins = coinsForLevel(level.kind, fraction, stars > 0, wasPassed, level.stage);
       unlocked = addCoins(child.wallet, coins).unlocked;
     }
+    logPlay(child, { t: Date.now(), d: app.today, id: level.id, k: level.kind, st: level.stage, sc: correct, of: asked.length, s: stars, sec: seconds, c: coins, g: !!child.assisted || undefined, a: tally });
   });
   return { coins, unlocked };
 }
@@ -167,6 +169,9 @@ function minionScreen(app: App, child: Child, level: Extract<Level, { kind: 'rev
   let i = 0;
   let correct = 0;
   let over = false;
+  // First-try answers per skill for the report.
+  const tally: Tally = {};
+  let shownAt = performance.now();
   // While paused the question is hidden, and a new one replaces it on return.
   let paused = false;
   let held = false;
@@ -174,6 +179,7 @@ function minionScreen(app: App, child: Child, level: Extract<Level, { kind: 'rev
 
   const next = () => {
     if (paused) return void (held = true);
+    shownAt = performance.now();
     renderQuestion(app, qwrap, answers, questions[i], (v, b) => void answer(v, b), little);
   };
 
@@ -182,6 +188,7 @@ function minionScreen(app: App, child: Child, level: Extract<Level, { kind: 'rev
     busy = true;
     const q = questions[i];
     const ok = isCorrect(q, value);
+    addAnswer(tally, q.skillId, ok, performance.now() - shownAt);
     app.voice.stop();
     markAnswers(answers, q, btn, ok);
     if (ok) {
@@ -227,7 +234,7 @@ function minionScreen(app: App, child: Child, level: Extract<Level, { kind: 'rev
       app.sfx.sad();
       if (!reducedMotion()) await body.animate([{ transform: 'none' }, { transform: 'translateX(-30px) rotate(-10deg)' }, { transform: 'translateX(400px)', opacity: 0 }], { duration: 900, easing: EASE_OUT, fill: 'forwards' }).finished;
     }
-    const { coins, unlocked } = settle(app, child, level, questions, correct, stars, clock.seconds, correct / questions.length);
+    const { coins, unlocked } = settle(app, child, level, questions, correct, stars, clock.seconds, correct / questions.length, tally);
     void app.show(resultScreen(child, level, { stars, score: correct, total: questions.length, coins, unlocked, timeUp: timeState(app, child) !== 'ok', title: stars ? 'Minion beaten!' : 'The minion ran away!' }));
   };
 
@@ -310,6 +317,8 @@ function bossScreen(app: App, child: Child, level: Extract<Level, { kind: 'boss'
   const seen = new Set<string>();
   let correct = 0;
   let over = false;
+  // First-try answers per skill for the report.
+  const tally: Tally = {};
   let timer: Animation | null = null;
   let timeout = 0;
   let askedAt = 0;
@@ -370,6 +379,7 @@ function bossScreen(app: App, child: Child, level: Extract<Level, { kind: 'boss'
     timer?.pause();
     const used = value === '__timeout__' ? 1 : (performance.now() - askedAt) / (allowed * 1000);
     const ok = value !== '__timeout__' && isCorrect(q, value);
+    addAnswer(tally, q.skillId, ok, performance.now() - askedAt);
     if (ok) correct++;
     app.voice.stop();
     markAnswers(answers, q, btn, ok);
@@ -457,7 +467,7 @@ function bossScreen(app: App, child: Child, level: Extract<Level, { kind: 'boss'
     app.fx.confetti(r.x + r.width / 2, r.y + r.height / 2, 120, 1.4);
     await wait(900);
     const stars = (fight.hearts >= 3 ? 3 : fight.hearts === 2 ? 2 : 1) as 1 | 2 | 3;
-    const { coins, unlocked } = settle(app, child, level, asked, correct, stars, clock.seconds, bossFraction(fight.hearts), def.id);
+    const { coins, unlocked } = settle(app, child, level, asked, correct, stars, clock.seconds, bossFraction(fight.hearts), tally, def.id);
     void app.show(resultScreen(child, level, { stars, score: correct, total: asked.length, coins, unlocked, timeUp: timeState(app, child) !== 'ok', title: `${def.name} defeated!` }));
   };
 
@@ -469,7 +479,7 @@ function bossScreen(app: App, child: Child, level: Extract<Level, { kind: 'boss'
     qwrap.innerHTML = `<article class="qcard"><h2 class="prompt">Out of hearts!</h2><p class="subtitle">The answer was <b>${prettyAnswer(q.answer)}</b>. Practise a little and come back stronger.</p></article>`;
     answers.innerHTML = '';
     await say('Ha! Come back when you are ready!', 2000);
-    const { coins, unlocked } = settle(app, child, level, asked, correct, 0, clock.seconds, 0);
+    const { coins, unlocked } = settle(app, child, level, asked, correct, 0, clock.seconds, 0, tally);
     void app.show(resultScreen(child, level, { stars: 0, score: correct, total: asked.length, coins, unlocked, timeUp: timeState(app, child) !== 'ok', title: 'The boss won this time' }));
   };
 

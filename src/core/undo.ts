@@ -4,6 +4,7 @@
 
 import type { LevelResult, Progress } from './path.ts';
 import type { Wallet } from './economy.ts';
+import { unlog, type StatsHolder } from './stats.ts';
 
 export interface UndoEntry {
   /** When (ms since epoch) and on which local day the change happened. */
@@ -19,7 +20,7 @@ export interface UndoEntry {
   bosses: string[];
 }
 
-interface Undoable {
+interface Undoable extends StatsHolder {
   progress: Progress;
   wallet: Wallet;
   stats: { answered: number; correct: number; secondsByDay: Record<string, number> };
@@ -67,6 +68,7 @@ export function rollback(c: Undoable, since: number): number {
     c.stats.secondsByDay = e.secondsByDay;
     c.bossesBeaten = e.bosses;
   }
+  unlog(c, since);
   c.undo = keep;
   return undo.length;
 }

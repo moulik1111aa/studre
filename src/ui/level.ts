@@ -1,6 +1,7 @@
 // Playing a skill level: questions one at a time, pictures and voice for little ones,
 // a number pad or big choices for older children, a timer on Speed and Master levels.
 
+import { addAnswer, logPlay, type Tally } from '../core/stats.ts';
 import { lineBeforeLevel, plusSays } from './pep.ts';
 import { html, esc, type App, type Screen } from './app.ts';
 import { TOGETHER_LEVELS, type Child } from '../storage/save.ts';
@@ -90,6 +91,9 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
     let retries = 0;
     // Answering a twin after a slip: it's practice, not score.
     let retrying = false;
+    // First-try answers per skill, and when the current question appeared (for the report).
+    const tally: Tally = {};
+    let askedAt = performance.now();
     const paintPrize = () => {
       let best: number;
       if (rules.streak) best = masterFraction(Math.max(10, i - streak + 10));
@@ -148,6 +152,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
       // Every question is read aloud (unless the parent switched reading off).
       // Assisted: always read aloud, even if reading is switched off.
       app.voice.say(again ? `Now try this one. ${q.speak ?? spoken(q.prompt)}` : q.speak ?? spoken(q.prompt), undefined, !!child.assisted);
+      askedAt = performance.now();
       startTimer();
     };
 
@@ -214,6 +219,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
       timer?.pause();
       clearTimeout(timeout);
       const ok = value !== '__timeout__' && isCorrect(q, value);
+      if (!retrying) addAnswer(tally, q.skillId, ok, performance.now() - askedAt);
       const card = qwrap.firstElementChild as HTMLElement;
       const dot = dots.children[rules.streak ? Math.min(streak, total - 1) : i] as HTMLElement | undefined;
       app.voice.stop();
@@ -302,6 +308,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
           coins = coinsForLevel('skill', fraction, stars > 0, wasPassed, level.stage);
           unlocked = addCoins(child.wallet, coins).unlocked;
         }
+        logPlay(child, { t: Date.now(), d: app.today, id: level.id, k: 'skill', st: level.stage, tier: level.tier, sc: score, of: scoreTotal, s: stars, sec: seconds, c: coins, g: together || undefined, a: tally });
         if (firstLevels) child.together = Math.max(0, (child.together ?? 0) - 1);
         if (child.placementChecks > 0) {
           child.placementChecks--;
