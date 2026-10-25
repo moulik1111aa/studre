@@ -21,6 +21,7 @@ import { trophyScreen } from './trophy.ts';
 import { BOSS_EMOJI } from './bosses.ts';
 import { remember } from '../core/undo.ts';
 import { showMapTips } from './tour.ts';
+import { adventureOn, adventureScreen, questBadge } from './adventure.ts';
 
 interface Node {
   kind: 'skill' | 'review' | 'boss' | 'quest';
@@ -58,6 +59,7 @@ export function mapScreen(child: Child) {
     const stagesBuilt = AREAS[0].skills.filter((s) => s.length).length;
     const left = Math.ceil(secondsLeft(child.wallet, app.today, app.save.data.settings.limitMinutes) / 60);
     const limit = app.save.data.settings.limitMinutes;
+    const adv = adventureOn(child) ? questBadge(app, child) : null;
     const el = html(`<section class="screen map" aria-label="Map">
       <header class="map-top">
         <button class="who" aria-label="Switch child">${avatarHtml(child.avatar, 46)}<span><b>${esc(child.name)}</b><small>${left > 0 ? `${left} min left today` : 'Time’s up for today'}</small></span></button>
@@ -67,7 +69,7 @@ export function mapScreen(child: Child) {
       </header>
       <div class="jar-slot"></div>
       <div class="worlds scroll"></div>
-      <div class="play-bar">${next ? `<button class="icon-btn skip-btn" aria-label="Skip this level (grown-up)">${ICONS.skip}</button>` : ''}<button class="btn play-next">${next ? `${ICONS.play} ${next.kind === 'skill' ? 'Play' : next.kind === 'boss' ? 'Fight the boss!' : 'Minion fight!'}` : 'All done!'}</button></div>
+      <div class="play-bar">${next ? `<button class="icon-btn skip-btn" aria-label="Skip this level (grown-up)">${ICONS.skip}</button>` : ''}<button class="btn play-next">${next ? `${ICONS.play} ${next.kind === 'skill' ? 'Play' : next.kind === 'boss' ? 'Fight the boss!' : 'Minion fight!'}` : 'All done!'}</button>${adv ? `<button class="icon-btn adv-btn${adv.ready ? ' ready' : ''}" aria-label="Quests and badges: ${adv.done} of 3 quests done today"><span aria-hidden="true">${adv.ready ? '🎁' : '📜'}</span><i aria-hidden="true">${adv.done}/3</i></button>` : ''}</div>
     </section>`);
     const jar = new JarBar(child);
     el.querySelector('.jar-slot')!.appendChild(jar.el);
@@ -157,6 +159,7 @@ export function mapScreen(child: Child) {
 
     el.querySelector('.who')!.addEventListener('click', () => void app.show(whosPlayingScreen));
     el.querySelector('.trophy-btn')!.addEventListener('click', () => void app.show(trophyScreen(child)));
+    el.querySelector('.adv-btn')?.addEventListener('click', () => void app.show(adventureScreen(child)));
     el.querySelector('.help-btn')!.addEventListener('click', () => void showMapTips(app, child, el));
     el.querySelector('.play-next')!.addEventListener('click', () => {
       if (next) playLevel(app, child, next);

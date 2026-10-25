@@ -1,6 +1,7 @@
 // Parent area (behind the grown-up check): children, time limit, holiday mode, reward
 // categories, sound/voice, redo placement, and a progress report per child.
 
+import { toggleAdventure } from './adventure.ts';
 import { schoolScreen, schoolLabel } from './school.ts';
 import { reportScreen } from './report.ts';
 import { restoreFromFile } from './restore.ts';
@@ -67,7 +68,7 @@ export function parentScreen(app: App): Screen {
       <h2 class="pa-h">Children</h2>
       <div class="pa-kids">${app.save.data.children
         .map((c) => `<div class="pa-kid card">${avatarHtml(c.avatar, 52)}<div><b>${esc(c.name)}</b><small>Age ${c.age}</small></div>
-          <div class="pa-kid-btns"><button class="btn ghost small level-btn" data-id="${c.id}">${CHALLENGE[c.challenge ?? 0].icon} ${CHALLENGE[c.challenge ?? 0].name}</button><button class="btn ghost small report" data-id="${c.id}">${ICONS.chart} Report</button><button class="btn ghost small age-btn" data-id="${c.id}">🎂 Age ${c.age}</button><button class="btn ghost small school-btn" data-id="${c.id}">📚 ${c.school?.on ? esc(schoolLabel(c.school)) : 'School path'}</button><button class="btn ghost small assist-btn${c.assisted ? ' on' : ''}" data-id="${c.id}" aria-pressed="${!!c.assisted}">👪 With a grown-up: ${c.assisted ? 'on' : 'off'}</button></div></div>`)
+          <div class="pa-kid-btns"><button class="btn ghost small level-btn" data-id="${c.id}">${CHALLENGE[c.challenge ?? 0].icon} ${CHALLENGE[c.challenge ?? 0].name}</button><button class="btn ghost small report" data-id="${c.id}">${ICONS.chart} Report</button><button class="btn ghost small age-btn" data-id="${c.id}">🎂 Age ${c.age}</button><button class="btn ghost small school-btn" data-id="${c.id}">📚 ${c.school?.on ? esc(schoolLabel(c.school)) : 'School path'}</button><button class="btn ghost small adv-toggle${c.adventure?.on ? ' on' : ''}" data-id="${c.id}" aria-pressed="${!!c.adventure?.on}">🎮 Adventure: ${c.adventure?.on ? 'on' : 'off'}</button><button class="btn ghost small assist-btn${c.assisted ? ' on' : ''}" data-id="${c.id}" aria-pressed="${!!c.assisted}">👪 With a grown-up: ${c.assisted ? 'on' : 'off'}</button></div></div>`)
         .join('')}</div>
       <button class="btn ghost small add-kid">+ Add a child</button>
       <button class="btn ghost small restore-kid">⤓ Restore from a report card</button>
@@ -178,6 +179,14 @@ export function parentScreen(app: App): Screen {
   );
   el.querySelectorAll<HTMLButtonElement>('.age-btn').forEach((b) =>
     b.addEventListener('click', () => void app.show(ageScreen(app.save.data.children.find((k) => k.id === b.dataset.id)!))),
+  );
+  el.querySelectorAll<HTMLButtonElement>('.adv-toggle').forEach((b) =>
+    b.addEventListener('click', () => {
+      const c = app.save.data.children.find((k) => k.id === b.dataset.id)!;
+      const on = toggleAdventure(app, c);
+      app.toast(on ? `Adventure on for ${c.name}: daily quests, a weekly challenge, chests of bonus coins and badges.` : `Adventure off for ${c.name}. Badges are kept for later.`);
+      void app.show(parentScreen);
+    }),
   );
   el.querySelectorAll<HTMLButtonElement>('.assist-btn').forEach((b) =>
     b.addEventListener('click', () => {

@@ -15,6 +15,8 @@ import { rewardsScreen } from './ui/rewards.ts';
 import { unlockScreen } from './ui/unlock.ts';
 import { timesUpScreen } from './ui/timesup.ts';
 import { trophyScreen } from './ui/trophy.ts';
+import { mapScreen } from './ui/map.ts';
+import { adventureScreen } from './ui/adventure.ts';
 import { parentScreen } from './ui/parent.ts';
 import { showLesson } from './ui/lesson.ts';
 import { accessState, lockScreen, ownerScreen } from './ui/access.ts';
@@ -32,7 +34,7 @@ async function boot(): Promise<void> {
   const app = new App(document.getElementById('app')!, storage, native);
   if (app.debug) {
     // Screen factories for screenshots and tests.
-    Object.assign(window, { __app: app, __screens: { resultScreen, showcaseScreen, rewardsScreen, unlockScreen, timesUpScreen, trophyScreen, parentScreen, welcomeScreen, whosPlayingScreen } });
+    Object.assign(window, { __app: app, __screens: { mapScreen, adventureScreen, resultScreen, showcaseScreen, rewardsScreen, unlockScreen, timesUpScreen, trophyScreen, parentScreen, welcomeScreen, whosPlayingScreen } });
     // Lessons: open one for a skill's question, or for a hand-made question.
     Object.assign(window, {
       __T: { addsub, muldiv, fractions },

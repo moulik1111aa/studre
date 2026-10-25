@@ -6,6 +6,7 @@ import { freshWallet, type Wallet } from '../core/economy.ts';
 import type { UndoEntry } from '../core/undo.ts';
 import type { OwnReward } from '../core/rewards.ts';
 import type { PlayEntry, Tally } from '../core/stats.ts';
+import type { AdventureState } from '../core/adventure.ts';
 
 export const SAVE_VERSION = 1;
 const PRIMARY = 'studyhard.save';
@@ -77,6 +78,8 @@ export interface Child {
   assisted?: boolean;
   /** A school path chosen by a parent; while `on`, the map shows only these skills. */
   school?: SchoolPath;
+  /** Adventure mode: quests, chests and badges (core/adventure.ts); off when missing. */
+  adventure?: AdventureState;
   /** Play log and per-skill answer tallies for the parent report (core/stats.ts). */
   log?: PlayEntry[];
   tally?: Tally;

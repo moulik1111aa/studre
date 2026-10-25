@@ -1,5 +1,6 @@
 // Level complete: stars draw in, coins fly into the treat jar, then Next or the map.
 
+import { adventureNews, adventureScreen } from './adventure.ts';
 import { html, esc, type App, type Screen } from './app.ts';
 import { progressMoment, MILESTONES, type Moment } from '../core/moment.ts';
 import { rewardById } from '../core/rewards.ts';
@@ -73,6 +74,7 @@ export function resultScreen(child: Child, level: Level, r: ResultInfo) {
     const after = app.path[level.index + 1];
     const twoWays = passed && !!after && !!front && after.id !== front.id && after.index < front.index;
     const moment = r.coins > 0 ? progressMoment(child.wallet, r.coins, r.perfectCoins ?? r.coins) : null;
+    const news = adventureNews(app, child);
     const el = html(`<section class="screen result" style="${worldVars(level.stage)}" aria-label="Level result">
       ${ambientHtml(level.stage, 8)}
       ${moment ? '' : '<div class="jar-slot"></div>'}
@@ -85,6 +87,7 @@ export function resultScreen(child: Child, level: Level, r: ResultInfo) {
         ${moment ? '' : r.perfect ? `<p class="res-perfect">💯 Perfect score — the biggest prize!</p>` : r.perfectCoins && !r.timeUp ? `<p class="res-aim">Aim for perfect: ${coinSvg} <b>+${r.perfectCoins}</b> for ${r.total}/${r.total}</p>` : ''}
         ${passed ? '' : `<p class="res-note">You need ${level.kind === 'skill' && level.tier === 5 ? '10 in a row' : 'a few more right'} to pass.</p><div class="res-plus"><span class="ps-plus">${plusFaceSvg({ cls: 'oops' })}</span><p>${lineAfterMiss(child, r.score, r.total)}</p></div>`}
       </div>
+      ${news}
       ${moment ? momentHtml(moment, r) : ''}
       </div>
       <div class="res-actions">
@@ -119,6 +122,7 @@ export function resultScreen(child: Child, level: Level, r: ResultInfo) {
         else enterChild(app, child);
       }),
     );
+    el.querySelector('.adv-open')?.addEventListener('click', () => proceed(() => void app.show(adventureScreen(child))));
     el.querySelector('.resume')?.addEventListener('click', () => proceed(() => playLevel(app, child, front!)));
     // The little ? beside each button says which level it goes to.
     const tip = el.querySelector<HTMLElement>('.tw-tip');

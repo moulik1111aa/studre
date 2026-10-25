@@ -682,3 +682,45 @@ test('locked copy: phone code shown, a wrong key is refused, a wrong code is jus
   await page.click('.grownup [data-back]');
   await expect(page.locator('.lock')).toBeVisible();
 });
+
+test('adventure: a parent turns it on, quests fill from play, the chest pays once, badges show', async ({ page }) => {
+  type W = { __app: { child: { wallet: { lifetime: number }; log?: unknown[]; stats: { secondsByDay: Record<string, number> } }; today: string; save: { update(f: () => void): void }; show(m: unknown): void }; __screens: { parentScreen: unknown; mapScreen(c: unknown): unknown } };
+  await page.goto('/?debug&demo=%4012');
+  await expect(page.locator('.map')).toBeVisible();
+  await expect(page.locator('.adv-btn')).toHaveCount(0);
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
+  await expect(page.locator('.adv-toggle')).toHaveText(/Adventure: off/);
+  await page.click('.adv-toggle');
+  await expect(page.locator('.adv-toggle')).toHaveText(/Adventure: on/);
+  // A good afternoon of play today.
+  await page.evaluate(() => {
+    const w = window as unknown as W;
+    const c = w.__app.child;
+    w.__app.save.update(() => {
+      c.log ??= [];
+      for (let i = 0; i < 6; i++) c.log.push({ t: Date.now() - 60_000 + i, d: w.__app.today, id: `x${i}`, k: 'skill', st: 3, tier: 1, sc: 10, of: 10, s: 3, sec: 200, c: 10, a: { 's3.x2': [10, 10, 30000] } });
+      c.stats.secondsByDay[w.__app.today] = 1500;
+    });
+    w.__app.show(w.__screens.mapScreen(c));
+  });
+  await expect(page.locator('.adv-btn.ready')).toBeVisible();
+  await page.click('.adv-btn');
+  await expect(page.locator('.adv-quests').first().locator('.aq.done')).toHaveCount(3);
+  const before = await page.evaluate(() => (window as unknown as W).__app.child.wallet.lifetime);
+  await page.click('.adv-chest.ready[data-kind="daily"]');
+  await expect(page.locator('.adv-chest.open[data-kind="daily"]')).toBeVisible({ timeout: 5000 });
+  const after = await page.evaluate(() => (window as unknown as W).__app.child.wallet.lifetime);
+  expect(after).toBeGreaterThan(before);
+  await expect(page.locator('.adv-chest.ready[data-kind="daily"]')).toHaveCount(0);
+  await page.click('.rp-tab[data-tab="badges"]');
+  await expect(page.locator('.adv-count')).toContainText('badges');
+  expect(await page.locator('.ab.on').count()).toBeGreaterThan(0);
+  expect(await page.locator('.ab:not(.on)').count()).toBeGreaterThan(40);
+  // Switched off again: the map is back to the plain version.
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
+  await page.click('.adv-toggle');
+  await expect(page.locator('.adv-toggle')).toHaveText(/Adventure: off/);
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.mapScreen(w.__app.child)); });
+  await expect(page.locator('.map')).toBeVisible();
+  await expect(page.locator('.adv-btn')).toHaveCount(0);
+});
