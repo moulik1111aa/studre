@@ -24,6 +24,7 @@ import { addChildScreen } from './setup.ts';
 import { makeBackup } from '../core/backup.ts';
 import { reportCardHtml, reportFileName } from './reportfile.ts';
 import { saveTextFile } from '../platform/files.ts';
+import { markBackedUp } from './backup.ts';
 
 const STRANDS: [string, string][] = [
   ['number', 'Numbers & place value'],
@@ -314,6 +315,7 @@ export function reportScreen(child: Child, start: Tab = 'overview') {
       try {
         const name = reportFileName(child, today);
         const ok = await saveTextFile(app, name, 'text/html', reportCardHtml(app, child, await makeBackup(child)));
+        if (ok) markBackedUp(app, child);
         if (ok) app.toast(`Saved ${name}`);
       } catch {
         app.toast('The report card couldn’t be saved. Please try again.');

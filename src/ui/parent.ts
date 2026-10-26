@@ -2,6 +2,9 @@
 // categories, sound/voice, redo placement, and a progress report per child.
 
 import { toggleAdventure } from './adventure.ts';
+import { backUpNow, lastBackupText } from './backup.ts';
+import { askNotifications, notificationState } from './remindsync.ts';
+import { DEFAULT_REMINDERS, type ReminderSettings } from '../core/reminders.ts';
 import { schoolScreen, schoolLabel } from './school.ts';
 import { reportScreen } from './report.ts';
 import { restoreFromFile } from './restore.ts';
@@ -62,6 +65,7 @@ const THEME_CHOICES: { id: Theme; name: string; note: string }[] = [
 
 export function parentScreen(app: App): Screen {
   const st = app.save.data.settings;
+  const rs: ReminderSettings = { ...DEFAULT_REMINDERS, ...st.reminders };
   const el = html(`<section class="screen parent" aria-label="Parent area">
     <header class="topbar"><button class="icon-btn back-btn" aria-label="Back">${ICONS.back}</button><span class="t">Parent area</span><span style="width:50px"></span></header>
     <div class="scroll pa-body">
@@ -72,6 +76,19 @@ export function parentScreen(app: App): Screen {
         .join('')}</div>
       <button class="btn ghost small add-kid">+ Add a child</button>
       <button class="btn ghost small restore-kid">⤓ Restore from a report card</button>
+      <h2 class="pa-h">Backups and reminders</h2>
+      <div class="card pa-backup">
+        <p class="pb-why"><b>💾 Back up progress</b><small>Everything is saved only on this phone. A report card file (saved to Google Drive or email) restores it on any phone.</small></p>
+        <ul class="pb-kids">${app.save.data.children.map((c) => `<li>${avatarHtml(c.avatar, 28)}<span>${esc(c.name)}</span><small>${lastBackupText(c)}</small></li>`).join('')}</ul>
+        <button class="btn small bk-all">Save report cards now</button>
+      </div>
+      <div class="card pa-remind">
+        <label class="toggle-row"><span><b>🍫 Melt watch</b><small>Friendly notes when a treat jar is about to melt, each with a fun fact.</small></span><input type="checkbox" role="switch" data-r="melt" ${rs.melt ? 'checked' : ''}></label>
+        <div class="seg pr-per" role="radiogroup" aria-label="Notes a day"${rs.melt ? '' : ' hidden'}>${([2, 3] as const).map((n) => `<button class="seg-b${rs.perDay === n ? ' on' : ''}" role="radio" aria-checked="${rs.perDay === n}" data-per="${n}"><b>${n} a day</b><small>${n === 3 ? '8 am · 4:30 pm · 7:30 pm' : '8 am · 6:30 pm'}</small></button>`).join('')}</div>
+        <label class="toggle-row"><span><b>💾 Backup reminder</b><small>When there’s a week of progress not backed up. Grown-ups also see it when the app opens.</small></span><input type="checkbox" role="switch" data-r="backup" ${rs.backup ? 'checked' : ''}></label>
+        <p class="pr-status" hidden></p>
+      </div>
+      <div class="card pa-widgets"><b>📱 Home-screen widgets</b><small>Treat jars, a fun fact and the Adventure card. Touch and hold an empty spot on your home screen, tap Widgets, then find MN.</small></div>
       <h2 class="pa-h">Play time and rewards</h2>
       <button class="pa-row card limits"><b>${st.limitMinutes} minutes a day</b><small>${st.timeUpMode === 'stop' ? 'Stops when time is up' : 'Keeps playing without coins'} · treats ${paceText(st.treatPace, 'treat')}, big toy ${paceText(st.goalPace, 'goal')}</small></button>
       <h2 class="pa-h">Look</h2>
@@ -99,6 +116,42 @@ export function parentScreen(app: App): Screen {
   el.querySelector('.add-kid')!.addEventListener('click', () => void app.show(addChildScreen(false)));
   el.querySelector('.restore-kid')!.addEventListener('click', () => void restoreFromFile(app, () => void app.show(parentScreen)));
   el.querySelector('.limits')!.addEventListener('click', () => void app.show(limitsScreen(false)));
+  el.querySelector('.bk-all')!.addEventListener('click', async () => {
+    const kids = app.save.data.children;
+    const n = await backUpNow(app, kids);
+    if (n) app.toast(n === kids.length ? 'Backed up! Keep the file somewhere safe, like Google Drive.' : `Saved ${n} of ${kids.length}.`);
+    if (n) void app.show(parentScreen);
+  });
+  // Reminders: switches, notes a day, and whether the phone lets MN send notes.
+  const setRemind = (patch: Partial<ReminderSettings>) => app.save.update((d) => (d.settings.reminders = { ...DEFAULT_REMINDERS, ...d.settings.reminders, ...patch }));
+  el.querySelectorAll<HTMLInputElement>('[data-r]').forEach((i) =>
+    i.addEventListener('change', () => {
+      setRemind({ [i.dataset.r as 'melt' | 'backup']: i.checked });
+      if (i.dataset.r === 'melt') el.querySelector<HTMLElement>('.pr-per')!.hidden = !i.checked;
+      if (i.checked) void paintNotes(true);
+    }),
+  );
+  el.querySelectorAll<HTMLButtonElement>('.pr-per .seg-b').forEach((b) =>
+    b.addEventListener('click', () => {
+      setRemind({ perDay: Number(b.dataset.per) as 2 | 3 });
+      el.querySelectorAll('.pr-per .seg-b').forEach((x) => {
+        x.classList.toggle('on', x === b);
+        x.setAttribute('aria-checked', String(x === b));
+      });
+    }),
+  );
+  const status = el.querySelector<HTMLElement>('.pr-status')!;
+  const paintNotes = async (ask = false) => {
+    let n = await notificationState(app);
+    if (!n) return;
+    if (!n.enabled && n.canAsk && ask) n = { enabled: await askNotifications(app), canAsk: false };
+    status.hidden = n.enabled;
+    if (n.enabled) return;
+    status.innerHTML = n.canAsk ? 'MN isn’t allowed to send notes yet. <button class="linkish pr-allow">Allow notes</button>' : 'Notes are switched off for MN on this phone. <button class="linkish pr-open">Open settings</button>';
+    status.querySelector('.pr-allow')?.addEventListener('click', () => void paintNotes(true));
+    status.querySelector('.pr-open')?.addEventListener('click', () => void app.native?.openNotificationSettings?.());
+  };
+  void paintNotes();
   el.querySelector('.voice-row')!.addEventListener('click', () => void app.show(voiceScreen));
   const ts = el.querySelector<HTMLInputElement>('.pt-slider')!;
   const paintTimer = () => {
@@ -199,7 +252,33 @@ export function parentScreen(app: App): Screen {
   el.querySelectorAll<HTMLButtonElement>('.report').forEach((b) =>
     b.addEventListener('click', () => void app.show(reportScreen(app.save.data.children.find((c) => c.id === b.dataset.id)!))),
   );
-  return { el, mounted: () => stagger(el.querySelectorAll('.pa-body > *'), { gap: 40 }) };
+  return {
+    el,
+    mounted: () => {
+      stagger(el.querySelectorAll('.pa-body > *'), { gap: 40 });
+      void firstAsk(app);
+    },
+  };
+}
+
+/** Once, on the phone: may MN send the melt-watch and backup notes? */
+async function firstAsk(app: App): Promise<void> {
+  if (!app.native?.askNotifications || app.save.data.settings.notifAsked) return;
+  const n = await notificationState(app);
+  app.save.update((d) => (d.settings.notifAsked = true));
+  if (!n || n.enabled || !n.canAsk) return;
+  const { result } = app.sheet(
+    `<h2>🔔 Can MN send friendly notes?</h2><p>Two or three a day about the treat jars melting, each with a fun fact, and a reminder for grown-ups to back up progress. You can change this here any time.</p>`,
+    [
+      { label: 'Allow notes', value: true, kind: 'mint' },
+      { label: 'Not now', value: false, kind: 'ghost', back: true },
+    ],
+    'Notes',
+  );
+  if (await result) {
+    const ok = await askNotifications(app);
+    app.toast(ok ? 'Notes are on. You’ll find them under Backups and reminders.' : 'No notes for now. You can turn them on under Backups and reminders.');
+  }
 }
 
 function faceoffRows(app: App): string {

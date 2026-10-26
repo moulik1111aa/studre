@@ -23,7 +23,13 @@ export interface StudyHardPlugin {
   savePhoto(o: { id: string; dataUrl: string }): Promise<void>;
   loadPhoto(o: { id: string }): Promise<{ dataUrl?: string }>;
   deletePhoto(o: { id: string }): Promise<void>;
+  setReminders?(o: { plan: string }): Promise<{ enabled?: boolean; canAsk?: boolean; snoozeUntil?: number }>;
+  notificationState?(): Promise<{ enabled?: boolean; canAsk?: boolean; snoozeUntil?: number }>;
+  askNotifications?(): Promise<{ enabled?: boolean; canAsk?: boolean }>;
+  openNotificationSettings?(): Promise<void>;
+  launchAction?(): Promise<{ open?: string }>;
   addListener(event: 'back', cb: () => void): unknown;
+  addListener(event: 'launch', cb: (d: { open?: string }) => void): unknown;
 }
 
 interface SystemBarsPlugin {

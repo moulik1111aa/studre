@@ -7,6 +7,7 @@ import type { UndoEntry } from '../core/undo.ts';
 import type { OwnReward } from '../core/rewards.ts';
 import type { PlayEntry, Tally } from '../core/stats.ts';
 import type { AdventureState } from '../core/adventure.ts';
+import type { ReminderSettings } from '../core/reminders.ts';
 
 export const SAVE_VERSION = 1;
 const PRIMARY = 'studyhard.save';
@@ -78,6 +79,9 @@ export interface Child {
   assisted?: boolean;
   /** A school path chosen by a parent; while `on`, the map shows only these skills. */
   school?: SchoolPath;
+  /** Last report-card backup (ms) and how many play days it held (for the backup reminder). */
+  backupAt?: number;
+  backupDays?: number;
   /** Adventure mode: quests, chests and badges (core/adventure.ts); off when missing. */
   adventure?: AdventureState;
   /** Play log and per-skill answer tallies for the parent report (core/stats.ts). */
@@ -125,6 +129,12 @@ export interface Settings {
   tourSeen?: boolean;
   /** Parent PIN for the grown-up check, as "salt:hash" (none: the phone's screen lock). */
   parentPin?: string;
+  /** Phone reminders (melt watch, backup); the defaults when missing. */
+  reminders?: ReminderSettings;
+  /** Backup reminders are quiet until then (ms), after "Remind me in 3 days". */
+  backupSnoozeUntil?: number;
+  /** The grown-up has been asked once whether MN may send notes. */
+  notifAsked?: boolean;
 }
 
 export type Theme = 'playground' | 'glass' | 'schoolbook' | 'precision';
@@ -297,12 +307,19 @@ export class SaveStore {
     return { data: freshSave(), source: 'reset' };
   }
 
+  private readonly listeners: (() => void)[] = [];
+  /** Called after every save (the phone's reminders and widgets follow the save). */
+  onSaved(fn: () => void): void {
+    this.listeners.push(fn);
+  }
+
   save(): void {
     const json = JSON.stringify(this.data);
     const prev = this.store.get(PRIMARY);
     if (prev && parse(prev)) this.store.set(BACKUP, prev);
     this.store.set(PRIMARY, json);
     if (!prev) this.store.set(BACKUP, json);
+    for (const fn of this.listeners) fn();
   }
 
   update(fn: (d: SaveData) => void): void {

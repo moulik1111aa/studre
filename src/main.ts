@@ -28,6 +28,8 @@ import { addChildScreen, limitsScreen } from './ui/setup.ts';
 import { meltedScreen } from './ui/unlock.ts';
 import { voiceChoiceScreen } from './ui/voicechoice.ts';
 import { lockSetupScreen } from './ui/grownup.ts';
+import { backupScreen, gateNeeded } from './ui/backup.ts';
+import { startReminders } from './ui/remindsync.ts';
 import { parentScreen } from './ui/parent.ts';
 import { showLesson } from './ui/lesson.ts';
 import { accessState, lockScreen, ownerScreen } from './ui/access.ts';
@@ -45,7 +47,7 @@ async function boot(): Promise<void> {
   const app = new App(document.getElementById('app')!, storage, native);
   if (app.debug) {
     // Screen factories for screenshots and tests.
-    Object.assign(window, { __app: app, __screens: { mapScreen, adventureScreen, resultScreen, showcaseScreen, rewardsScreen, unlockScreen, timesUpScreen, trophyScreen, parentScreen, welcomeScreen, whosPlayingScreen, reportScreen, schoolScreen, faceoffSetupScreen, fightScreen, levelScreen, questScreen, placementScreen, addChildScreen, limitsScreen, meltedScreen, voiceChoiceScreen, lockSetupScreen, ownerScreen } });
+    Object.assign(window, { __app: app, __screens: { mapScreen, adventureScreen, resultScreen, showcaseScreen, rewardsScreen, unlockScreen, timesUpScreen, trophyScreen, parentScreen, welcomeScreen, whosPlayingScreen, reportScreen, schoolScreen, faceoffSetupScreen, fightScreen, levelScreen, questScreen, placementScreen, addChildScreen, limitsScreen, meltedScreen, voiceChoiceScreen, lockSetupScreen, ownerScreen, backupScreen } });
     // Lessons: open one for a skill's question, or for a hand-made question.
     Object.assign(window, {
       __T: { addsub, muldiv, fractions },
@@ -61,7 +63,10 @@ async function boot(): Promise<void> {
   const params = new URLSearchParams(location.search);
 
   // Once a child exists the app opens on "Who's playing?", even if setup was left half-way.
-  const home = () => (app.save.data.children.length ? whosPlayingScreen : welcomeScreen);
+  // When there is a week of unsaved progress, grown-ups see the backup screen first (browser
+  // test runs only when they ask for it with &backup).
+  const backupFirst = () => gateNeeded(app) && (!app.debug || params.has('backup'));
+  const home = () => (app.save.data.children.length ? (backupFirst() ? backupScreen(whosPlayingScreen) : whosPlayingScreen) : welcomeScreen);
   // Access keys: the app opens only with a key for this phone (or on the owner's phone).
   // Browser test runs (?debug) skip it unless they ask for it with &lock.
   const gated = !!native || !app.debug || params.has('lock');
@@ -98,6 +103,8 @@ async function boot(): Promise<void> {
       void app.show(lockScreen(st, () => void gate()));
     }
   });
+  // The phone's reminders and home-screen widgets follow the save.
+  startReminders(app);
   const demo = params.get('demo');
   const seeded = app.debug && demo ? seedDemo(app, demo, { coins: Number(params.get('coins')) || 0, age: Number(params.get('age')) || 8, tips: params.has('tips') }) : null;
   if (seeded) {

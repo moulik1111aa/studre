@@ -51,7 +51,8 @@ for (const dir of readdirSync(res)) {
 }
 cpSync(join(root, 'native/android/res'), res, { recursive: true });
 
-// 5. Manifest: portrait, vibration, and visibility of the phone's text-to-speech engine (Android 11+).
+// 5. Manifest: portrait, vibration, visibility of the phone's text-to-speech engine (Android 11+),
+//    and the reminders and widgets.
 const manifestPath = join(main, 'AndroidManifest.xml');
 let manifest = readFileSync(manifestPath, 'utf8');
 manifest = patch(manifest, 'android:name=".MainActivity"', 'android:name=".MainActivity"\n            android:screenOrientation="portrait"');
@@ -59,6 +60,31 @@ manifest = patch(
   manifest,
   '<uses-permission android:name="android.permission.INTERNET" />',
   '<uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.VIBRATE" />\n    <queries>\n        <intent>\n            <action android:name="android.intent.action.TTS_SERVICE" />\n        </intent>\n    </queries>',
+);
+// Reminders (melt watch, backup) and the home-screen widgets: notification permission, alarms
+// that come back after a restart, and the receivers (see Reminders.java and Widgets.java).
+manifest = patch(
+  manifest,
+  '<uses-permission android:name="android.permission.VIBRATE" />',
+  '<uses-permission android:name="android.permission.VIBRATE" />\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />',
+);
+const widget = (name, label, info) => `
+        <receiver android:name=".${name}" android:exported="false" android:label="${label}">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/${info}" />
+        </receiver>`;
+manifest = patch(
+  manifest,
+  '</application>',
+  `        <receiver android:name=".ReminderReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>${widget('JarWidget', 'MN treat jars', 'widget_jar_info')}${widget('FactWidget', 'MN fun fact', 'widget_fact_info')}${widget('AdventureWidget', 'MN adventure', 'widget_adventure_info')}
+    </application>`,
 );
 writeFileSync(manifestPath, manifest);
 

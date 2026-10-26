@@ -31,12 +31,16 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
+import androidx.core.app.NotificationManagerCompat;
 import com.getcapacitor.JSObject;
+import com.getcapacitor.PermissionState;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.ActivityCallback;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import com.getcapacitor.annotation.Permission;
+import com.getcapacitor.annotation.PermissionCallback;
 import androidx.activity.result.ActivityResult;
 import java.util.Map;
 
@@ -44,10 +48,14 @@ import java.util.Map;
  * Study Hard's bridge to the phone: haptics, the back button, full-screen display,
  * the highest refresh rate, keep-screen-on while playing, a native mirror of the save
  * (progress survives even if the WebView's storage is cleared), reading questions
- * aloud with the phone's English voice, and the reward photos parents attach.
+ * aloud with the phone's English voice, the reward photos parents attach, and the
+ * reminders and home-screen widgets (Reminders.java, Widgets.java).
  * The web side lives in src/platform/native.ts.
  */
-@CapacitorPlugin(name = "StudyHard")
+@CapacitorPlugin(
+    name = "StudyHard",
+    permissions = { @Permission(strings = { "android.permission.POST_NOTIFICATIONS" }, alias = "notifications") }
+)
 public class StudyHardPlugin extends Plugin {
 
     private static final String PREFS = "studyhard_save";
@@ -58,6 +66,8 @@ public class StudyHardPlugin extends Plugin {
     private String pendingText = null;
     private String pendingVoice = null;
     private float pendingRate = 0.95f;
+    /** "play" or "backup" when the app was opened from a reminder (read once by the web app). */
+    private String pendingOpen = null;
 
     @Override
     public void load() {
@@ -89,6 +99,11 @@ public class StudyHardPlugin extends Plugin {
         });
 
         AppCompatActivity activity = getActivity();
+        Intent start = activity.getIntent();
+        if (start != null && start.hasExtra(Reminders.EXTRA_OPEN)) {
+            pendingOpen = start.getStringExtra(Reminders.EXTRA_OPEN);
+            start.removeExtra(Reminders.EXTRA_OPEN);
+        }
         activity.runOnUiThread(() -> {
             immersive();
             preferHighestRefreshRate();
@@ -119,6 +134,18 @@ public class StudyHardPlugin extends Plugin {
             tts = null;
         }
         super.handleOnDestroy();
+    }
+
+    /** A reminder tapped while the app was already open. */
+    @Override
+    protected void handleOnNewIntent(Intent intent) {
+        super.handleOnNewIntent(intent);
+        if (intent == null || !intent.hasExtra(Reminders.EXTRA_OPEN)) return;
+        pendingOpen = intent.getStringExtra(Reminders.EXTRA_OPEN);
+        intent.removeExtra(Reminders.EXTRA_OPEN);
+        JSObject d = new JSObject();
+        d.put("open", pendingOpen);
+        notifyListeners("launch", d);
     }
 
     @Override
@@ -514,5 +541,86 @@ public class StudyHardPlugin extends Plugin {
 
     private SharedPreferences prefs() {
         return getContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+    }
+
+    // ── reminders and widgets ──────────────────────────────────────────────
+
+    /** A new plan from the web app: { plan: JSON text with items[] and widget{} }. */
+    @PluginMethod
+    public void setReminders(PluginCall call) {
+        String plan = call.getString("plan");
+        if (plan == null) {
+            call.reject("no plan");
+            return;
+        }
+        Context ctx = getContext();
+        try {
+            org.json.JSONObject parsed = new org.json.JSONObject(plan);
+            org.json.JSONObject widget = parsed.optJSONObject("widget");
+            Widgets.store(ctx, widget == null ? "{}" : widget.toString());
+        } catch (Exception ignored) {
+            // Keep the old widget data.
+        }
+        Reminders.apply(ctx, plan);
+        Widgets.updateAll(ctx);
+        call.resolve(notificationInfo());
+    }
+
+    private JSObject notificationInfo() {
+        Context ctx = getContext();
+        JSObject r = new JSObject();
+        boolean ask = Build.VERSION.SDK_INT >= 33 && getPermissionState("notifications") != PermissionState.GRANTED;
+        r.put("enabled", !ask && NotificationManagerCompat.from(ctx).areNotificationsEnabled());
+        r.put("canAsk", ask && getPermissionState("notifications") != PermissionState.DENIED);
+        r.put("snoozeUntil", Reminders.prefs(ctx).getLong(Reminders.KEY_SNOOZE, 0));
+        return r;
+    }
+
+    /** Whether notes can be shown, and whether Android will still ask. */
+    @PluginMethod
+    public void notificationState(PluginCall call) {
+        call.resolve(notificationInfo());
+    }
+
+    /** Ask Android for permission to show notes (Android 13 and later). */
+    @PluginMethod
+    public void askNotifications(PluginCall call) {
+        if (Build.VERSION.SDK_INT < 33 || getPermissionState("notifications") == PermissionState.GRANTED) {
+            call.resolve(notificationInfo());
+            return;
+        }
+        requestPermissionForAlias("notifications", call, "notificationsAsked");
+    }
+
+    @PermissionCallback
+    private void notificationsAsked(PluginCall call) {
+        if (call == null) return;
+        Reminders.createChannels(getContext());
+        call.resolve(notificationInfo());
+    }
+
+    /** Opens the phone's notification settings for MN (after "Don't allow"). */
+    @PluginMethod
+    public void openNotificationSettings(PluginCall call) {
+        try {
+            Intent i = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                .putExtra(Settings.EXTRA_APP_PACKAGE, getContext().getPackageName())
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(i);
+        } catch (Exception e) {
+            Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getContext().getPackageName()))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(i);
+        }
+        call.resolve();
+    }
+
+    /** What the app was opened for from a reminder ("play", "backup" or nothing), once. */
+    @PluginMethod
+    public void launchAction(PluginCall call) {
+        JSObject r = new JSObject();
+        r.put("open", pendingOpen == null ? "" : pendingOpen);
+        pendingOpen = null;
+        call.resolve(r);
     }
 }

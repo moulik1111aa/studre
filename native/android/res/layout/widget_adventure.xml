@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home-screen widget: Adventure level card. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/w_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg_adv"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <TextView
+        android:id="@+id/a_icon"
+        android:text="🗺️"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="34sp" />
+
+    <TextView
+        android:id="@+id/a_level"
+        android:text="Adventure"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="#FF1A1446"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/a_rank"
+        android:text="Levels, quests and badges"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:gravity="center"
+        android:maxLines="2"
+        android:textColor="#FF1A1446"
+        android:textSize="13sp" />
+
+    <ProgressBar
+        android:id="@+id/a_bar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:progress="40"
+        android:layout_width="match_parent"
+        android:layout_height="9dp"
+        android:layout_marginTop="6dp"
+        android:layout_marginBottom="6dp"
+        android:progressDrawable="@drawable/widget_progress_gold" />
+
+    <TextView
+        android:id="@+id/a_line"
+        android:text="Tap to play"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:gravity="center"
+        android:maxLines="1"
+        android:textColor="#FF1A1446"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+</LinearLayout>
