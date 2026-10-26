@@ -5,7 +5,7 @@ import { newChild } from '../src/storage/save.ts';
 import { logPlay } from '../src/core/stats.ts';
 import { remember, rollback } from '../src/core/undo.ts';
 import { mergeChild } from '../src/core/backup.ts';
-import { BADGES, awardBadges, claimChest, chestCoins, dailyQuests, freshAdventure, newBadges, questStreak, status, weekDays, weekStart, weeklyChallenge, type BadgeContext } from '../src/core/adventure.ts';
+import { BADGES, MAX_LEVEL, XP, awardBadges, claimChest, chestCoins, dailyQuests, freshAdventure, levelOf, newBadges, nextRank, questStreak, rankOf, status, weekDays, weekStart, weeklyChallenge, xpOf, xpToReach, type BadgeContext } from '../src/core/adventure.ts';
 
 const DAY = '2026-10-25';
 const kid = (age = 8) => {
@@ -114,4 +114,37 @@ test('combining two phones keeps every chest and badge', () => {
   assert.equal(m.adventure!.badges['levels-1'], 40);
   assert.equal(m.adventure!.badges['bosses-1'], 60);
   assert.equal(m.adventure!.claimed[`d:${DAY}`], 70);
+});
+
+test('XP comes from saved progress, and levels need a little more each time', () => {
+  assert.equal(xpToReach(1), 0);
+  assert.equal(xpToReach(2), 200);
+  assert.equal(xpToReach(3), 450);
+  assert.equal(levelOf(199).level, 1);
+  assert.deepEqual(levelOf(200), { level: 2, into: 0, need: 250, xp: 200 });
+  assert.equal(levelOf(10_000_000).level, MAX_LEVEL);
+  assert.equal(levelOf(10_000_000).need, 0);
+  const c = kid();
+  c.stats.correct = 30;
+  c.progress.levels['s3.x2#1'] = { stars: 3, passes: 1 };
+  c.progress.levels['s3.x2#2'] = { stars: 1, passes: 1 };
+  c.bossesBeaten = ['gloop'];
+  c.adventure!.claimed[`d:${DAY}`] = 5;
+  c.adventure!.claimed['w:2026-10-19'] = 6;
+  c.adventure!.badges['levels-1'] = 7; // bronze
+  c.adventure!.badges['plevel-5'] = 8; // level badges give no XP
+  assert.equal(xpOf(c), 30 * XP.right + 4 * XP.star + XP.boss + XP.daily + XP.weekly + XP.badge[1]);
+});
+
+test('ranks every few levels, and combo badges from the best run in a level', () => {
+  assert.equal(rankOf(1).name, 'Rookie');
+  assert.equal(rankOf(4).name, 'Rookie');
+  assert.equal(rankOf(5).name, 'Number Scout');
+  assert.equal(rankOf(99).name, 'Infinity Master');
+  assert.equal(nextRank(14)!.from, 15);
+  assert.equal(nextRank(95), undefined);
+  const c = kid();
+  logPlay(c, { t: 1, d: DAY, id: 'a', k: 'skill', st: 3, tier: 1, sc: 10, of: 10, s: 3, sec: 100, c: 5, a: { 's3.x2': [10, 10, 9000] }, cb: 10 });
+  const got = newBadges(ctx(c)).map((b) => b.id);
+  assert.ok(got.includes('combo-5') && got.includes('combo-10') && !got.includes('combo-20'), got.join());
 });

@@ -30,6 +30,8 @@ export interface PlayEntry {
   g?: boolean;
   /** First-try answers per skill in this level. */
   a: Tally;
+  /** Adventure: best run of first-try right answers in this level. */
+  cb?: number;
 }
 
 export interface StatsHolder {

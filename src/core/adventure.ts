@@ -1,7 +1,8 @@
 // Adventure mode (a parent switches it on per child): daily quests, a weekly challenge, streak
-// flames and badges, on top of the same levels. Quest progress is worked out from the play
-// log (core/stats.ts), so undoing play undoes it too. Finishing all three daily quests, or
-// the weekly challenge, opens a chest of bonus coins for the real reward jar.
+// flames, badges, and XP with player levels and ranks, on top of the same levels. Quest
+// progress and XP are worked out from what is already saved (the play log, stars, answers),
+// so undoing play undoes them too. Finishing all three daily quests, or the weekly challenge,
+// opens a chest of bonus coins for the real reward jar.
 
 import { addDays, dayDiff } from './economy.ts';
 import { isMastered, isDone, type Level, type Progress } from './path.ts';
@@ -15,6 +16,9 @@ export interface AdventureState {
   badges: Record<string, number>;
   /** Quest ids already celebrated today (so each is cheered once). */
   cheered: Record<string, string[]>;
+  /** The player level last celebrated, and the XP last shown (for "+120 XP" after a level). */
+  seenLevel?: number;
+  xpSeen?: number;
 }
 
 export const freshAdventure = (): AdventureState => ({ on: true, claimed: {}, badges: {}, cheered: {} });
@@ -110,6 +114,68 @@ export const status = (c: AdvChild, q: Quest, days: string[]): QuestStatus => {
 /** Coins in a chest: one perfect level's worth for the daily chest, three for the weekly. */
 export const chestCoins = (perfectLevelCoins: number, kind: 'daily' | 'weekly'): number => Math.max(5, Math.round(perfectLevelCoins * (kind === 'daily' ? 1 : 3)));
 
+// ── XP, player levels and ranks ───────────────────────────────────────────
+/** XP for each thing (shown to children on the ranks sheet). */
+export const XP = { right: 10, star: 20, boss: 150, daily: 100, weekly: 300, badge: [0, 25, 50, 100] } as const;
+export const MAX_LEVEL = 99;
+
+/** All XP earned, worked out from saved progress (so undo and combining phones just work). */
+export function xpOf(c: AdvChild): number {
+  const stars = Object.values(c.progress.levels).reduce((n, l) => n + l.stars, 0);
+  const a = c.adventure;
+  let chests = 0;
+  for (const k of Object.keys(a?.claimed ?? {})) chests += k.startsWith('w:') ? XP.weekly : k.startsWith('d:') ? XP.daily : 0;
+  // Level badges give no XP (they come from XP).
+  const badges = BADGES.reduce((n, b) => n + (a?.badges[b.id] && !b.id.startsWith('plevel-') ? XP.badge[b.tier] : 0), 0);
+  return c.stats.correct * XP.right + stars * XP.star + c.bossesBeaten.length * XP.boss + chests + badges;
+}
+
+/** Total XP needed to reach level L: each level needs 50 more than the one before (200, 250, 300…). */
+export const xpToReach = (L: number): number => 150 * (L - 1) + 25 * (L - 1) * L;
+
+export interface LevelInfo {
+  level: number;
+  /** XP into this level, and XP this level needs in all (0 at the top level). */
+  into: number;
+  need: number;
+  xp: number;
+}
+export function levelOf(xp: number): LevelInfo {
+  let level = 1;
+  while (level < MAX_LEVEL && xp >= xpToReach(level + 1)) level++;
+  const into = xp - xpToReach(level);
+  const need = level >= MAX_LEVEL ? 0 : xpToReach(level + 1) - xpToReach(level);
+  return { level, into, need, xp };
+}
+
+export interface Rank {
+  from: number;
+  name: string;
+  short: string;
+  icon: string;
+}
+export const RANKS: Rank[] = [
+  { from: 1, name: 'Rookie', short: 'Rookie', icon: '🐣' },
+  { from: 5, name: 'Number Scout', short: 'Scout', icon: '🧭' },
+  { from: 10, name: 'Sum Ranger', short: 'Ranger', icon: '🏹' },
+  { from: 15, name: 'Times Knight', short: 'Knight', icon: '🛡️' },
+  { from: 20, name: 'Fraction Pilot', short: 'Pilot', icon: '✈️' },
+  { from: 25, name: 'Puzzle Captain', short: 'Captain', icon: '⚓' },
+  { from: 30, name: 'Equation Hero', short: 'Hero', icon: '🦸' },
+  { from: 35, name: 'Number Ninja', short: 'Ninja', icon: '🥷' },
+  { from: 40, name: 'Maths Wizard', short: 'Wizard', icon: '🧙' },
+  { from: 45, name: 'Star Sage', short: 'Sage', icon: '🌟' },
+  { from: 50, name: 'Galaxy Genius', short: 'Genius', icon: '🪐' },
+  { from: 60, name: 'Maths Legend', short: 'Legend', icon: '🏆' },
+  { from: 75, name: 'Mythic Mind', short: 'Mythic', icon: '🐉' },
+  { from: 90, name: 'Infinity Master', short: 'Master', icon: '💫' },
+];
+export const rankOf = (level: number): Rank => [...RANKS].reverse().find((r) => level >= r.from)!;
+export const nextRank = (level: number): Rank | undefined => RANKS.find((r) => r.from > level);
+
+/** Best run of first-try right answers in any one level (Adventure combo meter). */
+const bestCombo = (c: AdvChild) => Math.max(0, ...(c.log ?? []).map((e) => e.cb ?? 0));
+
 // ── badges ─────────────────────────────────────────────────────────────────
 export interface BadgeContext {
   c: AdvChild;
@@ -203,6 +269,8 @@ export const BADGES: Badge[] = [
   ...ladder('masterlv', '🥋', ['Black Belt', 'Sensei'], [10, 50], (t) => `Pass ${t} Master levels`, (x) => tierPassed(x, 5)),
   { id: 'explorer', icon: '🧩', name: 'All-rounder', desc: 'Answer questions from all 7 kinds of maths', tier: 2, target: 7, value: (x) => new Set(Object.keys(x.c.tally ?? {}).map((id) => x.strandOf(id)).filter(Boolean)).size },
   { id: 'big-day', icon: '🌟', name: 'Big Day', desc: 'Finish 10 levels in one day', tier: 2, target: 10, value: (x) => Math.max(0, ...Object.values(logOf(x).reduce<Record<string, number>>((m, e) => ((m[e.d] = (m[e.d] ?? 0) + 1), m), {}))) },
+  ...ladder('plevel', '⭐', ['Rising Star', 'Double Digits', 'High Flyer', 'Sky High', 'Half Century', 'Mythic'], [5, 10, 20, 30, 50, 75], (t) => `Reach player level ${t}`, (x) => levelOf(xpOf(x.c)).level),
+  ...ladder('combo', '🔥', ['Combo Starter', 'Combo Champ', 'Combo Legend'], [5, 10, 20], (t) => `Get ${t} right in a row in one level`, (x) => bestCombo(x.c)),
 ];
 
 /** Badges earned now that weren't before. */
@@ -241,7 +309,7 @@ export function mergeAdventure(x: AdventureState | undefined, y: AdventureState 
     for (const [k, t] of Object.entries(q)) out[k] = out[k] ? Math.min(out[k], t) : t;
     return out;
   };
-  return { on: x.on, claimed: both(x.claimed, y.claimed), badges: both(x.badges, y.badges), cheered: { ...x.cheered } };
+  return { on: x.on, claimed: both(x.claimed, y.claimed), badges: both(x.badges, y.badges), cheered: { ...x.cheered }, seenLevel: x.seenLevel, xpSeen: x.xpSeen };
 }
 
 /** Days in a row on which every daily quest was finished, up to today. */

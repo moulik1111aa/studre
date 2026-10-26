@@ -21,7 +21,7 @@ import { trophyScreen } from './trophy.ts';
 import { BOSS_EMOJI } from './bosses.ts';
 import { remember } from '../core/undo.ts';
 import { showMapTips } from './tour.ts';
-import { adventureOn, adventureScreen, questBadge } from './adventure.ts';
+import { adventureOn, adventureScreen, questBadge, whoLine } from './adventure.ts';
 
 interface Node {
   kind: 'skill' | 'review' | 'boss' | 'quest';
@@ -62,7 +62,7 @@ export function mapScreen(child: Child) {
     const adv = adventureOn(child) ? questBadge(app, child) : null;
     const el = html(`<section class="screen map" aria-label="Map">
       <header class="map-top">
-        <button class="who" aria-label="Switch child">${avatarHtml(child.avatar, 46)}<span><b>${esc(child.name)}</b><small>${left > 0 ? `${left} min left today` : 'Time’s up for today'}</small></span></button>
+        <button class="who" aria-label="Switch child (${left > 0 ? `${left} min left today` : 'time’s up for today'})">${avatarHtml(child.avatar, 46)}<span><b>${esc(child.name)}</b>${adv ? whoLine(child) : `<small>${left > 0 ? `${left} min left` : 'Time’s up'}</small>`}</span></button>
         <div class="ring" style="--p:${Math.max(0, Math.min(1, left / limit))}" aria-hidden="true"><span>${Math.max(0, left)}</span></div>
         <button class="icon-btn help-btn" aria-label="How it works">?</button>
         <button class="icon-btn trophy-btn" aria-label="Trophy room">${ICONS.trophy}</button>

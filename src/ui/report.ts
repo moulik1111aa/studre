@@ -35,11 +35,11 @@ const STRANDS: [string, string][] = [
   ['word', 'Word problems'],
 ];
 const TABS = [
-  ['overview', 'Overview'],
-  ['skills', 'Skills'],
-  ['activity', 'Activity'],
-  ['rewards', 'Rewards'],
-  ['manage', 'Manage'],
+  ['overview', 'Stats', '📊'],
+  ['skills', 'Skills', '🧠'],
+  ['activity', 'Activity', '📅'],
+  ['rewards', 'Rewards', '🎁'],
+  ['manage', 'Manage', '⚙️'],
 ] as const;
 type Tab = (typeof TABS)[number][0];
 
@@ -291,7 +291,7 @@ export function reportScreen(child: Child, start: Tab = 'overview') {
     const bodies: Record<Tab, string> = { overview, skills: skillsTab, activity, rewards, manage };
     const el = html(`<section class="screen report" aria-label="Progress report">
       <header class="topbar"><button class="icon-btn back-btn" aria-label="Back">${ICONS.back}</button><span class="t">${esc(child.name)}’s report</span><button class="icon-btn rp-export" aria-label="Save the report card"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M5 19h14"/></svg></button></header>
-      <nav class="rp-tabs" role="tablist">${TABS.map(([id, label]) => `<button role="tab" class="rp-tab" data-tab="${id}" aria-selected="${id === start}">${label}</button>`).join('')}</nav>
+      <nav class="rp-tabs fit" role="tablist">${TABS.map(([id, label, icon]) => `<button role="tab" class="rp-tab" data-tab="${id}" aria-selected="${id === start}"><span class="rt-i" aria-hidden="true">${icon}</span><span class="rt-l">${label}</span></button>`).join('')}</nav>
       <div class="scroll pa-body rp-body"></div>
     </section>`);
     const body = el.querySelector<HTMLElement>('.rp-body')!;

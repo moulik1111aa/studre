@@ -23,6 +23,7 @@ import { stageForAge } from '../core/placement.ts';
 import { remember } from '../core/undo.ts';
 import { wireChoices, type Wired } from './confirm.ts';
 import { lessonFor, showLesson } from './lesson.ts';
+import { adventureOn } from './adventure.ts';
 
 export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' }>, harder = false) {
   return (app: App): Screen => {
@@ -47,7 +48,9 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
     const secs = app.save.data.settings.timerSeconds;
     const rules = { ...round.rules, timer: together || !secs || !round.rules.timer ? 0 : secs };
     const { questions } = round;
-    const el = html(`<section class="screen play" style="${worldVars(level.stage)}" aria-label="${skill.name}">
+    // Adventure: a combo meter for first-try right answers in a row.
+    const combo = adventureOn(child);
+        const el = html(`<section class="screen play" style="${worldVars(level.stage)}" aria-label="${skill.name}">
       ${ambientHtml(level.stage, 6)}
       <header class="play-top">
         <button class="icon-btn quit" aria-label="Pause">${ICONS.pause}</button>
@@ -55,6 +58,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
         <div class="dots" aria-hidden="true"></div>
       </header>
       <div class="prize" aria-live="polite"></div>
+      ${combo ? '<div class="combo" aria-live="polite" hidden></div>' : ''}
       <div class="jar-slot"></div>
       <div class="timer" hidden><i></i></div>
       <main class="qwrap" aria-live="polite"></main>
@@ -72,6 +76,8 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
     let i = 0;
     let correct = 0;
     let streak = 0;
+    let run = 0;
+    let bestRun = 0;
     let done = false;
     let activeSince = performance.now();
     let activeMs = 0;
@@ -105,6 +111,22 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
       const label = best >= 1 ? 'Perfect score' : best ? `${rules.streak ? 'Now' : `${questions.length - misses}/${questions.length}`}` : 'Keep going — you can retry';
       prizeEl.innerHTML = coins ? `<span>${label}</span><b>${coinSvg} +${coins}</b>` : `<span>${label}</span>`;
       prizeEl.classList.toggle('dim', best < 1);
+    };
+
+    const comboEl = el.querySelector<HTMLElement>('.combo');
+    const showCombo = () => {
+      if (!comboEl || run < 3) return;
+      comboEl.classList.remove('broke');
+      comboEl.hidden = false;
+      const big = run >= 10 ? ' mega' : run >= 5 ? ' hot' : '';
+      comboEl.className = `combo${big}`;
+      comboEl.innerHTML = `<span aria-hidden="true">${run >= 10 ? '🔥🔥' : '🔥'}</span><b>${run}</b> in a row!`;
+      if (reducedMotion()) return;
+      comboEl.animate([{ transform: 'scale(.6) rotate(-6deg)' }, { transform: 'scale(1.18) rotate(3deg)', offset: 0.6 }, { transform: 'scale(1)' }], { duration: 420, easing: EASE_OUT });
+      if (run === 5 || run === 10 || run === 15 || run === 20) {
+        const r = comboEl.getBoundingClientRect();
+        app.fx.confetti(r.x + r.width / 2, r.y + r.height / 2, run >= 10 ? 40 : 24);
+      }
     };
 
     const accrue = () => {
@@ -225,7 +247,12 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
       app.voice.stop();
       pending = () => undefined;
       if (ok) {
-        if (!retrying) correct++;
+        if (!retrying) {
+          correct++;
+          run++;
+          bestRun = Math.max(bestRun, run);
+          if (combo) showCombo();
+        }
         streak++;
         app.sfx.correct(streak);
         app.haptics.match(streak);
@@ -241,7 +268,12 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
         await wait(app.save.data.settings.voice ? 1500 : 900);
       } else {
         streak = 0;
-        if (!retrying) misses++;
+        if (!retrying) {
+          misses++;
+          if (combo && run >= 3) comboEl?.classList.add('broke');
+          run = 0;
+          if (combo) setTimeout(() => comboEl && !run && (comboEl.hidden = true), reducedMotion() ? 0 : 450);
+        }
         paintPrize();
         if (!reducedMotion()) prizeEl.animate([{ transform: 'scale(1)' }, { transform: 'scale(.9)' }, { transform: 'scale(1)' }], { duration: 300 });
         app.sfx.wrong();
@@ -308,7 +340,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
           coins = coinsForLevel('skill', fraction, stars > 0, wasPassed, level.stage);
           unlocked = addCoins(child.wallet, coins).unlocked;
         }
-        logPlay(child, { t: Date.now(), d: app.today, id: level.id, k: 'skill', st: level.stage, tier: level.tier, sc: score, of: scoreTotal, s: stars, sec: seconds, c: coins, g: together || undefined, a: tally });
+        logPlay(child, { t: Date.now(), d: app.today, id: level.id, k: 'skill', st: level.stage, tier: level.tier, sc: score, of: scoreTotal, s: stars, sec: seconds, c: coins, g: together || undefined, a: tally, cb: bestRun || undefined });
         if (firstLevels) child.together = Math.max(0, (child.together ?? 0) - 1);
         if (child.placementChecks > 0) {
           child.placementChecks--;

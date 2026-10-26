@@ -1,6 +1,6 @@
 // Level complete: stars draw in, coins fly into the treat jar, then Next or the map.
 
-import { adventureNews, adventureScreen } from './adventure.ts';
+import { adventureNews, adventureScreen, levelUpCheck } from './adventure.ts';
 import { html, esc, type App, type Screen } from './app.ts';
 import { progressMoment, MILESTONES, type Moment } from '../core/moment.ts';
 import { rewardById } from '../core/rewards.ts';
@@ -202,6 +202,14 @@ export function resultScreen(child: Child, level: Level, r: ResultInfo) {
         if (!momentEl) jar.update(true);
       }
     };
-    return { el, mounted: () => void celebrate() };
+    return {
+      el,
+      mounted: () =>
+        void celebrate().then(async () => {
+          // A new player level (Adventure): celebrate once the coins have landed.
+          await wait(reducedMotion() ? 0 : 500);
+          if (el.isConnected) await levelUpCheck(app, child);
+        }),
+    };
   };
 }

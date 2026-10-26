@@ -22,6 +22,10 @@ public class MainActivity extends BridgeActivity {
                 WebSettings s = web.getSettings();
                 // The opening video's voiceover starts on its own, before the first tap.
                 s.setMediaPlaybackRequiresUserGesture(false);
+                // The app's type is already big and bold, and every button is sized for it. The
+                // phone's own font-size setting scaled the text on top of that, so words spilled
+                // out of buttons: keep the page's text at 100%.
+                s.setTextZoom(100);
                 if (Build.VERSION.SDK_INT >= 33) s.setAlgorithmicDarkeningAllowed(false);
                 else if (Build.VERSION.SDK_INT >= 29) s.setForceDark(WebSettings.FORCE_DARK_OFF);
             }

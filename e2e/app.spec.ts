@@ -724,3 +724,51 @@ test('adventure: a parent turns it on, quests fill from play, the chest pays onc
   await expect(page.locator('.map')).toBeVisible();
   await expect(page.locator('.adv-btn')).toHaveCount(0);
 });
+
+test('adventure XP: past play counts, a new level is celebrated once, and a combo shows in levels', async ({ page }) => {
+  type W = { __app: { child: { stats: { correct: number }; adventure?: { seenLevel?: number } }; path: unknown[]; save: { update(f: () => void): void }; show(m: unknown): void }; __screens: { parentScreen: unknown; mapScreen(c: unknown): unknown; resultScreen(...a: unknown[]): unknown } };
+  await page.goto('/?debug&demo=%4012');
+  await expect(page.locator('.map')).toBeVisible();
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
+  await page.click('.adv-toggle');
+  // Switching on does not celebrate old levels.
+  const seen = await page.evaluate(() => (window as unknown as W).__app.child.adventure!.seenLevel);
+  expect(seen).toBeGreaterThanOrEqual(1);
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.mapScreen(w.__app.child)); });
+  await expect(page.locator('.who-lv')).toContainText(`Lv ${seen}`);
+  // 150 more right answers = 1,500 XP: at least one new level after the next result.
+  await page.evaluate(() => {
+    const w = window as unknown as W;
+    w.__app.save.update(() => (w.__app.child.stats.correct += 150));
+    w.__app.show(w.__screens.resultScreen(w.__app.child, w.__app.path[1], { stars: 3, score: 10, total: 10, coins: 0, unlocked: [], timeUp: false }));
+  });
+  await expect(page.locator('.xp-gain')).toContainText('XP');
+  await expect(page.locator('.lvlup')).toBeVisible({ timeout: 8000 });
+  await page.click('.lu-ok');
+  await expect(page.locator('.lvlup')).toHaveCount(0);
+  const after = await page.evaluate(() => (window as unknown as W).__app.child.adventure!.seenLevel!);
+  expect(after).toBeGreaterThan(seen!);
+  // The same level is not celebrated twice.
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.resultScreen(w.__app.child, w.__app.path[1], { stars: 3, score: 10, total: 10, coins: 0, unlocked: [], timeUp: false })); });
+  await page.waitForTimeout(3500);
+  await expect(page.locator('.lvlup')).toHaveCount(0);
+  // Three right in a row in a level: the combo meter.
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.mapScreen(w.__app.child)); });
+  await page.click('.play-next');
+  for (let k = 0; k < 3; k++) {
+    const card = page.locator('.qcard[data-answer]');
+    await expect(card).toBeVisible();
+    await page.waitForFunction(() => document.querySelector('.choice:not([disabled]), .pad .key'));
+    const ans = (await card.getAttribute('data-answer'))!;
+    if (await page.locator('.choice').count()) {
+      const vals = await page.locator('.choice').evaluateAll((bs) => bs.map((b) => decodeURIComponent((b as HTMLElement).dataset.v!)));
+      await page.locator('.choice').nth(vals.indexOf(ans)).click();
+      if (await page.locator('.check-btn').count()) await page.click('.check-btn');
+    } else {
+      for (const ch of ans.replace(/^-/, '−')) await page.locator(`.answers [data-k="${ch}"]`).first().dispatchEvent('pointerdown');
+      await page.locator('.answers .ok').click();
+    }
+    if (k < 2) await page.waitForFunction(() => !document.querySelector('.qcard .reveal'), null, { timeout: 8000 });
+  }
+  await expect(page.locator('.combo')).toContainText('3 in a row');
+});
