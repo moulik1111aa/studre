@@ -23,7 +23,7 @@ import { stageForAge } from '../core/placement.ts';
 import { remember } from '../core/undo.ts';
 import { wireChoices, type Wired } from './confirm.ts';
 import { lessonFor, showLesson } from './lesson.ts';
-import { adventureOn } from './adventure.ts';
+import { adventureOn, outfitFor } from './adventure.ts';
 
 export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' }>, harder = false) {
   return (app: App): Screen => {
@@ -405,7 +405,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
         } else {
           // Plus says a word first: welcome back, last time, a retry, or a bit of chat.
           const line = app.debug && (window as { __quietPlus?: boolean }).__quietPlus ? null : lineBeforeLevel(child, level, app.today);
-          if (line) void plusSays(app, line).then(() => show(questions[0]));
+          if (line) void plusSays(app, line, undefined, outfitFor(child)).then(() => show(questions[0]));
           else show(questions[0]);
         }
       },

@@ -136,3 +136,77 @@
 .play .combo.hot{background:linear-gradient(180deg,#FFB36B,#FF7A3D);color:#3A1200;box-shadow:0 4px 0 #C2541C,0 6px 18px rgba(255,110,40,.45)}
 .play .combo.mega{background:linear-gradient(180deg,#FF8FB8,#FF4F7B);color:#fff;box-shadow:0 4px 0 #B8274E,0 6px 22px rgba(255,60,110,.5)}
 .play .combo.broke{opacity:.4;filter:grayscale(1);transition:opacity .3s,filter .3s}
+
+/* ── wardrobe ─────────────────────────────────────────────────────────── */
+.wd-hero{display:flex;align-items:center;gap:14px;padding:14px 16px}
+.wd-plus{flex:none;width:104px;height:124px;display:grid;place-items:end center}
+.wd-plus svg{width:100%;height:100%}
+.wd-side{flex:1;min-width:0;display:grid;gap:6px}
+.wd-gems{margin:0;display:grid}
+.wd-gems b{font-size:30px;line-height:1.1;font-weight:900}
+.wd-gems small{font-size:13px;font-weight:800;color:var(--ink-soft)}
+.wd-how{margin:0;font-size:13px;line-height:1.35;color:var(--ink-faint)}
+.wd-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.wd-item{appearance:none;border:0;font:inherit;color:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px 9px;border-radius:18px;background:var(--hi-08);box-shadow:inset 0 0 0 2px var(--line);text-align:center;min-height:96px}
+.wd-item:active{transform:scale(.96)}
+.wd-i{font-size:30px;line-height:1.15}
+.wd-item b{font-size:13px;line-height:1.15}
+.wd-item small{font-size:12px;font-weight:800;color:var(--ink-soft)}
+.wd-item.on{background:color-mix(in srgb,var(--good) 20%,var(--hi-08));box-shadow:inset 0 0 0 3px var(--good)}
+.wd-item.on small{color:var(--good)}
+.wd-item.buy small{color:var(--sun-deep)}
+.wd-item.short,.wd-item.locked{opacity:.6}
+.wd-item.locked .wd-i{filter:grayscale(1)}
+.wd-note{margin:6px 0 0;font-size:13px;color:var(--ink-faint);text-align:center}
+
+.adv-surprise{margin:0;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800;color:var(--ink-soft)}
+.adv-surprise b{margin-left:auto;color:var(--ink)}
+.as-dots{display:flex;gap:4px}
+.as-dots i{width:12px;height:12px;border-radius:50%;background:var(--hi-12);box-shadow:inset 0 0 0 2px var(--line)}
+.as-dots i.on{background:var(--sun);box-shadow:none}
+
+.lu-gems{margin:0;font-size:15px;font-weight:900;color:var(--accent,#6C4CF5)}
+
+/* ── chest ceremony ───────────────────────────────────────────────────── */
+.chest-cer{--t:0;flex-direction:column;align-items:center;justify-content:flex-start;gap:10px;padding:calc(var(--safe-top) + 12px) 18px calc(var(--safe-bottom) + 18px);overflow-y:auto;background:radial-gradient(circle at 50% 42%,rgba(255,205,90,calc(.2 + var(--t) * .12)),transparent 64%),#14123A!important}
+.chest-cer.weekly{background:radial-gradient(circle at 50% 42%,rgba(190,150,255,calc(.22 + var(--t) * .12)),transparent 64%),#14123A!important}
+.cc-top{width:100%;max-width:440px}
+.cc-stage{position:relative;display:grid;justify-items:center;gap:6px;margin-top:6px}
+.cc-glow{position:absolute;top:10px;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(255,236,150,calc(.25 + var(--t) * .2)),transparent 65%);transform:scale(calc(.8 + var(--t) * .12));transition:transform .3s,background .3s;pointer-events:none}
+.cc-chest{appearance:none;border:0;background:none;padding:0;cursor:pointer;width:210px;height:180px;position:relative}
+.cc-svg{width:100%;height:100%;overflow:visible}
+.cc-lid{transform-box:fill-box;transform-origin:8% 100%;transition:transform .5s cubic-bezier(.2,.9,.3,1.3)}
+.chest-cer.open .cc-lid{transform:translate(-6px,-30px) rotate(-28deg)}
+.cc-hint{margin:0;font-size:22px;font-weight:900;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.4)}
+.cc-loot{width:100%;max-width:440px;display:grid;gap:10px}
+.cc-row{margin:0;display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:18px;background:rgba(255,255,255,.12);color:#fff}
+.cc-row svg{width:30px;height:30px;flex:none}
+.cc-row > span{font-size:26px;line-height:1}
+.cc-row b{font-size:20px;font-weight:900}
+.cc-row small{margin-left:auto;font-size:13px;font-weight:800;opacity:.8}
+.cc-gift{display:flex;align-items:center;gap:12px;padding:12px 14px}
+.cc-gift-plus{flex:none;width:58px;height:70px;display:grid;place-items:end center}
+.cc-gift-plus svg{width:100%;height:100%}
+.cc-gift > div{flex:1;min-width:0;display:grid;gap:2px}
+.cc-gift small{font-size:13px;font-weight:700;color:var(--ink-soft)}
+.cc-next{margin:0;text-align:center;font-size:15px;font-weight:800;color:#fff;opacity:.9}
+.cc-done{width:100%}
+@media (prefers-reduced-motion:reduce){.cc-lid,.cc-glow{transition:none}}
+
+/* ── Plus on the map, and his trail ───────────────────────────────────── */
+.map-buddy{position:absolute;top:-14px;width:44px;height:54px;pointer-events:none;z-index:2}
+.map-buddy.left{left:-6px}
+.map-buddy.right{right:-6px}
+.map-buddy svg{width:100%;height:100%;filter:drop-shadow(0 3px 4px rgba(0,0,0,.25))}
+.map.trail-sparkles .trail-done{stroke:#FFC531!important;stroke-dasharray:14 7!important;filter:drop-shadow(0 0 5px #FFE27A) drop-shadow(0 0 2px #fff)!important;animation:trail-run 1.2s linear infinite}
+.map.trail-stars .trail-done{stroke:#FFFFFF!important;stroke-width:12!important;stroke-dasharray:.1 16!important;stroke-linecap:round;filter:drop-shadow(0 0 4px #FFE27A) drop-shadow(0 0 1px #FFC531)!important}
+.map.trail-bubbles .trail-done{stroke:#7FD3FF!important;stroke-width:14!important;stroke-dasharray:.1 20!important;stroke-linecap:round;opacity:.9;filter:drop-shadow(0 0 3px #fff)!important}
+.map.trail-rainbow .trail-done{stroke:url(#mnRainbow)!important;stroke-width:12!important;filter:none!important}
+@keyframes trail-run{to{stroke-dashoffset:-42}}
+@media (prefers-reduced-motion:reduce){.map.trail-sparkles .trail-done{animation:none}}
+.trail-defs{position:absolute;width:0;height:0}
+
+/* Three Adventure tabs always fit. */
+.adventure .adv-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;overflow:visible;padding:2px 0 4px}
+.adventure .adv-tabs .rp-tab{padding:9px 4px;white-space:nowrap;font-size:13.5px}
+@media (max-width:340px){.adventure .adv-tabs .rp-tab{font-size:12.5px;padding:9px 2px}}

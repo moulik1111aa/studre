@@ -19,6 +19,10 @@ export interface AdventureState {
   /** The player level last celebrated, and the XP last shown (for "+120 XP" after a level). */
   seenLevel?: number;
   xpSeen?: number;
+  /** Wardrobe (core/wardrobe.ts): items bought with gems, items found in chests (id → ms), and what Plus wears. */
+  owned?: Record<string, number>;
+  gifted?: Record<string, number>;
+  equipped?: Record<string, string>;
 }
 
 export const freshAdventure = (): AdventureState => ({ on: true, claimed: {}, badges: {}, cheered: {} });
@@ -129,6 +133,24 @@ export function xpOf(c: AdvChild): number {
   const badges = BADGES.reduce((n, b) => n + (a?.badges[b.id] && !b.id.startsWith('plevel-') ? XP.badge[b.tier] : 0), 0);
   return c.stats.correct * XP.right + stars * XP.star + c.bossesBeaten.length * XP.boss + chests + badges;
 }
+
+// ── gems (Adventure-only; they never become coins) ─────────────────────────
+export const GEMS = { level: 10, daily: 5, weekly: 15, badge: [0, 2, 5, 10] } as const;
+
+/** Gems earned so far, worked out from saved progress (gem badges give none: they come from gems). */
+export function gemsEarned(c: AdvChild): number {
+  const a = c.adventure;
+  const level = levelOf(xpOf(c)).level;
+  let chests = 0;
+  for (const k of Object.keys(a?.claimed ?? {})) chests += k.startsWith('w:') ? GEMS.weekly : k.startsWith('d:') ? GEMS.daily : 0;
+  const badges = BADGES.reduce((n, b) => n + (a?.badges[b.id] && !b.id.startsWith('gems-') ? GEMS.badge[b.tier] : 0), 0);
+  return (level - 1) * GEMS.level + chests + badges;
+}
+
+/** Chests opened so far (every third one holds a surprise wardrobe item). */
+export const chestsOpened = (a: AdventureState | undefined): number => Object.keys(a?.claimed ?? {}).filter((k) => k.startsWith('d:') || k.startsWith('w:')).length;
+
+const itemsOwned = (a: AdventureState | undefined) => new Set([...Object.keys(a?.owned ?? {}), ...Object.keys(a?.gifted ?? {})]).size;
 
 /** Total XP needed to reach level L: each level needs 50 more than the one before (200, 250, 300…). */
 export const xpToReach = (L: number): number => 150 * (L - 1) + 25 * (L - 1) * L;
@@ -271,6 +293,8 @@ export const BADGES: Badge[] = [
   { id: 'big-day', icon: '🌟', name: 'Big Day', desc: 'Finish 10 levels in one day', tier: 2, target: 10, value: (x) => Math.max(0, ...Object.values(logOf(x).reduce<Record<string, number>>((m, e) => ((m[e.d] = (m[e.d] ?? 0) + 1), m), {}))) },
   ...ladder('plevel', '⭐', ['Rising Star', 'Double Digits', 'High Flyer', 'Sky High', 'Half Century', 'Mythic'], [5, 10, 20, 30, 50, 75], (t) => `Reach player level ${t}`, (x) => levelOf(xpOf(x.c)).level),
   ...ladder('combo', '🔥', ['Combo Starter', 'Combo Champ', 'Combo Legend'], [5, 10, 20], (t) => `Get ${t} right in a row in one level`, (x) => bestCombo(x.c)),
+  ...ladder('outfit', '🎩', ['First Outfit', 'Fashionista'], [1, 10], (t) => (t === 1 ? 'Get your first wardrobe item for Plus' : `Collect ${t} wardrobe items`), (x) => itemsOwned(x.c.adventure)),
+  { id: 'gems-500', icon: '💎', name: 'Gem Collector', desc: 'Earn 500 gems', tier: 2, target: 500, value: (x) => gemsEarned(x.c) },
 ];
 
 /** Badges earned now that weren't before. */
@@ -298,10 +322,10 @@ export function claimChest(a: AdventureState, key: string, done: boolean, now: n
 /** Undo (parent area): chests opened and badges earned at or after `since` go back. */
 export function rollbackAdventure(a: AdventureState | undefined, since: number): void {
   if (!a) return;
-  for (const m of [a.claimed, a.badges]) for (const [k, t] of Object.entries(m)) if (t >= since) delete m[k];
+  for (const m of [a.claimed, a.badges, a.owned ?? {}, a.gifted ?? {}]) for (const [k, t] of Object.entries(m)) if (t >= since) delete m[k];
 }
 
-/** Two phones' Adventure records together: every chest and badge, the earlier time of each. */
+/** Two phones' Adventure records together: every chest, badge and wardrobe item, the earlier time of each. */
 export function mergeAdventure(x: AdventureState | undefined, y: AdventureState | undefined): AdventureState | undefined {
   if (!x || !y) return x ?? y;
   const both = (p: Record<string, number>, q: Record<string, number>) => {
@@ -309,7 +333,7 @@ export function mergeAdventure(x: AdventureState | undefined, y: AdventureState 
     for (const [k, t] of Object.entries(q)) out[k] = out[k] ? Math.min(out[k], t) : t;
     return out;
   };
-  return { on: x.on, claimed: both(x.claimed, y.claimed), badges: both(x.badges, y.badges), cheered: { ...x.cheered }, seenLevel: x.seenLevel, xpSeen: x.xpSeen };
+  return { on: x.on, claimed: both(x.claimed, y.claimed), badges: both(x.badges, y.badges), cheered: { ...x.cheered }, seenLevel: x.seenLevel, xpSeen: x.xpSeen, owned: both(x.owned ?? {}, y.owned ?? {}), gifted: both(x.gifted ?? {}, y.gifted ?? {}), equipped: { ...(y.equipped ?? {}), ...(x.equipped ?? {}) } };
 }
 
 /** Days in a row on which every daily quest was finished, up to today. */

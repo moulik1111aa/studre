@@ -1,6 +1,6 @@
 // Level complete: stars draw in, coins fly into the treat jar, then Next or the map.
 
-import { adventureNews, adventureScreen, levelUpCheck } from './adventure.ts';
+import { adventureNews, adventureScreen, levelUpCheck, outfitFor } from './adventure.ts';
 import { html, esc, type App, type Screen } from './app.ts';
 import { progressMoment, MILESTONES, type Moment } from '../core/moment.ts';
 import { rewardById } from '../core/rewards.ts';
@@ -85,7 +85,7 @@ export function resultScreen(child: Child, level: Level, r: ResultInfo) {
         <p class="res-score">${r.score} / ${r.total} right</p>
         ${r.coins ? `<p class="res-coins">${coinSvg}<b class="coin-count">+0</b></p>` : r.timeUp && passed ? `<p class="res-note">Time’s up for today, so no coins this time.</p>` : ''}
         ${moment ? '' : r.perfect ? `<p class="res-perfect">💯 Perfect score — the biggest prize!</p>` : r.perfectCoins && !r.timeUp ? `<p class="res-aim">Aim for perfect: ${coinSvg} <b>+${r.perfectCoins}</b> for ${r.total}/${r.total}</p>` : ''}
-        ${passed ? '' : `<p class="res-note">You need ${level.kind === 'skill' && level.tier === 5 ? '10 in a row' : 'a few more right'} to pass.</p><div class="res-plus"><span class="ps-plus">${plusFaceSvg({ cls: 'oops' })}</span><p>${lineAfterMiss(child, r.score, r.total)}</p></div>`}
+        ${passed ? '' : `<p class="res-note">You need ${level.kind === 'skill' && level.tier === 5 ? '10 in a row' : 'a few more right'} to pass.</p><div class="res-plus"><span class="ps-plus">${plusFaceSvg({ cls: 'oops', outfit: outfitFor(child) })}</span><p>${lineAfterMiss(child, r.score, r.total)}</p></div>`}
       </div>
       ${news}
       ${moment ? momentHtml(moment, r) : ''}

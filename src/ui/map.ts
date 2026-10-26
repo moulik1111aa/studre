@@ -21,7 +21,8 @@ import { trophyScreen } from './trophy.ts';
 import { BOSS_EMOJI } from './bosses.ts';
 import { remember } from '../core/undo.ts';
 import { showMapTips } from './tour.ts';
-import { adventureOn, adventureScreen, questBadge, whoLine } from './adventure.ts';
+import { adventureOn, adventureScreen, outfitFor, questBadge, whoLine } from './adventure.ts';
+import { plusFaceSvg } from './plus.ts';
 
 interface Node {
   kind: 'skill' | 'review' | 'boss' | 'quest';
@@ -60,7 +61,10 @@ export function mapScreen(child: Child) {
     const left = Math.ceil(secondsLeft(child.wallet, app.today, app.save.data.settings.limitMinutes) / 60);
     const limit = app.save.data.settings.limitMinutes;
     const adv = adventureOn(child) ? questBadge(app, child) : null;
-    const el = html(`<section class="screen map" aria-label="Map">
+    // Adventure: Plus walks the map in his outfit, leaving his trail behind.
+    const outfit = adv ? outfitFor(child) : {};
+    const trailCls = outfit.trail ? ` trail-${outfit.trail}` : '';
+    const el = html(`<section class="screen map${trailCls}" aria-label="Map">
       <header class="map-top">
         <button class="who" aria-label="Switch child (${left > 0 ? `${left} min left today` : 'time’s up for today'})">${avatarHtml(child.avatar, 46)}<span><b>${esc(child.name)}</b>${adv ? whoLine(child) : `<small>${left > 0 ? `${left} min left` : 'Time’s up'}</small>`}</span></button>
         <div class="ring" style="--p:${Math.max(0, Math.min(1, left / limit))}" aria-hidden="true"><span>${Math.max(0, left)}</span></div>
@@ -73,6 +77,7 @@ export function mapScreen(child: Child) {
     </section>`);
     const jar = new JarBar(child);
     el.querySelector('.jar-slot')!.appendChild(jar.el);
+    if (outfit.trail === 'rainbow') el.appendChild(html(`<svg class="trail-defs" width="0" height="0" aria-hidden="true"><defs><linearGradient id="mnRainbow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF5A5A"/><stop offset=".2" stop-color="#FFB13D"/><stop offset=".4" stop-color="#FFE45C"/><stop offset=".6" stop-color="#3DDC84"/><stop offset=".8" stop-color="#3D9BFF"/><stop offset="1" stop-color="#A879FF"/></linearGradient></defs></svg>`));
     const worlds = el.querySelector<HTMLElement>('.worlds')!;
     let currentNode: HTMLElement | null = null;
 
@@ -110,6 +115,7 @@ export function mapScreen(child: Child) {
           ${face}${pips}<span class="nd-label">${esc(n.label)}${n.kind === 'quest' ? `<small>${qbest ? `Best ${qbest}/100` : '100 in 5 min'}</small>` : ''}</span>${playable ? '' : `<span class="nd-lock">${ICONS.lock}</span>`}
         </button>`);
         if (isCurrent) currentNode = node;
+        if (isCurrent && adv) node.appendChild(html(`<span class="map-buddy ${x < 50 ? 'right' : 'left'}" aria-hidden="true">${plusFaceSvg({ cls: 'alive', outfit })}</span>`));
         node.addEventListener('click', () => {
           if (!playable) {
             popIn(node, 0, 0.9);

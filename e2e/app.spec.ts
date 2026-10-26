@@ -708,6 +708,13 @@ test('adventure: a parent turns it on, quests fill from play, the chest pays onc
   await expect(page.locator('.adv-quests').first().locator('.aq.done')).toHaveCount(3);
   const before = await page.evaluate(() => (window as unknown as W).__app.child.wallet.lifetime);
   await page.click('.adv-chest.ready[data-kind="daily"]');
+  // The chest ceremony: three taps, then it bursts open.
+  await expect(page.locator('.chest-cer')).toBeVisible();
+  for (let k = 0; k < 3; k++) await page.click('.cc-chest');
+  await expect(page.locator('.cc-loot')).toBeVisible();
+  await expect(page.locator('.cc-gems')).toContainText('gems');
+  await page.click('.cc-done');
+  await expect(page.locator('.chest-cer')).toHaveCount(0);
   await expect(page.locator('.adv-chest.open[data-kind="daily"]')).toBeVisible({ timeout: 5000 });
   const after = await page.evaluate(() => (window as unknown as W).__app.child.wallet.lifetime);
   expect(after).toBeGreaterThan(before);
@@ -735,7 +742,7 @@ test('adventure XP: past play counts, a new level is celebrated once, and a comb
   const seen = await page.evaluate(() => (window as unknown as W).__app.child.adventure!.seenLevel);
   expect(seen).toBeGreaterThanOrEqual(1);
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.mapScreen(w.__app.child)); });
-  await expect(page.locator('.who-lv')).toContainText(`Lv ${seen}`);
+  await expect(page.locator('.who-lv')).toContainText(`Level ${seen}`);
   // 150 more right answers = 1,500 XP: at least one new level after the next result.
   await page.evaluate(() => {
     const w = window as unknown as W;
@@ -836,4 +843,32 @@ test('backup: "remind me in 3 days" needs a grown-up, and the parent area shows 
   await expect(page.locator('.pr-per')).toBeHidden();
   const rs = await page.evaluate(() => (window as unknown as { __app: { save: { data: { settings: { reminders?: { melt: boolean } } } } } }).__app.save.data.settings.reminders);
   expect(rs?.melt).toBe(false);
+});
+
+test('wardrobe: gems from levels buy a hat for Plus, and he wears it on the map', async ({ page }) => {
+  type W = { __app: { child: { stats: { correct: number }; adventure?: { equipped?: Record<string, string> } }; save: { update(f: () => void): void }; show(m: unknown): void }; __screens: { parentScreen: unknown; mapScreen(c: unknown): unknown; adventureScreen(c: unknown, t?: string): unknown } };
+  await page.goto('/?debug&demo=%4012');
+  await expect(page.locator('.map')).toBeVisible();
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
+  await page.click('.adv-toggle');
+  // Lots of right answers: new levels, and gems with them.
+  await page.evaluate(() => {
+    const w = window as unknown as W;
+    w.__app.save.update(() => (w.__app.child.stats.correct += 300));
+    w.__app.show(w.__screens.adventureScreen(w.__app.child, 'wardrobe'));
+  });
+  await page.locator('.lu-ok').click({ timeout: 8000 }).catch(() => undefined);
+  await expect(page.locator('.wd-gems')).toContainText('gems to spend');
+  await page.click('.wd-item[data-id="party-hat"]');
+  await expect(page.locator('.wd-item[data-id="party-hat"]')).toHaveClass(/\bon\b/);
+  await expect(page.locator('.wd-plus .px-hat')).toHaveAttribute('data-item', 'party-hat');
+  // Too dear for now: nothing is bought.
+  await page.click('.wd-item[data-id="space-helmet"]');
+  expect(await page.evaluate(() => (window as unknown as W).__app.child.adventure!.equipped!.hat)).toBe('party-hat');
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.mapScreen(w.__app.child)); });
+  await expect(page.locator('.map-buddy .px-hat')).toHaveAttribute('data-item', 'party-hat');
+  // Tap again to take it off.
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.adventureScreen(w.__app.child, 'wardrobe')); });
+  await page.click('.wd-item[data-id="party-hat"]');
+  await expect(page.locator('.wd-plus .px-hat')).toHaveCount(0);
 });

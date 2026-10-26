@@ -9,7 +9,7 @@ import type { Level } from '../core/path.ts';
 import { skillById } from '../core/areas/index.ts';
 import { rewardById, costOf } from '../core/rewards.ts';
 import { dayDiff, addDays } from '../core/economy.ts';
-import { plusFaceSvg } from './plus.ts';
+import { plusFaceSvg, type Outfit } from './plus.ts';
 
 export function levelName(level: Level): string {
   if (level.kind === 'skill') return skillById(level.skillId)?.name ?? 'that level';
@@ -98,8 +98,8 @@ export function lineAfterMiss(child: Child, score: number, total: number): strin
 }
 
 /** Plus pops up with a speech bubble. Resolves when it closes (tap, or after a few seconds). */
-export function plusSays(app: App, text: string, ms = 4200): Promise<void> {
-  const el = html(`<div class="plus-says" role="status"><span class="ps-plus">${plusFaceSvg({ cls: 'alive' })}</span><p class="ps-text">${text}</p><button class="ps-ok">OK!</button></div>`);
+export function plusSays(app: App, text: string, ms = 4200, outfit?: Outfit): Promise<void> {
+  const el = html(`<div class="plus-says" role="status"><span class="ps-plus">${plusFaceSvg({ cls: 'alive', outfit })}</span><p class="ps-text">${text}</p><button class="ps-ok">OK!</button></div>`);
   // Lives on the current screen, so it goes away with it.
   (app.screen?.el ?? document.getElementById('app')!).appendChild(el);
   app.voice.say(el.querySelector('.ps-text')!.textContent ?? '');

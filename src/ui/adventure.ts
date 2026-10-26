@@ -34,11 +34,16 @@ import {
   type LevelInfo,
   type QuestStatus,
 } from '../core/adventure.ts';
-import { plusSvg } from './plus.ts';
+import { plusSvg, plusFaceSvg, type Outfit } from './plus.ts';
+import { GEMS, chestsOpened } from '../core/adventure.ts';
+import { ITEMS, SLOTS, chestsToSurprise, gemBalance, itemById, outfitOf, ownsItem, surpriseFor, tapItem, type Item } from '../core/wardrobe.ts';
+import { JarBar } from './jars.ts';
+import { coinSvg } from './icons.ts';
+import { flyArc, countUp } from '../render/motion.ts';
 import { ICONS } from './icons.ts';
 import { goHome } from './flow.ts';
 import { unlockScreen } from './unlock.ts';
-import { popIn, stagger, reducedMotion, wait, EASE_SPRING } from '../render/motion.ts';
+import { popIn, stagger, reducedMotion, EASE_SPRING } from '../render/motion.ts';
 
 export const adventureOn = (c: Child): boolean => !!c.adventure?.on;
 
@@ -48,6 +53,8 @@ export function badgeContext(app: App, c: Child): BadgeContext {
 }
 
 export const levelInfo = (c: Child): LevelInfo => levelOf(xpOf(c));
+/** What Plus wears for this child (nothing when Adventure is off). */
+export const outfitFor = (c: Child | undefined): Outfit => (c?.adventure?.on ? outfitOf(c.adventure) : {});
 const pctOf = (L: LevelInfo) => (L.need ? Math.min(100, (100 * L.into) / L.need) : 100);
 
 /** Parent area: switch Adventure on or off for one child. Badges already earned are kept. */
@@ -72,7 +79,7 @@ export function toggleAdventure(app: App, c: Child): boolean {
 export function whoLine(c: Child): string {
   const L = levelInfo(c);
   const r = rankOf(L.level);
-  return `<small class="who-lv">${r.icon} Lv ${L.level} · ${esc(r.short)}</small><i class="who-xp" aria-hidden="true"><b style="width:${pctOf(L)}%"></b></i>`;
+  return `<small class="who-lv" title="${esc(r.name)}">${r.icon} Level ${L.level}</small><i class="who-xp" aria-hidden="true"><b style="width:${pctOf(L)}%"></b></i>`;
 }
 
 const limitOf = (app: App) => app.save.data.settings.limitMinutes;
@@ -180,7 +187,8 @@ function showLevelUp(app: App, c: Child, from: number, to: number): Promise<void
       <div class="lu-emb${newRank ? ' rank' : ''}"><span class="lu-icon" aria-hidden="true">${rank.icon}</span><b class="lu-num">${to}</b></div>
       <h2>${newRank ? `You’re a ${esc(rank.name)}!` : `Level ${to}`}</h2>
       <p>${newRank ? `A new rank for ${esc(c.name)}. ${line}` : line}</p>
-      <div class="lu-plus" aria-hidden="true">${plusSvg({ cls: 'alive', noShadow: true })}</div>
+      <p class="lu-gems">💎 +${(to - from) * GEMS.level} gems for the wardrobe</p>
+      <div class="lu-plus" aria-hidden="true">${plusSvg({ cls: 'alive', noShadow: true, outfit: outfitFor(c) })}</div>
       <button class="btn lu-ok" data-back>Awesome!</button>
     </div>
   </div>`);
@@ -231,7 +239,7 @@ function showRanks(app: App, c: Child): void {
 }
 
 // ── the Adventure screen ─────────────────────────────────────────────────
-type Tab = 'quests' | 'badges';
+type Tab = 'quests' | 'badges' | 'wardrobe';
 
 function questRow(q: QuestStatus): string {
   return `<li class="aq${q.done ? ' done' : ''}"><span class="aq-i">${q.quest.icon}</span><div class="aq-b"><p>${esc(q.quest.text)}</p><div class="aq-bar"><i style="width:${(100 * q.value) / q.quest.target}%"></i></div></div><b class="aq-n">${q.done ? ICONS.check : `${q.value}/${q.quest.target}`}</b></li>`;
@@ -279,7 +287,7 @@ function questsTab(app: App, c: Child): string {
       ${qStreak > 1 ? `<p class="ah-note">All quests done ${qStreak} days running!</p>` : ''}
     </div>
     <h3 class="pa-h">Today’s quests</h3>
-    <div class="card adv-quests"><ul>${qs.map(questRow).join('')}</ul>${chestHtml('daily', a.claimed[dailyKey(app)] ? 'open' : allDone ? 'ready' : 'locked', chestFor(app, c, 'daily'))}</div>
+    <div class="card adv-quests"><ul>${qs.map(questRow).join('')}</ul>${chestHtml('daily', a.claimed[dailyKey(app)] ? 'open' : allDone ? 'ready' : 'locked', chestFor(app, c, 'daily'))}${surpriseLine(a)}</div>
     <h3 class="pa-h">This week’s challenge</h3>
     <div class="card adv-quests"><ul>${questRow(week)}</ul>${chestHtml('weekly', a.claimed[weekKey(app)] ? 'open' : week.done ? 'ready' : 'locked', chestFor(app, c, 'weekly'))}<p class="fine">New quests every day. A new challenge every Monday.</p></div>`;
 }
@@ -301,6 +309,143 @@ function badgesTab(app: App, c: Child): string {
     </div>`;
 }
 
+/** "🎁 Surprise item ●●○ 2/3": every third chest holds a wardrobe item. */
+function surpriseLine(a: NonNullable<Child['adventure']>): string {
+  const done = chestsOpened(a) % 3;
+  const dots = [0, 1, 2].map((k) => `<i class="${k < done ? 'on' : ''}"></i>`).join('');
+  return `<p class="adv-surprise"><span>🎁 Surprise item</span><span class="as-dots" aria-hidden="true">${dots}</span><b>${done}/3</b></p>`;
+}
+
+function itemTile(c: Child, item: Item, level: number, balance: number): string {
+  const a = c.adventure!;
+  const own = ownsItem(a, item.id);
+  const wearing = own && a.equipped?.[item.slot] === item.id;
+  const locked = !own && level < item.level;
+  const short = !own && !locked && balance < item.price;
+  const label = wearing ? 'Wearing ✓' : own ? 'Tap to wear' : locked ? `🔒 Level ${item.level}` : `💎 ${item.price}`;
+  const cls = wearing ? 'on' : own ? 'own' : locked ? 'locked' : short ? 'short' : 'buy';
+  return `<button class="wd-item ${cls}" data-id="${item.id}" aria-pressed="${wearing}" aria-label="${esc(item.name)}: ${esc(label)}"><span class="wd-i" aria-hidden="true">${item.icon}</span><b>${esc(item.name)}</b><small>${label}</small></button>`;
+}
+
+function wardrobeTab(c: Child): string {
+  const level = levelInfo(c).level;
+  const balance = gemBalance(c);
+  const outfit = outfitFor(c);
+  return `
+    <div class="card wd-hero">
+      <div class="wd-plus" aria-hidden="true">${plusSvg({ cls: 'alive', noShadow: true, outfit })}</div>
+      <div class="wd-side">
+        <p class="wd-gems"><b>💎 ${balance.toLocaleString('en-IN')}</b><small>gems to spend</small></p>
+        <p class="wd-how">Gems come from new levels (+${GEMS.level}), chests (+${GEMS.daily}, weekly +${GEMS.weekly}) and badges. They are only for Plus’s wardrobe.</p>
+      </div>
+    </div>
+    ${SLOTS.map((slot) => `<h3 class="pa-h">${slot.name}</h3><div class="wd-grid">${ITEMS.filter((i) => i.slot === slot.id).map((i) => itemTile(c, i, level, balance)).join('')}</div>`).join('')}
+    <p class="fine wd-note">Tap an item to buy it and put it on. Tap again to take it off. Every third chest has a surprise item inside.</p>`;
+}
+
+const CHEST_COLOURS = { daily: ['#C97A36', '#B8692B', '#FFD25A'], weekly: ['#7A52EE', '#6440D8', '#FFD25A'] } as const;
+function chestSvg(kind: 'daily' | 'weekly'): string {
+  const [box, lid, band] = CHEST_COLOURS[kind];
+  return `<svg class="cc-svg" viewBox="0 0 200 170" aria-hidden="true">
+    <g class="cc-box"><rect x="24" y="70" width="152" height="86" rx="12" fill="${box}" stroke="${PLUS_INK_C}" stroke-width="6"/><path d="M24 100 H176" stroke="${PLUS_INK_C}" stroke-width="3" opacity=".25"/><rect x="88" y="70" width="24" height="86" fill="${band}" stroke="${PLUS_INK_C}" stroke-width="5"/><rect x="83" y="82" width="34" height="28" rx="7" fill="#FFE27A" stroke="${PLUS_INK_C}" stroke-width="5"/><circle cx="100" cy="94" r="4" fill="${PLUS_INK_C}"/><path d="M100 96 V103" stroke="${PLUS_INK_C}" stroke-width="3.5" stroke-linecap="round"/></g>
+    <g class="cc-lid"><path d="M24 72 Q24 24 100 24 Q176 24 176 72 Z" fill="${lid}" stroke="${PLUS_INK_C}" stroke-width="6" stroke-linejoin="round"/><path d="M88 26 H112 V72 H88 Z" fill="${band}" stroke="${PLUS_INK_C}" stroke-width="5"/><path d="M44 50 Q60 36 84 34" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".45"/></g>
+  </svg>`;
+}
+const PLUS_INK_C = '#1A1446';
+
+/**
+ * Opening a chest is a moment: tap it three times (it wobbles and glows more each time), then it
+ * bursts. Coins fly into the treat jar, gems count up, and every third chest has a surprise.
+ * The chest is already claimed when this shows; this is the show.
+ */
+function chestCeremony(app: App, c: Child, kind: 'daily' | 'weekly', coins: number, gems: number, surprise: Item | null, jar: JarBar): Promise<void> {
+  const calm = reducedMotion();
+  const taps = calm ? 1 : 3;
+  const ov = html(`<div class="overlay chest-cer ${kind}" role="dialog" aria-modal="true" aria-label="Open your chest">
+    <div class="cc-top"></div>
+    <div class="cc-stage">
+      <div class="cc-glow" aria-hidden="true"></div>
+      <button class="cc-chest" aria-label="Tap the chest">${chestSvg(kind)}</button>
+      <p class="cc-hint">${calm ? 'Tap the chest to open it!' : 'Tap the chest!'}</p>
+    </div>
+    <div class="cc-loot" hidden>
+      <p class="cc-row cc-coins">${coinSvg}<b>+${coins} coins</b><small>in the treat jar</small></p>
+      <p class="cc-row cc-gems"><span>💎</span><b class="cc-gem-n">+0 gems</b><small>for Plus’s wardrobe</small></p>
+      ${surprise ? `<div class="cc-gift card"><span class="cc-gift-plus">${plusFaceSvg({ cls: 'alive', outfit: { [surprise.slot]: surprise.id } })}</span><div><b>Surprise! ${esc(surprise.name)} ${surprise.icon}</b><small>A new wardrobe item for Plus</small></div><button class="btn small mint cc-wear">Wear it</button></div>` : `<p class="cc-next">🎁 ${chestsToSurprise(c.adventure)} more chest${chestsToSurprise(c.adventure) === 1 ? '' : 's'} to a surprise item</p>`}
+      <button class="btn cc-done" data-back>Awesome!</button>
+    </div>
+  </div>`);
+  ov.querySelector('.cc-top')!.appendChild(jar.el);
+  app.root.appendChild(ov);
+  if (!calm) ov.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 240 });
+  const chest = ov.querySelector<HTMLButtonElement>('.cc-chest')!;
+  const hint = ov.querySelector<HTMLElement>('.cc-hint')!;
+  let n = 0;
+  return new Promise((done) => {
+    const close = () => {
+      if (calm) {
+        ov.remove();
+        return done();
+      }
+      ov.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: 'forwards' }).finished.then(() => {
+        ov.remove();
+        done();
+      });
+    };
+    const burst = async () => {
+      chest.disabled = true;
+      ov.classList.add('open');
+      hint.textContent = surprise ? 'Wow, a surprise!' : 'Wow!';
+      app.sfx.fanfare();
+      app.haptics.match(5);
+      const r = chest.getBoundingClientRect();
+      if (!calm) app.fx.confetti(r.x + r.width / 2, r.y + r.height / 3, 90);
+      const loot = ov.querySelector<HTMLElement>('.cc-loot')!;
+      loot.hidden = false;
+      if (!calm) stagger(loot.children, { gap: 120, y: 14 });
+      // Coins into the jar.
+      const from = ov.querySelector('.cc-coins svg')!.getBoundingClientRect();
+      const flights: Promise<void>[] = [];
+      for (let k = 0; k < (calm ? 0 : Math.min(8, Math.max(3, Math.round(coins / 3)))); k++) {
+        const f = html(`<span class="flying-coin">${coinSvg}</span>`);
+        document.body.appendChild(f);
+        flights.push(flyArc(f, from, jar.target(), 700, 300 + k * 80).then(() => {
+          f.remove();
+          app.sfx.coin(k);
+        }));
+      }
+      countUp(ov.querySelector<HTMLElement>('.cc-gem-n')!, 0, gems, calm ? 1 : 900, (v) => `+${Math.round(v)} gems`);
+      await Promise.all(flights);
+      jar.update(!calm);
+    };
+    chest.addEventListener('click', () => {
+      if (n >= taps) return;
+      n++;
+      ov.style.setProperty('--t', String(n));
+      if (n < taps) {
+        app.sfx.pop();
+        app.haptics.tap();
+        hint.textContent = n === 1 ? 'Tap again!' : 'One more!';
+        chest.animate([{ transform: 'rotate(0) scale(1)' }, { transform: `rotate(${n % 2 ? -10 : 10}deg) scale(${1 + n * 0.06})` }, { transform: `rotate(${n % 2 ? 8 : -8}deg) scale(${1 + n * 0.06})` }, { transform: 'rotate(0) scale(1)' }], { duration: 420, easing: EASE_SPRING });
+        const r = chest.getBoundingClientRect();
+        app.fx.confetti(r.x + r.width / 2, r.y + r.height / 3, 10 + n * 12);
+        return;
+      }
+      void burst();
+    });
+    ov.querySelector('.cc-wear')?.addEventListener('click', (e) => {
+      const b = e.currentTarget as HTMLButtonElement;
+      app.save.update(() => {
+        const a = c.adventure!;
+        (a.equipped ??= {})[surprise!.slot] = surprise!.id;
+      });
+      b.textContent = 'Wearing ✓';
+      b.disabled = true;
+    });
+    ov.querySelector('.cc-done')!.addEventListener('click', close);
+  });
+}
+
 export function adventureScreen(child: Child, start: Tab = 'quests') {
   return (app: App): Screen => {
     let tab: Tab = start;
@@ -308,51 +453,68 @@ export function adventureScreen(child: Child, start: Tab = 'quests') {
     app.save.update(() => awardBadges(badgeContext(app, child), Date.now()));
     const el = html(`<section class="screen adventure" aria-label="Adventure">
       <header class="topbar"><button class="icon-btn back-btn" aria-label="Back">${ICONS.back}</button><span class="t">Adventure</span><span style="width:50px"></span></header>
-      <nav class="rp-tabs adv-tabs" role="tablist"><button role="tab" class="rp-tab" data-tab="quests">📜 Quests</button><button role="tab" class="rp-tab" data-tab="badges">🏅 Badges</button></nav>
+      <nav class="rp-tabs adv-tabs" role="tablist"><button role="tab" class="rp-tab" data-tab="quests">📜 Quests</button><button role="tab" class="rp-tab" data-tab="badges">🏅 Badges</button><button role="tab" class="rp-tab" data-tab="wardrobe">🎩 Wardrobe</button></nav>
       <div class="scroll pa-body adv-body"></div>
     </section>`);
     const body = el.querySelector<HTMLElement>('.adv-body')!;
     const render = (animate = true) => {
       el.querySelectorAll<HTMLElement>('.rp-tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
-      body.innerHTML = tab === 'quests' ? questsTab(app, child) : badgesTab(app, child);
-      body.scrollTop = 0;
+      const keep = tab === 'wardrobe' && !animate ? body.scrollTop : 0;
+      body.innerHTML = tab === 'quests' ? questsTab(app, child) : tab === 'badges' ? badgesTab(app, child) : wardrobeTab(child);
+      body.scrollTop = keep;
+      body.querySelectorAll<HTMLButtonElement>('.wd-item').forEach((b) => b.addEventListener('click', () => tapWardrobe(b.dataset.id!)));
       body.querySelectorAll<HTMLButtonElement>('.adv-chest.ready').forEach((b) => b.addEventListener('click', () => void openChest(b.dataset.kind as 'daily' | 'weekly', b)));
       body.querySelector('.adv-rank')?.addEventListener('click', () => showRanks(app, child));
       if (animate) stagger(body.querySelectorAll(tab === 'quests' ? '.card, .pa-h' : '.ab'), { gap: tab === 'quests' ? 50 : 12 });
+    };
+    const tapWardrobe = (id: string) => {
+      let r: ReturnType<typeof tapItem> = null;
+      let got: Badge[] = [];
+      app.save.update(() => {
+        if (itemById(id) && !ownsItem(child.adventure, id)) remember(child, [], Date.now(), app.today);
+        r = tapItem(child, id, Date.now());
+        if (r?.kind === 'bought') got = awardBadges(badgeContext(app, child), Date.now());
+      });
+      const res = r as ReturnType<typeof tapItem>;
+      if (!res) return;
+      if (res.kind === 'locked') return app.toast(`${res.item.name} unlocks at Level ${res.need}. Keep playing!`);
+      if (res.kind === 'short') return app.toast(`You need ${res.need} more gem${res.need === 1 ? '' : 's'} for the ${res.item.name.toLowerCase()}. Gems come from levels, chests and badges.`);
+      if (res.kind === 'bought') {
+        app.sfx.fanfare();
+        app.toast(`New for Plus: ${res.item.name}! 💎 −${res.item.price}${got.length ? ` · New badge: ${got[0].name}` : ''}`);
+      } else app.sfx.pop();
+      render(false);
+      const plus = body.querySelector('.wd-plus');
+      if (plus && !reducedMotion()) plus.animate([{ transform: 'scale(.85) rotate(-6deg)' }, { transform: 'scale(1.06) rotate(3deg)' }, { transform: 'none' }], { duration: 480, easing: EASE_SPRING });
     };
     const openChest = async (kind: 'daily' | 'weekly', btn: HTMLElement) => {
       const a = child.adventure!;
       const done = kind === 'daily' ? todayQuests(app, child).every((q) => q.done) : weekQuest(app, child).done;
       const key = kind === 'daily' ? dailyKey(app) : weekKey(app);
       const coins = chestFor(app, child, kind);
+      // The jar as it was, so the coins can be seen landing in it.
+      const jar = new JarBar(child);
       let unlocked: ('treat' | 'goal')[] = [];
       let ok = false;
-      let got: Badge[] = [];
+      let surprise: Item | null = null;
       app.save.update(() => {
         if (a.claimed[key] || !done) return;
         remember(child, [], Date.now(), app.today);
         ok = claimChest(a, key, done, Date.now());
         if (ok) {
           unlocked = addCoins(child.wallet, coins).unlocked;
-          got = awardBadges(badgeContext(app, child), Date.now());
+          surprise = surpriseFor(child, Date.now());
+          awardBadges(badgeContext(app, child), Date.now());
         }
       });
       if (!ok) return render();
       btn.setAttribute('disabled', '');
-      app.sfx.fanfare();
-      const r = btn.getBoundingClientRect();
-      if (!reducedMotion()) {
-        btn.querySelector('.ch-i')?.animate([{ transform: 'rotate(0) scale(1)' }, { transform: 'rotate(-14deg) scale(1.2)' }, { transform: 'rotate(12deg) scale(1.25)' }, { transform: 'rotate(0) scale(1)' }], { duration: 650, easing: EASE_SPRING });
-        app.fx.confetti(r.x + r.width / 2, r.y + r.height / 2, 60);
-      }
-      app.toast(`+${coins} coins in your jar!${got.length ? ` New badge: ${got[0].name}` : ''}`);
-      await new Promise((res) => setTimeout(res, reducedMotion() ? 50 : 900));
+      await chestCeremony(app, child, kind, coins, kind === 'daily' ? GEMS.daily : GEMS.weekly, surprise, jar);
       if (unlocked.length) return void app.show(unlockScreen(child, unlocked[0]));
-      render();
+      render(false);
       const fresh = body.querySelector<HTMLElement>(`.adv-chest[data-kind="${kind}"]`);
       if (fresh) popIn(fresh, 0, 0.9);
       // Chests and badges give XP too.
-      await wait(reducedMotion() ? 0 : 400);
       app.save.update(() => (a.xpSeen = xpOf(child)));
       if (el.isConnected) await levelUpCheck(app, child);
       if (el.isConnected) render(false);
