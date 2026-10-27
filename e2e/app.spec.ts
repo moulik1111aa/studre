@@ -75,6 +75,24 @@ async function playThrough(page: Page, done: string, max = 60): Promise<number> 
   return answered;
 }
 
+/** Open a chest: hold the big key until the ring is full. */
+async function holdKey(page: Page, ms = 1300): Promise<void> {
+  const k = (await page.locator('.cc-key').boundingBox())!;
+  await page.mouse.move(k.x + k.width / 2, k.y + k.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(ms);
+  await page.mouse.up();
+}
+
+/** Step through a tips walkthrough to the end. */
+async function stepTips(page: Page): Promise<void> {
+  for (let i = 0; i < 12 && (await page.locator('.tips-ov').count()); i++) {
+    await page.click('.tip-next');
+    await page.waitForTimeout(150);
+  }
+  await expect(page.locator('.tips-ov')).toHaveCount(0);
+}
+
 async function seeded(page: Page, level: string, mutate?: string): Promise<void> {
   await page.goto(`/?debug&demo=${encodeURIComponent(level)}`);
   await expect(page.locator('.map')).toBeVisible();
@@ -117,6 +135,10 @@ test('first run: setup, placement, rewards, first level', async ({ page }) => {
   // Age 8 is suggested to play alone.
   await expect(page.locator('.stops .stop-now')).toContainText('Helper');
   await expect(page.locator('[data-h="0"]')).toHaveClass(/\bon\b/);
+  await page.click('.ac-next');
+  // Classic or Adventure: Classic unless a grown-up picks Adventure.
+  await expect(page.locator('.stops .stop-now')).toContainText('Adventure');
+  await expect(page.locator('[data-adv="0"]')).toHaveClass(/\bon\b/);
   await page.click('.ac-next');
   await expect(page.locator('.ac-next')).toHaveText('Save Riya');
   await page.click('.ac-next');
@@ -691,6 +713,10 @@ test('adventure: a parent turns it on, quests fill from play, the chest pays onc
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
   await expect(page.locator('.adv-toggle')).toHaveText(/Adventure: off/);
   await page.click('.adv-toggle');
+  // The first time, the grown-up is shown what Adventure is (no skipping).
+  await expect(page.locator('.tips-ov')).toBeVisible();
+  await expect(page.locator('.tip-skip')).toHaveCount(0);
+  await stepTips(page);
   await expect(page.locator('.adv-toggle')).toHaveText(/Adventure: on/);
   // A good afternoon of play today.
   await page.evaluate(() => {
@@ -708,9 +734,9 @@ test('adventure: a parent turns it on, quests fill from play, the chest pays onc
   await expect(page.locator('.adv-quests').first().locator('.aq.done')).toHaveCount(3);
   const before = await page.evaluate(() => (window as unknown as W).__app.child.wallet.lifetime);
   await page.click('.adv-chest.ready[data-kind="daily"]');
-  // The chest ceremony: three taps, then it bursts open.
+  // The chest is locked: hold the key until the ring fills.
   await expect(page.locator('.chest-cer')).toBeVisible();
-  for (let k = 0; k < 3; k++) await page.click('.cc-chest');
+  await holdKey(page);
   await expect(page.locator('.cc-loot')).toBeVisible();
   await expect(page.locator('.cc-gems')).toContainText('gems');
   await page.click('.cc-done');
@@ -738,6 +764,7 @@ test('adventure XP: past play counts, a new level is celebrated once, and a comb
   await expect(page.locator('.map')).toBeVisible();
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
   await page.click('.adv-toggle');
+  await stepTips(page);
   // Switching on does not celebrate old levels.
   const seen = await page.evaluate(() => (window as unknown as W).__app.child.adventure!.seenLevel);
   expect(seen).toBeGreaterThanOrEqual(1);
@@ -851,6 +878,7 @@ test('wardrobe: gems from levels buy a hat for Plus, and he wears it on the map'
   await expect(page.locator('.map')).toBeVisible();
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
   await page.click('.adv-toggle');
+  await stepTips(page);
   // Lots of right answers: new levels, and gems with them.
   await page.evaluate(() => {
     const w = window as unknown as W;
@@ -871,4 +899,138 @@ test('wardrobe: gems from levels buy a hat for Plus, and he wears it on the map'
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.adventureScreen(w.__app.child, 'wardrobe')); });
   await page.click('.wd-item[data-id="party-hat"]');
   await expect(page.locator('.wd-plus .px-hat')).toHaveCount(0);
+});
+
+test('weekly raid: right answers this week hit the monster, and beating it opens a raid chest once', async ({ page }) => {
+  type C = { log?: unknown[]; age: number; adventure?: { claimed: Record<string, number>; gifted?: Record<string, number>; badges: Record<string, number> } };
+  type W = { __app: { child: C; today: string; save: { update(f: () => void): void }; show(m: unknown): void }; __screens: { adventureScreen(c: unknown): unknown } };
+  await page.goto('/?debug&demo=%4012');
+  await expect(page.locator('.map')).toBeVisible();
+  const levels = async (n: number) =>
+    page.evaluate((k) => {
+      const w = window as unknown as W;
+      const c = w.__app.child;
+      w.__app.save.update(() => {
+        c.adventure ??= { claimed: {}, badges: {}, cheered: {}, on: true } as never;
+        (c.adventure as unknown as { toured: boolean }).toured = true;
+        c.log ??= [];
+        for (let i = 0; i < k; i++) c.log.push({ t: Date.now() - 1000 + i + c.log.length, d: w.__app.today, id: `r${c.log.length}`, k: 'skill', st: 3, tier: 1, sc: 8, of: 10, s: 1, sec: 100, c: 5, a: { 's3.x2': [10, 8, 30000] } });
+      });
+      w.__app.show(w.__screens.adventureScreen(c));
+    }, n);
+  await levels(2); // 16 hits
+  await expect(page.locator('.adv-raid')).toContainText('HP left');
+  await page.click('.adv-raid');
+  await expect(page.locator('.raid .rd-hp')).toContainText(/\d+ \/ (150|250) HP/);
+  const hp = Number((await page.locator('.rd-hp b').textContent())!);
+  expect(hp).toBeGreaterThan(100);
+  await expect(page.locator('.rd-chest')).toHaveCount(0);
+  await levels(40); // plenty to beat it
+  await page.click('.adv-raid');
+  await page.click('.rd-chest');
+  await expect(page.locator('.chest-cer.raid')).toBeVisible();
+  await holdKey(page);
+  await expect(page.locator('.cc-gems')).toContainText('gems');
+  await expect(page.locator('.cc-gift')).toContainText('From');
+  await page.click('.cc-done');
+  await expect(page.locator('.rd-done')).toContainText('Beaten');
+  const a = await page.evaluate(() => (window as unknown as W).__app.child.adventure!);
+  expect(Object.keys(a.claimed).filter((k) => k.startsWith('r:')).length).toBe(1);
+  expect(Object.keys(a.gifted ?? {}).length).toBe(1);
+  expect(a.badges['raid-1']).toBeTruthy();
+});
+
+test('a quick tap on the chest key does not open it; holding does', async ({ page }) => {
+  type W = { __app: { child: { log?: unknown[]; stats: { secondsByDay: Record<string, number> }; adventure?: unknown }; today: string; save: { update(f: () => void): void }; show(m: unknown): void }; __screens: { adventureScreen(c: unknown): unknown } };
+  await page.goto('/?debug&demo=%4012');
+  await expect(page.locator('.map')).toBeVisible();
+  await page.evaluate(() => {
+    const w = window as unknown as W;
+    const c = w.__app.child;
+    w.__app.save.update(() => {
+      c.adventure = { on: true, claimed: {}, badges: {}, cheered: {}, toured: true };
+      c.log ??= [];
+      for (let i = 0; i < 6; i++) c.log.push({ t: Date.now() - 1000 + i, d: w.__app.today, id: `x${i}`, k: 'skill', st: 3, tier: 1, sc: 10, of: 10, s: 3, sec: 200, c: 10, a: { 's3.x2': [10, 10, 30000] } });
+      c.stats.secondsByDay[w.__app.today] = 1500;
+    });
+    w.__app.show(w.__screens.adventureScreen(c));
+  });
+  await page.locator('.lu-ok').click({ timeout: 4000 }).catch(() => undefined);
+  await page.click('.adv-chest.ready[data-kind="daily"]');
+  await holdKey(page, 200);
+  await expect(page.locator('.cc-loot')).toBeHidden();
+  await expect(page.locator('.cc-hint')).toContainText('Hold');
+  await holdKey(page);
+  await expect(page.locator('.cc-loot')).toBeVisible();
+});
+
+test('adventure tips: grown-ups first time without Skip, then with Skip; children only after 3 levels', async ({ page }) => {
+  type W = { __app: { child: { log?: unknown[]; adventure?: { toured?: boolean } }; today: string; save: { update(f: () => void): void }; show(m: unknown): void }; __screens: { parentScreen: unknown; mapScreen(c: unknown): unknown } };
+  await page.goto('/?debug&demo=%4012');
+  await expect(page.locator('.map')).toBeVisible();
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
+  await page.click('.adv-what');
+  await expect(page.locator('.tips-ov')).toBeVisible();
+  await expect(page.locator('.tip-skip')).toHaveCount(0);
+  await stepTips(page);
+  await page.click('.adv-what');
+  await expect(page.locator('.tip-skip')).toBeVisible();
+  await page.click('.tip-skip');
+  await expect(page.locator('.tips-ov')).toHaveCount(0);
+  // A child with Adventure and 2 levels played: no Adventure tips yet.
+  const map = async (levels: number) =>
+    page.evaluate((n) => {
+      const w = window as unknown as W;
+      const c = w.__app.child;
+      w.__app.save.update(() => {
+        c.adventure = { on: true, claimed: {}, badges: {}, cheered: {} } as never;
+        c.log = [];
+        for (let i = 0; i < n; i++) c.log.push({ t: Date.now() - 1000 + i, d: '2026-10-01', id: `x${i}`, k: 'skill', st: 3, tier: 1, sc: 8, of: 10, s: 1, sec: 100, c: 5, a: { 's3.x2': [10, 8, 30000] } });
+      });
+      w.__app.show(w.__screens.mapScreen(c));
+    }, levels);
+  await map(2);
+  await page.waitForTimeout(2000);
+  await expect(page.locator('.tips-ov')).toHaveCount(0);
+  await map(3);
+  await expect(page.locator('.tips-ov[aria-label="Adventure tips"]')).toBeVisible({ timeout: 5000 });
+  await stepTips(page);
+  expect(await page.evaluate(() => (window as unknown as W).__app.child.adventure!.toured)).toBe(true);
+});
+
+test('add a child with Adventure on from the start', async ({ page }) => {
+  type W = { __app: { save: { data: { children: { name: string; adventure?: { on: boolean } }[]; settings: { advTipsSeen?: boolean } } }; show(m: unknown): void }; __screens: { addChildScreen(f: boolean): unknown } };
+  await page.goto('/?debug&demo=%4012');
+  await expect(page.locator('.map')).toBeVisible();
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.addChildScreen(false)); });
+  await page.fill('.name', 'Kabir');
+  await page.click('.ac-next');
+  await page.click('.ac-age[data-age="9"]');
+  await page.click('.ac-next');
+  await page.click('.ac-next');
+  await expect(page.locator('.stops .stop-now')).toContainText('Adventure');
+  await page.click('[data-adv="1"]');
+  await expect(page.locator('.tips-ov')).toBeVisible();
+  await stepTips(page);
+  await page.click('.ac-next');
+  await page.click('.ac-next');
+  const kid = await page.evaluate(() => (window as unknown as W).__app.save.data.children.find((c) => c.name === 'Kabir'));
+  expect(kid?.adventure?.on).toBe(true);
+});
+
+test('the sound logo plays at the big moments, and not with sound off', async ({ page }) => {
+  type W = { __app: { child: unknown; path: unknown[]; sfx: { chimes: number; enabled: boolean }; show(m: unknown): void }; __screens: { resultScreen(...a: unknown[]): unknown; whosPlayingScreen: unknown } };
+  await page.goto('/?debug&demo=%4012');
+  await expect(page.locator('.map')).toBeVisible();
+  const chimes = () => page.evaluate(() => (window as unknown as W).__app.sfx.chimes);
+  await page.evaluate(() => ((window as unknown as W).__app.sfx.enabled = true));
+  const before = await chimes();
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.resultScreen(w.__app.child, w.__app.path[1], { stars: 3, score: 10, total: 10, coins: 0, unlocked: [], timeUp: false, perfect: true })); });
+  await expect.poll(chimes).toBeGreaterThan(before);
+  // Sound off: nothing.
+  await page.waitForTimeout(2600);
+  const n = await chimes();
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.sfx.enabled = false; w.__app.show(w.__screens.resultScreen(w.__app.child, w.__app.path[1], { stars: 3, score: 10, total: 10, coins: 0, unlocked: [], timeUp: false, perfect: true })); });
+  await page.waitForTimeout(1500);
+  expect(await chimes()).toBe(n);
 });

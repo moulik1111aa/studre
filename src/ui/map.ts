@@ -21,7 +21,8 @@ import { trophyScreen } from './trophy.ts';
 import { BOSS_EMOJI } from './bosses.ts';
 import { remember } from '../core/undo.ts';
 import { showMapTips } from './tour.ts';
-import { adventureOn, adventureScreen, outfitFor, questBadge, whoLine } from './adventure.ts';
+import { adventureOn, adventureScreen, outfitFor, questBadge, showAdventureTips, whoLine } from './adventure.ts';
+import { advTipsDue } from '../core/adventure.ts';
 import { plusFaceSvg } from './plus.ts';
 
 interface Node {
@@ -73,7 +74,7 @@ export function mapScreen(child: Child) {
       </header>
       <div class="jar-slot"></div>
       <div class="worlds scroll"></div>
-      <div class="play-bar">${next ? `<button class="icon-btn skip-btn" aria-label="Skip this level (grown-up)">${ICONS.skip}</button>` : ''}<button class="btn play-next">${next ? `${ICONS.play} ${next.kind === 'skill' ? 'Play' : next.kind === 'boss' ? 'Fight the boss!' : 'Minion fight!'}` : 'All done!'}</button>${adv ? `<button class="icon-btn adv-btn${adv.ready ? ' ready' : ''}" aria-label="Quests and badges: ${adv.done} of 3 quests done today"><span aria-hidden="true">${adv.ready ? '🎁' : '📜'}</span><i aria-hidden="true">${adv.done}/3</i></button>` : ''}</div>
+      <div class="play-bar">${next ? `<button class="icon-btn skip-btn" aria-label="Skip this level (grown-up)">${ICONS.skip}</button>` : ''}<button class="btn play-next">${next ? `${ICONS.play} ${next.kind === 'skill' ? 'Play' : next.kind === 'boss' ? 'Fight the boss!' : 'Minion fight!'}` : 'All done!'}</button>${adv ? `<button class="icon-btn adv-btn${adv.ready ? ' ready' : ''}" aria-label="Quests and badges: ${adv.done} of 3 quests done today"><span aria-hidden="true">${adv.ready ? '🎁' : '📜'}</span><i aria-hidden="true">${adv.done}/3</i>${!adv.raid.claimed ? `<b class="raid-chip" title="${esc(adv.raid.monster.name)}" aria-hidden="true">${adv.raid.monster.icon}</b>` : ''}</button>` : ''}</div>
     </section>`);
     const jar = new JarBar(child);
     el.querySelector('.jar-slot')!.appendChild(jar.el);
@@ -200,6 +201,8 @@ export function mapScreen(child: Child) {
         stagger([el.querySelector('.map-top')!, jar.el, el.querySelector('.play-bar')!], { gap: 90 });
         // First visit: Plus shows the child around.
         if (!child.toured) setTimeout(() => el.isConnected && !app.root.querySelector('.overlay') && void showMapTips(app, child, el), reducedMotion() ? 100 : 1100);
+        // Adventure: its own tips, once the child has played a few levels.
+        else if (advTipsDue(child)) setTimeout(() => el.isConnected && !app.root.querySelector('.overlay') && void showAdventureTips(app, child, el, 'map'), reducedMotion() ? 100 : 1100);
       },
     };
   };

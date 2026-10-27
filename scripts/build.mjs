@@ -91,7 +91,10 @@ function fonts() {
 
 /** three.js (r170, MIT) as inert text; parsed only when a 3D scene first opens (render/three.ts). */
 /** The opening video's voiceover (assets/audio/opening.mp3), inlined for reel.ts. */
-const audioTag = () => `<script type="text/plain" id="reel-audio">${readFileSync(join(root, 'assets', 'audio', 'opening.mp3')).toString('base64')}</script>`;
+const audioTag = () =>
+  `<script type="text/plain" id="reel-audio">${readFileSync(join(root, 'assets', 'audio', 'opening.mp3')).toString('base64')}</script>` +
+  // MN's sound logo, "Chime Pop" (scripts/sound-logo), for the big moments (Sfx.chime).
+  `<script type="text/plain" id="logo-audio">${readFileSync(join(root, 'assets', 'audio', 'mn-logo.mp3')).toString('base64')}</script>`;
 const threeTag = () => `<script type="text/plain" id="three-src">${readFileSync(join(root, 'assets', 'vendor', 'three.module.min.js'), 'utf8').replace(/<\/(script)/gi, '<\\/$1')}</script>`;
 
 export function build() {

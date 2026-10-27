@@ -23,6 +23,10 @@ export interface AdventureState {
   owned?: Record<string, number>;
   gifted?: Record<string, number>;
   equipped?: Record<string, string>;
+  /** Raid damage last shown on the raid screen (for the "hits since last time" moment). */
+  raidSeen?: { monday: string; damage: number };
+  /** The children's Adventure tips have been shown (after their first 3 levels). */
+  toured?: boolean;
 }
 
 export const freshAdventure = (): AdventureState => ({ on: true, claimed: {}, badges: {}, cheered: {} });
@@ -120,7 +124,7 @@ export const chestCoins = (perfectLevelCoins: number, kind: 'daily' | 'weekly'):
 
 // ── XP, player levels and ranks ───────────────────────────────────────────
 /** XP for each thing (shown to children on the ranks sheet). */
-export const XP = { right: 10, star: 20, boss: 150, daily: 100, weekly: 300, badge: [0, 25, 50, 100] } as const;
+export const XP = { right: 10, star: 20, boss: 150, daily: 100, weekly: 300, raid: 200, badge: [0, 25, 50, 100] } as const;
 export const MAX_LEVEL = 99;
 
 /** All XP earned, worked out from saved progress (so undo and combining phones just work). */
@@ -128,21 +132,21 @@ export function xpOf(c: AdvChild): number {
   const stars = Object.values(c.progress.levels).reduce((n, l) => n + l.stars, 0);
   const a = c.adventure;
   let chests = 0;
-  for (const k of Object.keys(a?.claimed ?? {})) chests += k.startsWith('w:') ? XP.weekly : k.startsWith('d:') ? XP.daily : 0;
+  for (const k of Object.keys(a?.claimed ?? {})) chests += k.startsWith('w:') ? XP.weekly : k.startsWith('d:') ? XP.daily : k.startsWith('r:') ? XP.raid : 0;
   // Level badges give no XP (they come from XP).
   const badges = BADGES.reduce((n, b) => n + (a?.badges[b.id] && !b.id.startsWith('plevel-') ? XP.badge[b.tier] : 0), 0);
   return c.stats.correct * XP.right + stars * XP.star + c.bossesBeaten.length * XP.boss + chests + badges;
 }
 
 // ── gems (Adventure-only; they never become coins) ─────────────────────────
-export const GEMS = { level: 10, daily: 5, weekly: 15, badge: [0, 2, 5, 10] } as const;
+export const GEMS = { level: 10, daily: 5, weekly: 15, raid: 40, badge: [0, 2, 5, 10] } as const;
 
 /** Gems earned so far, worked out from saved progress (gem badges give none: they come from gems). */
 export function gemsEarned(c: AdvChild): number {
   const a = c.adventure;
   const level = levelOf(xpOf(c)).level;
   let chests = 0;
-  for (const k of Object.keys(a?.claimed ?? {})) chests += k.startsWith('w:') ? GEMS.weekly : k.startsWith('d:') ? GEMS.daily : 0;
+  for (const k of Object.keys(a?.claimed ?? {})) chests += k.startsWith('w:') ? GEMS.weekly : k.startsWith('d:') ? GEMS.daily : k.startsWith('r:') ? GEMS.raid : 0;
   const badges = BADGES.reduce((n, b) => n + (a?.badges[b.id] && !b.id.startsWith('gems-') ? GEMS.badge[b.tier] : 0), 0);
   return (level - 1) * GEMS.level + chests + badges;
 }
@@ -295,6 +299,7 @@ export const BADGES: Badge[] = [
   ...ladder('combo', '🔥', ['Combo Starter', 'Combo Champ', 'Combo Legend'], [5, 10, 20], (t) => `Get ${t} right in a row in one level`, (x) => bestCombo(x.c)),
   ...ladder('outfit', '🎩', ['First Outfit', 'Fashionista'], [1, 10], (t) => (t === 1 ? 'Get your first wardrobe item for Plus' : `Collect ${t} wardrobe items`), (x) => itemsOwned(x.c.adventure)),
   { id: 'gems-500', icon: '💎', name: 'Gem Collector', desc: 'Earn 500 gems', tier: 2, target: 500, value: (x) => gemsEarned(x.c) },
+  ...ladder('raid', '⚔️', ['Raid Rookie', 'Raid Hunter', 'Raid Legend'], [1, 4, 12], (t) => `Beat ${t} weekly raid monster${t > 1 ? 's' : ''}`, (x) => claims(x, 'r:')),
 ];
 
 /** Badges earned now that weren't before. */
@@ -347,3 +352,7 @@ export function questStreak(c: AdvChild, today: string): number {
 export function tidy(a: AdventureState, today: string): void {
   for (const d of Object.keys(a.cheered)) if (dayDiff(d, today) > 2) delete a.cheered[d];
 }
+
+/** The children's Adventure tips wait until they have finished 3 levels (so the start stays simple). */
+export const ADV_TIPS_AFTER = 3;
+export const advTipsDue = (c: AdvChild): boolean => !!c.adventure?.on && !c.adventure.toured && (c.log?.length ?? 0) >= ADV_TIPS_AFTER;

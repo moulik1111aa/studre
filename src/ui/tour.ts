@@ -6,13 +6,13 @@
 
 import { html, type App } from './app.ts';
 import type { Child } from '../storage/save.ts';
-import { plusFaceSvg } from './plus.ts';
+import { plusFaceSvg, type Outfit } from './plus.ts';
 import { rewardById } from '../core/rewards.ts';
 import { reducedMotion, wait, EASE_OUT } from '../render/motion.ts';
 
 // ── 2. Map tips ────────────────────────────────────────────────────────────
 
-interface Tip {
+export interface Tip {
   /** What to point at (inside the map screen); none = a tip in the middle. */
   at?: string;
   text: string;
@@ -47,13 +47,33 @@ function tipsFor(child: Child, el: HTMLElement): Tip[] {
 
 /** Show the map tips over the map screen `el`. Resolves when they are done or skipped. */
 export function showMapTips(app: App, child: Child, el: HTMLElement): Promise<void> {
-  const tips = tipsFor(child, el);
-  const ov = html(`<div class="overlay tips-ov" role="dialog" aria-modal="true" aria-label="How it works">
+  return runTips(app, el, tipsFor(child, el), {
+    onClose: () => {
+      app.save.update(() => (child.toured = true));
+      el.querySelector('[data-tip-boss]')?.removeAttribute('data-tip-boss');
+    },
+  });
+}
+
+export interface TipsOptions {
+  /** Offer Skip (default: yes). */
+  skip?: boolean;
+  label?: string;
+  /** The last button's text. */
+  last?: string;
+  outfit?: Outfit;
+  onClose?: () => void;
+}
+
+/** Plus points at things on screen `el`, one tip at a time (read aloud). */
+export function runTips(app: App, el: HTMLElement, tips: Tip[], o: TipsOptions = {}): Promise<void> {
+  const canSkip = o.skip !== false;
+  const ov = html(`<div class="overlay tips-ov" role="dialog" aria-modal="true" aria-label="${o.label ?? 'How it works'}">
     <div class="tip-hole"></div>
     <div class="tip-card">
-      <div class="tip-dog">${plusFaceSvg({ cls: 'alive' })}</div>
+      <div class="tip-dog">${plusFaceSvg({ cls: 'alive', outfit: o.outfit })}</div>
       <p class="tip-text" aria-live="polite"></p>
-      <div class="tip-foot"><span class="tip-count"></span><button class="btn ghost small tip-skip" data-back>Skip</button><button class="btn small tip-next">Next</button></div>
+      <div class="tip-foot"><span class="tip-count"></span>${canSkip ? '<button class="btn ghost small tip-skip" data-back>Skip</button>' : ''}<button class="btn small tip-next">Next</button></div>
     </div>
   </div>`);
   const hole = ov.querySelector<HTMLElement>('.tip-hole')!;
@@ -67,8 +87,7 @@ export function showMapTips(app: App, child: Child, el: HTMLElement): Promise<vo
   return new Promise<void>((resolve) => {
     const close = () => {
       app.voice.stop();
-      app.save.update(() => (child.toured = true));
-      el.querySelector('[data-tip-boss]')?.removeAttribute('data-tip-boss');
+      o.onClose?.();
       const done = () => {
         ov.remove();
         // Back to where the child is on the path.
@@ -81,7 +100,7 @@ export function showMapTips(app: App, child: Child, el: HTMLElement): Promise<vo
     const place = async () => {
       const tip = tips[k];
       const target = tip.at ? el.querySelector<HTMLElement>(tip.at) : null;
-      if (target && target.closest('.worlds')) {
+      if (target && target.closest('.worlds, .scroll')) {
         // Jump the map to it (a smooth scroll would move it after we measure).
         target.scrollIntoView({ block: 'center', behavior: 'auto' });
         await wait(60);
@@ -118,16 +137,17 @@ export function showMapTips(app: App, child: Child, el: HTMLElement): Promise<vo
       }
       text.textContent = tips[k].text;
       ov.querySelector('.tip-count')!.textContent = `${k + 1} / ${tips.length}`;
-      nextBtn.textContent = k === tips.length - 1 ? 'Let’s go!' : 'Next';
+      nextBtn.textContent = k === tips.length - 1 ? (o.last ?? 'Let’s go!') : 'Next';
       nextBtn.classList.toggle('mint', k === tips.length - 1);
-      ov.querySelector<HTMLElement>('.tip-skip')!.style.visibility = k === tips.length - 1 ? 'hidden' : 'visible';
+      const skipBtn = ov.querySelector<HTMLElement>('.tip-skip');
+      if (skipBtn) skipBtn.style.visibility = k === tips.length - 1 ? 'hidden' : 'visible';
       await place();
       if (!reducedMotion()) card.animate([{ opacity: 0, transform: 'translateY(8px) scale(.97)' }, { opacity: 1, transform: 'none' }], { duration: 320, easing: EASE_OUT });
       app.voice.say(tips[k].text);
       busy = false;
     };
     nextBtn.addEventListener('click', () => void step());
-    ov.querySelector('.tip-skip')!.addEventListener('click', close);
+    ov.querySelector('.tip-skip')?.addEventListener('click', close);
     if (!reducedMotion()) ov.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 260 });
     void step();
   });

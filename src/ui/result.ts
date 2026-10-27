@@ -159,7 +159,9 @@ export function resultScreen(child: Child, level: Level, r: ResultInfo) {
       });
       stagger(el.querySelectorAll('.res-actions .btn'), { delay: 900 });
       if (passed) {
-        app.sfx.fanfare();
+        // MN's sound logo for a perfect score, the usual fanfare otherwise.
+        if (r.perfect) app.sfx.chime();
+        else app.sfx.fanfare();
         await wait(300);
         // One quiet celebration per level; confetti only for a perfect score.
         if (r.perfect) {

@@ -37,13 +37,56 @@ export class Sfx {
 
   /** Wake the audio engine for a sound, and put it back to sleep after 3 quiet seconds
    *  (a running AudioContext keeps the phone's audio thread busy even in silence). */
-  private wake(): boolean {
+  private wake(quiet = 3000): boolean {
     const c = this.ctx;
     if (!c || !this.master || !this.enabled) return false;
     if (c.state === 'suspended') void c.resume().catch(() => {});
     clearTimeout(this.idle);
-    this.idle = window.setTimeout(() => void c.suspend().catch(() => {}), 3000);
+    this.idle = window.setTimeout(() => void c.suspend().catch(() => {}), quiet);
     return true;
+  }
+
+  /** How many times the sound logo was asked for (tests read it). */
+  chimes = 0;
+  private logo: AudioBuffer | null = null;
+  private logoLoading: Promise<AudioBuffer | null> | null = null;
+  private lastChime = -1e9;
+
+  private loadLogo(): Promise<AudioBuffer | null> {
+    const c = this.ctx;
+    if (this.logo || !c) return Promise.resolve(this.logo);
+    this.logoLoading ??= (async () => {
+      try {
+        const b64 = document.getElementById('logo-audio')?.textContent?.trim();
+        if (!b64) return null;
+        const bytes = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
+        this.logo = await c.decodeAudioData(bytes.buffer);
+        return this.logo;
+      } catch {
+        return null;
+      }
+    })();
+    return this.logoLoading;
+  }
+
+  /** MN's sound logo ("Chime Pop") for the big moments: opening, level-ups, chests, rewards, perfect scores. */
+  chime(): void {
+    if (!this.enabled) return;
+    const now = performance.now();
+    // Never twice on top of each other.
+    if (now - this.lastChime < 2500) return;
+    this.lastChime = now;
+    this.chimes++;
+    void this.loadLogo().then((buf) => {
+      const c = this.ctx;
+      if (!buf || !c || !this.master || !this.wake(4500)) return;
+      const src = c.createBufferSource();
+      src.buffer = buf;
+      const g = c.createGain();
+      g.gain.value = 0.9;
+      src.connect(g).connect(this.master);
+      src.start();
+    });
   }
 
   private tone(freq: number, start: number, dur: number, type: OscillatorType = 'sine', vol = 0.3, slide = 0): void {

@@ -35,15 +35,17 @@ import {
   type QuestStatus,
 } from '../core/adventure.ts';
 import { plusSvg, plusFaceSvg, type Outfit } from './plus.ts';
-import { GEMS, chestsOpened } from '../core/adventure.ts';
-import { ITEMS, SLOTS, chestsToSurprise, gemBalance, itemById, outfitOf, ownsItem, surpriseFor, tapItem, type Item } from '../core/wardrobe.ts';
+import { ADV_TIPS_AFTER, GEMS, chestsOpened } from '../core/adventure.ts';
+import { ITEMS, SLOTS, SURPRISE_EVERY, chestsToSurprise, gemBalance, itemById, outfitOf, ownsItem, raidItem, surpriseFor, tapItem, type Item } from '../core/wardrobe.ts';
 import { JarBar } from './jars.ts';
+import { HIT, raidFor, tauntFor, type RaidState } from '../core/raid.ts';
+import { runTips, type Tip } from './tour.ts';
 import { coinSvg } from './icons.ts';
 import { flyArc, countUp } from '../render/motion.ts';
 import { ICONS } from './icons.ts';
 import { goHome } from './flow.ts';
 import { unlockScreen } from './unlock.ts';
-import { popIn, stagger, reducedMotion, EASE_SPRING } from '../render/motion.ts';
+import { popIn, stagger, reducedMotion, wait, EASE_SPRING } from '../render/motion.ts';
 
 export const adventureOn = (c: Child): boolean => !!c.adventure?.on;
 
@@ -96,12 +98,13 @@ function chestFor(app: App, c: Child, kind: 'daily' | 'weekly'): number {
 }
 
 /** For the map button: quests done today, and whether a chest is waiting. */
-export function questBadge(app: App, c: Child): { done: number; ready: boolean } {
+export function questBadge(app: App, c: Child): { done: number; ready: boolean; raid: RaidState } {
   const qs = todayQuests(app, c);
   const done = qs.filter((q) => q.done).length;
   const a = c.adventure!;
-  const ready = (done === qs.length && !a.claimed[dailyKey(app)]) || (weekQuest(app, c).done && !a.claimed[weekKey(app)]);
-  return { done, ready };
+  const raid = raidFor(c, app.today);
+  const ready = (done === qs.length && !a.claimed[dailyKey(app)]) || (weekQuest(app, c).done && !a.claimed[weekKey(app)]) || (raid.defeated && !raid.claimed);
+  return { done, ready, raid };
 }
 
 /** After a level: new badges are saved, and quests finished since the last look are listed. */
@@ -126,6 +129,14 @@ export function adventureNews(app: App, c: Child): string {
   });
   const xpRow = xpRowHtml(before, after);
   const lines: string[] = [];
+  // The weekly raid: this level's hits.
+  const raid = raidFor(c, app.today);
+  const last = (c.log ?? [])[(c.log ?? []).length - 1];
+  if (last && last.d === app.today && !raid.claimed) {
+    const hit = Object.values(last.a).reduce((x, r) => x + r[1], 0) * HIT.right + (last.of > 0 && last.sc >= last.of ? HIT.perfect : 0) + (last.s >= 3 ? HIT.stars3 : 0);
+    const before = raid.damage - hit;
+    if (hit > 0 && before < raid.hp) lines.push(raid.defeated ? `<li class="raid"><span>${raid.monster.icon}</span><p><b>You beat ${esc(raid.monster.name)}!</b> Open the raid chest on the Quests tab.</p></li>` : `<li class="raid"><span>${raid.monster.icon}</span><p><b>You hit ${esc(raid.monster.name)} for ${hit}!</b> ${raid.left} HP left.</p></li>`);
+  }
   for (const q of fresh) lines.push(`<li><span>${q.quest.icon}</span><p><b>Quest done!</b> ${esc(q.quest.text)}</p></li>`);
   if (weekFresh) lines.push(`<li><span>🏆</span><p><b>Weekly challenge done!</b> ${esc(week.quest.text)}</p></li>`);
   const allDone = qs.every((q) => q.done) && !a.claimed[dailyKey(app)];
@@ -194,7 +205,7 @@ function showLevelUp(app: App, c: Child, from: number, to: number): Promise<void
   </div>`);
   app.root.appendChild(ov);
   const num = ov.querySelector<HTMLElement>('.lu-num')!;
-  app.sfx.fanfare();
+  app.sfx.chime();
   app.voice.say(newRank ? `Level ${to}! You're a ${rank.name}!` : `Level up! Level ${to}!`);
   if (!reducedMotion()) {
     ov.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 260 });
@@ -271,6 +282,7 @@ function questsTab(app: App, c: Child): string {
   const rank = rankOf(L.level);
   const nr = nextRank(L.level);
   return `
+    ${raidCard(c, app.today)}
     <button class="card adv-rank" aria-label="Level ${L.level}, ${esc(rank.name)}. See all ranks">
       <span class="ar-emb" aria-hidden="true">${rank.icon}<b>${L.level}</b></span>
       <span class="ar-b">
@@ -292,6 +304,19 @@ function questsTab(app: App, c: Child): string {
     <div class="card adv-quests"><ul>${questRow(week)}</ul>${chestHtml('weekly', a.claimed[weekKey(app)] ? 'open' : week.done ? 'ready' : 'locked', chestFor(app, c, 'weekly'))}<p class="fine">New quests every day. A new challenge every Monday.</p></div>`;
 }
 
+/** The weekly raid at the top of the Quests tab. */
+function raidCard(c: Child, today: string): string {
+  const r = raidFor(c, today);
+  const pct = (100 * r.left) / r.hp;
+  const state = r.claimed ? 'Beaten! 🏆 A new monster comes on Monday.' : r.defeated ? 'Beaten! Open the raid chest.' : `${r.left} of ${r.hp} HP left`;
+  return `<button class="card adv-raid${r.defeated ? ' won' : ''}" style="--mc:${r.monster.colour}" aria-label="Weekly raid: ${esc(r.monster.name)}, ${esc(state)}">
+    <span class="ar-mon" aria-hidden="true">${r.monster.icon}</span>
+    <span class="ar-b"><small class="ar-k">⚔️ Weekly raid</small><span class="ar-n">${esc(r.monster.name)}</span>
+      <span class="raid-bar"><i style="width:${pct}%"></i></span><small>${esc(state)}</small></span>
+    <span class="ar-go" aria-hidden="true">›</span>
+  </button>`;
+}
+
 const TIER = ['', 'Bronze', 'Silver', 'Gold'];
 function badgesTab(app: App, c: Child): string {
   const x = badgeContext(app, c);
@@ -311,9 +336,9 @@ function badgesTab(app: App, c: Child): string {
 
 /** "🎁 Surprise item ●●○ 2/3": every third chest holds a wardrobe item. */
 function surpriseLine(a: NonNullable<Child['adventure']>): string {
-  const done = chestsOpened(a) % 3;
-  const dots = [0, 1, 2].map((k) => `<i class="${k < done ? 'on' : ''}"></i>`).join('');
-  return `<p class="adv-surprise"><span>🎁 Surprise item</span><span class="as-dots" aria-hidden="true">${dots}</span><b>${done}/3</b></p>`;
+  const done = chestsOpened(a) % SURPRISE_EVERY;
+  const dots = Array.from({ length: SURPRISE_EVERY }, (_, k) => `<i class="${k < done ? 'on' : ''}"></i>`).join('');
+  return `<p class="adv-surprise"><span>🎁 Surprise item</span><span class="as-dots" aria-hidden="true">${dots}</span><b>${done}/${SURPRISE_EVERY}</b></p>`;
 }
 
 function itemTile(c: Child, item: Item, level: number, balance: number): string {
@@ -340,49 +365,146 @@ function wardrobeTab(c: Child): string {
       </div>
     </div>
     ${SLOTS.map((slot) => `<h3 class="pa-h">${slot.name}</h3><div class="wd-grid">${ITEMS.filter((i) => i.slot === slot.id).map((i) => itemTile(c, i, level, balance)).join('')}</div>`).join('')}
-    <p class="fine wd-note">Tap an item to buy it and put it on. Tap again to take it off. Every third chest has a surprise item inside.</p>`;
+    <p class="fine wd-note">Tap an item to buy it and put it on. Tap again to take it off. Every fifth chest has a surprise item inside, and raid monsters guard their own.</p>`;
 }
 
-const CHEST_COLOURS = { daily: ['#C97A36', '#B8692B', '#FFD25A'], weekly: ['#7A52EE', '#6440D8', '#FFD25A'] } as const;
-function chestSvg(kind: 'daily' | 'weekly'): string {
+export type ChestKind = 'daily' | 'weekly' | 'raid';
+const INK = '#1A1446';
+const CHEST_COLOURS: Record<ChestKind, [string, string, string]> = { daily: ['#C97A36', '#B8692B', '#FFD25A'], weekly: ['#7A52EE', '#6440D8', '#FFD25A'], raid: ['#E53950', '#C62C44', '#FFD25A'] };
+function chestSvg(kind: ChestKind): string {
   const [box, lid, band] = CHEST_COLOURS[kind];
   return `<svg class="cc-svg" viewBox="0 0 200 170" aria-hidden="true">
-    <g class="cc-box"><rect x="24" y="70" width="152" height="86" rx="12" fill="${box}" stroke="${PLUS_INK_C}" stroke-width="6"/><path d="M24 100 H176" stroke="${PLUS_INK_C}" stroke-width="3" opacity=".25"/><rect x="88" y="70" width="24" height="86" fill="${band}" stroke="${PLUS_INK_C}" stroke-width="5"/><rect x="83" y="82" width="34" height="28" rx="7" fill="#FFE27A" stroke="${PLUS_INK_C}" stroke-width="5"/><circle cx="100" cy="94" r="4" fill="${PLUS_INK_C}"/><path d="M100 96 V103" stroke="${PLUS_INK_C}" stroke-width="3.5" stroke-linecap="round"/></g>
-    <g class="cc-lid"><path d="M24 72 Q24 24 100 24 Q176 24 176 72 Z" fill="${lid}" stroke="${PLUS_INK_C}" stroke-width="6" stroke-linejoin="round"/><path d="M88 26 H112 V72 H88 Z" fill="${band}" stroke="${PLUS_INK_C}" stroke-width="5"/><path d="M44 50 Q60 36 84 34" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".45"/></g>
+    <ellipse class="cc-inside" cx="100" cy="74" rx="66" ry="12" fill="#FFE9A0"/>
+    <g class="cc-box"><rect x="24" y="70" width="152" height="86" rx="12" fill="${box}" stroke="${INK}" stroke-width="6"/><path d="M24 100 H176" stroke="${INK}" stroke-width="3" opacity=".25"/><rect x="88" y="70" width="24" height="86" fill="${band}" stroke="${INK}" stroke-width="5"/></g>
+    <g class="cc-lid"><path d="M24 72 Q24 24 100 24 Q176 24 176 72 Z" fill="${lid}" stroke="${INK}" stroke-width="6" stroke-linejoin="round"/><path d="M88 26 H112 V72 H88 Z" fill="${band}" stroke="${INK}" stroke-width="5"/><path d="M44 50 Q60 36 84 34" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".45"/></g>
+    <g class="cc-lock"><path d="M88 80 V68 A12 12 0 0 1 112 68 V80" fill="none" stroke="#C9D3E0" stroke-width="7" stroke-linecap="round"/><path d="M88 80 V68 A12 12 0 0 1 112 68 V80" fill="none" stroke="${INK}" stroke-width="2.5" stroke-linecap="round" opacity=".5"/><rect x="80" y="78" width="40" height="34" rx="8" fill="#FFD25A" stroke="${INK}" stroke-width="5"/><circle cx="100" cy="92" r="4.5" fill="${INK}"/><path d="M100 95 V103" stroke="${INK}" stroke-width="4" stroke-linecap="round"/></g>
   </svg>`;
 }
-const PLUS_INK_C = '#1A1446';
+
+const HOLD_MS = 900;
 
 /**
- * Opening a chest is a moment: tap it three times (it wobbles and glows more each time), then it
- * bursts. Coins fly into the treat jar, gems count up, and every third chest has a surprise.
- * The chest is already claimed when this shows; this is the show.
+ * Opening a chest: the chest is locked, and the child holds the big key until the ring fills.
+ * The lock pops, the lid swings open with a beam of light, and coins and gems rise out and
+ * drop into the jar and the gem counter. The chest is already claimed when this shows.
  */
-function chestCeremony(app: App, c: Child, kind: 'daily' | 'weekly', coins: number, gems: number, surprise: Item | null, jar: JarBar): Promise<void> {
+function chestCeremony(app: App, c: Child, kind: ChestKind, coins: number, gems: number, item: Item | null, jar: JarBar, itemNote = 'Surprise!'): Promise<void> {
   const calm = reducedMotion();
-  const taps = calm ? 1 : 3;
   const ov = html(`<div class="overlay chest-cer ${kind}" role="dialog" aria-modal="true" aria-label="Open your chest">
     <div class="cc-top"></div>
     <div class="cc-stage">
-      <div class="cc-glow" aria-hidden="true"></div>
-      <button class="cc-chest" aria-label="Tap the chest">${chestSvg(kind)}</button>
-      <p class="cc-hint">${calm ? 'Tap the chest to open it!' : 'Tap the chest!'}</p>
+      <div class="cc-beam" aria-hidden="true"></div>
+      <div class="cc-chest">${chestSvg(kind)}</div>
+      <p class="cc-hint">${calm ? 'Tap the key to open your chest!' : 'Hold the key to unlock!'}</p>
+      <button class="cc-key" aria-label="${calm ? 'Open the chest' : 'Hold to unlock the chest'}"><span class="cc-key-i" aria-hidden="true">🔑</span></button>
     </div>
     <div class="cc-loot" hidden>
-      <p class="cc-row cc-coins">${coinSvg}<b>+${coins} coins</b><small>in the treat jar</small></p>
+      ${coins ? `<p class="cc-row cc-coins">${coinSvg}<b>+${coins} coins</b><small>in the treat jar</small></p>` : ''}
       <p class="cc-row cc-gems"><span>💎</span><b class="cc-gem-n">+0 gems</b><small>for Plus’s wardrobe</small></p>
-      ${surprise ? `<div class="cc-gift card"><span class="cc-gift-plus">${plusFaceSvg({ cls: 'alive', outfit: { [surprise.slot]: surprise.id } })}</span><div><b>Surprise! ${esc(surprise.name)} ${surprise.icon}</b><small>A new wardrobe item for Plus</small></div><button class="btn small mint cc-wear">Wear it</button></div>` : `<p class="cc-next">🎁 ${chestsToSurprise(c.adventure)} more chest${chestsToSurprise(c.adventure) === 1 ? '' : 's'} to a surprise item</p>`}
+      ${item ? `<div class="cc-gift card"><span class="cc-gift-plus">${plusFaceSvg({ cls: 'alive', outfit: { [item.slot]: item.id } })}</span><div><b>${esc(itemNote)} ${esc(item.name)} ${item.icon}</b><small>A new wardrobe item for Plus</small></div><button class="btn small mint cc-wear">Wear it</button></div>` : kind === 'raid' ? '' : `<p class="cc-next">🎁 ${chestsToSurprise(c.adventure)} more chest${chestsToSurprise(c.adventure) === 1 ? '' : 's'} to a surprise item</p>`}
       <button class="btn cc-done" data-back>Awesome!</button>
     </div>
   </div>`);
   ov.querySelector('.cc-top')!.appendChild(jar.el);
   app.root.appendChild(ov);
   if (!calm) ov.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 240 });
-  const chest = ov.querySelector<HTMLButtonElement>('.cc-chest')!;
+  const key = ov.querySelector<HTMLButtonElement>('.cc-key')!;
   const hint = ov.querySelector<HTMLElement>('.cc-hint')!;
-  let n = 0;
+  const chest = ov.querySelector<HTMLElement>('.cc-chest')!;
   return new Promise((done) => {
-    const close = () => {
+    let opened = false;
+    let p = 0;
+    let holding = false;
+    let last = 0;
+    let raf = 0;
+    const paint = () => {
+      key.style.setProperty('--p', String(p));
+      key.querySelector<HTMLElement>('.cc-key-i')!.style.transform = `rotate(${p * 90}deg)`;
+      ov.style.setProperty('--t', String(p * 3));
+    };
+    const tick = (now: number) => {
+      const dt = now - last;
+      last = now;
+      p = Math.max(0, Math.min(1, p + (holding ? dt / HOLD_MS : -dt / 400)));
+      paint();
+      if (p >= 1) return void unlock();
+      if (holding || p > 0) raf = requestAnimationFrame(tick);
+    };
+    const start = () => {
+      if (opened) return;
+      if (calm) return void unlock();
+      holding = true;
+      hint.textContent = 'Keep holding…';
+      app.haptics.tap();
+      cancelAnimationFrame(raf);
+      last = performance.now();
+      raf = requestAnimationFrame(tick);
+    };
+    const stop = () => {
+      if (!holding || opened) return;
+      holding = false;
+      if (p < 1) {
+        hint.textContent = 'Hold the key until the ring is full!';
+        if (p < 0.15) chest.animate([{ transform: 'rotate(0)' }, { transform: 'rotate(-3deg)' }, { transform: 'rotate(3deg)' }, { transform: 'rotate(0)' }], { duration: 300 });
+      }
+    };
+    const unlock = async () => {
+      if (opened) return;
+      opened = true;
+      holding = false;
+      cancelAnimationFrame(raf);
+      p = 1;
+      paint();
+      key.disabled = true;
+      ov.classList.add('open');
+      hint.textContent = item ? 'Wow, something special!' : 'It’s open!';
+      app.sfx.chime();
+      app.haptics.match(5);
+      const loot = ov.querySelector<HTMLElement>('.cc-loot')!;
+      const box = chest.getBoundingClientRect();
+      const mouth = { x: box.x + box.width / 2 - 14, y: box.y + box.height * 0.42 - 14 };
+      if (!calm) app.fx.confetti(mouth.x + 14, mouth.y, 50);
+      await wait(calm ? 0 : 450);
+      loot.hidden = false;
+      if (!calm) stagger(loot.children, { gap: 110, y: 14 });
+      // Coins and gems rise out of the chest, then drop into the jar and the gem counter.
+      const flights: Promise<void>[] = [];
+      const rise = (markup: string, to: DOMRect | { x: number; y: number }, k: number, n: number) => {
+        const f = html(`<span class="flying-coin">${markup}</span>`);
+        document.body.appendChild(f);
+        const up = { x: mouth.x + (k - (n - 1) / 2) * 26, y: mouth.y - 110 - (k % 2) * 24 };
+        return flyArc(f, mouth, up, 420, k * 60)
+          .then(() => flyArc(f, up, to, 520, 80))
+          .then(() => f.remove());
+      };
+      if (!calm) {
+        const nc = coins ? Math.min(7, Math.max(3, Math.round(coins / 3))) : 0;
+        for (let k = 0; k < nc; k++) flights.push(rise(coinSvg, jar.target(), k, nc + 3).then(() => app.sfx.coin(k)));
+        const gemTo = ov.querySelector('.cc-gems span')!.getBoundingClientRect();
+        for (let k = 0; k < 3; k++) flights.push(rise('<span class="fly-gem">💎</span>', gemTo, nc + k, nc + 3));
+      }
+      countUp(ov.querySelector<HTMLElement>('.cc-gem-n')!, 0, gems, calm ? 1 : 1300, (v) => `+${Math.round(v)} gems`);
+      await Promise.all(flights);
+      if (coins) jar.update(!calm);
+    };
+    key.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      start();
+    });
+    for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) key.addEventListener(ev, stop);
+    key.addEventListener('keydown', (e) => {
+      if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) start();
+    });
+    key.addEventListener('keyup', stop);
+    // A plain click (keyboard, screen reader) with reduced motion opens it.
+    key.addEventListener('click', () => calm && void unlock());
+    ov.querySelector('.cc-wear')?.addEventListener('click', (e) => {
+      const b = e.currentTarget as HTMLButtonElement;
+      app.save.update(() => ((c.adventure!.equipped ??= {})[item!.slot] = item!.id));
+      b.textContent = 'Wearing ✓';
+      b.disabled = true;
+    });
+    ov.querySelector('.cc-done')!.addEventListener('click', () => {
       if (calm) {
         ov.remove();
         return done();
@@ -391,59 +513,132 @@ function chestCeremony(app: App, c: Child, kind: 'daily' | 'weekly', coins: numb
         ov.remove();
         done();
       });
-    };
-    const burst = async () => {
-      chest.disabled = true;
-      ov.classList.add('open');
-      hint.textContent = surprise ? 'Wow, a surprise!' : 'Wow!';
-      app.sfx.fanfare();
-      app.haptics.match(5);
-      const r = chest.getBoundingClientRect();
-      if (!calm) app.fx.confetti(r.x + r.width / 2, r.y + r.height / 3, 90);
-      const loot = ov.querySelector<HTMLElement>('.cc-loot')!;
-      loot.hidden = false;
-      if (!calm) stagger(loot.children, { gap: 120, y: 14 });
-      // Coins into the jar.
-      const from = ov.querySelector('.cc-coins svg')!.getBoundingClientRect();
-      const flights: Promise<void>[] = [];
-      for (let k = 0; k < (calm ? 0 : Math.min(8, Math.max(3, Math.round(coins / 3)))); k++) {
-        const f = html(`<span class="flying-coin">${coinSvg}</span>`);
-        document.body.appendChild(f);
-        flights.push(flyArc(f, from, jar.target(), 700, 300 + k * 80).then(() => {
-          f.remove();
-          app.sfx.coin(k);
-        }));
-      }
-      countUp(ov.querySelector<HTMLElement>('.cc-gem-n')!, 0, gems, calm ? 1 : 900, (v) => `+${Math.round(v)} gems`);
-      await Promise.all(flights);
-      jar.update(!calm);
-    };
-    chest.addEventListener('click', () => {
-      if (n >= taps) return;
-      n++;
-      ov.style.setProperty('--t', String(n));
-      if (n < taps) {
-        app.sfx.pop();
-        app.haptics.tap();
-        hint.textContent = n === 1 ? 'Tap again!' : 'One more!';
-        chest.animate([{ transform: 'rotate(0) scale(1)' }, { transform: `rotate(${n % 2 ? -10 : 10}deg) scale(${1 + n * 0.06})` }, { transform: `rotate(${n % 2 ? 8 : -8}deg) scale(${1 + n * 0.06})` }, { transform: 'rotate(0) scale(1)' }], { duration: 420, easing: EASE_SPRING });
-        const r = chest.getBoundingClientRect();
-        app.fx.confetti(r.x + r.width / 2, r.y + r.height / 3, 10 + n * 12);
-        return;
-      }
-      void burst();
     });
-    ov.querySelector('.cc-wear')?.addEventListener('click', (e) => {
-      const b = e.currentTarget as HTMLButtonElement;
-      app.save.update(() => {
-        const a = c.adventure!;
-        (a.equipped ??= {})[surprise!.slot] = surprise!.id;
-      });
-      b.textContent = 'Wearing ✓';
-      b.disabled = true;
-    });
-    ov.querySelector('.cc-done')!.addEventListener('click', close);
   });
+}
+
+const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+/** The weekly raid: the monster, its HP, the hits since last time, and the raid chest. */
+export function raidScreen(child: Child) {
+  return (app: App): Screen => {
+    const a = child.adventure!;
+    const r = raidFor(child, app.today);
+    const seen = a.raidSeen?.monday === r.monday ? Math.min(a.raidSeen.damage, r.damage) : 0;
+    const fresh = r.damage - seen;
+    const fromPct = (100 * Math.max(0, r.hp - seen)) / r.hp;
+    const toPct = (100 * r.left) / r.hp;
+    const el = html(`<section class="screen raid" style="--mc:${r.monster.colour}" aria-label="Weekly raid">
+      <header class="topbar"><button class="icon-btn back-btn" aria-label="Back">${ICONS.back}</button><span class="t">Weekly raid</span><span style="width:50px"></span></header>
+      <div class="scroll pa-body raid-body">
+        <div class="card raid-hero">
+          <div class="rd-mon${r.defeated ? ' down' : ''}" aria-hidden="true">${r.monster.icon}</div>
+          <h2>${esc(r.monster.name)}</h2>
+          <p class="rd-taunt">“${esc(tauntFor(r, app.today))}”</p>
+          <div class="raid-bar big"><i style="width:${fromPct}%"></i></div>
+          <p class="rd-hp"><b>${r.left}</b> / ${r.hp} HP</p>
+          ${r.claimed ? '<p class="rd-done">Beaten! 🏆 A new monster arrives on Monday.</p>' : r.defeated ? '<button class="btn mint rd-chest">🎁 Open the raid chest</button>' : `<p class="rd-left">Beat it by Sunday night. Every right answer is a hit!</p>`}
+        </div>
+        <h3 class="pa-h">Hits this week</h3>
+        <div class="card rd-days">${DAY_NAMES.map((n, k) => {
+          const d = r.byDay[k];
+          return `<div class="${d ? '' : 'later'}"><small>${n}</small><b>${d ? d.damage : '–'}</b></div>`;
+        }).join('')}</div>
+        <div class="card rd-how"><p><b>How to hit</b></p><p>✅ Right answer: ${HIT.right} · 💯 Perfect level: +${HIT.perfect} · ⭐ 3 stars: +${HIT.stars3} · 🎁 Daily chest: +${HIT.chest}</p>
+          <p class="fine">If it isn’t beaten by Sunday, it just wanders off and a new one comes. Nothing is lost.</p></div>
+      </div>
+    </section>`);
+    el.querySelector('.back-btn')!.addEventListener('click', () => void app.show(adventureScreen(child)));
+    el.querySelector('.rd-chest')?.addEventListener('click', () => void openRaidChest());
+    const openRaidChest = async () => {
+      const jar = new JarBar(child);
+      let ok = false;
+      let item: Item | null = null;
+      app.save.update(() => {
+        const now = raidFor(child, app.today);
+        if (!now.defeated || now.claimed) return;
+        remember(child, [], Date.now(), app.today);
+        ok = claimChest(a, now.key, true, Date.now());
+        if (ok) {
+          item = raidItem(child, now.monster.id, Date.now());
+          awardBadges(badgeContext(app, child), Date.now());
+        }
+      });
+      if (!ok) return;
+      await chestCeremony(app, child, 'raid', 0, GEMS.raid, item, jar, `From ${r.monster.name}:`);
+      app.save.update(() => (a.xpSeen = xpOf(child)));
+      void app.show(raidScreen(child));
+    };
+    return {
+      el,
+      mounted: async () => {
+        app.save.update(() => (a.raidSeen = { monday: r.monday, damage: r.damage }));
+        const bar = el.querySelector<HTMLElement>('.raid-bar.big i')!;
+        const mon = el.querySelector<HTMLElement>('.rd-mon')!;
+        if (reducedMotion() || fresh <= 0) {
+          bar.style.width = `${toPct}%`;
+          return;
+        }
+        // The hits since last time fly off the monster, then the bar drains.
+        await wait(400);
+        const hits = Math.min(6, Math.max(1, Math.ceil(fresh / 15)));
+        for (let k = 0; k < hits; k++) {
+          const share = k === hits - 1 ? fresh - Math.floor(fresh / hits) * (hits - 1) : Math.floor(fresh / hits);
+          const n = html(`<span class="rd-hit">−${share}!</span>`);
+          n.style.setProperty('--x', `${(k % 2 ? 1 : -1) * (20 + k * 12)}px`);
+          mon.appendChild(n);
+          mon.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-8px) rotate(-6deg)' }, { transform: 'translateX(8px) rotate(6deg)' }, { transform: 'none' }], { duration: 320 });
+          app.sfx.hit(k === hits - 1);
+          setTimeout(() => n.remove(), 1100);
+          await wait(260);
+        }
+        bar.animate([{ width: `${fromPct}%` }, { width: `${toPct}%` }], { duration: 900, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'forwards' });
+        bar.style.width = `${toPct}%`;
+        if (r.defeated) setTimeout(() => mon.classList.add('down'), 900);
+      },
+    };
+  };
+}
+
+// ── tips ─────────────────────────────────────────────────────────────────
+/** For the child, on the map, once they have played 3 levels (and again from the Adventure "?"). */
+export function showAdventureTips(app: App, child: Child, el: HTMLElement, where: 'map' | 'screen'): Promise<void> {
+  const r = raidFor(child, app.today);
+  const tips: Tip[] =
+    where === 'map'
+      ? [
+          { text: `You’ve played ${ADV_TIPS_AFTER} levels, ${child.name}! Time for your Adventure. Let me show you.` },
+          { at: '.who-lv', text: 'This is your player level. Right answers, stars and chests give you XP. Fill the bar to level up!' },
+          { at: '.adv-btn', text: 'Your quests live here. Finish all 3 in a day to open a chest of coins for your treat jar!' },
+          { at: '.adv-btn .raid-chip', text: `This week’s raid monster is ${r.monster.name}! Every right answer hits it. Beat it by Sunday for a raid chest.` },
+          { text: 'In levels, get answers right again and again for a combo. 🔥 Can you get 10 in a row?' },
+          { at: '.adv-btn', text: 'In here you’ll also find your badges, and gems to dress me up in the Wardrobe!' },
+          { text: 'That’s it! Have fun on your Adventure.' },
+        ]
+      : [
+          { at: '.adv-raid', text: `This week’s raid monster. Right answers hit it. Beat ${r.monster.name} by Sunday for a raid chest!` },
+          { at: '.adv-rank', text: 'Your level and rank. Tap it to see all the ranks and how to earn XP.' },
+          { at: '.adv-quests', text: 'Today’s 3 quests. Finish them all and the chest opens: coins for your treat jar!' },
+          { at: '.adv-surprise', text: `Every ${SURPRISE_EVERY}th chest has a surprise item for me inside.` },
+          { at: '.rp-tab[data-tab="badges"]', text: 'Badges for big moments: streaks, bosses, perfect scores and more.' },
+          { at: '.rp-tab[data-tab="wardrobe"]', text: 'Spend your gems here on hats, glasses and colours for me!' },
+        ];
+  return runTips(app, el, tips, { label: 'Adventure tips', last: 'Got it!', outfit: outfitFor(child), onClose: () => app.save.update(() => child.adventure && (child.adventure.toured = true)) });
+}
+
+/** For grown-ups: what Adventure gives a child. No Skip the first time. */
+export function showParentAdventureTips(app: App, el: HTMLElement): Promise<void> {
+  const seen = !!app.save.data.settings.advTipsSeen;
+  const tips: Tip[] = [
+    { text: '🎮 Adventure turns practice into a game, on top of the same maths. Here’s what your child gets.' },
+    { text: '⭐ XP and levels: right answers, stars and chests earn XP, with 99 levels and ranks like Number Scout and Maths Wizard.' },
+    { text: '📜 Daily quests and chests: three small goals a day, like “finish 3 levels”. Finishing them opens a chest of real coins for the treat jar.' },
+    { text: '🏅 Badges for milestones: streaks, bosses, mastered skills and more.' },
+    { text: '💎 Gems and Plus’s wardrobe: gems buy hats and colours for Plus. Gems never turn into coins, so rewards stay as you set them.' },
+    { text: '⚔️ The weekly raid: a friendly monster that right answers knock out by Sunday. If it isn’t beaten, nothing is lost.' },
+    { text: '🔁 You can switch Adventure off any time in the Parent area. Badges and items are kept for later.' },
+  ];
+  return runTips(app, el, tips, { label: 'What is Adventure?', skip: seen, last: 'Got it', onClose: () => app.save.update((d) => (d.settings.advTipsSeen = true)) });
 }
 
 export function adventureScreen(child: Child, start: Tab = 'quests') {
@@ -452,7 +647,7 @@ export function adventureScreen(child: Child, start: Tab = 'quests') {
     // Catch up on badges earned while away (e.g. a boss beaten).
     app.save.update(() => awardBadges(badgeContext(app, child), Date.now()));
     const el = html(`<section class="screen adventure" aria-label="Adventure">
-      <header class="topbar"><button class="icon-btn back-btn" aria-label="Back">${ICONS.back}</button><span class="t">Adventure</span><span style="width:50px"></span></header>
+      <header class="topbar"><button class="icon-btn back-btn" aria-label="Back">${ICONS.back}</button><span class="t">Adventure</span><button class="icon-btn adv-help" aria-label="Adventure tips">?</button></header>
       <nav class="rp-tabs adv-tabs" role="tablist"><button role="tab" class="rp-tab" data-tab="quests">📜 Quests</button><button role="tab" class="rp-tab" data-tab="badges">🏅 Badges</button><button role="tab" class="rp-tab" data-tab="wardrobe">🎩 Wardrobe</button></nav>
       <div class="scroll pa-body adv-body"></div>
     </section>`);
@@ -465,6 +660,7 @@ export function adventureScreen(child: Child, start: Tab = 'quests') {
       body.querySelectorAll<HTMLButtonElement>('.wd-item').forEach((b) => b.addEventListener('click', () => tapWardrobe(b.dataset.id!)));
       body.querySelectorAll<HTMLButtonElement>('.adv-chest.ready').forEach((b) => b.addEventListener('click', () => void openChest(b.dataset.kind as 'daily' | 'weekly', b)));
       body.querySelector('.adv-rank')?.addEventListener('click', () => showRanks(app, child));
+      body.querySelector('.adv-raid')?.addEventListener('click', () => void app.show(raidScreen(child)));
       if (animate) stagger(body.querySelectorAll(tab === 'quests' ? '.card, .pa-h' : '.ab'), { gap: tab === 'quests' ? 50 : 12 });
     };
     const tapWardrobe = (id: string) => {
@@ -526,6 +722,13 @@ export function adventureScreen(child: Child, start: Tab = 'quests') {
       render();
     });
     el.querySelector('.back-btn')!.addEventListener('click', () => goHome(app));
+    el.querySelector('.adv-help')!.addEventListener('click', () => {
+      if (tab !== 'quests') {
+        tab = 'quests';
+        render(false);
+      }
+      void showAdventureTips(app, child, el, 'screen');
+    });
     render(false);
     return {
       el,

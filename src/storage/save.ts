@@ -135,6 +135,8 @@ export interface Settings {
   backupSnoozeUntil?: number;
   /** The grown-up has been asked once whether MN may send notes. */
   notifAsked?: boolean;
+  /** The grown-ups' "What is Adventure?" tips have been seen once (after that they can be skipped). */
+  advTipsSeen?: boolean;
 }
 
 export type Theme = 'playground' | 'glass' | 'schoolbook' | 'precision';

@@ -52,7 +52,7 @@ export function unlockScreen(child: Child, jarName: 'treat' | 'goal') {
           icon.animate([{ transform: 'scale(0) rotate(-30deg)', filter: 'grayscale(1) brightness(2)' }, { transform: 'scale(1.25) rotate(8deg)', filter: 'grayscale(.5)', offset: 0.6 }, { transform: 'scale(1)', filter: 'none' }], { duration: 1100, easing: EASE_OUT, fill: 'backwards' });
         }
         stagger(el.querySelectorAll('.chip, .title, .subtitle, .ul-actions .btn'), { delay: 600, gap: 110 });
-        app.sfx.fanfare();
+        app.sfx.chime();
         await wait(700);
         const b = icon.getBoundingClientRect();
         app.fx.confetti(b.x + b.width / 2, b.y + b.height / 2, 120, 1.4);

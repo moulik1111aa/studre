@@ -12,6 +12,8 @@ import { rewardById } from '../core/rewards.ts';
 import { accessState, keyReminder, lockScreen } from './access.ts';
 import { useVoice } from './voicechoice.ts';
 
+let chimed = false;
+
 export function whosPlayingScreen(app: App): Screen {
   const kids = app.save.data.children;
   const el = html(`<section class="screen whos" aria-label="Who's playing">
@@ -41,6 +43,12 @@ export function whosPlayingScreen(app: App): Screen {
     el,
     mounted: () => {
       useVoice(app);
+      // MN's sound logo, once each time the app is opened.
+      if (!chimed) {
+        chimed = true;
+        app.sfx.unlock();
+        app.sfx.chime();
+      }
       const mark = el.querySelector<SVGElement>('.brand svg')!;
       void drawOn(mark, { duration: 500, stagger: 30 }).then(() => mark.classList.add('alive'));
       stagger([el.querySelector('.title')!, ...el.querySelectorAll('.kid')], { gap: 90 });

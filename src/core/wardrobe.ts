@@ -1,7 +1,7 @@
 // Plus's wardrobe (Adventure): hats, glasses, things to wear round the neck, body colours and
 // map trails, bought with gems. Gems are earned (core/adventure.ts gemsEarned) and only buy
 // these fun things: they never turn into coins, so real rewards cost parents the same.
-// Every third chest also holds a surprise item, chosen in a fixed order (no random loot).
+// Every fifth chest also holds a surprise item, chosen in a fixed order (no random loot).
 
 import { chestsOpened, gemsEarned, levelOf, xpOf, type AdvChild, type AdventureState } from './adventure.ts';
 
@@ -22,6 +22,8 @@ export interface Item {
   price: number;
   /** Player level needed to buy it (1 = from the start). */
   level: number;
+  /** Raid-only: found in a raid monster's chest, never sold (core/raid.ts). */
+  raid?: string;
 }
 
 export const ITEMS: Item[] = [
@@ -55,6 +57,15 @@ export const ITEMS: Item[] = [
   { id: 'bubbles', slot: 'trail', name: 'Bubble trail', icon: '🫧', price: 100, level: 5 },
   { id: 'stars', slot: 'trail', name: 'Starlight trail', icon: '🌟', price: 120, level: 9 },
   { id: 'rainbow', slot: 'trail', name: 'Rainbow trail', icon: '🌈', price: 250, level: 18 },
+  // Raid chests only.
+  { id: 'dino-spikes', slot: 'hat', name: 'Dino spikes', icon: '🦖', price: 0, level: 1, raid: 'grumblesaur' },
+  { id: 'nightcap', slot: 'hat', name: 'Sleepy nightcap', icon: '🦥', price: 0, level: 1, raid: 'snoozer' },
+  { id: 'pixel-shades', slot: 'face', name: 'Pixel shades', icon: '👾', price: 0, level: 1, raid: 'glitch' },
+  { id: 'dragon-wings', slot: 'neck', name: 'Dragon wings', icon: '🐉', price: 0, level: 1, raid: 'fizzle' },
+  { id: 'octo-purple', slot: 'colour', name: 'Octo purple', icon: '🐙', price: 0, level: 1, raid: 'muddle' },
+  { id: 'stone', slot: 'colour', name: 'Stone', icon: '🪨', price: 0, level: 1, raid: 'rumble' },
+  { id: 'jelly', slot: 'colour', name: 'Jelly pink', icon: '🪼', price: 0, level: 1, raid: 'wobbler' },
+  { id: 'ghost-trail', slot: 'trail', name: 'Ghost trail', icon: '👻', price: 0, level: 1, raid: 'gus' },
 ];
 export const itemById = (id: string): Item | undefined => ITEMS.find((i) => i.id === id);
 
@@ -73,7 +84,7 @@ export function outfitOf(a: AdventureState | undefined): Partial<Record<Slot, st
   return out;
 }
 
-export type TapResult = { kind: 'worn' | 'off' | 'bought'; item: Item } | { kind: 'locked' | 'short'; item: Item; need: number };
+export type TapResult = { kind: 'worn' | 'off' | 'bought' | 'raid'; item: Item } | { kind: 'locked' | 'short'; item: Item; need: number };
 
 /**
  * One tap on an item: put on or take off one the child has, or buy and put on a new one.
@@ -92,6 +103,7 @@ export function tapItem(c: AdvChild, id: string, now: number): TapResult | null 
     eq[item.slot] = id;
     return { kind: 'worn', item };
   }
+  if (item.raid) return { kind: 'raid', item };
   const level = levelOf(xpOf(c)).level;
   if (level < item.level) return { kind: 'locked', item, need: item.level };
   const balance = gemBalance(c);
@@ -101,21 +113,32 @@ export function tapItem(c: AdvChild, id: string, now: number): TapResult | null 
   return { kind: 'bought', item };
 }
 
-/** Chests until the next surprise (3, 2 or 1), counting the one being opened. */
-export const chestsToSurprise = (a: AdventureState | undefined): number => 3 - (chestsOpened(a) % 3);
+/** A surprise wardrobe item comes in every SURPRISE_EVERY-th chest. */
+export const SURPRISE_EVERY = 5;
+/** Chests until the next surprise (5 … 1), counting the one being opened. */
+export const chestsToSurprise = (a: AdventureState | undefined): number => SURPRISE_EVERY - (chestsOpened(a) % SURPRISE_EVERY);
 
 /**
- * After a chest is claimed: every third chest gives the next item the child doesn't have
+ * After a chest is claimed: every fifth chest gives the next item the child doesn't have
  * (cheapest first, among those open at their level), or nothing if they have them all.
  */
 export function surpriseFor(c: AdvChild, now: number): Item | null {
   const a = c.adventure;
   if (!a?.on) return null;
   const n = chestsOpened(a);
-  if (n === 0 || n % 3 !== 0) return null;
+  if (n === 0 || n % SURPRISE_EVERY !== 0) return null;
   const level = levelOf(xpOf(c)).level;
-  const next = ITEMS.filter((i) => !has(a, i.id) && i.level <= Math.max(level, 1)).sort((p, q) => p.price - q.price || p.id.localeCompare(q.id))[0];
+  const next = ITEMS.filter((i) => !i.raid && !has(a, i.id) && i.level <= Math.max(level, 1)).sort((p, q) => p.price - q.price || p.id.localeCompare(q.id))[0];
   if (!next) return null;
   (a.gifted ??= {})[next.id] = now;
   return next;
+}
+
+/** A raid chest's item: the monster's own wardrobe item (once). */
+export function raidItem(c: AdvChild, monsterId: string, now: number): Item | null {
+  const a = c.adventure;
+  const item = ITEMS.find((i) => i.raid === monsterId);
+  if (!a?.on || !item || has(a, item.id)) return null;
+  (a.gifted ??= {})[item.id] = now;
+  return item;
 }

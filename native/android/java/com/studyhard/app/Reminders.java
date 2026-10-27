@@ -9,6 +9,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.media.AudioAttributes;
+import android.net.Uri;
 import android.os.Build;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
@@ -27,8 +29,9 @@ final class Reminders {
     static final String KEY_PLAN = "plan";
     static final String KEY_IDS = "ids";
     static final String KEY_SNOOZE = "backupSnoozeUntil";
-    static final String CH_MELT = "melt_watch";
-    static final String CH_BACKUP = "backup";
+    /** v2: with MN's own sound ("Chime Pop", res/raw/mn_chime). A channel's sound is fixed once made. */
+    static final String CH_MELT = "melt_watch_v2";
+    static final String CH_BACKUP = "backup_v2";
     static final String ACTION_FIRE = "com.studyhard.app.REMINDER";
     static final String ACTION_LATER = "com.studyhard.app.BACKUP_LATER";
     /** Extra on the intent that opens the app from a note: "play" or "backup". */
@@ -101,12 +104,26 @@ final class Reminders {
         if (Build.VERSION.SDK_INT < 26) return;
         NotificationManager nm = ctx.getSystemService(NotificationManager.class);
         if (nm == null) return;
+        // The first channels had the phone's default sound.
+        nm.deleteNotificationChannel("melt_watch");
+        nm.deleteNotificationChannel("backup");
+        AudioAttributes attrs = new AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build();
         NotificationChannel melt = new NotificationChannel(CH_MELT, "Melt watch", NotificationManager.IMPORTANCE_DEFAULT);
+        melt.setSound(chime(ctx), attrs);
         melt.setDescription("Friendly notes when a treat jar is about to melt, each with a fun fact");
         NotificationChannel backup = new NotificationChannel(CH_BACKUP, "Backup reminders", NotificationManager.IMPORTANCE_DEFAULT);
+        backup.setSound(chime(ctx), attrs);
         backup.setDescription("For grown-ups: save a report card so progress is never lost");
         nm.createNotificationChannel(melt);
         nm.createNotificationChannel(backup);
+    }
+
+    /** MN's notification sound. */
+    static Uri chime(Context ctx) {
+        return Uri.parse("android.resource://" + ctx.getPackageName() + "/" + R.raw.mn_chime);
     }
 
     static boolean allowed(Context ctx) {
@@ -139,7 +156,9 @@ final class Reminders {
             .setAutoCancel(true)
             .setContentIntent(tap)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setCategory(NotificationCompat.CATEGORY_REMINDER);
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            // Android 7 and older have no channels: the sound goes on the note itself.
+            .setSound(chime(ctx));
         if (backup) {
             b.addAction(0, "Back up now", tap);
             Intent later = new Intent(ctx, ReminderReceiver.class).setAction(ACTION_LATER).putExtra("id", id);

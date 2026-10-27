@@ -1,5 +1,6 @@
 // First-run setup (grown-up): add children, set the daily limit and what happens at time-up.
 
+import { showParentAdventureTips, toggleAdventure } from './adventure.ts';
 import { restoreFromFile } from './restore.ts';
 import { html, esc, type App, type Screen } from './app.ts';
 import { newChild } from '../storage/save.ts';
@@ -65,7 +66,8 @@ export function addChildScreen(firstRun: boolean) {
     let age = 0;
     let avatar = app.save.data.children.length % AVATARS.length;
     let assisted: boolean | null = null;
-    const STOPS = ['Name', 'Age', 'Helper', 'Buddy'];
+    let adventure = false;
+    const STOPS = ['Name', 'Age', 'Helper', 'Adventure', 'Buddy'];
     const el = html(`<section class="screen add-child" aria-label="Add a child">
       <header class="topbar"><button class="icon-btn back-btn" aria-label="Back">←</button><span class="t">Add a child</span><span style="width:50px"></span></header>
       <div class="stops-slot"></div>
@@ -124,6 +126,25 @@ export function addChildScreen(firstRun: boolean) {
         );
         next.disabled = false;
         next.textContent = 'Next';
+      } else if (step === 3) {
+        body.innerHTML = `<h1 class="ac-q">Classic or Adventure?</h1>
+          <div class="seg seg-col ac-adv">
+            <button class="seg-b${adventure ? '' : ' on'}" data-adv="0"><b>📘 Classic</b><small>The maths path, coins and the rewards you choose. Calm and simple.</small></button>
+            <button class="seg-b${adventure ? ' on' : ''}" data-adv="1"><b>🎮 Adventure</b><small>The same maths, plus levels, daily quests, chests, badges, Plus’s wardrobe and a weekly raid.</small></button>
+          </div>
+          <button class="linkish ac-adv-what">What is Adventure?</button>
+          <p class="fine">You can switch this any time in the Parent area.</p>`;
+        body.querySelectorAll<HTMLElement>('[data-adv]').forEach((b) =>
+          b.addEventListener('click', async () => {
+            adventure = b.dataset.adv === '1';
+            body.querySelectorAll('[data-adv]').forEach((x) => x.classList.toggle('on', x === b));
+            // First time a grown-up picks Adventure: show what it is.
+            if (adventure && !app.save.data.settings.advTipsSeen) await showParentAdventureTips(app, el);
+          }),
+        );
+        body.querySelector('.ac-adv-what')!.addEventListener('click', () => void showParentAdventureTips(app, el));
+        next.disabled = false;
+        next.textContent = 'Next';
       } else {
         body.innerHTML = `<h1 class="ac-q">Pick a buddy for ${who()}</h1>
           <div class="ac-preview">${avatarHtml(avatar, 84)}</div>
@@ -152,6 +173,7 @@ export function addChildScreen(firstRun: boolean) {
       c.assisted = assisted ?? age <= 6;
       if (tester) Object.assign(c, { tester: true, placed: true, together: 0, assisted: false });
       app.save.update((d) => d.children.push(c));
+      if (adventure) toggleAdventure(app, c);
       if (tester) app.toast('Tester made: every level is open.');
       void app.show(firstRun ? moreChildrenScreen : whosPlayingScreen);
     };

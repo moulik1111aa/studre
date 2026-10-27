@@ -74,19 +74,22 @@ test('two phones: every item from both, the earlier time of each', () => {
   assert.deepEqual(m.equipped, { neck: 'scarf', hat: 'cap' });
 });
 
-test('every third chest has a surprise: the cheapest item not owned yet, free', () => {
+test('every fifth chest has a surprise: the cheapest item not owned yet, free (never a raid item)', () => {
   const c = kid(0);
   const a = c.adventure!;
   a.claimed['d:2026-10-20'] = 1;
-  assert.equal(chestsToSurprise(a), 2);
+  assert.equal(chestsToSurprise(a), 4);
   assert.equal(surpriseFor(c, 2), null);
-  a.claimed['d:2026-10-21'] = 2;
-  a.claimed['d:2026-10-22'] = 3;
+  for (const d of ['21', '22', '23']) a.claimed[`d:2026-10-${d}`] = 2;
+  assert.equal(surpriseFor(c, 3), null);
+  a.claimed['d:2026-10-24'] = 3;
   const gift = surpriseFor(c, 3)!;
-  const cheapest = [...ITEMS].filter((i) => i.level <= 1).sort((p, q) => p.price - q.price)[0];
+  const cheapest = [...ITEMS].filter((i) => i.level <= 1 && !i.raid).sort((p, q) => p.price - q.price)[0];
   assert.equal(gift.id, cheapest.id);
   assert.ok(a.gifted![gift.id]);
-  // Surprise items cost nothing.
+  // Surprise items cost nothing; raid items can't be bought.
   assert.equal(gemBalance(c), gemsEarned(c));
   assert.equal(tapItem(c, gift.id, 4)!.kind, 'worn');
+  c.stats.correct = 500;
+  assert.equal(tapItem(c, 'dino-spikes', 5)!.kind, 'raid');
 });

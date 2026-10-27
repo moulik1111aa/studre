@@ -33,6 +33,9 @@ const COLOURS: Record<string, [string, string, string]> = {
   bubblegum: ['#FFD6E7', '#FF8FBE', '#EE5C97'],
   grape: ['#E2D4FF', '#A983FF', '#7A52EE'],
   sunset: ['#FFE38A', '#FF9A4D', '#FF5E7A'],
+  'octo-purple': ['#E6D2FF', '#B07CFF', '#7B3FE4'],
+  stone: ['#E3E7EA', '#AAB4BC', '#7D8A94'],
+  jelly: ['#FFE1EC', '#FF9EC2', '#F06292'],
 };
 
 const I = PLUS_INK;
@@ -68,11 +71,16 @@ const HATS: Record<string, string> = {
   crown: `<path d="M68 20 L63 -22 L84 -2 L100 -32 L116 -2 L137 -22 L132 20 Z" fill="#FFD25A" stroke="${I}" stroke-width="5" stroke-linejoin="round"/><circle cx="100" cy="6" r="5.5" fill="#FF5A7A" stroke="${I}" stroke-width="2.5"/><circle cx="81" cy="8" r="4" fill="#3D7BFF" stroke="${I}" stroke-width="2.5"/><circle cx="119" cy="8" r="4" fill="#22B983" stroke="${I}" stroke-width="2.5"/>`,
   'space-helmet': `<circle cx="100" cy="64" r="76" fill="rgba(170,215,255,.25)" stroke="#E8F2FF" stroke-width="7"/><circle cx="100" cy="64" r="76" fill="none" stroke="${I}" stroke-width="2.5" opacity=".55"/><path d="M54 28 Q70 2 100 -4" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" opacity=".85"/><path d="M100 -12 V-34" stroke="${I}" stroke-width="4"/><circle cx="100" cy="-38" r="7" fill="#FF5A5A" stroke="${I}" stroke-width="3"/>`,
 };
+Object.assign(HATS, {
+  'dino-spikes': `<path d="M64 20 L69 -22 L84 12 L92 -34 L102 10 L110 -30 L120 12 L131 -20 L136 20 Z" fill="#4CAF6A" stroke="${I}" stroke-width="5" stroke-linejoin="round"/><path d="M69 -22 L74 0 M92 -34 L95 -6 M110 -30 L112 -4 M131 -20 L130 2" stroke="#2E7D4A" stroke-width="3" stroke-linecap="round"/>`,
+  nightcap: `<path d="M62 22 C62 -16 126 -30 164 6 C150 6 138 6 134 22 Z" fill="#5C7CFA" stroke="${I}" stroke-width="5" stroke-linejoin="round"/><circle cx="84" cy="2" r="3" fill="#fff"/><circle cx="104" cy="-8" r="3" fill="#fff"/><circle cx="122" cy="-4" r="3" fill="#fff"/><rect x="60" y="14" width="80" height="12" rx="6" fill="#fff" stroke="${I}" stroke-width="4"/><circle cx="166" cy="8" r="10" fill="#fff" stroke="${I}" stroke-width="4"/>`,
+});
 const FACES: Record<string, string> = {
   'round-glasses': `<g fill="rgba(255,255,255,.18)" stroke="${I}" stroke-width="4"><circle cx="85" cy="82" r="13"/><circle cx="115" cy="82" r="13"/></g><path d="M98 80 Q100 76 102 80 M72 80 L64 75 M128 80 L136 75" fill="none" stroke="${I}" stroke-width="4" stroke-linecap="round"/>`,
   sunglasses: `<path d="M67 73 H98 V85 Q98 96 86 96 H80 Q67 96 67 85 Z M102 73 H133 V85 Q133 96 121 96 H114 Q102 96 102 85 Z" fill="${I}" stroke="${I}" stroke-width="3" stroke-linejoin="round"/><path d="M98 77 H102" stroke="${I}" stroke-width="4"/><path d="M73 79 H82 M108 79 H117" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" opacity=".75"/>`,
   'heart-glasses': `<g fill="#FF6F91" fill-opacity=".78" stroke="${I}" stroke-width="3.5" stroke-linejoin="round"><path d="${heart(85, 82)}"/><path d="${heart(115, 82)}"/></g><path d="M97 80 Q100 77 103 80" fill="none" stroke="${I}" stroke-width="3.5"/>`,
   'star-glasses': `<g fill="#FFD25A" fill-opacity=".72" stroke="${I}" stroke-width="3" stroke-linejoin="round"><path d="${star(85, 82, 17, 8)}"/><path d="${star(115, 82, 17, 8)}"/></g>`,
+  'pixel-shades': `<path d="M64 73 H136 V81 H124 V91 H106 V81 H94 V91 H76 V81 H64 Z" fill="${I}"/><path d="M80 77 h6 v4 h-6z M110 77 h6 v4 h-6z" fill="#fff"/>`,
   monocle: `<circle cx="115" cy="82" r="14" fill="rgba(255,255,255,.2)" stroke="#E0A400" stroke-width="4.5"/><path d="M128 89 Q142 110 126 124" fill="none" stroke="#E0A400" stroke-width="2.5"/>`,
 };
 const NECKS: Record<string, string> = {
@@ -82,7 +90,9 @@ const NECKS: Record<string, string> = {
   medal: `<path d="M84 114 L100 142 L116 114" fill="none" stroke="#3D7BFF" stroke-width="8" stroke-linejoin="round"/><path d="M91 114 L100 131 L109 114" fill="none" stroke="#FF5A5A" stroke-width="3"/><circle cx="100" cy="150" r="13" fill="#FFD25A" stroke="${I}" stroke-width="4"/><path d="${star(100, 150, 7)}" fill="#E0A400"/>`,
 };
 /** Drawn behind Plus. */
+const WING = `<path d="M74 54 C56 12 24 -4 -6 -10 C4 16 8 32 16 50 C28 42 42 44 52 56 Z" fill="#FF7043" stroke="${I}" stroke-width="5" stroke-linejoin="round"/><path d="M66 46 C50 26 28 12 6 2 M60 52 C44 38 30 30 12 26" fill="none" stroke="${I}" stroke-width="3" opacity=".35"/>`;
 const BACKS: Record<string, string> = {
+  'dragon-wings': `${WING}<g transform="translate(200 0) scale(-1 1)">${WING}</g>`,
   cape: `<path d="M70 58 C50 90 40 150 32 192 Q100 206 168 192 C160 150 150 90 130 58 Z" fill="#E84A5F" stroke="${I}" stroke-width="5" stroke-linejoin="round"/>`,
 };
 
@@ -121,7 +131,7 @@ function body(o: PlusOptions, u: number): string {
 }
 
 /** Room above the head for a hat. */
-const hatRoom = (o: PlusOptions) => (o.outfit?.hat && HATS[o.outfit.hat] ? 50 : 0);
+const hatRoom = (o: PlusOptions) => (o.outfit?.hat && HATS[o.outfit.hat] ? 50 : o.outfit?.neck === 'dragon-wings' ? 20 : 0);
 
 /** Plus on its own (no shadow): the logo, the app icon and the helper in lessons and tips. */
 export function plusFaceSvg(o: PlusOptions = {}): string {
