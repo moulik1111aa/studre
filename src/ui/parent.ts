@@ -2,6 +2,7 @@
 // categories, sound/voice, redo placement, and a progress report per child.
 
 import { showParentAdventureTips, toggleAdventure } from './adventure.ts';
+import { DRAGON_MAP } from './foldmap.ts';
 import { backUpNow, lastBackupText } from './backup.ts';
 import { askNotifications, notificationState } from './remindsync.ts';
 import { DEFAULT_REMINDERS, type ReminderSettings } from '../core/reminders.ts';
@@ -72,7 +73,7 @@ export function parentScreen(app: App): Screen {
       <h2 class="pa-h">Children</h2>
       <div class="pa-kids">${app.save.data.children
         .map((c) => `<div class="pa-kid card">${avatarHtml(c.avatar, 52)}<div><b>${esc(c.name)}</b><small>Age ${c.age}</small></div>
-          <div class="pa-kid-btns"><button class="btn ghost small level-btn" data-id="${c.id}">${CHALLENGE[c.challenge ?? 0].icon} ${CHALLENGE[c.challenge ?? 0].name}</button><button class="btn ghost small report" data-id="${c.id}">${ICONS.chart} Report</button><button class="btn ghost small age-btn" data-id="${c.id}">🎂 Age ${c.age}</button><button class="btn ghost small school-btn" data-id="${c.id}">📚 ${c.school?.on ? esc(schoolLabel(c.school)) : 'School path'}</button><button class="btn ghost small adv-toggle${c.adventure?.on ? ' on' : ''}" data-id="${c.id}" aria-pressed="${!!c.adventure?.on}">🎮 Adventure: ${c.adventure?.on ? 'on' : 'off'}</button><button class="btn ghost small assist-btn${c.assisted ? ' on' : ''}" data-id="${c.id}" aria-pressed="${!!c.assisted}">👪 With a grown-up: ${c.assisted ? 'on' : 'off'}</button></div></div>`)
+          <div class="pa-kid-btns"><button class="btn ghost small level-btn" data-id="${c.id}">${CHALLENGE[c.challenge ?? 0].icon} ${CHALLENGE[c.challenge ?? 0].name}</button><button class="btn ghost small report" data-id="${c.id}">${ICONS.chart} Report</button><button class="btn ghost small age-btn" data-id="${c.id}">🎂 Age ${c.age}</button><button class="btn ghost small school-btn" data-id="${c.id}">📚 ${c.school?.on ? esc(schoolLabel(c.school)) : 'School path'}</button><button class="btn ghost small adv-toggle${c.adventure?.on ? ' on' : ''}" data-id="${c.id}" aria-pressed="${!!c.adventure?.on}">🎮 Adventure: ${c.adventure?.on ? 'on' : 'off'}</button>${DRAGON_MAP ? `<button class="btn ghost small dragon-toggle${c.dragonMap ? ' on' : ''}" data-id="${c.id}" aria-pressed="${!!c.dragonMap}">🐉 Dragon map: ${c.dragonMap ? 'on' : 'off'}</button>` : ''}<button class="btn ghost small assist-btn${c.assisted ? ' on' : ''}" data-id="${c.id}" aria-pressed="${!!c.assisted}">👪 With a grown-up: ${c.assisted ? 'on' : 'off'}</button></div></div>`)
         .join('')}</div>
       <button class="linkish adv-what">🎮 What is Adventure?</button>
       <button class="btn ghost small add-kid">+ Add a child</button>
@@ -245,6 +246,14 @@ export function parentScreen(app: App): Screen {
     }),
   );
   el.querySelector('.adv-what')!.addEventListener('click', () => void showParentAdventureTips(app, el));
+  el.querySelectorAll<HTMLButtonElement>('.dragon-toggle').forEach((b) =>
+    b.addEventListener('click', () => {
+      const c = app.save.data.children.find((k) => k.id === b.dataset.id)!;
+      app.save.update(() => (c.dragonMap = !c.dragonMap));
+      app.toast(c.dragonMap ? `Dragon map on for ${c.name}.` : `Dragon map off for ${c.name}. Progress stays the same.`);
+      void app.show(parentScreen);
+    }),
+  );
   el.querySelectorAll<HTMLButtonElement>('.assist-btn').forEach((b) =>
     b.addEventListener('click', () => {
       const c = app.save.data.children.find((k) => k.id === b.dataset.id)!;

@@ -24,6 +24,7 @@ import { showMapTips } from './tour.ts';
 import { adventureOn, adventureScreen, outfitFor, questBadge, showAdventureTips, whoLine } from './adventure.ts';
 import { advTipsDue } from '../core/adventure.ts';
 import { plusFaceSvg } from './plus.ts';
+import { dragonMapOn, foldStage, type FoldNode } from './foldmap.ts';
 
 interface Node {
   kind: 'skill' | 'review' | 'boss' | 'quest';
@@ -82,9 +83,68 @@ export function mapScreen(child: Child) {
     const worlds = el.querySelector<HTMLElement>('.worlds')!;
     let currentNode: HTMLElement | null = null;
 
+    const nodeState = (n: Node) => ({
+      done: n.kind === 'quest' ? (p.levels[n.id]?.stars ?? 0) > 0 : n.levels.every((l) => isDone(p, l)),
+      playable: n.kind === 'quest' || !!child.tester || n.levels.some((l) => isPlayable(path, p, l)),
+      skipped: n.kind !== 'quest' && n.levels.every((l) => isSkipped(p, l)) && !n.levels.some((l) => isPassed(p, l)),
+      isCurrent: n.levels.some((l) => l.index === front),
+    });
+    const tapNode = (n: Node, nodeEl: HTMLElement | null) => {
+      if (!nodeState(n).playable) {
+        if (nodeEl) popIn(nodeEl, 0, 0.9);
+        app.toast('Finish the levels before this one to open it.');
+        return;
+      }
+      if (n.kind === 'quest') {
+        if (timeState(app, child) === 'stop') return void app.show(timesUpScreen(child));
+        return void app.show(questScreen(child, quests.find((x) => x.id === n.id)!), 'liquid');
+      }
+      if (n.kind !== 'skill') return playLevel(app, child, n.levels[0]);
+      openSkill(app, child, n, path);
+    };
+
+    // Dragon map (a per-child option): the same stops, laid along a dragon curve (foldmap.ts)
+    // instead of the stage worlds.
+    let fold: ReturnType<typeof foldStage> | null = null;
+    if (dragonMapOn(app, child)) {
+      const segStage = [0, ...path.map((l) => l.stage)];
+      const segDone = [false, ...path.map((l) => isDone(p, l))];
+      let bossSeg = 0;
+      const skillNo: Record<number, number> = {};
+      const fnodes: FoldNode[] = nodes.map((n) => {
+        const st = nodeState(n);
+        const first = n.levels.length ? n.levels[0].index + 1 : bossSeg;
+        const last = n.levels.length ? n.levels[n.levels.length - 1].index + 1 : bossSeg;
+        if (n.kind === 'boss') bossSeg = first;
+        const face =
+          n.kind === 'boss'
+            ? (BOSS_EMOJI[bossFor(n.stage, (n.levels[0] as Extract<Level, { kind: 'boss' }>).boss).id] ?? '👾')
+            : n.kind === 'review'
+              ? '⚔️'
+              : n.kind === 'quest'
+                ? '🧭'
+                : String((skillNo[n.stage] = (skillNo[n.stage] ?? 0) + 1));
+        return { kind: n.kind, stage: n.stage, first, last, face, label: n.label, done: st.done, playable: st.playable, skipped: st.skipped, current: st.isCurrent, tiers: n.kind === 'skill' ? n.levels.map((l) => isPassed(p, l)) : undefined };
+      });
+      fold = foldStage(app, {
+        nodes: fnodes,
+        segStage,
+        segDone,
+        total: path.length,
+        done: front,
+        seen: child.foldSeen,
+        markSeen: (end) => app.save.update(() => (child.foldSeen = end)),
+        onTap: (k) => tapNode(nodes[k], null),
+        buddy: adv ? plusFaceSvg({ cls: 'alive', outfit }) : undefined,
+        trail: outfit.trail,
+      });
+      worlds.replaceWith(fold.el);
+      el.classList.add('fold-map');
+    }
+
     const school = child.school?.on ? child.school : null;
-    if (school) worlds.appendChild(html(`<div class="school-chip card"><span>📚</span><b>${esc(schoolLabel(school))}</b><small>${school.skills.length} skills chosen by a grown-up</small></div>`));
-    for (let s = 1; s <= stagesBuilt; s++) {
+    if (!fold && school) worlds.appendChild(html(`<div class="school-chip card"><span>📚</span><b>${esc(schoolLabel(school))}</b><small>${school.skills.length} skills chosen by a grown-up</small></div>`));
+    for (let s = 1; !fold && s <= stagesBuilt; s++) {
       const info = AREAS[0].stages[s - 1];
       // A school path only shows the stages it uses.
       if (school && !nodes.some((n) => n.stage === s)) continue;
@@ -98,10 +158,7 @@ export function mapScreen(child: Child) {
       stageNodes.forEach((n, k) => {
         if (n.kind === 'skill') skillNo++;
         const qbest = n.kind === 'quest' ? (p.questBest?.[n.id] ?? 0) : 0;
-        const done = n.kind === 'quest' ? (p.levels[n.id]?.stars ?? 0) > 0 : n.levels.every((l) => isDone(p, l));
-        const playable = n.kind === 'quest' || !!child.tester || n.levels.some((l) => isPlayable(path, p, l));
-        const skipped = n.kind !== 'quest' && n.levels.every((l) => isSkipped(p, l)) && !n.levels.some((l) => isPassed(p, l));
-        const isCurrent = n.levels.some((l) => l.index === front);
+        const { done, playable, skipped, isCurrent } = nodeState(n);
         const x = 50 + Math.sin(k * 0.9) * 30;
         const face =
           n.kind === 'boss'
@@ -117,24 +174,12 @@ export function mapScreen(child: Child) {
         </button>`);
         if (isCurrent) currentNode = node;
         if (isCurrent && adv) node.appendChild(html(`<span class="map-buddy ${x < 50 ? 'right' : 'left'}" aria-hidden="true">${plusFaceSvg({ cls: 'alive', outfit })}</span>`));
-        node.addEventListener('click', () => {
-          if (!playable) {
-            popIn(node, 0, 0.9);
-            app.toast('Finish the levels before this one to open it.');
-            return;
-          }
-          if (n.kind === 'quest') {
-            if (timeState(app, child) === 'stop') return void app.show(timesUpScreen(child));
-            return void app.show(questScreen(child, quests.find((x) => x.id === n.id)!), 'liquid');
-          }
-          if (n.kind !== 'skill') return playLevel(app, child, n.levels[0]);
-          openSkill(app, child, n, path);
-        });
+        node.addEventListener('click', () => tapNode(n, node));
         track.appendChild(node);
       });
       worlds.appendChild(sec);
     }
-    if (stagesBuilt < 7 && !school) worlds.appendChild(html(`<section class="world soon" style="${worldVars(stagesBuilt + 1)}"><div class="world-head"><span class="chip">Stage ${stagesBuilt + 1}</span><h2>${AREAS[0].stages[stagesBuilt].name}</h2><p>Coming soon</p></div></section>`));
+    if (!fold && stagesBuilt < 7 && !school) worlds.appendChild(html(`<section class="world soon" style="${worldVars(stagesBuilt + 1)}"><div class="world-head"><span class="chip">Stage ${stagesBuilt + 1}</span><h2>${AREAS[0].stages[stagesBuilt].name}</h2><p>Coming soon</p></div></section>`));
 
     const layoutTrails = () => {
       worlds.querySelectorAll<HTMLElement>('.world .track').forEach((track) => {
@@ -187,6 +232,24 @@ export function mapScreen(child: Child) {
       void app.show(mapScreen(child));
     });
 
+    const showTips = () => {
+      if (!el.isConnected || app.root.querySelector('.overlay')) return;
+      // First visit: Plus shows the child around. Adventure: its own tips, after a few levels.
+      if (!child.toured) void showMapTips(app, child, el);
+      else if (advTipsDue(child)) void showAdventureTips(app, child, el, 'map');
+    };
+    if (fold) {
+      const f = fold;
+      return {
+        el,
+        destroy: () => f.destroy(),
+        mounted: () => {
+          stagger([el.querySelector('.map-top')!, jar.el, el.querySelector('.play-bar')!], { gap: 90 });
+          void f.mounted().then(() => setTimeout(showTips, reducedMotion() ? 100 : 500));
+        },
+      };
+    }
+
     return {
       el,
       mounted: () => {
@@ -199,10 +262,7 @@ export function mapScreen(child: Child) {
         const sec = currentNode ? (currentNode as HTMLElement).closest('.world') : null;
         if (sec) void drawOn(sec.querySelector('svg')!, { duration: 1400, fill: false });
         stagger([el.querySelector('.map-top')!, jar.el, el.querySelector('.play-bar')!], { gap: 90 });
-        // First visit: Plus shows the child around.
-        if (!child.toured) setTimeout(() => el.isConnected && !app.root.querySelector('.overlay') && void showMapTips(app, child, el), reducedMotion() ? 100 : 1100);
-        // Adventure: its own tips, once the child has played a few levels.
-        else if (advTipsDue(child)) setTimeout(() => el.isConnected && !app.root.querySelector('.overlay') && void showAdventureTips(app, child, el, 'map'), reducedMotion() ? 100 : 1100);
+        if (!child.toured || advTipsDue(child)) setTimeout(showTips, reducedMotion() ? 100 : 1100);
       },
     };
   };

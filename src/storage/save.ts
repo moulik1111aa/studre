@@ -89,6 +89,10 @@ export interface Child {
   tally?: Tally;
   /** The last finished level (Plus mentions it next time). */
   lastPlay?: LastPlay;
+  /** The dragon map instead of the usual path (a grown-up switches it in the Parent area). */
+  dragonMap?: boolean;
+  /** Dragon map: the end of the last chapter this child has seen unfold (core/dragon.ts). */
+  foldSeen?: number;
 }
 
 /** The first levels a new child plays together with a grown-up. */

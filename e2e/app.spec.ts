@@ -1034,3 +1034,50 @@ test('the sound logo plays at the big moments, and not with sound off', async ({
   await page.waitForTimeout(1500);
   expect(await chimes()).toBe(n);
 });
+
+test('dragon map: a grown-up switches it on, the levels lie along a dragon curve, and a finished chapter unfolds the next', async ({ page }) => {
+  type C = { foldSeen?: number; dragonMap?: boolean; progress: { levels: Record<string, unknown> } };
+  type W = { __app: { child: C; path: { id: string }[]; save: { update(f: () => void): void }; show(m: unknown): void }; __screens: { mapScreen(c: unknown): unknown; parentScreen: unknown } };
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  // Off by default: the usual map.
+  await page.goto('/?debug&noloader&age=4&demo=%405');
+  await expect(page.locator('.map .worlds')).toBeVisible();
+  await expect(page.locator('.fold-stage')).toHaveCount(0);
+  // A grown-up switches it on in the Parent area.
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
+  await expect(page.locator('.dragon-toggle')).toHaveText(/Dragon map: off/);
+  await page.click('.dragon-toggle');
+  await expect(page.locator('.dragon-toggle')).toHaveText(/Dragon map: on/);
+  expect(await page.evaluate(() => (window as unknown as W).__app.child.dragonMap)).toBe(true);
+  // The first visit unfolds the map from a single strip, then shows chapter 1.
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.mapScreen(w.__app.child)); });
+  await expect(page.locator('.fold-stage canvas')).toBeVisible();
+  await expect(page.locator('.map .worlds')).toHaveCount(0);
+  await expect(page.locator('.fold-banner')).toContainText('Every line is one level');
+  const seen = () => page.evaluate(() => (window as unknown as W).__app.child.foldSeen);
+  await expect.poll(seen, { timeout: 15000 }).toBe(8);
+  await expect(page.locator('.fold-cap')).toContainText('Chapter 1');
+  // The current stop opens its 5 levels.
+  await page.locator('.fold-anchor.current').click();
+  await expect(page.locator('.skill-sheet .tier-row')).toHaveCount(5);
+  await page.click('.skill-sheet [data-back]');
+  await page.click('.fold-fit');
+  await page.click('.fold-me');
+  // 16 levels done: the map unfolds into chapter 3 (levels 17–32).
+  await page.evaluate(() => {
+    const a = (window as unknown as W).__app;
+    a.save.update(() => { for (const l of a.path.slice(0, 16)) a.child.progress.levels[l.id] = { stars: 3, passes: 1 }; });
+    a.show((window as unknown as W).__screens.mapScreen(a.child));
+  });
+  await expect(page.locator('.fold-banner')).toContainText('Chapter 3! The map unfolds.');
+  await expect.poll(seen, { timeout: 15000 }).toBe(32);
+  await expect(page.locator('.fold-cap')).toContainText('levels 17–32');
+  // Off again: back to the usual map, same progress.
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
+  await page.click('.dragon-toggle');
+  await expect(page.locator('.dragon-toggle')).toHaveText(/Dragon map: off/);
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.mapScreen(w.__app.child)); });
+  await expect(page.locator('.map .worlds')).toBeVisible();
+  expect(errors).toEqual([]);
+});

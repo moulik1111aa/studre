@@ -70,3 +70,25 @@
 .nd-face.quest{width:68px;height:68px;font-size:34px;background:radial-gradient(circle at 32% 26%,rgba(255,255,255,.55),transparent 45%),linear-gradient(160deg,#5CF3C8,#1F8F8A);box-shadow:0 7px 0 #136B67,0 0 0 3px rgba(92,243,200,.45),0 16px 24px -10px rgba(0,0,0,.6);animation:questGlow 2.4s ease-in-out 3}
 @keyframes questGlow{50%{box-shadow:0 7px 0 #136B67,0 0 0 7px rgba(92,243,200,.25),0 16px 24px -10px rgba(0,0,0,.6)}}
 .nd-label small{display:block;font-size:12px;color:#7FF5D2;font-weight:800}
+
+/* The dragon map (ui/foldmap.ts, a per-child option), a night window between the jars and Play. */
+.fold-stage{position:relative;flex:1;min-height:0;margin:10px -18px 0;border-radius:30px 30px 0 0;overflow:hidden;
+  background:radial-gradient(120% 80% at 50% 35%,#261C66 0%,#141040 55%,#0B0922 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 -6px 24px -12px rgba(0,0,0,.5)}
+.fold-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+.fold-anchors{position:absolute;inset:0;pointer-events:none}
+.fold-stage .fold-anchor{position:absolute;width:calc(var(--r,20px)*2);height:calc(var(--r,20px)*2);transform:translate(-50%,-50%);pointer-events:auto;border-radius:50%;padding:0;gap:0;display:block}
+.fold-stage .fold-ghost{pointer-events:none}
+html .fold-stage .node.current.fold-anchor::before{top:50%;left:50%;width:calc(var(--r,20px)*2 + 18px);height:calc(var(--r,20px)*2 + 18px);margin:calc(-1*var(--r,20px) - 9px) 0 0 calc(-1*var(--r,20px) - 9px);border:3px solid #FFE27A;animation:ringOut 1.8s ease-out 8}
+.fold-buddy{position:absolute;left:calc(100% - 4px);bottom:30%;width:40px;height:50px;pointer-events:none}
+.fold-buddy svg{width:100%;height:100%;filter:drop-shadow(0 3px 4px rgba(0,0,0,.35))}
+.fold-cap{position:absolute;left:14px;top:12px;margin:0;max-width:calc(100% - 140px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:7px 13px;border-radius:999px;background:rgba(11,9,34,.72);color:#EDE7FF;font-weight:800;font-size:14px;line-height:1.2;pointer-events:none}
+.fold-cap b{color:#FFE27A}
+.fold-tools{position:absolute;right:12px;top:10px;display:flex;gap:8px}
+.fold-tools .icon-btn{width:46px;height:46px;border-radius:16px}
+.fold-tools .icon-btn svg{width:22px;height:22px}
+.fold-banner{position:absolute;left:50%;bottom:128px;transform:translateX(-50%);margin:0;max-width:calc(100% - 32px);padding:10px 18px;border-radius:999px;background:rgba(11,9,34,.86);border:2px solid #C9A6FF;color:#fff;font-weight:900;font-size:17px;text-align:center;opacity:0;transition:opacity .4s;pointer-events:none}
+.fold-banner.on{opacity:1}
+.fold-stage.unfolding .fold-tools,.fold-stage.unfolding .fold-cap{opacity:.35;pointer-events:none}
+@media (prefers-reduced-motion:reduce){.fold-banner{transition:none}}
+html .map.fold-map .play-bar{background:linear-gradient(180deg,transparent,rgba(11,9,34,.94) 45%)}
+@media (max-width:360px){.fold-cap{font-size:12.5px;padding:6px 10px}}
