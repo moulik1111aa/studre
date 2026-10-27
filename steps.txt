@@ -1,0 +1,42 @@
+[smoke] device: sdk_gphone64_x86_64, Android 15, Physical size: 1080x2400
+Performing Streamed Install
+Success
+Starting: Intent { cmp=com.studyhard.app/.MainActivity }
+Status: ok
+LaunchState: COLD
+Activity: com.studyhard.app/.MainActivity
+TotalTime: 3237
+WaitTime: 3287
+Complete
+[smoke] FAIL: welcome screen did not appear
+[smoke] FAIL: could not find "Set up for my child" to tap
+[smoke] FAIL: grown-up check did not appear
+[smoke] FAIL: add-child screen did not open
+[smoke] FAIL: could not find "Name" to tap
+[smoke] FAIL: could not find "Pick a buddy" to tap
+[smoke] FAIL: could not find "Older" to tap
+[smoke] FAIL: could not find "Older" to tap
+[smoke] FAIL: could not find "Save" to tap
+[smoke] FAIL: children screen did not open
+[smoke] FAIL: could not find "Next" to tap
+[smoke] FAIL: limit screen did not open
+[smoke] FAIL: could not find "Finish setup" to tap
+[smoke] FAIL: who's playing did not appear
+[smoke] FAIL: could not find "Aarav" to tap
+[smoke] FAIL: placement did not start
+[smoke] FAIL: placement did not finish
+[smoke] FAIL: could not find "Choose rewards" to tap
+[smoke] FAIL: treat picker missing
+[smoke] FAIL: could not find "Milk chocolate bar" to tap
+[smoke] FAIL: could not find "Choose this" to tap
+[smoke] FAIL: goal picker missing
+[smoke] FAIL: could not find "Toy car" to tap
+[smoke] FAIL: could not find "Choose this" to tap
+[smoke] FAIL: map did not appear
+[smoke] FAIL: could not find "Play" to tap
+[smoke] FAIL: could not find "Play" to tap
+[smoke] FAIL: back did not pause
+[smoke] FAIL: could not find "Leave level" to tap
+[smoke] FAIL: did not return to the map
+[smoke] after second back:   mCurrentFocus=Window{60ec918 u0 com.studyhard.app/com.studyhard.app.MainActivity}
+[smoke] FAIL: app did not leave on second back
