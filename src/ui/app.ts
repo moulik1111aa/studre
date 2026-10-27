@@ -165,7 +165,14 @@ export class App {
     }
     this.busy = true;
     try {
-      const next = make(this);
+      let next: Screen;
+      try {
+        next = make(this);
+      } catch (e) {
+        // Never a blank screen: say what went wrong and offer a way back.
+        console.error('screen failed', e);
+        next = errorScreen(e);
+      }
       const swap = () => {
         this.current?.destroy?.();
         this.current?.el.remove();
@@ -274,3 +281,18 @@ export function html(markup: string): HTMLElement {
 }
 
 export const esc = (s: string): string => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+
+/** Shown instead of a blank screen when a screen fails to build. */
+export function errorScreen(e: unknown): Screen {
+  const msg = e instanceof Error ? `${e.name}: ${e.message}\n${(e.stack ?? '').split('\n').slice(0, 4).join('\n')}` : String(e);
+  const el = html(`<section class="screen oops-screen" aria-label="Something went wrong">
+    <div class="scroll" style="display:grid;gap:14px;align-content:center;text-align:center;padding:20px 0">
+      <h1 class="title">Oops, MN got stuck</h1>
+      <p class="subtitle">Your progress is safe. Tap below to start again. If it keeps happening, send a screenshot of this to the person who gave you MN.</p>
+      <pre style="white-space:pre-wrap;text-align:left;font-size:12px;opacity:.75;margin:0;padding:12px;border-radius:14px;background:rgba(0,0,0,.08)">${esc(msg)}</pre>
+      <button class="btn oops-reload">Start again</button>
+    </div>
+  </section>`);
+  el.querySelector('.oops-reload')!.addEventListener('click', () => location.reload());
+  return { el };
+}

@@ -1,7 +1,7 @@
 // Boot: restore the save (native mirror on Android). The very first launch plays the opening
 // video (reel.ts) and then setup; later launches go straight to "Who's playing?".
 
-import { App } from './ui/app.ts';
+import { App, errorScreen } from './ui/app.ts';
 import { nativeBridge, nativeStorage } from './platform/native.ts';
 import { browserStorage } from './storage/save.ts';
 import { reelScreen } from './ui/reel.ts';
@@ -103,8 +103,12 @@ async function boot(): Promise<void> {
       void app.show(lockScreen(st, () => void gate()));
     }
   });
-  // The phone's reminders and home-screen widgets follow the save.
-  startReminders(app);
+  // The phone's reminders and home-screen widgets follow the save (never in the way of opening).
+  try {
+    startReminders(app);
+  } catch (e) {
+    console.error('reminders', e);
+  }
   const demo = params.get('demo');
   const seeded = app.debug && demo ? seedDemo(app, demo, { coins: Number(params.get('coins')) || 0, age: Number(params.get('age')) || 8, tips: params.has('tips') }) : null;
   if (seeded) {
@@ -134,4 +138,11 @@ async function boot(): Promise<void> {
   void gate('fade');
 }
 
-void boot();
+void boot().catch((e) => {
+  // A start-up failure: show it rather than an empty sky.
+  console.error('boot failed', e);
+  const root = document.getElementById('app');
+  if (root && !root.querySelector('.screen')) {
+    root.appendChild(errorScreen(e).el);
+  }
+});

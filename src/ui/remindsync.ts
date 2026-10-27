@@ -98,8 +98,13 @@ export function startReminders(app: App): void {
     if (document.visibilityState === 'hidden') void push(app);
   });
   void push(app);
-  quietly(native.addListener?.('launch', (d: { open?: string }) => opened(app, d.open)) as Promise<unknown> | undefined);
-  void native.launchAction?.().then((r) => opened(app, r?.open), () => undefined);
+  // Reminders must never stop the app from opening.
+  try {
+    quietly(native.addListener?.('launch', (d: { open?: string }) => opened(app, d.open)));
+    quietly(native.launchAction?.().then((r) => opened(app, r?.open)));
+  } catch {
+    /* no launch info: the app opens as usual */
+  }
 }
 
 /** Notes allowed on this phone? (and can Android still ask?) */

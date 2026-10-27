@@ -60,8 +60,10 @@ export function setSystemBarStyle(darkBackground: boolean): void {
     .catch(() => {});
 }
 
-export function quietly(p: Promise<unknown> | undefined): void {
-  p?.catch(() => {});
+/** Ignore a native call's failure. Some calls (like addListener) give back a plain handle,
+ *  not a promise, on some Capacitor versions, so only a real promise is caught. */
+export function quietly(p: unknown): void {
+  if (p && typeof (p as Promise<unknown>).catch === 'function') (p as Promise<unknown>).catch(() => {});
 }
 
 function timeout<T>(p: Promise<T>, ms: number): Promise<T> {
