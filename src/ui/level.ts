@@ -17,6 +17,7 @@ import { JarBar } from './jars.ts';
 import { ambientHtml, worldVars } from './worlds.ts';
 import { popIn, shake, stagger, wait, EASE_OUT, reducedMotion, fitCard } from '../render/motion.ts';
 import { resultScreen } from './result.ts';
+import { peekLine, petPeek } from './pets.ts';
 import { goHome, timeState } from './flow.ts';
 import { stepBackAfterPlacement } from './placement.ts';
 import { stageForAge } from '../core/placement.ts';
@@ -126,6 +127,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
       if (run === 5 || run === 10 || run === 15 || run === 20) {
         const r = comboEl.getBoundingClientRect();
         app.fx.confetti(r.x + r.width / 2, r.y + r.height / 2, run >= 10 ? 40 : 24);
+        petPeek(app, child, el, peekLine(child, run));
       }
     };
 
@@ -349,7 +351,12 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
       });
       const replay = (child.progress.levels[level.id]?.passes ?? 0) > (stars ? 1 : 0);
       const perfect = coinsForLevel('skill', 1, true, replay, level.stage);
-      void app.show(resultScreen(child, level, { stars, score, total: scoreTotal, coins, unlocked, timeUp: timeState(app, child) !== 'ok', perfect: fraction >= 1, perfectCoins: perfect }));
+      const toResult = () => void app.show(resultScreen(child, level, { stars, score, total: scoreTotal, coins, unlocked, timeUp: timeState(app, child) !== 'ok', perfect: fraction >= 1, perfectCoins: perfect }));
+      // The Adventure pet pops in to cheer the end of the level.
+      if (combo && child.adventure?.pet) {
+        petPeek(app, child, el, stars ? `${child.adventure.pet.name}: You did it! 🎉` : `${child.adventure.pet.name}: Nice try! Again?`);
+        setTimeout(toResult, reducedMotion() ? 300 : 1100);
+      } else toResult();
     };
 
     const pause = () => {

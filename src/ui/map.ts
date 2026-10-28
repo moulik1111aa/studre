@@ -25,6 +25,7 @@ import { adventureOn, adventureScreen, outfitFor, questBadge, showAdventureTips,
 import { advTipsDue } from '../core/adventure.ts';
 import { plusFaceSvg } from './plus.ts';
 import { dragonMapOn, foldStage, type FoldNode } from './foldmap.ts';
+import { mapPetHtml } from './pets.ts';
 
 interface Node {
   kind: 'skill' | 'review' | 'boss' | 'quest';
@@ -68,7 +69,7 @@ export function mapScreen(child: Child) {
     const trailCls = outfit.trail ? ` trail-${outfit.trail}` : '';
     const el = html(`<section class="screen map${trailCls}" aria-label="Map">
       <header class="map-top">
-        <button class="who" aria-label="Switch child (${left > 0 ? `${left} min left today` : 'time’s up for today'})">${avatarHtml(child.avatar, 46)}<span><b>${esc(child.name)}</b>${adv ? whoLine(child) : `<small>${left > 0 ? `${left} min left` : 'Time’s up'}</small>`}</span></button>
+        <button class="who" aria-label="Switch child (${left > 0 ? `${left} min left today` : 'time’s up for today'})"><span class="who-av">${avatarHtml(child.avatar, 46)}${adv ? mapPetHtml(app, child) : ''}</span><span><b>${esc(child.name)}</b>${adv ? whoLine(child) : `<small>${left > 0 ? `${left} min left` : 'Time’s up'}</small>`}</span></button>
         <div class="ring" style="--p:${Math.max(0, Math.min(1, left / limit))}" aria-hidden="true"><span>${Math.max(0, left)}</span></div>
         <button class="icon-btn help-btn" aria-label="How it works">?</button>
         <button class="icon-btn trophy-btn" aria-label="Trophy room">${ICONS.trophy}</button>

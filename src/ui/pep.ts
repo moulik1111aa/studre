@@ -83,6 +83,8 @@ export function lineBeforeLevel(child: Child, level: Level, today: string): stri
   if (reward && pct >= 50 && pct < 100) options.push(`Your ${esc(reward.name.toLowerCase())} jar is ${pct}% full! Perfect scores fill it fastest.`);
   if (level.kind !== 'skill') options.push(`A big one! Remember: read each question twice. ${pick(GO)}`);
   if (last.stars === 3) options.push(`That last one was perfect. Can you do it twice in a row?`);
+  const pet = child.adventure?.on ? child.adventure.pet : undefined;
+  if (pet) options.push(`${esc(pet.name)} is proud of you! Let’s make ${esc(pet.name)} grow.`, `${esc(pet.name)} is watching. Show ${esc(pet.name)} your best maths!`);
   return pick(options);
 }
 
@@ -94,6 +96,7 @@ export function lineAfterMiss(child: Child, score: number, total: number): strin
     `Every mistake teaches your brain something. Let’s try that one more time!`,
     `So close! Take it slowly this time. I’ll be cheering for you.`,
     `Tricky one! Even I get them wrong sometimes. Let’s have another go.`,
+    ...(child.adventure?.on && child.adventure.pet ? [`${esc(child.adventure.pet.name)} believes in you! One more try.`] : []),
   ]);
 }
 

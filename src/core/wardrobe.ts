@@ -4,6 +4,7 @@
 // Every fifth chest also holds a surprise item, chosen in a fixed order (no random loot).
 
 import { chestsOpened, gemsEarned, levelOf, xpOf, type AdvChild, type AdventureState } from './adventure.ts';
+import { treatGems } from './petdata.ts';
 
 export type Slot = 'hat' | 'face' | 'neck' | 'colour' | 'trail';
 export const SLOTS: { id: Slot; name: string }[] = [
@@ -72,8 +73,8 @@ export const itemById = (id: string): Item | undefined => ITEMS.find((i) => i.id
 const has = (a: AdventureState | undefined, id: string) => !!(a?.owned?.[id] || a?.gifted?.[id]);
 export const ownsItem = has;
 
-/** Gems spent: only bought items count (surprise items are free). */
-export const gemsSpent = (a: AdventureState | undefined): number => Object.keys(a?.owned ?? {}).reduce((n, id) => n + (itemById(id)?.price ?? 0), 0);
+/** Gems spent: bought items (surprise items are free) and the pet's snacks. */
+export const gemsSpent = (a: AdventureState | undefined): number => Object.keys(a?.owned ?? {}).reduce((n, id) => n + (itemById(id)?.price ?? 0), 0) + treatGems(a?.pet);
 export const gemBalance = (c: AdvChild): number => Math.max(0, gemsEarned(c) - gemsSpent(c.adventure));
 
 /** What Plus is wearing (only items the child has; an undo may have taken one back). */

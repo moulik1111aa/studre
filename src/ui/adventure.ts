@@ -46,6 +46,8 @@ import { ICONS } from './icons.ts';
 import { goHome } from './flow.ts';
 import { unlockScreen } from './unlock.ts';
 import { popIn, stagger, reducedMotion, wait, EASE_SPRING } from '../render/motion.ts';
+import { bindPetTab, petStageCheck, petTab, setPetBadgeContext } from './pets.ts';
+import { ensureEgg, hatchReady } from '../core/pet.ts';
 
 export const adventureOn = (c: Child): boolean => !!c.adventure?.on;
 
@@ -53,6 +55,8 @@ export function badgeContext(app: App, c: Child): BadgeContext {
   const skillIds = AREAS[0].skills.flat().map((s) => s.id);
   return { c, today: app.today, path: app.pathFor(c), strandOf: (id) => skillById(id)?.strand, skillIds };
 }
+
+setPetBadgeContext((app, c) => badgeContext(app, c as Child));
 
 export const levelInfo = (c: Child): LevelInfo => levelOf(xpOf(c));
 /** What Plus wears for this child (nothing when Adventure is off). */
@@ -69,6 +73,7 @@ export function toggleAdventure(app: App, c: Child): boolean {
     } else c.adventure.on = !c.adventure.on;
     // Past play already counts: they start at their level, without a pile of level-ups.
     if (c.adventure.on) {
+      ensureEgg(c.adventure, Date.now());
       const L = levelInfo(c);
       c.adventure.seenLevel = Math.max(c.adventure.seenLevel ?? 0, L.level);
       c.adventure.xpSeen = L.xp;
@@ -119,7 +124,9 @@ export function adventureNews(app: App, c: Child): string {
   let got: Badge[] = [];
   let before = 0;
   let after = 0;
+  const eggWasReady = hatchReady(c);
   app.save.update(() => {
+    ensureEgg(a, Date.now());
     got = awardBadges(badgeContext(app, c), Date.now());
     a.cheered[app.today] = [...seen, ...fresh.map((q) => q.quest.id), ...(weekFresh ? [week.quest.id] : [])];
     tidy(a, app.today);
@@ -137,6 +144,7 @@ export function adventureNews(app: App, c: Child): string {
     const before = raid.damage - hit;
     if (hit > 0 && before < raid.hp) lines.push(raid.defeated ? `<li class="raid"><span>${raid.monster.icon}</span><p><b>You beat ${esc(raid.monster.name)}!</b> Open the raid chest on the Quests tab.</p></li>` : `<li class="raid"><span>${raid.monster.icon}</span><p><b>You hit ${esc(raid.monster.name)} for ${hit}!</b> ${raid.left} HP left.</p></li>`);
   }
+  if (!a.pet && !eggWasReady && hatchReady(c)) lines.push(`<li class="egg"><span>🥚</span><p><b>Your egg is moving!</b> Hatch it on the Pet tab.</p></li>`);
   for (const q of fresh) lines.push(`<li><span>${q.quest.icon}</span><p><b>Quest done!</b> ${esc(q.quest.text)}</p></li>`);
   if (weekFresh) lines.push(`<li><span>🏆</span><p><b>Weekly challenge done!</b> ${esc(week.quest.text)}</p></li>`);
   const allDone = qs.every((q) => q.done) && !a.claimed[dailyKey(app)];
@@ -250,7 +258,7 @@ function showRanks(app: App, c: Child): void {
 }
 
 // ── the Adventure screen ─────────────────────────────────────────────────
-type Tab = 'quests' | 'badges' | 'wardrobe';
+type Tab = 'quests' | 'badges' | 'wardrobe' | 'pet';
 
 function questRow(q: QuestStatus): string {
   return `<li class="aq${q.done ? ' done' : ''}"><span class="aq-i">${q.quest.icon}</span><div class="aq-b"><p>${esc(q.quest.text)}</p><div class="aq-bar"><i style="width:${(100 * q.value) / q.quest.target}%"></i></div></div><b class="aq-n">${q.done ? ICONS.check : `${q.value}/${q.quest.target}`}</b></li>`;
@@ -622,6 +630,7 @@ export function showAdventureTips(app: App, child: Child, el: HTMLElement, where
           { at: '.adv-surprise', text: `Every ${SURPRISE_EVERY}th chest has a surprise item for me inside.` },
           { at: '.rp-tab[data-tab="badges"]', text: 'Badges for big moments: streaks, bosses, perfect scores and more.' },
           { at: '.rp-tab[data-tab="wardrobe"]', text: 'Spend your gems here on hats, glasses and colours for me!' },
+          { at: '.rp-tab[data-tab="pet"]', text: child.adventure?.pet ? `${child.adventure.pet.name} lives here. Feed snacks to teach tricks, and learn lots to help it grow!` : 'Your mystery egg lives here. It hatches after 3 levels or your first chest!' },
         ];
   return runTips(app, el, tips, { label: 'Adventure tips', last: 'Got it!', outfit: outfitFor(child), onClose: () => app.save.update(() => child.adventure && (child.adventure.toured = true)) });
 }
@@ -636,6 +645,7 @@ export function showParentAdventureTips(app: App, el: HTMLElement): Promise<void
     { text: '🏅 Badges for milestones: streaks, bosses, mastered skills and more.' },
     { text: '💎 Gems and Plus’s wardrobe: gems buy hats and colours for Plus. Gems never turn into coins, so rewards stay as you set them.' },
     { text: '⚔️ The weekly raid: a friendly monster that right answers knock out by Sunday. If it isn’t beaten, nothing is lost.' },
+    { text: '🐣 A pet: an egg hatches after 3 levels, and the pet grows as your child learns. It is never sad or sick, and missing a day costs nothing.' },
     { text: '🔁 You can switch Adventure off any time in the Parent area. Badges and items are kept for later.' },
   ];
   return runTips(app, el, tips, { label: 'What is Adventure?', skip: seen, last: 'Got it', onClose: () => app.save.update((d) => (d.settings.advTipsSeen = true)) });
@@ -648,20 +658,29 @@ export function adventureScreen(child: Child, start: Tab = 'quests') {
     app.save.update(() => awardBadges(badgeContext(app, child), Date.now()));
     const el = html(`<section class="screen adventure" aria-label="Adventure">
       <header class="topbar"><button class="icon-btn back-btn" aria-label="Back">${ICONS.back}</button><span class="t">Adventure</span><button class="icon-btn adv-help" aria-label="Adventure tips">?</button></header>
-      <nav class="rp-tabs adv-tabs" role="tablist"><button role="tab" class="rp-tab" data-tab="quests">📜 Quests</button><button role="tab" class="rp-tab" data-tab="badges">🏅 Badges</button><button role="tab" class="rp-tab" data-tab="wardrobe">🎩 Wardrobe</button></nav>
+      <nav class="rp-tabs adv-tabs" role="tablist"><button role="tab" class="rp-tab" data-tab="quests"><span class="at-i" aria-hidden="true">📜</span>Quests</button><button role="tab" class="rp-tab" data-tab="badges"><span class="at-i" aria-hidden="true">🏅</span>Badges</button><button role="tab" class="rp-tab" data-tab="wardrobe"><span class="at-i" aria-hidden="true">🎩</span>Wardrobe</button><button role="tab" class="rp-tab${!child.adventure?.pet && hatchReady(child) ? ' nudge' : ''}" data-tab="pet"><span class="at-i" aria-hidden="true">${child.adventure?.pet ? '🐾' : '🥚'}</span>Pet</button></nav>
       <div class="scroll pa-body adv-body"></div>
     </section>`);
     const body = el.querySelector<HTMLElement>('.adv-body')!;
     const render = (animate = true) => {
       el.querySelectorAll<HTMLElement>('.rp-tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
-      const keep = tab === 'wardrobe' && !animate ? body.scrollTop : 0;
-      body.innerHTML = tab === 'quests' ? questsTab(app, child) : tab === 'badges' ? badgesTab(app, child) : wardrobeTab(child);
+      const keep = (tab === 'wardrobe' || tab === 'pet') && !animate ? body.scrollTop : 0;
+      body.innerHTML = tab === 'quests' ? questsTab(app, child) : tab === 'badges' ? badgesTab(app, child) : tab === 'pet' ? petTab(app, child) : wardrobeTab(child);
+      if (tab === 'pet') {
+        bindPetTab(app, child, body, () => {
+          render(false);
+          const t = el.querySelector('.rp-tab[data-tab="pet"]');
+          t?.classList.remove('nudge');
+          const i = t?.querySelector('.at-i');
+          if (i && child.adventure?.pet) i.textContent = '🐾';
+        });
+      }
       body.scrollTop = keep;
       body.querySelectorAll<HTMLButtonElement>('.wd-item').forEach((b) => b.addEventListener('click', () => tapWardrobe(b.dataset.id!)));
       body.querySelectorAll<HTMLButtonElement>('.adv-chest.ready').forEach((b) => b.addEventListener('click', () => void openChest(b.dataset.kind as 'daily' | 'weekly', b)));
       body.querySelector('.adv-rank')?.addEventListener('click', () => showRanks(app, child));
       body.querySelector('.adv-raid')?.addEventListener('click', () => void app.show(raidScreen(child)));
-      if (animate) stagger(body.querySelectorAll(tab === 'quests' ? '.card, .pa-h' : '.ab'), { gap: tab === 'quests' ? 50 : 12 });
+      if (animate) stagger(body.querySelectorAll(tab === 'quests' || tab === 'pet' ? '.card, .pa-h' : '.ab'), { gap: tab === 'badges' ? 12 : 50 });
     };
     const tapWardrobe = (id: string) => {
       let r: ReturnType<typeof tapItem> = null;
@@ -734,7 +753,9 @@ export function adventureScreen(child: Child, start: Tab = 'quests') {
       el,
       mounted: () => {
         stagger(body.querySelectorAll('.card, .pa-h'), { gap: 50 });
-        void levelUpCheck(app, child).then(() => el.isConnected && render(false));
+        void levelUpCheck(app, child)
+          .then(() => (el.isConnected ? petStageCheck(app, child) : undefined))
+          .then(() => el.isConnected && render(false));
       },
     };
   };

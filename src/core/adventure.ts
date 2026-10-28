@@ -7,6 +7,7 @@
 import { addDays, dayDiff } from './economy.ts';
 import { isMastered, isDone, type Level, type Progress } from './path.ts';
 import { streaks, pathProgress, type PlayEntry, type Tally } from './stats.ts';
+import { heartsOf, mergePet, rollbackPet, stageFor, type PetState } from './petdata.ts';
 
 export interface AdventureState {
   on: boolean;
@@ -27,6 +28,9 @@ export interface AdventureState {
   raidSeen?: { monday: string; damage: number };
   /** The children's Adventure tips have been shown (after their first 3 levels). */
   toured?: boolean;
+  /** The pet (core/pet.ts): when its egg turned up (ms), and the pet once hatched. */
+  eggAt?: number;
+  pet?: PetState;
 }
 
 export const freshAdventure = (): AdventureState => ({ on: true, claimed: {}, badges: {}, cheered: {} });
@@ -299,6 +303,9 @@ export const BADGES: Badge[] = [
   ...ladder('combo', '🔥', ['Combo Starter', 'Combo Champ', 'Combo Legend'], [5, 10, 20], (t) => `Get ${t} right in a row in one level`, (x) => bestCombo(x.c)),
   ...ladder('outfit', '🎩', ['First Outfit', 'Fashionista'], [1, 10], (t) => (t === 1 ? 'Get your first wardrobe item for Plus' : `Collect ${t} wardrobe items`), (x) => itemsOwned(x.c.adventure)),
   { id: 'gems-500', icon: '💎', name: 'Gem Collector', desc: 'Earn 500 gems', tier: 2, target: 500, value: (x) => gemsEarned(x.c) },
+  { id: 'pet-parent', icon: '🥚', name: 'Pet Parent', desc: 'Hatch your Adventure pet', tier: 1, target: 1, value: (x) => (x.c.adventure?.pet ? 1 : 0) },
+  { id: 'pet-friends', icon: '💞', name: 'Best Friends', desc: 'Give your pet 30 friendship hearts', tier: 2, target: 30, value: (x) => heartsOf(x.c.adventure?.pet) },
+  { id: 'pet-legend', icon: '👑', name: 'Legendary Pet', desc: 'Grow your pet all the way to Legendary', tier: 3, target: 5, value: (x) => { const p = x.c.adventure?.pet; return p ? stageFor(Math.max(0, xpOf(x.c) - p.xpAtHatch)).stage.n : 0; } },
   ...ladder('raid', '⚔️', ['Raid Rookie', 'Raid Hunter', 'Raid Legend'], [1, 4, 12], (t) => `Beat ${t} weekly raid monster${t > 1 ? 's' : ''}`, (x) => claims(x, 'r:')),
 ];
 
@@ -328,6 +335,7 @@ export function claimChest(a: AdventureState, key: string, done: boolean, now: n
 export function rollbackAdventure(a: AdventureState | undefined, since: number): void {
   if (!a) return;
   for (const m of [a.claimed, a.badges, a.owned ?? {}, a.gifted ?? {}]) for (const [k, t] of Object.entries(m)) if (t >= since) delete m[k];
+  rollbackPet(a, since);
 }
 
 /** Two phones' Adventure records together: every chest, badge and wardrobe item, the earlier time of each. */
@@ -338,7 +346,7 @@ export function mergeAdventure(x: AdventureState | undefined, y: AdventureState 
     for (const [k, t] of Object.entries(q)) out[k] = out[k] ? Math.min(out[k], t) : t;
     return out;
   };
-  return { on: x.on, claimed: both(x.claimed, y.claimed), badges: both(x.badges, y.badges), cheered: { ...x.cheered }, seenLevel: x.seenLevel, xpSeen: x.xpSeen, owned: both(x.owned ?? {}, y.owned ?? {}), gifted: both(x.gifted ?? {}, y.gifted ?? {}), equipped: { ...(y.equipped ?? {}), ...(x.equipped ?? {}) } };
+  return { on: x.on, claimed: both(x.claimed, y.claimed), badges: both(x.badges, y.badges), cheered: { ...x.cheered }, seenLevel: x.seenLevel, xpSeen: x.xpSeen, owned: both(x.owned ?? {}, y.owned ?? {}), gifted: both(x.gifted ?? {}, y.gifted ?? {}), equipped: { ...(y.equipped ?? {}), ...(x.equipped ?? {}) }, eggAt: Math.min(x.eggAt ?? Infinity, y.eggAt ?? Infinity) < Infinity ? Math.min(x.eggAt ?? Infinity, y.eggAt ?? Infinity) : undefined, pet: mergePet(x.pet, y.pet) };
 }
 
 /** Days in a row on which every daily quest was finished, up to today. */

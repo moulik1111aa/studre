@@ -1,6 +1,7 @@
 // Level complete: stars draw in, coins fly into the treat jar, then Next or the map.
 
 import { adventureNews, adventureScreen, levelUpCheck, outfitFor } from './adventure.ts';
+import { petLine, petNow, petStageCheck } from './pets.ts';
 import { html, esc, type App, type Screen } from './app.ts';
 import { progressMoment, MILESTONES, type Moment } from '../core/moment.ts';
 import { rewardById } from '../core/rewards.ts';
@@ -75,6 +76,9 @@ export function resultScreen(child: Child, level: Level, r: ResultInfo) {
     const twoWays = passed && !!after && !!front && after.id !== front.id && after.index < front.index;
     const moment = r.coins > 0 ? progressMoment(child.wallet, r.coins, r.perfectCoins ?? r.coins) : null;
     const news = adventureNews(app, child);
+    // The Adventure pet cheers too.
+    const pl = petLine(child, passed);
+    const petRow = pl ? `<div class="res-pet card"><span class="rp-pet">${petNow(app, child, 'alive')}</span><p>${pl}</p></div>` : '';
     const el = html(`<section class="screen result" style="${worldVars(level.stage)}" aria-label="Level result">
       ${ambientHtml(level.stage, 8)}
       ${moment ? '' : '<div class="jar-slot"></div>'}
@@ -88,6 +92,7 @@ export function resultScreen(child: Child, level: Level, r: ResultInfo) {
         ${passed ? '' : `<p class="res-note">You need ${level.kind === 'skill' && level.tier === 5 ? '10 in a row' : 'a few more right'} to pass.</p><div class="res-plus"><span class="ps-plus">${plusFaceSvg({ cls: 'oops', outfit: outfitFor(child) })}</span><p>${lineAfterMiss(child, r.score, r.total)}</p></div>`}
       </div>
       ${news}
+      ${petRow}
       ${moment ? momentHtml(moment, r) : ''}
       </div>
       <div class="res-actions">
@@ -211,6 +216,7 @@ export function resultScreen(child: Child, level: Level, r: ResultInfo) {
           // A new player level (Adventure): celebrate once the coins have landed.
           await wait(reducedMotion() ? 0 : 500);
           if (el.isConnected) await levelUpCheck(app, child);
+          if (el.isConnected) await petStageCheck(app, child);
         }),
     };
   };

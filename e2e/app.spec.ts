@@ -1081,3 +1081,59 @@ test('dragon map: a grown-up switches it on, the levels lie along a dragon curve
   await expect(page.locator('.map .worlds')).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+test('Adventure pet: the egg hatches, the child picks and names a pet, feeds it, and it sits on the map', async ({ page }) => {
+  type C = { stats: { correct: number }; log?: unknown[]; adventure?: { pet?: { name: string; species: string; treats?: Record<string, number> }; badges: Record<string, number> } };
+  type W = { __app: { child: C; today: string; path: { id: string }[]; save: { update(f: () => void): void }; show(m: unknown): void }; __screens: { adventureScreen(c: unknown, t?: string): unknown; mapScreen(c: unknown): unknown } };
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto('/?debug&noloader&demo=%4030');
+  await expect(page.locator('.map')).toBeVisible();
+  // Adventure on, the egg turned up a minute ago, and 2 levels played since.
+  await page.evaluate(() => {
+    const a = (window as unknown as W).__app;
+    const c = a.child;
+    a.save.update(() => {
+      c.adventure = { on: true, claimed: {}, badges: {}, cheered: {}, toured: true, eggAt: Date.now() - 60000 } as never;
+      c.stats.correct += 300;
+      for (let i = 0; i < 2; i++) (c.log ??= []).push({ t: Date.now() - 1000 * (i + 1), d: a.today, id: a.path[i].id, k: 'skill', st: 1, tier: 1, sc: 10, of: 10, s: 3, sec: 60, c: 5, a: {} });
+    });
+    a.show((window as unknown as W).__screens.adventureScreen(c));
+  });
+  await page.click('.rp-tab[data-tab="pet"]');
+  await expect(page.locator('.pet-eggcard h2')).toHaveText('A mystery egg!');
+  await expect(page.locator('.pet-eggcard')).toContainText('Finish 1 more level');
+  // One more level: it's ready.
+  await page.evaluate(() => {
+    const w = window as unknown as W;
+    const a = w.__app;
+    a.save.update(() => a.child.log!.push({ t: Date.now(), d: a.today, id: a.path[3].id, k: 'skill', st: 1, tier: 1, sc: 10, of: 10, s: 3, sec: 60, c: 5, a: {} }));
+    a.show(w.__screens.adventureScreen(a.child, 'pet'));
+  });
+  await page.click('.pet-hatch');
+  await expect(page.locator('.ph-pick')).toBeVisible({ timeout: 8000 });
+  await expect(page.locator('.ph-opt')).toHaveCount(4);
+  await page.click('.ph-opt[data-sp="owl"]');
+  await expect(page.locator('.ph-ok')).toBeDisabled();
+  await page.fill('.ph-input', 'Professor Hootington');
+  await expect(page.locator('.ph-input')).toHaveValue('Professor Ho');
+  await page.fill('.ph-input', 'Hoot');
+  await page.click('.ph-ok');
+  await expect(page.locator('.ph-name h2')).toHaveText('Say hi to Hoot!');
+  await page.click('.ph-done');
+  await expect(page.locator('.pet-hero h2')).toHaveText('Hoot');
+  await expect(page.locator('.pet-kind')).toHaveText('Baby owl');
+  const pet = () => page.evaluate(() => (window as unknown as W).__app.child.adventure!.pet!);
+  expect((await pet()).species).toBe('owl');
+  expect(await page.evaluate(() => !!(window as unknown as W).__app.child.adventure!.badges['pet-parent'])).toBe(true);
+  // A snack: gems go, hearts come.
+  const gems = Number((await page.locator('.pet-gems').textContent())!.replace(/\D/g, ''));
+  await page.click('.pet-snack[data-snack="cookie"]');
+  await expect(page.locator('.pet-hearts')).toContainText('2', { timeout: 6000 });
+  await expect(page.locator('.pet-gems')).toContainText(String(gems - 10));
+  expect(Object.keys((await pet()).treats ?? {}).length).toBe(1);
+  // On the map, beside the child.
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.mapScreen(w.__app.child)); });
+  await expect(page.locator('.map .who .who-pet svg.pet-owl')).toBeVisible();
+  expect(errors).toEqual([]);
+});
