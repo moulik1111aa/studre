@@ -39,7 +39,7 @@ function tipsFor(child: Child, el: HTMLElement): Tip[] {
   tips.push(
     { at: '.ring', text: 'This shows how many minutes you can play today. When it runs out, see you tomorrow!' },
     { at: '.play-next', text: 'Tap Play to start your next level. Get every answer right to earn the most coins!' },
-    { at: '.trophy-btn', text: 'Your trophies and badges live here.' },
+    { at: '.map-menu', text: 'Tap this menu for your trophies, my tips, switching player and more.' },
     { text: 'Play a little every day, or your jars melt a bit. Ready?' },
   );
   return tips;

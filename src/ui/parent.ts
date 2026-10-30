@@ -1,7 +1,7 @@
-// Parent area (behind the grown-up check), in two parts like a game's settings. Basic has
-// what most grown-ups need: children (report, and their own settings), daily play time,
-// sound, the look and backups. Advanced has the rest in groups (learning, notes, audio,
-// device, security, help). Each child's own settings (age, difficulty, school path,
+// Parent area (behind the grown-up check). It opens on the everyday settings: children
+// (report, and their own settings), daily play time, sound, the look and backups. The rest
+// sits in groups (learning, notes, audio, device, security, help) in a ☰ side menu, like a
+// game's settings. Each child's own settings (age, difficulty, school path,
 // Adventure, dragon map, with a grown-up) live on that child's page.
 
 import { showParentAdventureTips, toggleAdventure } from './adventure.ts';
@@ -24,6 +24,7 @@ import { lockSetupScreen } from './grownup.ts';
 import { reelScreen } from './reel.ts';
 import { accessState, lockScreen, niceDay } from './access.ts';
 import { freshProgress } from '../core/path.ts';
+import { MENU_ICON, openDrawer } from './drawer.ts';
 
 
 export const CHALLENGE = [
@@ -62,18 +63,18 @@ const THEME_CHOICES: { id: Theme; name: string; note: string }[] = [
 
 /** Advanced settings come in groups, like the tabs down the side of a game's settings. */
 type Group = 'learning' | 'notes' | 'audio' | 'device' | 'security' | 'help';
-const GROUPS: { id: Group; icon: string; name: string }[] = [
-  { id: 'learning', icon: '🎓', name: 'Learning' },
-  { id: 'notes', icon: '🔔', name: 'Notes' },
-  { id: 'audio', icon: '🔊', name: 'Audio' },
-  { id: 'device', icon: '📱', name: 'Device' },
-  { id: 'security', icon: '🔒', name: 'Security' },
-  { id: 'help', icon: '❓', name: 'Help' },
+const GROUPS: { id: Group; icon: string; name: string; note: string }[] = [
+  { id: 'learning', icon: '🎓', name: 'Learning', note: 'Timers, checking answers, lessons, rewards' },
+  { id: 'notes', icon: '🔔', name: 'Notes', note: 'Melt watch, backup reminders, widgets' },
+  { id: 'audio', icon: '🔊', name: 'Audio', note: 'Reading voice, sound, vibration' },
+  { id: 'device', icon: '📱', name: 'Device', note: '3D fights, frame rate' },
+  { id: 'security', icon: '🔒', name: 'Security', note: 'Grown-up lock, access key' },
+  { id: 'help', icon: '❓', name: 'Help', note: 'Video, tips, what Adventure is' },
 ];
 
-/** Where the grown-up was (kept while they visit a sub-screen and come back). */
-let mode: 'basic' | 'advanced' = 'basic';
-let group: Group = 'learning';
+/** The page the grown-up is on (kept while they visit a sub-screen and come back). */
+type Page = 'basic' | Group;
+let page: Page = 'basic';
 
 const kidLine = (c: Child): string => [`Age ${c.age}`, c.adventure?.on ? 'Adventure' : '', c.school?.on ? 'School path' : '', (c.challenge ?? 0) > 0 ? CHALLENGE[c.challenge ?? 0].name : ''].filter(Boolean).join(' · ');
 
@@ -100,10 +101,10 @@ function basicHtml(app: App): string {
         <button class="btn small bk-all">Save report cards now</button>
         <button class="linkish restore-kid">⤓ Restore from a report card</button>
       </div></section>
-    <button class="pa-more card to-adv"><span>⚙️</span><span><b>Advanced settings</b><small>Timers, notes, voice, lock and more</small></span><i aria-hidden="true">›</i></button>`;
+    <button class="pa-more card to-adv"><span>☰</span><span><b>More settings</b><small>Timers, notes, voice, lock and help are in the menu</small></span><i aria-hidden="true">›</i></button>`;
 }
 
-function advancedHtml(app: App): string {
+function groupHtml(app: App, group: Group): string {
   const st = app.save.data.settings;
   const rs: ReminderSettings = { ...DEFAULT_REMINDERS, ...st.reminders };
   const body: Record<Group, () => string> = {
@@ -137,40 +138,59 @@ function advancedHtml(app: App): string {
       <button class="pa-row card adv-what"><b>🎮 What is Adventure?</b><small>Quests, chests, badges, the wardrobe, the raid and the pet</small></button>
       ${faceoffRows(app)}`,
   };
-  return `<nav class="pa-groups" role="tablist" aria-label="Settings groups">${GROUPS.map((g) => `<button role="tab" class="pa-group" data-g="${g.id}" aria-selected="${g.id === group}"><span aria-hidden="true">${g.icon}</span>${g.name}</button>`).join('')}</nav>
-    <div class="pa-panel" role="tabpanel">${body[group]()}</div>`;
+  return `<div class="pa-panel">${body[group]()}</div>`;
+}
+
+const pageName = (p: Page): string => (p === 'basic' ? 'Parent area' : GROUPS.find((g) => g.id === p)!.name);
+
+/** The ☰ menu: everyday settings first, then the groups of more settings. */
+function parentMenu(app: App, go: (p: Page) => void): Promise<void> {
+  return openDrawer(app, {
+    title: 'Parent area',
+    sub: 'Settings for grown-ups',
+    items: [
+      { id: 'basic', icon: '⭐', label: 'Everyday settings', note: 'Children, play time, sound, look, backup', current: page === 'basic', onPick: () => go('basic') },
+      { heading: 'More settings' },
+      ...GROUPS.map((g) => ({ id: g.id, icon: g.icon, label: g.name, note: g.note, current: page === g.id, onPick: () => go(g.id) })),
+    ],
+  });
 }
 
 export function parentScreen(app: App): Screen {
   const el = html(`<section class="screen parent" aria-label="Parent area">
-    <header class="topbar"><button class="icon-btn back-btn" aria-label="Back">${ICONS.back}</button><span class="t">Parent area</span><span style="width:50px"></span></header>
-    <div class="seg pa-mode" role="tablist" aria-label="Settings"><button role="tab" class="seg-b" data-mode="basic"><b>Basic</b></button><button role="tab" class="seg-b" data-mode="advanced"><b>Advanced</b></button></div>
+    <header class="topbar"><button class="icon-btn pa-menu" aria-label="Menu">${MENU_ICON}</button><span class="t"></span><button class="icon-btn back-btn" aria-label="Close the parent area">✕</button></header>
     <div class="scroll pa-body"></div>
   </section>`);
   const body = el.querySelector<HTMLElement>('.pa-body')!;
   const render = (animate: boolean) => {
-    el.querySelectorAll<HTMLElement>('.pa-mode .seg-b').forEach((b) => {
-      const on = b.dataset.mode === mode;
-      b.classList.toggle('on', on);
-      b.setAttribute('aria-selected', String(on));
-    });
-    body.innerHTML = mode === 'basic' ? basicHtml(app) : advancedHtml(app);
+    el.querySelector('.topbar .t')!.textContent = pageName(page);
+    body.innerHTML = page === 'basic' ? basicHtml(app) : groupHtml(app, page);
     body.scrollTop = 0;
     bind(app, el, body, render);
-    if (animate) stagger(body.querySelectorAll(mode === 'basic' ? '.pa-sec, .pa-more' : '.pa-panel > *'), { gap: 40 });
+    if (animate) stagger(body.querySelectorAll(page === 'basic' ? '.pa-sec, .pa-more' : '.pa-panel > *'), { gap: 40 });
   };
-  el.querySelector('.pa-mode')!.addEventListener('click', (e) => {
-    const b = (e.target as HTMLElement).closest<HTMLElement>('.seg-b');
-    if (!b || b.dataset.mode === mode) return;
-    mode = b.dataset.mode as typeof mode;
+  const go = (p: Page) => {
+    if (p === page) return;
+    page = p;
     render(true);
+  };
+  const menu = () => void parentMenu(app, go);
+  el.querySelector('.pa-menu')!.addEventListener('click', menu);
+  body.addEventListener('click', (e) => {
+    if ((e.target as HTMLElement).closest('.to-adv')) menu();
   });
   el.querySelector('.back-btn')!.addEventListener('click', () => void app.show(whosPlayingScreen));
   render(false);
   return {
     el,
+    // Android back: from a group, back to the everyday settings first.
+    back: () => {
+      if (page === 'basic') return false;
+      go('basic');
+      return true;
+    },
     mounted: () => {
-      stagger(body.querySelectorAll(mode === 'basic' ? '.pa-sec, .pa-more' : '.pa-panel > *'), { gap: 40 });
+      stagger(body.querySelectorAll(page === 'basic' ? '.pa-sec, .pa-more' : '.pa-panel > *'), { gap: 40 });
       void firstAsk(app);
     },
   };
@@ -180,14 +200,6 @@ export function parentScreen(app: App): Screen {
 function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: boolean) => void): void {
   const on = <K extends keyof HTMLElementEventMap>(sel: string, ev: K, fn: (b: HTMLElement) => void) => body.querySelectorAll<HTMLElement>(sel).forEach((b) => b.addEventListener(ev, () => fn(b)));
   const kid = (b: HTMLElement) => app.save.data.children.find((k) => k.id === b.dataset.id)!;
-  on('.to-adv', 'click', () => {
-    mode = 'advanced';
-    render(true);
-  });
-  on('.pa-group', 'click', (b) => {
-    group = b.dataset.g as Group;
-    render(true);
-  });
   on('.kid-set', 'click', (b) => void app.show(childSettingsScreen(kid(b))));
   on('.report', 'click', (b) => void app.show(reportScreen(kid(b))));
   on('.add-kid', 'click', () => void app.show(addChildScreen(false)));
@@ -364,7 +376,7 @@ async function firstAsk(app: App): Promise<void> {
   );
   if (await result) {
     const ok = await askNotifications(app);
-    app.toast(ok ? 'Notes are on. Change them any time in Advanced → Notes.' : 'No notes for now. You can turn them on in Advanced → Notes.');
+    app.toast(ok ? 'Notes are on. Change them any time in ☰ → Notes.' : 'No notes for now. You can turn them on in ☰ → Notes.');
   }
 }
 

@@ -26,6 +26,8 @@ import { advTipsDue } from '../core/adventure.ts';
 import { plusFaceSvg } from './plus.ts';
 import { dragonMapOn, foldStage, type FoldNode } from './foldmap.ts';
 import { mapPetHtml } from './pets.ts';
+import { MENU_ICON, openDrawer } from './drawer.ts';
+import { parentScreen } from './parent.ts';
 
 interface Node {
   kind: 'skill' | 'review' | 'boss' | 'quest';
@@ -69,10 +71,9 @@ export function mapScreen(child: Child) {
     const trailCls = outfit.trail ? ` trail-${outfit.trail}` : '';
     const el = html(`<section class="screen map${trailCls}" aria-label="Map">
       <header class="map-top">
+        <button class="icon-btn map-menu" aria-label="Menu">${MENU_ICON}</button>
         <button class="who" aria-label="Switch child (${left > 0 ? `${left} min left today` : 'time’s up for today'})"><span class="who-av">${avatarHtml(child.avatar, 46)}${adv ? mapPetHtml(app, child) : ''}</span><span><b>${esc(child.name)}</b>${adv ? whoLine(child) : `<small>${left > 0 ? `${left} min left` : 'Time’s up'}</small>`}</span></button>
         <div class="ring" style="--p:${Math.max(0, Math.min(1, left / limit))}" aria-hidden="true"><span>${Math.max(0, left)}</span></div>
-        <button class="icon-btn help-btn" aria-label="How it works">?</button>
-        <button class="icon-btn trophy-btn" aria-label="Trophy room">${ICONS.trophy}</button>
       </header>
       <div class="jar-slot"></div>
       <div class="worlds scroll"></div>
@@ -211,9 +212,24 @@ export function mapScreen(child: Child) {
     };
 
     el.querySelector('.who')!.addEventListener('click', () => void app.show(whosPlayingScreen));
-    el.querySelector('.trophy-btn')!.addEventListener('click', () => void app.show(trophyScreen(child)));
+    // ☰: the child's menu, like a game's (the grown-ups' area sits behind the grown-up check).
+    el.querySelector('.map-menu')!.addEventListener('click', () =>
+      void openDrawer(app, {
+        title: child.name,
+        sub: adv ? undefined : `${Math.max(0, left)} min left today`,
+        badge: avatarHtml(child.avatar, 44),
+        items: [
+          { id: 'map', icon: '🗺️', label: 'Map', current: true, onPick: () => undefined },
+          ...(adv ? [{ id: 'adventure', icon: '🎮', label: 'Adventure', note: 'Quests, badges, wardrobe and your pet', onPick: () => void app.show(adventureScreen(child)) }] : []),
+          { id: 'trophies', icon: '🏆', label: 'Trophy room', note: 'Rewards you’ve won', onPick: () => void app.show(trophyScreen(child)) },
+          { id: 'tips', icon: '❓', label: 'How it works', note: 'Plus shows you around', onPick: () => void showMapTips(app, child, el) },
+          { id: 'switch', icon: '👧', label: 'Switch child', onPick: () => void app.show(whosPlayingScreen) },
+          { heading: 'Grown-ups' },
+          { id: 'parent', icon: '🔒', label: 'Parent area', note: 'Settings, reports and backups', onPick: async () => (await app.grownUp('Parent area')) && void app.show(parentScreen) },
+        ],
+      }),
+    );
     el.querySelector('.adv-btn')?.addEventListener('click', () => void app.show(adventureScreen(child)));
-    el.querySelector('.help-btn')!.addEventListener('click', () => void showMapTips(app, child, el));
     el.querySelector('.play-next')!.addEventListener('click', () => {
       if (next) playLevel(app, child, next);
     });
