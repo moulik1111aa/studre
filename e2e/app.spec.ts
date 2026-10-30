@@ -67,9 +67,9 @@ async function playThrough(page: Page, done: string, max = 60): Promise<number> 
       }
     }
     answered++;
-    // The right answer is shown after every question; wait for the next one.
+    // Wait for the next question (a right answer glows green; a wrong one shows the answer).
     await page.waitForTimeout(150);
-    await page.waitForFunction(() => !document.querySelector('.qcard .reveal'), null, { timeout: 8000 }).catch(() => undefined);
+    await page.waitForFunction(() => !document.querySelector('.qcard.right, .qcard .reveal'), null, { timeout: 8000 }).catch(() => undefined);
   }
   await expect(page.locator(done)).toBeVisible({ timeout: 20_000 });
   return answered;
@@ -378,7 +378,7 @@ test('parent can start a child over, then delete the profile', async ({ page }) 
   expect(save.children.find((c: { id: string }) => c.id === kid.id)).toBeUndefined();
 });
 
-test('confirm answers: pick, then Check; the answer is always shown', async ({ page }) => {
+test('confirm answers: pick, then Check; a right answer glows green', async ({ page }) => {
   // A tap-the-answer level (confirming only applies to choices).
   await seeded(page, 's3.compare3#1', `window.__app.save.update((d) => { d.settings.confirmAnswers = true; })`);
   await page.click('.play-next');
@@ -396,7 +396,10 @@ test('confirm answers: pick, then Check; the answer is always shown', async ({ p
   await page.locator('.choice').nth(right).click();
   await expect(page.locator('.choice').nth(right)).toHaveClass(/picked/);
   await page.click('.check-btn');
-  await expect(page.locator('.reveal.good')).toContainText(ans);
+  await expect(page.locator('.choice').nth(right)).toHaveClass(/right/);
+  await expect(page.locator('.flash-right')).toHaveCount(1);
+  // Nothing covers the question: no answer box on a right answer.
+  await expect(page.locator('.reveal')).toHaveCount(0);
 });
 
 /** Type a wrong answer on the pad (or tap a wrong choice). */
@@ -553,6 +556,7 @@ test('school path: pick a board and class, edit the skills, and the map follows 
   await page.goto('/?debug&demo=%4012&age=9');
   await expect(page.locator('.map')).toBeVisible();
   await page.evaluate(() => { const w = window as unknown as { __app: { show(m: unknown): void }; __screens: { parentScreen: unknown } }; w.__app.show(w.__screens.parentScreen); });
+  await page.click('.kid-set');
   await page.click('.school-btn');
   await page.click('[data-b="cbse"]');
   await page.click('.school .done');
@@ -576,6 +580,7 @@ test('school path: pick a board and class, edit the skills, and the map follows 
   await expect(page.locator('.world.soon')).toHaveCount(0);
   // Back to the age path.
   await page.evaluate(() => { const w = window as unknown as { __app: { show(m: unknown): void }; __screens: { parentScreen: unknown } }; w.__app.show(w.__screens.parentScreen); });
+  await page.click('.kid-set');
   await page.click('.school-btn');
   await page.click('[data-b=""]');
   await page.click('.school .done');
@@ -587,6 +592,7 @@ test('parents choose how long timed questions last', async ({ page }) => {
   await page.goto('/?debug&demo=%4012');
   await expect(page.locator('.map')).toBeVisible();
   await page.evaluate(() => { const w = window as unknown as { __app: { show(m: unknown): void }; __screens: { parentScreen: unknown } }; w.__app.show(w.__screens.parentScreen); });
+  await page.click('.pa-mode [data-mode="advanced"]');
   await expect(page.locator('.pt-val')).toHaveText('20 seconds');
   await page.locator('.pt-slider').fill('35');
   await page.locator('.pt-slider').dispatchEvent('change');
@@ -711,13 +717,14 @@ test('adventure: a parent turns it on, quests fill from play, the chest pays onc
   await expect(page.locator('.map')).toBeVisible();
   await expect(page.locator('.adv-btn')).toHaveCount(0);
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
-  await expect(page.locator('.adv-toggle')).toHaveText(/Adventure: off/);
+  await page.click('.kid-set');
+  await expect(page.locator('.adv-toggle')).not.toBeChecked();
   await page.click('.adv-toggle');
   // The first time, the grown-up is shown what Adventure is (no skipping).
   await expect(page.locator('.tips-ov')).toBeVisible();
   await expect(page.locator('.tip-skip')).toHaveCount(0);
   await stepTips(page);
-  await expect(page.locator('.adv-toggle')).toHaveText(/Adventure: on/);
+  await expect(page.locator('.adv-toggle')).toBeChecked();
   // A good afternoon of play today.
   await page.evaluate(() => {
     const w = window as unknown as W;
@@ -751,8 +758,9 @@ test('adventure: a parent turns it on, quests fill from play, the chest pays onc
   expect(await page.locator('.ab:not(.on)').count()).toBeGreaterThan(40);
   // Switched off again: the map is back to the plain version.
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
+  await page.click('.kid-set');
   await page.click('.adv-toggle');
-  await expect(page.locator('.adv-toggle')).toHaveText(/Adventure: off/);
+  await expect(page.locator('.adv-toggle')).not.toBeChecked();
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.mapScreen(w.__app.child)); });
   await expect(page.locator('.map')).toBeVisible();
   await expect(page.locator('.adv-btn')).toHaveCount(0);
@@ -763,6 +771,7 @@ test('adventure XP: past play counts, a new level is celebrated once, and a comb
   await page.goto('/?debug&demo=%4012');
   await expect(page.locator('.map')).toBeVisible();
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
+  await page.click('.kid-set');
   await page.click('.adv-toggle');
   await stepTips(page);
   // Switching on does not celebrate old levels.
@@ -802,7 +811,7 @@ test('adventure XP: past play counts, a new level is celebrated once, and a comb
       for (const ch of ans.replace(/^-/, '−')) await page.locator(`.answers [data-k="${ch}"]`).first().dispatchEvent('pointerdown');
       await page.locator('.answers .ok').click();
     }
-    if (k < 2) await page.waitForFunction(() => !document.querySelector('.qcard .reveal'), null, { timeout: 8000 });
+    if (k < 2) await page.waitForFunction(() => !document.querySelector('.qcard.right, .qcard .reveal'), null, { timeout: 8000 });
   }
   await expect(page.locator('.combo')).toContainText('3 in a row');
 });
@@ -865,7 +874,9 @@ test('backup: "remind me in 3 days" needs a grown-up, and the parent area shows 
   await expect(page.locator('.pa-backup')).toContainText('Never backed up');
   await page.click('.bk-all');
   await expect(page.locator('.pa-backup')).toContainText('Last backup today');
-  // Reminder settings are saved.
+  // Reminder settings are saved (Advanced → Notes).
+  await page.click('.pa-mode [data-mode="advanced"]');
+  await page.click('.pa-group[data-g="notes"]');
   await page.locator('[data-r="melt"]').uncheck();
   await expect(page.locator('.pr-per')).toBeHidden();
   const rs = await page.evaluate(() => (window as unknown as { __app: { save: { data: { settings: { reminders?: { melt: boolean } } } } } }).__app.save.data.settings.reminders);
@@ -877,6 +888,7 @@ test('wardrobe: gems from levels buy a hat for Plus, and he wears it on the map'
   await page.goto('/?debug&demo=%4012');
   await expect(page.locator('.map')).toBeVisible();
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
+  await page.click('.kid-set');
   await page.click('.adv-toggle');
   await stepTips(page);
   // Lots of right answers: new levels, and gems with them.
@@ -969,6 +981,9 @@ test('adventure tips: grown-ups first time without Skip, then with Skip; childre
   await page.goto('/?debug&demo=%4012');
   await expect(page.locator('.map')).toBeVisible();
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
+  // In Advanced → Help (it is also on each child's page).
+  await page.click('.pa-mode [data-mode="advanced"]');
+  await page.click('.pa-group[data-g="help"]');
   await page.click('.adv-what');
   await expect(page.locator('.tips-ov')).toBeVisible();
   await expect(page.locator('.tip-skip')).toHaveCount(0);
@@ -1046,9 +1061,10 @@ test('dragon map: a grown-up switches it on, the levels lie along a dragon curve
   await expect(page.locator('.fold-stage')).toHaveCount(0);
   // A grown-up switches it on in the Parent area.
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
-  await expect(page.locator('.dragon-toggle')).toHaveText(/Dragon map: off/);
+  await page.click('.kid-set');
+  await expect(page.locator('.dragon-toggle')).not.toBeChecked();
   await page.click('.dragon-toggle');
-  await expect(page.locator('.dragon-toggle')).toHaveText(/Dragon map: on/);
+  await expect(page.locator('.dragon-toggle')).toBeChecked();
   expect(await page.evaluate(() => (window as unknown as W).__app.child.dragonMap)).toBe(true);
   // The first visit unfolds the map from a single strip, then shows chapter 1.
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.mapScreen(w.__app.child)); });
@@ -1075,8 +1091,9 @@ test('dragon map: a grown-up switches it on, the levels lie along a dragon curve
   await expect(page.locator('.fold-cap')).toContainText('levels 17–32');
   // Off again: back to the usual map, same progress.
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
+  await page.click('.kid-set');
   await page.click('.dragon-toggle');
-  await expect(page.locator('.dragon-toggle')).toHaveText(/Dragon map: off/);
+  await expect(page.locator('.dragon-toggle')).not.toBeChecked();
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.mapScreen(w.__app.child)); });
   await expect(page.locator('.map .worlds')).toBeVisible();
   expect(errors).toEqual([]);
@@ -1136,4 +1153,34 @@ test('Adventure pet: the egg hatches, the child picks and names a pet, feeds it,
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.mapScreen(w.__app.child)); });
   await expect(page.locator('.map .who .who-pet svg.pet-owl')).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test('parent area: Basic has the everyday settings, Advanced has the rest in groups, each child has a page', async ({ page }) => {
+  type W = { __app: { child: { challenge?: number }; show(m: unknown): void }; __screens: { parentScreen: unknown } };
+  await page.goto('/?debug&demo=%4012');
+  await expect(page.locator('.map')).toBeVisible();
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
+  // Basic: children, daily play, sound, look, backup; nothing advanced.
+  await expect(page.locator('.pa-mode [data-mode="basic"]')).toHaveAttribute('aria-selected', 'true');
+  for (const sel of ['.pa-kid', '.limits', '[data-k="holiday"]', '[data-k="sound"]', '[data-k="voice"]', '.theme-tile', '.bk-all', '.to-adv']) await expect(page.locator(sel).first()).toBeAttached();
+  for (const sel of ['.pt-slider', '[data-r="melt"]', '.lock-row', '[data-k="showFps"]', '.adv-toggle']) await expect(page.locator(sel)).toHaveCount(0);
+  // Advanced: six groups, one at a time.
+  await page.click('.to-adv');
+  await expect(page.locator('.pa-group')).toHaveCount(6);
+  await expect(page.locator('.pt-slider')).toBeVisible();
+  await page.click('.pa-group[data-g="device"]');
+  await expect(page.locator('[data-k="showFps"]')).toBeAttached();
+  await expect(page.locator('.pt-slider')).toHaveCount(0);
+  await page.click('.pa-group[data-g="security"]');
+  await expect(page.locator('.lock-row')).toBeVisible();
+  // A child's own page: difficulty is changed there.
+  await page.click('.pa-mode [data-mode="basic"]');
+  await page.click('.kid-set');
+  await expect(page.locator('.kid-settings .adv-toggle')).toBeAttached();
+  await page.click('.level-btn');
+  await page.locator('.sheet button', { hasText: 'Harder' }).click();
+  await expect(page.locator('.level-btn')).toContainText('Harder');
+  expect(await page.evaluate(() => (window as unknown as W).__app.child.challenge)).toBe(1);
+  await page.click('.back-btn');
+  await expect(page.locator('.pa-kid')).toContainText('Harder');
 });

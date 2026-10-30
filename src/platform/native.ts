@@ -20,6 +20,8 @@ export interface StudyHardPlugin {
   speak(o: { text: string; rate?: number; pitch?: number; voice?: string }): Promise<void>;
   voices(): Promise<{ voices?: { name: string; locale: string; quality: number; network: boolean }[] }>;
   stopSpeaking(): Promise<void>;
+  /** Whether the voice is still talking (newer apps only). */
+  speaking?(): Promise<{ speaking: boolean }>;
   savePhoto(o: { id: string; dataUrl: string }): Promise<void>;
   loadPhoto(o: { id: string }): Promise<{ dataUrl?: string }>;
   deletePhoto(o: { id: string }): Promise<void>;

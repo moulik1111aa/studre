@@ -484,6 +484,14 @@ public class StudyHardPlugin extends Plugin {
         call.resolve();
     }
 
+    /** Still talking? (So a speech bubble stays until its words are finished.) */
+    @PluginMethod
+    public void speaking(PluginCall call) {
+        JSObject r = new JSObject();
+        r.put("speaking", tts != null && (tts.isSpeaking() || (!ttsReady && pendingText != null)));
+        call.resolve(r);
+    }
+
     // ── Reward photos: JPEGs in the app's private files folder ──
 
     private File photoFile(String id) {

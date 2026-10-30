@@ -110,6 +110,34 @@ export class Voice {
     }
   }
 
+  /**
+   * Wait until the voice has finished talking (at most `maxMs`). Resolves true when it could
+   * tell, false when this phone can't say (then callers fall back to a reading-time guess).
+   */
+  async whenDone(maxMs = 30000): Promise<boolean> {
+    if (!this.enabled) return false;
+    const t0 = Date.now();
+    const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    // First wait for it to start talking (engines can take a moment); if it never does, we can't tell.
+    let started = false;
+    while (Date.now() - t0 < maxMs) {
+      let on: boolean;
+      if (this.native) {
+        try {
+          on = !!(await this.native.speaking!()).speaking;
+        } catch {
+          return false;
+        }
+      } else if ('speechSynthesis' in globalThis) on = speechSynthesis.speaking || speechSynthesis.pending;
+      else return false;
+      if (on) started = true;
+      else if (started) return true;
+      else if (Date.now() - t0 > 3000) return false;
+      await pause(started ? 250 : 150);
+    }
+    return true;
+  }
+
   stop(): void {
     if (this.native) quietly(this.native.stopSpeaking());
     else

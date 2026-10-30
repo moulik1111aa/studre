@@ -18,6 +18,20 @@ import { ambientHtml, worldVars } from './worlds.ts';
 import { popIn, shake, stagger, wait, EASE_OUT, reducedMotion, fitCard } from '../render/motion.ts';
 import { resultScreen } from './result.ts';
 import { peekLine, petPeek } from './pets.ts';
+
+/** Said after a right answer: short, so it is never cut off by the next question. */
+const PRAISE = ['Right!', 'Correct!', 'Yes!', 'Well done!', 'Great!', 'Super!'];
+
+/** A soft green glow over the whole screen (its colour follows the theme). */
+function flashRight(screen: HTMLElement): void {
+  const f = document.createElement('div');
+  f.className = 'flash-right';
+  f.setAttribute('aria-hidden', 'true');
+  screen.appendChild(f);
+  const still = reducedMotion();
+  const a = f.animate(still ? [{ opacity: 1 }, { opacity: 1 }] : [{ opacity: 0 }, { opacity: 1, offset: 0.18 }, { opacity: 1, offset: 0.45 }, { opacity: 0 }], { duration: still ? 500 : 850, easing: 'ease-out' });
+  void a.finished.then(() => f.remove(), () => f.remove());
+}
 import { goHome, timeState } from './flow.ts';
 import { stepBackAfterPlacement } from './placement.ts';
 import { stageForAge } from '../core/placement.ts';
@@ -262,12 +276,11 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
         btn?.classList.add('right');
         if (!retrying) dot?.classList.add('on');
         if (!reducedMotion()) card.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.015)' }, { transform: 'scale(1)' }], { duration: 360, easing: EASE_OUT });
-        // Always show and say the answer, right or wrong.
-        const yes = html(`<div class="reveal good">${ICONS.check} Right! It’s <b>${prettyAnswer(q.answer)}</b></div>`);
-        card.appendChild(yes);
-        popIn(yes);
-        app.voice.say(`Right! It's ${spoken(q.answer)}.`);
-        await wait(app.save.data.settings.voice ? 1500 : 900);
+        // Right: the whole screen glows green for a moment and Plus says one short word (the
+        // chosen answer is already marked, so nothing covers the question).
+        flashRight(el);
+        app.voice.say(PRAISE[(correct + i) % PRAISE.length]);
+        await wait(app.save.data.settings.voice ? 1000 : 800);
       } else {
         streak = 0;
         if (!retrying) {

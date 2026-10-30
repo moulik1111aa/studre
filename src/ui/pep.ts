@@ -116,7 +116,17 @@ export function plusSays(app: App, text: string, ms = 4200, outfit?: Outfit): Pr
       setTimeout(() => el.remove(), 260);
       resolve();
     };
-    const t = setTimeout(close, ms + text.length * 25);
+    // Stay up until Plus has finished talking (a fun fact can be long), and long enough to
+    // read: about 15 letters a second for a child, never less than `ms`.
+    const words = el.querySelector('.ps-text')!.textContent ?? '';
+    const readMs = Math.max(ms, 1500 + words.length * 65);
+    let t = setTimeout(close, Math.min(readMs, 30000));
+    void app.voice.whenDone(30000).then((known) => {
+      if (done || !known) return;
+      clearTimeout(t);
+      // A beat after the last word, then off it goes.
+      t = setTimeout(close, 700);
+    });
     el.addEventListener('click', close);
   });
 }

@@ -279,3 +279,31 @@ i.lv4{background:var(--accent)}
 .rp-jar small{font-size:12px;font-weight:800;color:var(--ink-faint)}
 .rp-jar em{font-style:normal;font-size:12.5px;font-weight:700;color:var(--ink-soft)}
 .rp-since{text-align:left;margin:2px 4px 0}
+
+/* Parent area: Basic / Advanced, groups of advanced settings, and each child's own page. */
+.pa-mode{flex:none;margin:2px 0 8px;gap:8px}
+.pa-mode .seg-b{padding:11px 8px}
+.pa-mode .seg-b b{font-size:17px}
+.pa-row svg{width:18px;height:18px;vertical-align:-3px}
+.pa-sec{display:grid;gap:10px}
+.pa-sec .pa-h{margin-top:6px}
+.pa-kid .pk-who{flex:1 1 120px;min-width:0;display:flex;flex-direction:column}
+.pa-kid .pk-btns{flex:none;margin-left:auto;display:flex;flex-direction:row;align-items:center;gap:8px}
+.pa-kid .pk-btns .btn{min-height:44px;font-size:15px;padding:0 14px}
+.pa-kid .kid-set{width:46px;height:46px;font-size:20px}
+.pa-more{appearance:none;border:0;cursor:pointer;color:var(--ink);display:flex;align-items:center;gap:12px;padding:14px 16px;text-align:left;margin-top:6px}
+.pa-more > span:first-child{font-size:24px}
+.pa-more > span:nth-child(2){flex:1;display:flex;flex-direction:column}
+.pa-more small{color:var(--ink-soft);font-weight:700}
+.pa-more i{font-style:normal;font-size:26px;font-weight:900;color:var(--ink-faint)}
+.pa-groups{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.pa-group{appearance:none;border:0;cursor:pointer;color:var(--ink-soft);font:inherit;font-weight:900;font-size:14px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px;border-radius:18px;background:var(--hi-06,rgba(255,255,255,.06));box-shadow:inset 0 0 0 2px var(--hi-12)}
+.pa-group span{font-size:22px;line-height:1.15}
+.pa-group[aria-selected="true"]{color:var(--ink);background:color-mix(in srgb,var(--accent,#6C4CF5) 18%,transparent);box-shadow:inset 0 0 0 3px var(--accent,#6C4CF5)}
+.pa-panel{display:grid;gap:12px;margin-top:4px}
+.pa-sub{margin:6px 0 0;font-size:15px;color:var(--ink-soft)}
+.pa-backup .restore-kid{justify-self:center;margin-top:2px}
+.ks-hero{display:grid;justify-items:center;gap:2px;padding:4px 0 6px}
+.ks-hero b{font-size:22px}
+.ks-hero small{color:var(--ink-soft);font-weight:800}
+.kid-settings .adv-what{justify-self:center}

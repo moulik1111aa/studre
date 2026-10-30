@@ -191,3 +191,5 @@ html[data-theme] .q-tools .icon-btn.hint.on{background:var(--accent);color:var(-
 .tw-row .btn{flex:1;white-space:nowrap}
 .tw-q{flex:none;width:30px;height:30px;border-radius:50%;border:0;font:inherit;font-size:16px;font-weight:900;cursor:pointer;color:var(--ink-soft);background:var(--hi-12,rgba(255,255,255,.12));box-shadow:inset 0 0 0 1.5px var(--line)}
 .tw-tip{margin:-4px 0 0;justify-self:center;padding:8px 14px;border-radius:14px;font-size:15px;font-weight:800;text-align:center;color:var(--toast-ink,#0F1530);background:var(--toast-bg,#fff)}
+/* A right answer: the whole screen glows green for a moment (the colour follows the theme). */
+.flash-right{position:absolute;inset:0;z-index:4;pointer-events:none;background:radial-gradient(circle at 50% 45%,color-mix(in srgb,var(--good) 50%,transparent),color-mix(in srgb,var(--good) 32%,transparent) 75%)}

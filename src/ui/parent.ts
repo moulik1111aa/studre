@@ -1,5 +1,8 @@
-// Parent area (behind the grown-up check): children, time limit, holiday mode, reward
-// categories, sound/voice, redo placement, and a progress report per child.
+// Parent area (behind the grown-up check), in two parts like a game's settings. Basic has
+// what most grown-ups need: children (report, and their own settings), daily play time,
+// sound, the look and backups. Advanced has the rest in groups (learning, notes, audio,
+// device, security, help). Each child's own settings (age, difficulty, school path,
+// Adventure, dragon map, with a grown-up) live on that child's page.
 
 import { showParentAdventureTips, toggleAdventure } from './adventure.ts';
 import { DRAGON_MAP } from './foldmap.ts';
@@ -46,16 +49,9 @@ function timerNote(secs: number): string {
   return 'Relaxed: no rush at all.';
 }
 
-const TOGGLES: { key: keyof Settings; label: string; note: string }[] = [
-  { key: 'holiday', label: 'Holiday mode', note: 'Rewards don’t melt while you’re away or unwell.' },
-  { key: 'voice', label: 'Read questions aloud', note: 'Uses the phone’s English voice.' },
-  { key: 'confirmAnswers', label: 'Confirm answers', note: 'Tap an answer, then Check. Fewer slips from a stray tap.' },
-  { key: 'teach', label: 'Show how after a mistake', note: 'A short step-by-step lesson when an answer is wrong.' },
-  { key: 'fx3d', label: '3D boss fights', note: 'Turn off if fights feel slow on this phone.' },
-  { key: 'showFps', label: 'Show frame rate', note: 'For testing: how smoothly the app runs.' },
-  { key: 'sound', label: 'Sound effects', note: 'Taps, cheers and coins.' },
-  { key: 'vibration', label: 'Vibration', note: 'Gentle buzzes on taps and answers.' },
-];
+type Toggle = { key: keyof Settings; label: string; note: string };
+const T = (key: keyof Settings, label: string, note: string): Toggle => ({ key, label, note });
+const toggleRows = (st: Settings, list: Toggle[]) => list.map((t) => `<label class="toggle-row"><span><b>${t.label}</b><small>${t.note}</small></span><input type="checkbox" role="switch" data-k="${t.key}" ${st[t.key] ? 'checked' : ''}></label>`).join('');
 
 const THEME_CHOICES: { id: Theme; name: string; note: string }[] = [
   { id: 'playground', name: 'Playground', note: 'Bright sky, buttons that click like toys' },
@@ -64,86 +60,177 @@ const THEME_CHOICES: { id: Theme; name: string; note: string }[] = [
   { id: 'precision', name: 'Precision', note: 'White, one strong blue' },
 ];
 
-export function parentScreen(app: App): Screen {
+/** Advanced settings come in groups, like the tabs down the side of a game's settings. */
+type Group = 'learning' | 'notes' | 'audio' | 'device' | 'security' | 'help';
+const GROUPS: { id: Group; icon: string; name: string }[] = [
+  { id: 'learning', icon: '🎓', name: 'Learning' },
+  { id: 'notes', icon: '🔔', name: 'Notes' },
+  { id: 'audio', icon: '🔊', name: 'Audio' },
+  { id: 'device', icon: '📱', name: 'Device' },
+  { id: 'security', icon: '🔒', name: 'Security' },
+  { id: 'help', icon: '❓', name: 'Help' },
+];
+
+/** Where the grown-up was (kept while they visit a sub-screen and come back). */
+let mode: 'basic' | 'advanced' = 'basic';
+let group: Group = 'learning';
+
+const kidLine = (c: Child): string => [`Age ${c.age}`, c.adventure?.on ? 'Adventure' : '', c.school?.on ? 'School path' : '', (c.challenge ?? 0) > 0 ? CHALLENGE[c.challenge ?? 0].name : ''].filter(Boolean).join(' · ');
+
+function basicHtml(app: App): string {
   const st = app.save.data.settings;
-  const rs: ReminderSettings = { ...DEFAULT_REMINDERS, ...st.reminders };
-  const el = html(`<section class="screen parent" aria-label="Parent area">
-    <header class="topbar"><button class="icon-btn back-btn" aria-label="Back">${ICONS.back}</button><span class="t">Parent area</span><span style="width:50px"></span></header>
-    <div class="scroll pa-body">
-      <h2 class="pa-h">Children</h2>
+  return `
+    <section class="pa-sec"><h2 class="pa-h">👧 Children</h2>
       <div class="pa-kids">${app.save.data.children
-        .map((c) => `<div class="pa-kid card">${avatarHtml(c.avatar, 52)}<div><b>${esc(c.name)}</b><small>Age ${c.age}</small></div>
-          <div class="pa-kid-btns"><button class="btn ghost small level-btn" data-id="${c.id}">${CHALLENGE[c.challenge ?? 0].icon} ${CHALLENGE[c.challenge ?? 0].name}</button><button class="btn ghost small report" data-id="${c.id}">${ICONS.chart} Report</button><button class="btn ghost small age-btn" data-id="${c.id}">🎂 Age ${c.age}</button><button class="btn ghost small school-btn" data-id="${c.id}">📚 ${c.school?.on ? esc(schoolLabel(c.school)) : 'School path'}</button><button class="btn ghost small adv-toggle${c.adventure?.on ? ' on' : ''}" data-id="${c.id}" aria-pressed="${!!c.adventure?.on}">🎮 Adventure: ${c.adventure?.on ? 'on' : 'off'}</button>${DRAGON_MAP ? `<button class="btn ghost small dragon-toggle${c.dragonMap ? ' on' : ''}" data-id="${c.id}" aria-pressed="${!!c.dragonMap}">🐉 Dragon map: ${c.dragonMap ? 'on' : 'off'}</button>` : ''}<button class="btn ghost small assist-btn${c.assisted ? ' on' : ''}" data-id="${c.id}" aria-pressed="${!!c.assisted}">👪 With a grown-up: ${c.assisted ? 'on' : 'off'}</button></div></div>`)
+        .map((c) => `<div class="pa-kid card">${avatarHtml(c.avatar, 48)}<div class="pk-who"><b>${esc(c.name)}</b><small>${kidLine(c)}</small></div>
+          <div class="pk-btns"><button class="btn ghost small report" data-id="${c.id}">${ICONS.chart} Report</button><button class="icon-btn kid-set" data-id="${c.id}" aria-label="Settings for ${esc(c.name)}">⚙️</button></div></div>`)
         .join('')}</div>
-      <button class="linkish adv-what">🎮 What is Adventure?</button>
-      <button class="btn ghost small add-kid">+ Add a child</button>
-      <button class="btn ghost small restore-kid">⤓ Restore from a report card</button>
-      <h2 class="pa-h">Backups and reminders</h2>
+      <button class="btn ghost small add-kid">+ Add a child</button></section>
+    <section class="pa-sec"><h2 class="pa-h">⏱️ Daily play</h2>
+      <button class="pa-row card limits"><b>${st.limitMinutes} minutes a day</b><small>${st.timeUpMode === 'stop' ? 'Stops when time is up' : 'Keeps playing without coins'} · treats ${paceText(st.treatPace, 'treat')}, big toy ${paceText(st.goalPace, 'goal')}</small></button>
+      <div class="card pa-toggles">${toggleRows(st, [T('holiday', 'Holiday mode', 'Rewards don’t melt while you’re away or unwell.')])}</div></section>
+    <section class="pa-sec"><h2 class="pa-h">🔊 Sound</h2>
+      <div class="card pa-toggles">${toggleRows(st, [T('sound', 'Sound effects', 'Taps, cheers and coins.'), T('voice', 'Read questions aloud', 'Plus reads each question and tip.')])}</div></section>
+    <section class="pa-sec"><h2 class="pa-h">🎨 Look</h2>
+      <div class="themes" role="radiogroup" aria-label="Look of the app">${THEME_CHOICES.map((t) => `<button class="theme-tile th-${t.id}${st.theme === t.id ? ' on' : ''}" role="radio" aria-checked="${st.theme === t.id}" data-theme-id="${t.id}"><span class="th-swatch"><i></i><i></i><i></i></span><b>${t.name}</b><small>${t.note}</small></button>`).join('')}</div></section>
+    <section class="pa-sec"><h2 class="pa-h">💾 Backup</h2>
       <div class="card pa-backup">
-        <p class="pb-why"><b>💾 Back up progress</b><small>Everything is saved only on this phone. A report card file (saved to Google Drive or email) restores it on any phone.</small></p>
+        <p class="pb-why"><small>Progress is saved only on this phone. A report card file (kept in Google Drive or email) brings it back on any phone.</small></p>
         <ul class="pb-kids">${app.save.data.children.map((c) => `<li>${avatarHtml(c.avatar, 28)}<span>${esc(c.name)}</span><small>${lastBackupText(c)}</small></li>`).join('')}</ul>
         <button class="btn small bk-all">Save report cards now</button>
-      </div>
+        <button class="linkish restore-kid">⤓ Restore from a report card</button>
+      </div></section>
+    <button class="pa-more card to-adv"><span>⚙️</span><span><b>Advanced settings</b><small>Timers, notes, voice, lock and more</small></span><i aria-hidden="true">›</i></button>`;
+}
+
+function advancedHtml(app: App): string {
+  const st = app.save.data.settings;
+  const rs: ReminderSettings = { ...DEFAULT_REMINDERS, ...st.reminders };
+  const body: Record<Group, () => string> = {
+    learning: () => `
+      <div class="card pa-timer"><div class="pt-head"><b>Time per question</b><span class="pt-val"></span></div>
+        <small>For timed levels (Speed and Master) and boss fights.</small>
+        <input type="range" class="slider pt-slider" min="${TIMER_MIN}" max="${TIMER_OFF}" step="5" value="${st.timerSeconds || TIMER_OFF}" aria-label="Seconds per question">
+        <div class="pt-marks" aria-hidden="true">${TIMER_MARKS.map(([v, t]) => `<span style="--at:${(100 * (v - TIMER_MIN)) / (TIMER_OFF - TIMER_MIN)}%">${t}</span>`).join('')}</div>
+        <p class="pt-note"></p></div>
+      <div class="card pa-toggles">${toggleRows(st, [T('confirmAnswers', 'Confirm answers', 'Tap an answer, then Check. Fewer slips from a stray tap.'), T('teach', 'Show how after a mistake', 'A short step-by-step lesson when an answer is wrong.')])}</div>
+      <h3 class="pa-sub">Reward categories</h3>
+      <div class="card pa-cats">${CATEGORIES.map((c) => `<label class="toggle-row"><span><b>${c.icon} ${esc(c.name)}</b></span><input type="checkbox" role="switch" data-c="${c.id}" ${st.hiddenCategories.includes(c.id) ? '' : 'checked'}></label>`).join('')}</div>`,
+    notes: () => `
       <div class="card pa-remind">
         <label class="toggle-row"><span><b>🍫 Melt watch</b><small>Friendly notes when a treat jar is about to melt, each with a fun fact.</small></span><input type="checkbox" role="switch" data-r="melt" ${rs.melt ? 'checked' : ''}></label>
         <div class="seg pr-per" role="radiogroup" aria-label="Notes a day"${rs.melt ? '' : ' hidden'}>${([2, 3] as const).map((n) => `<button class="seg-b${rs.perDay === n ? ' on' : ''}" role="radio" aria-checked="${rs.perDay === n}" data-per="${n}"><b>${n} a day</b><small>${n === 3 ? '8 am · 4:30 pm · 7:30 pm' : '8 am · 6:30 pm'}</small></button>`).join('')}</div>
         <label class="toggle-row"><span><b>💾 Backup reminder</b><small>When there’s a week of progress not backed up. Grown-ups also see it when the app opens.</small></span><input type="checkbox" role="switch" data-r="backup" ${rs.backup ? 'checked' : ''}></label>
         <p class="pr-status" hidden></p>
       </div>
-      <div class="card pa-widgets"><b>📱 Home-screen widgets</b><small>Treat jars, a fun fact and the Adventure card. Touch and hold an empty spot on your home screen, tap Widgets, then find MN.</small></div>
-      <h2 class="pa-h">Play time and rewards</h2>
-      <button class="pa-row card limits"><b>${st.limitMinutes} minutes a day</b><small>${st.timeUpMode === 'stop' ? 'Stops when time is up' : 'Keeps playing without coins'} · treats ${paceText(st.treatPace, 'treat')}, big toy ${paceText(st.goalPace, 'goal')}</small></button>
-      <h2 class="pa-h">Look</h2>
-      <div class="themes" role="radiogroup" aria-label="Look of the app">${THEME_CHOICES.map((t) => `<button class="theme-tile th-${t.id}${st.theme === t.id ? ' on' : ''}" role="radio" aria-checked="${st.theme === t.id}" data-theme-id="${t.id}"><span class="th-swatch"><i></i><i></i><i></i></span><b>${t.name}</b><small>${t.note}</small></button>`).join('')}</div>
-      <h2 class="pa-h">Settings</h2>
+      <div class="card pa-widgets"><b>📱 Home-screen widgets</b><small>Treat jars, a fun fact and the Adventure card. Touch and hold an empty spot on your home screen, tap Widgets, then find MN.</small></div>`,
+    audio: () => `
       <button class="pa-row card voice-row"><b>Reading voice</b><small>${st.voiceName ? 'Chosen voice' : 'Automatic (clearest)'} · ${st.voiceRate < 0.9 ? 'slow' : st.voiceRate > 1 ? 'quick' : 'normal speed'}</small></button>
-      <div class="card pa-timer"><div class="pt-head"><b>Time per question</b><span class="pt-val"></span></div>
-        <small>For timed levels (Speed and Master) and boss fights.</small>
-        <input type="range" class="slider pt-slider" min="${TIMER_MIN}" max="${TIMER_OFF}" step="5" value="${st.timerSeconds || TIMER_OFF}" aria-label="Seconds per question">
-        <div class="pt-marks" aria-hidden="true">${TIMER_MARKS.map(([v, t]) => `<span style="--at:${(100 * (v - TIMER_MIN)) / (TIMER_OFF - TIMER_MIN)}%">${t}</span>`).join('')}</div>
-        <p class="pt-note"></p></div>
-      <div class="card pa-toggles">${TOGGLES.map((t) => `<label class="toggle-row"><span><b>${t.label}</b><small>${t.note}</small></span><input type="checkbox" role="switch" data-k="${t.key}" ${st[t.key] ? 'checked' : ''}></label>`).join('')}</div>
-      ${faceoffRows(app)}
+      <div class="card pa-toggles">${toggleRows(st, [T('sound', 'Sound effects', 'Taps, cheers and coins.'), T('voice', 'Read questions aloud', 'Plus reads each question and tip.'), T('vibration', 'Vibration', 'Gentle buzzes on taps and answers.')])}</div>`,
+    device: () => `<div class="card pa-toggles">${toggleRows(st, [T('fx3d', '3D boss fights', 'Turn off if fights feel slow on this phone.'), T('showFps', 'Show frame rate', 'For testing: how smoothly the app runs.')])}</div>`,
+    security: () => `
       <button class="pa-row card lock-row"><b>Grown-up lock</b><small>${st.parentPin ? 'Parent PIN' : 'This phone’s screen lock'}</small></button>
-      <h2 class="pa-h">Access key</h2>
-      <button class="pa-row card key-row"><b>Access key</b><small class="key-left">Checking…</small></button>
-      <h2 class="pa-h">How it works</h2>
+      <button class="pa-row card key-row"><b>Access key</b><small class="key-left">Checking…</small></button>`,
+    help: () => `
       <button class="pa-row card story-row"><b>▶ Watch the one-minute video</b><small>What MN does and how it keeps children going</small></button>
       <button class="pa-row card tips-row"><b>Show Plus’s map tips again</b><small>Each child sees the tips the next time they open the map</small></button>
-      <h2 class="pa-h">Reward categories</h2>
-      <div class="card pa-cats">${CATEGORIES.map((c) => `<label class="toggle-row"><span><b>${c.icon} ${esc(c.name)}</b></span><input type="checkbox" role="switch" data-c="${c.id}" ${st.hiddenCategories.includes(c.id) ? '' : 'checked'}></label>`).join('')}</div>
-    </div>
+      <button class="pa-row card adv-what"><b>🎮 What is Adventure?</b><small>Quests, chests, badges, the wardrobe, the raid and the pet</small></button>
+      ${faceoffRows(app)}`,
+  };
+  return `<nav class="pa-groups" role="tablist" aria-label="Settings groups">${GROUPS.map((g) => `<button role="tab" class="pa-group" data-g="${g.id}" aria-selected="${g.id === group}"><span aria-hidden="true">${g.icon}</span>${g.name}</button>`).join('')}</nav>
+    <div class="pa-panel" role="tabpanel">${body[group]()}</div>`;
+}
+
+export function parentScreen(app: App): Screen {
+  const el = html(`<section class="screen parent" aria-label="Parent area">
+    <header class="topbar"><button class="icon-btn back-btn" aria-label="Back">${ICONS.back}</button><span class="t">Parent area</span><span style="width:50px"></span></header>
+    <div class="seg pa-mode" role="tablist" aria-label="Settings"><button role="tab" class="seg-b" data-mode="basic"><b>Basic</b></button><button role="tab" class="seg-b" data-mode="advanced"><b>Advanced</b></button></div>
+    <div class="scroll pa-body"></div>
   </section>`);
+  const body = el.querySelector<HTMLElement>('.pa-body')!;
+  const render = (animate: boolean) => {
+    el.querySelectorAll<HTMLElement>('.pa-mode .seg-b').forEach((b) => {
+      const on = b.dataset.mode === mode;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-selected', String(on));
+    });
+    body.innerHTML = mode === 'basic' ? basicHtml(app) : advancedHtml(app);
+    body.scrollTop = 0;
+    bind(app, el, body, render);
+    if (animate) stagger(body.querySelectorAll(mode === 'basic' ? '.pa-sec, .pa-more' : '.pa-panel > *'), { gap: 40 });
+  };
+  el.querySelector('.pa-mode')!.addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLElement>('.seg-b');
+    if (!b || b.dataset.mode === mode) return;
+    mode = b.dataset.mode as typeof mode;
+    render(true);
+  });
   el.querySelector('.back-btn')!.addEventListener('click', () => void app.show(whosPlayingScreen));
-  el.querySelector('.add-kid')!.addEventListener('click', () => void app.show(addChildScreen(false)));
-  el.querySelector('.restore-kid')!.addEventListener('click', () => void restoreFromFile(app, () => void app.show(parentScreen)));
-  el.querySelector('.limits')!.addEventListener('click', () => void app.show(limitsScreen(false)));
-  el.querySelector('.bk-all')!.addEventListener('click', async () => {
+  render(false);
+  return {
+    el,
+    mounted: () => {
+      stagger(body.querySelectorAll(mode === 'basic' ? '.pa-sec, .pa-more' : '.pa-panel > *'), { gap: 40 });
+      void firstAsk(app);
+    },
+  };
+}
+
+/** Hook up whatever is showing (Basic or one Advanced group). */
+function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: boolean) => void): void {
+  const on = <K extends keyof HTMLElementEventMap>(sel: string, ev: K, fn: (b: HTMLElement) => void) => body.querySelectorAll<HTMLElement>(sel).forEach((b) => b.addEventListener(ev, () => fn(b)));
+  const kid = (b: HTMLElement) => app.save.data.children.find((k) => k.id === b.dataset.id)!;
+  on('.to-adv', 'click', () => {
+    mode = 'advanced';
+    render(true);
+  });
+  on('.pa-group', 'click', (b) => {
+    group = b.dataset.g as Group;
+    render(true);
+  });
+  on('.kid-set', 'click', (b) => void app.show(childSettingsScreen(kid(b))));
+  on('.report', 'click', (b) => void app.show(reportScreen(kid(b))));
+  on('.add-kid', 'click', () => void app.show(addChildScreen(false)));
+  on('.restore-kid', 'click', () => void restoreFromFile(app, () => void app.show(parentScreen)));
+  on('.limits', 'click', () => void app.show(limitsScreen(false)));
+  on('.bk-all', 'click', async () => {
     const kids = app.save.data.children;
     const n = await backUpNow(app, kids);
     if (n) app.toast(n === kids.length ? 'Backed up! Keep the file somewhere safe, like Google Drive.' : `Saved ${n} of ${kids.length}.`);
-    if (n) void app.show(parentScreen);
+    if (n) render(false);
   });
-  // Reminders: switches, notes a day, and whether the phone lets MN send notes.
+  on('.theme-tile', 'click', (b) => {
+    const theme = b.dataset.themeId as Theme;
+    app.save.update((d) => (d.settings.theme = theme));
+    app.applyTheme(theme);
+    body.querySelectorAll('.theme-tile').forEach((x) => {
+      x.classList.toggle('on', x === b);
+      x.setAttribute('aria-checked', String(x === b));
+    });
+  });
+  on('[data-k]', 'change', (b) => {
+    const i = b as HTMLInputElement;
+    const k = i.dataset.k as keyof Settings;
+    app.save.update((d) => ((d.settings as unknown as Record<string, boolean>)[k] = i.checked));
+    if (k === 'sound') app.sfx.enabled = i.checked;
+    if (k === 'voice') app.voice.enabled = i.checked;
+    if (k === 'vibration') app.haptics.enabled = i.checked;
+    if (k === 'showFps') app.fps.set(i.checked);
+  });
+  on('[data-c]', 'change', (b) => {
+    const i = b as HTMLInputElement;
+    app.save.update((d) => {
+      const set = new Set(d.settings.hiddenCategories);
+      if (i.checked) set.delete(i.dataset.c!);
+      else set.add(i.dataset.c!);
+      d.settings.hiddenCategories = [...set];
+    });
+  });
+  // Notes: switches, notes a day, and whether the phone lets MN send notes.
   const setRemind = (patch: Partial<ReminderSettings>) => app.save.update((d) => (d.settings.reminders = { ...DEFAULT_REMINDERS, ...d.settings.reminders, ...patch }));
-  el.querySelectorAll<HTMLInputElement>('[data-r]').forEach((i) =>
-    i.addEventListener('change', () => {
-      setRemind({ [i.dataset.r as 'melt' | 'backup']: i.checked });
-      if (i.dataset.r === 'melt') el.querySelector<HTMLElement>('.pr-per')!.hidden = !i.checked;
-      if (i.checked) void paintNotes(true);
-    }),
-  );
-  el.querySelectorAll<HTMLButtonElement>('.pr-per .seg-b').forEach((b) =>
-    b.addEventListener('click', () => {
-      setRemind({ perDay: Number(b.dataset.per) as 2 | 3 });
-      el.querySelectorAll('.pr-per .seg-b').forEach((x) => {
-        x.classList.toggle('on', x === b);
-        x.setAttribute('aria-checked', String(x === b));
-      });
-    }),
-  );
-  const status = el.querySelector<HTMLElement>('.pr-status')!;
+  const status = body.querySelector<HTMLElement>('.pr-status');
   const paintNotes = async (ask = false) => {
+    if (!status) return;
     let n = await notificationState(app);
     if (!n) return;
     if (!n.enabled && n.canAsk && ask) n = { enabled: await askNotifications(app), canAsk: false };
@@ -153,68 +240,85 @@ export function parentScreen(app: App): Screen {
     status.querySelector('.pr-allow')?.addEventListener('click', () => void paintNotes(true));
     status.querySelector('.pr-open')?.addEventListener('click', () => void app.native?.openNotificationSettings?.());
   };
+  on('[data-r]', 'change', (b) => {
+    const i = b as HTMLInputElement;
+    setRemind({ [i.dataset.r as 'melt' | 'backup']: i.checked });
+    if (i.dataset.r === 'melt') body.querySelector<HTMLElement>('.pr-per')!.hidden = !i.checked;
+    if (i.checked) void paintNotes(true);
+  });
+  on('.pr-per .seg-b', 'click', (b) => {
+    setRemind({ perDay: Number(b.dataset.per) as 2 | 3 });
+    body.querySelectorAll('.pr-per .seg-b').forEach((x) => {
+      x.classList.toggle('on', x === b);
+      x.setAttribute('aria-checked', String(x === b));
+    });
+  });
   void paintNotes();
-  el.querySelector('.voice-row')!.addEventListener('click', () => void app.show(voiceScreen));
-  const ts = el.querySelector<HTMLInputElement>('.pt-slider')!;
-  const paintTimer = () => {
-    const v = Number(ts.value);
-    const secs = v >= TIMER_OFF ? 0 : v;
-    el.querySelector('.pt-val')!.textContent = secs ? `${secs} seconds` : 'No timer';
-    el.querySelector('.pt-note')!.textContent = timerNote(secs);
-    ts.style.setProperty('--p', `${(100 * (v - TIMER_MIN)) / (TIMER_OFF - TIMER_MIN)}%`);
-    return secs;
-  };
-  paintTimer();
-  ts.addEventListener('input', paintTimer);
-  ts.addEventListener('change', () => {
-    const secs = paintTimer();
-    app.save.update((d) => (d.settings.timerSeconds = secs));
-  });
-  el.querySelector('.lock-row')!.addEventListener('click', () => void app.show(lockSetupScreen(parentScreen)));
-  void accessState(app).then((st) => {
-    const small = el.querySelector('.key-left')!;
-    small.textContent = st.locked ? 'No working key' : st.owner ? 'Owner’s phone: always unlocked' : st.until !== undefined ? `Works until ${niceDay(st.until)} · phone code ${st.phone}` : `Phone code ${st.phone}`;
-    el.querySelector('.key-row')!.addEventListener('click', () => void app.show(lockScreen(st, () => void app.show(parentScreen), { renew: true, back: () => void app.show(parentScreen) })));
-  });
-  el.querySelector('.story-row')!.addEventListener('click', () => void app.show(reelScreen({ first: false, label: 'Done', done: () => void app.show(parentScreen) }), 'liquid'));
-  el.querySelector('.tips-row')!.addEventListener('click', () => {
+  on('.voice-row', 'click', () => void app.show(voiceScreen));
+  const ts = body.querySelector<HTMLInputElement>('.pt-slider');
+  if (ts) {
+    const paintTimer = () => {
+      const v = Number(ts.value);
+      const secs = v >= TIMER_OFF ? 0 : v;
+      body.querySelector('.pt-val')!.textContent = secs ? `${secs} seconds` : 'No timer';
+      body.querySelector('.pt-note')!.textContent = timerNote(secs);
+      ts.style.setProperty('--p', `${(100 * (v - TIMER_MIN)) / (TIMER_OFF - TIMER_MIN)}%`);
+      return secs;
+    };
+    paintTimer();
+    ts.addEventListener('input', paintTimer);
+    ts.addEventListener('change', () => {
+      const secs = paintTimer();
+      app.save.update((d) => (d.settings.timerSeconds = secs));
+    });
+  }
+  on('.lock-row', 'click', () => void app.show(lockSetupScreen(parentScreen)));
+  if (body.querySelector('.key-row')) {
+    void accessState(app).then((st) => {
+      const small = body.querySelector('.key-left');
+      if (!small) return;
+      small.textContent = st.locked ? 'No working key' : st.owner ? 'Owner’s phone: always unlocked' : st.until !== undefined ? `Works until ${niceDay(st.until)} · phone code ${st.phone}` : `Phone code ${st.phone}`;
+      body.querySelector('.key-row')!.addEventListener('click', () => void app.show(lockScreen(st, () => void app.show(parentScreen), { renew: true, back: () => void app.show(parentScreen) })));
+    });
+  }
+  on('.story-row', 'click', () => void app.show(reelScreen({ first: false, label: 'Done', done: () => void app.show(parentScreen) }), 'liquid'));
+  on('.tips-row', 'click', () => {
     app.save.update((d) => d.children.forEach((c) => (c.toured = false)));
     app.toast('Done. The tips show next time each child opens the map.');
   });
-  el.querySelectorAll<HTMLButtonElement>('.theme-tile').forEach((b) =>
-    b.addEventListener('click', () => {
-      const theme = b.dataset.themeId as Theme;
-      app.save.update((d) => (d.settings.theme = theme));
-      app.applyTheme(theme);
-      el.querySelectorAll('.theme-tile').forEach((x) => {
-        x.classList.toggle('on', x === b);
-        x.setAttribute('aria-checked', String(x === b));
-      });
-    }),
-  );
-  el.querySelectorAll<HTMLInputElement>('[data-k]').forEach((i) =>
-    i.addEventListener('change', () => {
-      const k = i.dataset.k as keyof Settings;
-      app.save.update((d) => ((d.settings as unknown as Record<string, boolean>)[k] = i.checked));
-      if (k === 'sound') app.sfx.enabled = i.checked;
-      if (k === 'voice') app.voice.enabled = i.checked;
-      if (k === 'vibration') app.haptics.enabled = i.checked;
-      if (k === 'showFps') app.fps.set(i.checked);
-    }),
-  );
-  el.querySelectorAll<HTMLInputElement>('[data-c]').forEach((i) =>
-    i.addEventListener('change', () =>
-      app.save.update((d) => {
-        const set = new Set(d.settings.hiddenCategories);
-        if (i.checked) set.delete(i.dataset.c!);
-        else set.add(i.dataset.c!);
-        d.settings.hiddenCategories = [...set];
-      }),
-    ),
-  );
-  el.querySelectorAll<HTMLButtonElement>('.level-btn').forEach((b) =>
-    b.addEventListener('click', async () => {
-      const c = app.save.data.children.find((k) => k.id === b.dataset.id)!;
+  on('.adv-what', 'click', () => void showParentAdventureTips(app, el));
+}
+
+/** One child's settings: report, age, difficulty, school path, Adventure, the dragon map, with a grown-up. */
+export function childSettingsScreen(c: Child) {
+  return (app: App): Screen => {
+    const here = childSettingsScreen(c);
+    const el = html(`<section class="screen parent kid-settings" aria-label="Settings for ${esc(c.name)}">
+      <header class="topbar"><button class="icon-btn back-btn" aria-label="Back">${ICONS.back}</button><span class="t">${esc(c.name)}</span><span style="width:50px"></span></header>
+      <div class="scroll pa-body">
+        <div class="ks-hero">${avatarHtml(c.avatar, 64)}<b>${esc(c.name)}</b><small>Age ${c.age}</small></div>
+        <button class="pa-row card report" data-id="${c.id}"><b>${ICONS.chart} Report</b><small>What ${esc(c.name)} has learned, and where they need help</small></button>
+        <h2 class="pa-h">Learning</h2>
+        <button class="pa-row card age-btn"><b>🎂 Age</b><small>${c.age} · questions follow the age</small></button>
+        <button class="pa-row card level-btn"><b>${CHALLENGE[c.challenge ?? 0].icon} Difficulty</b><small>${CHALLENGE[c.challenge ?? 0].name} · ${CHALLENGE[c.challenge ?? 0].note}</small></button>
+        <button class="pa-row card school-btn"><b>📚 School path</b><small>${c.school?.on ? esc(schoolLabel(c.school)) : 'Off · follow the school syllabus instead of the age path'}</small></button>
+        <div class="card pa-toggles">
+          <label class="toggle-row"><span><b>👪 With a grown-up</b><small>No timers; after a slip they try one like it. On by default for ages 3–6.</small></span><input type="checkbox" role="switch" class="assist-btn" ${c.assisted ? 'checked' : ''}></label>
+        </div>
+        <h2 class="pa-h">Fun</h2>
+        <div class="card pa-toggles">
+          <label class="toggle-row"><span><b>🎮 Adventure</b><small>Quests, chests, badges, a wardrobe for Plus, a weekly raid and a pet.</small></span><input type="checkbox" role="switch" class="adv-toggle" ${c.adventure?.on ? 'checked' : ''}></label>
+          ${DRAGON_MAP ? `<label class="toggle-row"><span><b>🐉 Dragon map</b><small>The same levels, along a dragon curve that unfolds chapter by chapter.</small></span><input type="checkbox" role="switch" class="dragon-toggle" ${c.dragonMap ? 'checked' : ''}></label>` : ''}
+        </div>
+        <button class="linkish adv-what">🎮 What is Adventure?</button>
+      </div>
+    </section>`);
+    const back = () => void app.show(parentScreen);
+    el.querySelector('.back-btn')!.addEventListener('click', back);
+    el.querySelector('.report')!.addEventListener('click', () => void app.show(reportScreen(c)));
+    el.querySelector('.age-btn')!.addEventListener('click', () => void app.show(ageScreen(c)));
+    el.querySelector('.school-btn')!.addEventListener('click', () => void app.show(schoolScreen(c, here)));
+    el.querySelector('.level-btn')!.addEventListener('click', async () => {
       const actions: { label: string; value: number; kind: 'mint' | 'ghost'; back?: boolean }[] = [
         ...CHALLENGE.map((x, i) => ({ label: `${x.icon} ${x.name} — ${x.note}`, value: i, kind: i === (c.challenge ?? 0) ? ('mint' as const) : ('ghost' as const) })),
         { label: 'Cancel', value: -1, kind: 'ghost', back: true },
@@ -223,54 +327,24 @@ export function parentScreen(app: App): Screen {
       const v = await result;
       if (v === -1) return;
       app.save.update(() => (c.challenge = v as 0 | 1 | 2));
-      void app.show(parentScreen);
-    }),
-  );
-  el.querySelectorAll<HTMLButtonElement>('.school-btn').forEach((b) =>
-    b.addEventListener('click', () => {
-      const c = app.save.data.children.find((x) => x.id === b.dataset.id);
-      if (c) void app.show(schoolScreen(c, parentScreen));
-    }),
-  );
-  el.querySelectorAll<HTMLButtonElement>('.age-btn').forEach((b) =>
-    b.addEventListener('click', () => void app.show(ageScreen(app.save.data.children.find((k) => k.id === b.dataset.id)!))),
-  );
-  el.querySelectorAll<HTMLButtonElement>('.adv-toggle').forEach((b) =>
-    b.addEventListener('click', async () => {
-      const c = app.save.data.children.find((k) => k.id === b.dataset.id)!;
+      void app.show(here);
+    });
+    el.querySelector('.assist-btn')!.addEventListener('change', () => {
+      app.save.update(() => (c.assisted = !c.assisted));
+      app.toast(c.assisted ? `Assisted mode on: play alongside ${c.name}. No timers; after a slip they try one like it.` : `Assisted mode off for ${c.name}.`);
+    });
+    el.querySelector('.adv-toggle')!.addEventListener('change', async () => {
       const on = toggleAdventure(app, c);
       // Turning it on: show the grown-up what their child will get.
       if (on) await showParentAdventureTips(app, el);
       app.toast(on ? `Adventure on for ${c.name}.` : `Adventure off for ${c.name}. Badges are kept for later.`);
-      void app.show(parentScreen);
-    }),
-  );
-  el.querySelector('.adv-what')!.addEventListener('click', () => void showParentAdventureTips(app, el));
-  el.querySelectorAll<HTMLButtonElement>('.dragon-toggle').forEach((b) =>
-    b.addEventListener('click', () => {
-      const c = app.save.data.children.find((k) => k.id === b.dataset.id)!;
+    });
+    el.querySelector('.dragon-toggle')?.addEventListener('change', () => {
       app.save.update(() => (c.dragonMap = !c.dragonMap));
       app.toast(c.dragonMap ? `Dragon map on for ${c.name}.` : `Dragon map off for ${c.name}. Progress stays the same.`);
-      void app.show(parentScreen);
-    }),
-  );
-  el.querySelectorAll<HTMLButtonElement>('.assist-btn').forEach((b) =>
-    b.addEventListener('click', () => {
-      const c = app.save.data.children.find((k) => k.id === b.dataset.id)!;
-      app.save.update(() => (c.assisted = !c.assisted));
-      app.toast(c.assisted ? `Assisted mode on: play alongside ${c.name}. No timers; after a slip they try one like it.` : `Assisted mode off for ${c.name}.`);
-      void app.show(parentScreen);
-    }),
-  );
-  el.querySelectorAll<HTMLButtonElement>('.report').forEach((b) =>
-    b.addEventListener('click', () => void app.show(reportScreen(app.save.data.children.find((c) => c.id === b.dataset.id)!))),
-  );
-  return {
-    el,
-    mounted: () => {
-      stagger(el.querySelectorAll('.pa-body > *'), { gap: 40 });
-      void firstAsk(app);
-    },
+    });
+    el.querySelector('.adv-what')!.addEventListener('click', () => void showParentAdventureTips(app, el));
+    return { el, back: () => (back(), true), mounted: () => stagger(el.querySelectorAll('.pa-body > *'), { gap: 35 }) };
   };
 }
 
@@ -290,7 +364,7 @@ async function firstAsk(app: App): Promise<void> {
   );
   if (await result) {
     const ok = await askNotifications(app);
-    app.toast(ok ? 'Notes are on. You’ll find them under Backups and reminders.' : 'No notes for now. You can turn them on under Backups and reminders.');
+    app.toast(ok ? 'Notes are on. Change them any time in Advanced → Notes.' : 'No notes for now. You can turn them on in Advanced → Notes.');
   }
 }
 
@@ -323,7 +397,7 @@ function ageScreen(child: Child) {
       age = Number(b.dataset.age);
       el.querySelectorAll('.ac-age').forEach((x) => x.classList.toggle('on', x === b));
     });
-    el.querySelector('.back-btn')!.addEventListener('click', () => void app.show(parentScreen));
+    el.querySelector('.back-btn')!.addEventListener('click', () => void app.show(childSettingsScreen(child)));
     el.querySelector('.ac-next')!.addEventListener('click', () => {
       const younger = age < child.age;
       app.save.update(() => {
@@ -335,8 +409,8 @@ function ageScreen(child: Child) {
         }
       });
       app.toast(younger ? `${child.name} is now ${age}. A few placement questions come next time they play.` : `${child.name} is now ${age}.`);
-      void app.show(parentScreen);
+      void app.show(childSettingsScreen(child));
     });
-    return { el, back: () => (void app.show(parentScreen), true) };
+    return { el, back: () => (void app.show(childSettingsScreen(child)), true) };
   };
 }
