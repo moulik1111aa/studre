@@ -2,7 +2,7 @@
  * MN Mission Next: email notes for access requests (free, runs in your own Google account).
  *
  * Every 5 minutes this script looks at MN's cloud (Firestore, project mn-mission-next):
- *  - someone asked to use MN  → an email to you;
+ *  - someone asked to use MN  → an email to them ("we've got your request"), with a hidden copy to you;
  *  - you approved someone      → a welcome email to them ("You're in"), only once SEND_WELCOME is true.
  * It only reads the cloud; it never changes anything there.
  *
@@ -11,7 +11,7 @@
  */
 
 const PROJECT = 'mn-mission-next';
-/** Where request notes go. */
+/** Gets a hidden copy (bcc) of every request email. */
 const NOTIFY_TO = 'mbatechindore@gmail.com';
 /** Welcome emails to approved people: on hold for now. Set to true to start them (only approvals from then on get one). */
 const SEND_WELCOME = false;
@@ -43,7 +43,8 @@ function check() {
   const approved = {};
   access.forEach((d) => (approved[d.id] = d.f));
 
-  // New requests (from someone not approved yet): a note to you.
+  // New requests (from someone not approved yet): an email to them, with a hidden copy to you.
+  // Once per request: tapping "Check again" in MN doesn't send another.
   const requests = list_('requests');
   const stillOpen = {};
   requests.forEach((d) => {
@@ -51,13 +52,16 @@ function check() {
     const at = Number(r.at || 0);
     stillOpen[d.id] = at;
     if (approved[String(r.email || '').toLowerCase()]) return;
-    if (seenReq[d.id] === at) return;
+    if (d.id in seenReq) return;
     seenReq[d.id] = at;
-    const who = r.name ? r.name + ' (' + r.email + ')' : r.email;
-    send_(NOTIFY_TO, 'MN: ' + (r.name || r.email) + ' asked to use MN',
-      '<p><b>' + esc_(who) + '</b> signed in to MN with Google and is waiting for your approval.</p>' +
-      '<p>Phone code: <b>' + esc_(r.phone || '?') + '</b><br>Asked: ' + esc_(when_(at)) + '</p>' +
-      '<p style="color:#5B5F7A;font-size:13px">Approve or deny them in MN Access. They can keep using a phone-code key meanwhile.</p>');
+    if (!r.email) return;
+    send_(String(r.email), 'MN Mission Next: we’ve got your request',
+      '<p>Hi' + (r.name ? ' ' + esc_(String(r.name).split(' ')[0]) : '') + ',</p>' +
+      '<p>Thanks for signing in to MN Mission Next with <b>' + esc_(r.email) + '</b>. Your request to use MN is with us, and we’ll let you know once it’s approved.</p>' +
+      '<p>Phone code: <b>' + esc_(r.phone || '?') + '</b><br>Requested: ' + esc_(when_(at)) + '</p>' +
+      '<p>Once you’re approved, open MN and tap <b>Check again</b>. If you have a phone-code key, you can keep using MN with it meanwhile.</p>' +
+      '<p style="color:#5B5F7A;font-size:13px">Questions? Just reply to this email.</p>',
+      NOTIFY_TO);
   });
   Object.keys(seenReq).forEach((k) => { if (!(k in stillOpen)) delete seenReq[k]; });
 
@@ -111,9 +115,10 @@ function plain_(fields) {
   return o;
 }
 
-function send_(to, subject, body) {
+function send_(to, subject, body, bcc) {
   MailApp.sendEmail({
     to: to,
+    bcc: bcc || '',
     subject: subject,
     name: FROM_NAME,
     replyTo: REPLY_TO,
