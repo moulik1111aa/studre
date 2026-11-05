@@ -55,5 +55,8 @@ jobs:
         run: |
           printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
-          npx --yes firebase-tools@13 deploy --only hosting,firestore:rules --project mn-mission-next --non-interactive
+          npx --yes firebase-tools@13 deploy --only hosting --project mn-mission-next --non-interactive
+          # The rules too (a warning, not a failure, if the account can't publish rules yet).
+          npx --yes firebase-tools@13 deploy --only firestore:rules --project mn-mission-next --non-interactive \
+            || echo "::warning::The website is published, but the Firestore rules weren't. Check the service account has the Firebase Admin role."
           rm -f "$RUNNER_TEMP/sa.json"
