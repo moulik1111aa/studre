@@ -1,0 +1,126 @@
+/**
+ * MN Mission Next: email notes for access requests (free, runs in your own Google account).
+ *
+ * Every 5 minutes this script looks at MN's cloud (Firestore, project mn-mission-next):
+ *  - someone asked to use MN  → an email to you, with a link to MN Access to approve them;
+ *  - you approved someone      → a welcome email to them ("You're in").
+ * It only reads the cloud; it never changes anything there.
+ *
+ * Set up once: paste this file and appsscript.json into a new project at script.google.com,
+ * then run setup() and allow the permissions it asks for. That's it.
+ */
+
+const PROJECT = 'mn-mission-next';
+/** Where request notes go. */
+const NOTIFY_TO = 'moulik1111a@gmail.com';
+/** What people see as the sender, and where their replies go. */
+const FROM_NAME = 'MN Mission Next';
+const REPLY_TO = 'moulikmishra11@gmail.com';
+const ACCESS_PAGE = 'https://mn-mission-next.web.app/admin';
+const PRIVACY = 'https://mn-mission-next.web.app/privacy';
+
+/** Run this once by hand: it remembers who is already approved (no emails for them) and starts the 5-minute check. */
+function setup() {
+  const props = PropertiesService.getScriptProperties();
+  const access = list_('access');
+  const seen = {};
+  access.forEach((d) => (seen[d.id] = Number(d.f.addedAt || 0)));
+  props.setProperty('seenAccess', JSON.stringify(seen));
+  props.setProperty('seenRequests', '{}');
+  ScriptApp.getProjectTriggers().forEach((t) => ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger('check').timeBased().everyMinutes(5).create();
+  check();
+  Logger.log('Set up. ' + access.length + ' approved account(s) noted; checking every 5 minutes.');
+}
+
+/** Runs every 5 minutes. */
+function check() {
+  const props = PropertiesService.getScriptProperties();
+  const seenReq = JSON.parse(props.getProperty('seenRequests') || '{}');
+  const seenAcc = JSON.parse(props.getProperty('seenAccess') || '{}');
+  const access = list_('access');
+  const approved = {};
+  access.forEach((d) => (approved[d.id] = d.f));
+
+  // New requests (from someone not approved yet): a note to you.
+  const requests = list_('requests');
+  const stillOpen = {};
+  requests.forEach((d) => {
+    const r = d.f;
+    const at = Number(r.at || 0);
+    stillOpen[d.id] = at;
+    if (approved[String(r.email || '').toLowerCase()]) return;
+    if (seenReq[d.id] === at) return;
+    seenReq[d.id] = at;
+    const who = r.name ? r.name + ' (' + r.email + ')' : r.email;
+    send_(NOTIFY_TO, 'MN: ' + (r.name || r.email) + ' asked to use MN',
+      '<p><b>' + esc_(who) + '</b> signed in to MN with Google and is waiting for your approval.</p>' +
+      '<p>Phone code: <b>' + esc_(r.phone || '?') + '</b><br>Asked: ' + esc_(when_(at)) + '</p>' +
+      button_(ACCESS_PAGE, 'Open MN Access') +
+      '<p style="color:#5B5F7A;font-size:13px">Approve or deny them there. They can keep using a phone-code key meanwhile.</p>');
+  });
+  Object.keys(seenReq).forEach((k) => { if (!(k in stillOpen)) delete seenReq[k]; });
+
+  // Newly approved accounts: a welcome email to them.
+  access.forEach((d) => {
+    const a = d.f;
+    const added = Number(a.addedAt || 0);
+    if (seenAcc[d.id] === added) return;
+    seenAcc[d.id] = added;
+    const until = Number(a.until || 0);
+    send_(d.id, 'You’re in: MN Mission Next is ready',
+      '<p>Hi' + (a.name ? ' ' + esc_(String(a.name).split(' ')[0]) : '') + ',</p>' +
+      '<p>Your Google account <b>' + esc_(d.id) + '</b> can now use MN' + (until ? ', until ' + esc_(day_(until)) : '') + '.</p>' +
+      '<p>Open MN on your phone and tap <b>Check again</b>, or just close MN and open it again. Your children’s progress is backed up from now on.</p>' +
+      '<p style="color:#5B5F7A;font-size:13px">Questions? Just reply to this email. Privacy policy: <a href="' + PRIVACY + '">' + PRIVACY + '</a></p>');
+  });
+  Object.keys(seenAcc).forEach((k) => { if (!approved[k]) delete seenAcc[k]; });
+
+  props.setProperty('seenRequests', JSON.stringify(seenReq));
+  props.setProperty('seenAccess', JSON.stringify(seenAcc));
+}
+
+// ── helpers ──────────────────────────────────────────────────────────────
+
+/** Every document in a collection, as { id, f: plain fields }. */
+function list_(collection) {
+  const out = [];
+  let page = '';
+  for (let n = 0; n < 20; n++) {
+    const url = 'https://firestore.googleapis.com/v1/projects/' + PROJECT + '/databases/(default)/documents/' + collection + '?pageSize=300' + (page ? '&pageToken=' + encodeURIComponent(page) : '');
+    const res = UrlFetchApp.fetch(url, {
+      headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken(), 'x-goog-user-project': PROJECT },
+      muteHttpExceptions: true,
+    });
+    if (res.getResponseCode() !== 200) throw new Error('Firestore ' + collection + ': ' + res.getResponseCode() + ' ' + res.getContentText().slice(0, 300));
+    const j = JSON.parse(res.getContentText());
+    (j.documents || []).forEach((d) => out.push({ id: decodeURIComponent(d.name.split('/').pop()), f: plain_(d.fields || {}) }));
+    if (!j.nextPageToken) break;
+    page = j.nextPageToken;
+  }
+  return out;
+}
+
+function plain_(fields) {
+  const o = {};
+  Object.keys(fields).forEach((k) => {
+    const v = fields[k];
+    o[k] = 'stringValue' in v ? v.stringValue : 'integerValue' in v ? Number(v.integerValue) : 'doubleValue' in v ? v.doubleValue : 'booleanValue' in v ? v.booleanValue : null;
+  });
+  return o;
+}
+
+function send_(to, subject, body) {
+  MailApp.sendEmail({
+    to: to,
+    subject: subject,
+    name: FROM_NAME,
+    replyTo: REPLY_TO,
+    htmlBody: '<div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-size:15px;line-height:1.5;color:#16182B;max-width:520px">' + body + '<p style="color:#5B5F7A;font-size:13px;margin-top:24px">MN Mission Next</p></div>',
+  });
+}
+
+const button_ = (href, label) => '<p><a href="' + href + '" style="display:inline-block;background:#3D4BE0;color:#fff;text-decoration:none;font-weight:600;padding:10px 16px;border-radius:8px">' + label + '</a></p>';
+const esc_ = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const when_ = (ms) => Utilities.formatDate(new Date(ms), 'Asia/Kolkata', 'd MMM yyyy, h:mm a') + ' IST';
+const day_ = (ms) => Utilities.formatDate(new Date(ms), 'Asia/Kolkata', 'd MMM yyyy');
