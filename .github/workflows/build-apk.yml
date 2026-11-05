@@ -16,7 +16,7 @@ name: Build APK
 on:
   push:
     branches: [main]
-    paths-ignore: ['docs/**', 'README.md']
+    paths-ignore: ['docs/**', 'site/**', 'src/admin/**', 'scripts/site.mjs', 'firebase.json', '.firebaserc', '.github/workflows/site.yml', 'README.md']
   workflow_dispatch:
     inputs:
       smoke:

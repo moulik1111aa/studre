@@ -70,7 +70,7 @@ __req(${JSON.stringify(entryId)});
 }
 
 /** Make a string safe to place inside an inline <script> element. */
-const scriptSafe = (s) => s.replace(/<\/(script)/gi, '<\\/$1').replace(/<!--/g, '<\\!--');
+export const scriptSafe = (s) => s.replace(/<\/(script)/gi, '<\\/$1').replace(/<!--/g, '<\\!--');
 
 /** The theme fonts (Inter Display, TeX Gyre Schola), vendored in assets/fonts and inlined. */
 const FONT_FILES = [

@@ -123,7 +123,7 @@ async function consent(app: App): Promise<boolean> {
      <p>For grown-ups only. MN keeps a private copy of your family’s progress in your own space in Google’s cloud (Mumbai), so it is backed up and the same on every phone:</p>
      <ul class="cl-list"><li>your Google email and name</li><li>each child’s first name, age and avatar</li><li>levels, stars, rewards and play times</li><li>your family’s settings, like time limits and quiet hours</li></ul>
      <p>No photos, location or contacts, and no ads. You can delete the cloud copy any time in the Parent area.</p>
-     <p class="fine" style="overflow-wrap:anywhere">Privacy policy: moulik1111aa.github.io/studre/privacy.html</p>`,
+     <p class="fine" style="overflow-wrap:anywhere">Privacy policy: mn-mission-next.web.app/privacy</p>`,
     [
       { label: 'I agree, sign in', value: true, kind: 'mint' },
       { label: 'Not now', value: false, kind: 'ghost', back: true },

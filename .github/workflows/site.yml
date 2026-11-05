@@ -1,0 +1,59 @@
+# The website on Firebase Hosting: https://mn-mission-next.web.app
+#   /         home page
+#   /privacy  privacy policy
+#   /admin    MN Access, the owner's page for approving people
+# It also publishes firestore.rules, so the cloud's rules always match the repo.
+# Needs two secrets: FIREBASE_API_KEY (as the app build) and FIREBASE_SERVICE_ACCOUNT
+# (the JSON key of the project's firebase-adminsdk service account).
+name: Website
+
+on:
+  push:
+    branches: [main]
+    paths: ['site/**', 'src/admin/**', 'src/platform/cloudapi.ts', 'scripts/site.mjs', 'scripts/build.mjs', 'firebase.json', 'firestore.rules', '.github/workflows/site.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: site
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        run: npm install --no-audit --no-fund
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - name: Build the website
+        env:
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+        run: node scripts/site.mjs _site
+      - name: Check the publishing secret
+        id: sa
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$SA" ]; then
+            echo "::warning::Add the FIREBASE_SERVICE_ACCOUNT secret to publish the website."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Publish to Firebase Hosting (and the Firestore rules)
+        if: steps.sa.outputs.ok == 'true'
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+          npx --yes firebase-tools@13 deploy --only hosting,firestore:rules --project mn-mission-next --non-interactive
+          rm -f "$RUNNER_TEMP/sa.json"

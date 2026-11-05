@@ -10,3 +10,7 @@ playwright-report/
 
 # Firebase Web API key for local builds (CI uses the FIREBASE_API_KEY secret)
 .firebase-key
+
+# The website build (scripts/site.mjs)
+_site/
+.firebase/
