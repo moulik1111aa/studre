@@ -5,6 +5,7 @@ rules_version = '2';
 //   access/{email}            the owner's approved Google accounts (only the owner writes them)
 //   requests/{uid}            "please let me in": written by the person, read by the owner
 //   checkins/{uid}            which phones an account uses, and when (read by the owner)
+//   owner/keys                the owner's list of phone-code keys made
 //   families/{uid}            a family's sync document (approved accounts only)
 //   families/{uid}/children/* one child each: the gzipped, checked backup
 service cloud.firestore {
@@ -38,6 +39,11 @@ service cloud.firestore {
       allow create, update: if mine(uid)
         && request.resource.data.keys().hasOnly(['email', 'name', 'phone', 'device', 'version', 'at'])
         && request.resource.data.email == email();
+    }
+
+    // The owner's list of phone-code keys (names, phone codes, keys; never the master key).
+    match /owner/{doc} {
+      allow read, write: if isOwner();
     }
 
     match /checkins/{uid} {

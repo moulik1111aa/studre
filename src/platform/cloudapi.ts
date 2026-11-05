@@ -66,6 +66,17 @@ export interface FamilyChanges {
   device: string;
 }
 
+/** A phone-code key the owner made (as listed in the owner area; the master key never leaves the device). */
+export interface OwnerKey {
+  id: string;
+  name: string;
+  phone: string;
+  /** Last day it works (a day number, core/access.ts). */
+  until: number;
+  key: string;
+  made: string;
+}
+
 /** What the app needs from the cloud. */
 export interface CloudBackend {
   /** This account's approval (null: not approved). */
@@ -79,6 +90,9 @@ export interface CloudBackend {
   approve(e: AccessEntry): Promise<void>;
   removeAccess(email: string): Promise<void>;
   dropRequest(uid: string): Promise<void>;
+  /** The owner's list of phone-code keys made (never the master key itself). */
+  ownerKeys(): Promise<OwnerKey[] | null>;
+  saveOwnerKeys(list: OwnerKey[]): Promise<void>;
 
   signIn(googleIdToken: string): Promise<Session>;
   getFamily(): Promise<FamilyDoc | null>;
@@ -275,6 +289,20 @@ export class FirebaseRest implements CloudBackend {
   async dropRequest(uid: string): Promise<void> {
     await this.remove(`requests/${uid}`);
   }
+  async ownerKeys(): Promise<OwnerKey[] | null> {
+    const res = await this.fs('GET', 'owner/keys');
+    if (res.status === 404) return null;
+    if (!res.ok) throw new CloudError('other', `Cloud error ${res.status}`);
+    const f = unfields(((await res.json()) as { fields?: Record<string, FsValue> }).fields);
+    try {
+      return JSON.parse(String(f.list ?? '[]')) as OwnerKey[];
+    } catch {
+      return [];
+    }
+  }
+  async saveOwnerKeys(list: OwnerKey[]): Promise<void> {
+    await this.patch('owner/keys', { list: JSON.stringify(list), at: Date.now() });
+  }
 
   async getFamily(): Promise<FamilyDoc | null> {
     const res = await this.fs('GET', this.family);
@@ -420,6 +448,15 @@ export class MemoryCloud implements CloudBackend {
     const b = this.bag<AccessRequest>('requests');
     delete b[uid];
     this.setBag('requests', b);
+  }
+  async ownerKeys() {
+    this.ownerOnly();
+    const v = this.store.get('studyhard.mockcloud.ownerkeys');
+    return v ? (JSON.parse(v) as OwnerKey[]) : null;
+  }
+  async saveOwnerKeys(list: OwnerKey[]) {
+    this.ownerOnly();
+    this.store.set('studyhard.mockcloud.ownerkeys', JSON.stringify(list));
   }
   async getFamily() {
     return this.read().family;
