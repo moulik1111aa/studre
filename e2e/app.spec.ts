@@ -1371,3 +1371,40 @@ test('google: back up from the parent area; a new phone signs in and gets the ch
   expect(errors).toEqual([]);
   await ctx.close();
 });
+
+test('google: a phone already in use signs in and combines its child with the same child from the backup', async ({ page, browser }) => {
+  // Phone A backs up Riya.
+  await page.goto('/?debug&demo=s4.x7%231&cloudmock');
+  await expect(page.locator('.map')).toBeVisible();
+  await asGoogle(page, 'moulik1111a@gmail.com|Moulik');
+  await page.evaluate(() => { const w = window as unknown as CloudW; w.__app.show(w.__screens.parentScreen); });
+  await page.locator('.cl-in').first().click();
+  await page.click('.sheet .btn.mint');
+  await expect(page.locator('.pa-cloud.on')).toBeVisible();
+  const name = await page.evaluate(() => (window as unknown as CloudW).__app.save.data.children[0].name);
+  const cloud = await page.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith('studyhard.mockcloud')).map((k) => [k, localStorage.getItem(k)!])));
+  // Phone B has been used for a while with its own child of the same name.
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const p2 = await ctx.newPage();
+  await p2.addInitScript((c) => {
+    if (!sessionStorage.getItem('seeded')) {
+      for (const [k, v] of Object.entries(c)) localStorage.setItem(k, v);
+      sessionStorage.setItem('seeded', '1');
+    }
+    Object.assign(window, { __mockGoogle: 'moulik1111a@gmail.com|Moulik', __quietPlus: true });
+  }, cloud);
+  await p2.goto('/?debug&demo=s2.add10%231&cloudmock');
+  await expect(p2.locator('.map')).toBeVisible();
+  await p2.evaluate((n) => (window as unknown as { __app: { save: { update(f: (d: { children: { name: string }[] }) => void): void } } }).__app.save.update((d) => { d.children[0].name = n; }), name);
+  await p2.evaluate(() => { const w = window as unknown as CloudW; w.__app.show(w.__screens.parentScreen); });
+  await expect(p2.locator('.pa-invite')).toBeVisible();
+  await p2.locator('.pa-invite .cl-in').click();
+  await p2.locator('.sheet', { hasText: 'I agree' }).locator('.btn.mint').click(); // consent
+  const combine = p2.locator('.sheet', { hasText: `Combine ${name}?` });
+  await expect(combine).toBeVisible();
+  await combine.locator('.btn.mint').click(); // yes, the same child
+  await expect(p2.locator('.pa-cloud.on')).toBeVisible();
+  await expect.poll(() => p2.evaluate(() => (window as unknown as CloudW).__app.save.data.children.length)).toBe(1);
+  await expect(p2.locator('.pa-invite')).toHaveCount(0);
+  await ctx.close();
+});

@@ -76,6 +76,7 @@ jobs:
           FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
         run: |
           set -o pipefail
+          if [ -n "$FIREBASE_API_KEY" ]; then echo "Google sign-in: on"; else echo "::warning::The FIREBASE_API_KEY secret is missing, so Google sign-in is hidden in this build."; fi
           npm run build 2>&1 | tee -a ci.log
 
       - name: Generate the Android project

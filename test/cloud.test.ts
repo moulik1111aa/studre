@@ -33,7 +33,7 @@ interface Cloud {
 const phone = (id: string, children: Child[] = []): Phone => ({ id, children, memo: freshMemo(), rules: familyRules(freshSettings()) });
 const cloud = (): Cloud => ({ family: null, kids: new Map(), reads: 0, writes: 0 });
 
-async function sync(ph: Phone, cl: Cloud, now: number) {
+async function sync(ph: Phone, cl: Cloud, now: number, combineWith?: (a: Child, b: Child) => Promise<boolean>) {
   cl.reads++;
   const r = await planSync({
     local: ph.children,
@@ -44,6 +44,7 @@ async function sync(ph: Phone, cl: Cloud, now: number) {
     device: ph.id,
     label: `${ph.id}'s phone`,
     now,
+    combineWith,
   });
   for (const d of r.put) (cl.kids.set(d.childId, d), cl.writes++);
   for (const id of r.del) cl.kids.delete(id);
@@ -204,4 +205,37 @@ test('after undo on this phone, its copy replaces the cloud\'s instead of mergin
   await sync(b, cl, 5000);
   await sync(a, cl, 6000);
   assert.deepEqual(Object.keys(a.children[0].progress.levels), ['s1.count5#2']);
+});
+
+test('an existing phone signs in: a child set up separately elsewhere can be combined into one', async () => {
+  const cl = cloud();
+  const a = phone('A', [kid('Riya')]);
+  play(a.children[0], 1000, 's1.count5#1', 3);
+  await sync(a, cl, 2000);
+  // Phone B had its own Riya (a different id) and Kabir, from before signing in.
+  const b = phone('B', [kid(' riya '), kid('Kabir')]);
+  play(b.children[0], 1500, 's1.count5#2', 2);
+  const oldId = b.children[0].id;
+  const asked: string[] = [];
+  const r = await sync(b, cl, 3000, async (here, there) => (asked.push(`${here.name.trim()}=${there.name}`), true));
+  assert.deepEqual(asked, ['riya=Riya']);
+  const cloudId = a.children[0].id;
+  assert.deepEqual(r.renamed, { [oldId]: cloudId });
+  assert.deepEqual(r.added, []);
+  assert.equal(b.children.length, 2);
+  const riya = b.children.find((c) => c.id === cloudId)!;
+  assert.deepEqual(Object.keys(riya.progress.levels).sort(), ['s1.count5#1', 's1.count5#2']);
+  assert.equal(riya.log!.length, 2);
+  assert.equal(Object.keys(cl.family!.kids).length, 2);
+  // Phone A gets the combined Riya, and Kabir.
+  await sync(a, cl, 4000);
+  assert.equal(a.children.length, 2);
+  assert.deepEqual(Object.keys(a.children.find((c) => c.id === cloudId)!.progress.levels).sort(), ['s1.count5#1', 's1.count5#2']);
+  // Said no: both are kept.
+  const cl2 = cloud();
+  const c = phone('C', [kid('Riya')]);
+  await sync(c, cl2, 1000);
+  const d = phone('D', [kid('Riya')]);
+  await sync(d, cl2, 2000, async () => false);
+  assert.equal(d.children.length, 2);
 });

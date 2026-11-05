@@ -155,7 +155,15 @@ export interface SyncInput {
   device: string;
   label: string;
   now: number;
+  /**
+   * A child on this phone that isn't in the cloud yet, and a different child in the cloud with
+   * the same name (set up separately on another phone): combine them into one? Left out, both are kept.
+   */
+  combineWith?: (here: Child, there: Child) => Promise<boolean>;
 }
+
+/** "Riya", " riya " and "RIYA" are the same name. */
+export const sameName = (a: string, b: string): boolean => a.trim().replace(/\s+/g, ' ').toLowerCase() === b.trim().replace(/\s+/g, ' ').toLowerCase();
 
 export interface SyncResult {
   /** The children this phone should have now (same order, new ones at the end). */
@@ -174,6 +182,8 @@ export interface SyncResult {
   memo: SyncMemo;
   /** Children whose cloud copy couldn't be read (kept as they are on this phone). */
   skipped: string[];
+  /** Children combined with a same-named child from the cloud: id here → the cloud's id (which they now use). */
+  renamed: Record<string, string>;
 }
 
 export async function planSync(p: SyncInput): Promise<SyncResult> {
@@ -196,8 +206,42 @@ export async function planSync(p: SyncInput): Promise<SyncResult> {
   const put: CloudChild[] = [];
   const skipped: string[] = [];
   const added: string[] = [];
+
+  // The same child set up separately on two phones: offer to combine them (the cloud's id wins).
+  const renamed: Record<string, string> = {};
+  const cloudCopies = new Map<string, Child>();
+  if (p.combineWith) {
+    const here = new Set(p.local.map((c) => c.id));
+    const newcomers = p.local.filter((c) => !removed[c.id] && fam.kids[c.id] === undefined);
+    const strangers = Object.keys(fam.kids).filter((id) => !here.has(id) && !removed[id]);
+    if (newcomers.length && strangers.length) {
+      for (const id of strangers) {
+        const doc = await p.fetchChild(id);
+        const d = doc ? await decodeChild(doc) : null;
+        if (d?.ok) cloudCopies.set(id, d.child);
+      }
+      for (const c of newcomers) {
+        const taken = new Set(Object.values(renamed));
+        const match = [...cloudCopies.entries()].find(([id, there]) => !taken.has(id) && sameName(c.name, there.name));
+        if (match && (await p.combineWith(c, match[1]))) renamed[c.id] = match[0];
+      }
+    }
+  }
+
   for (const here of p.local) {
     if (removed[here.id]) continue;
+    const pair = renamed[here.id];
+    if (pair) {
+      const c = combine({ ...here, id: pair }, cloudCopies.get(pair)!, fam.kids[pair] > lastPlayed(here));
+      children.push(c);
+      const doc = await encodeChild(c, p.device, p.now);
+      put.push(doc);
+      fam.kids[pair] = doc.updatedAt;
+      memo.kidsAt[pair] = doc.updatedAt;
+      memo.hash[pair] = hashOf(c);
+      if (fam.resets[pair]) memo.resets[pair] = fam.resets[pair];
+      continue;
+    }
     const cloudAt = fam.kids[here.id];
     let c = here;
     let send = cloudAt === undefined || !!memo.force?.[here.id];
@@ -245,16 +289,20 @@ export async function planSync(p: SyncInput): Promise<SyncResult> {
   // Children only in the cloud: restore them here.
   for (const id of Object.keys(fam.kids)) {
     if (children.some((c) => c.id === id) || removed[id] || skipped.includes(id)) continue;
-    const doc = await p.fetchChild(id);
-    const d = doc ? await decodeChild(doc) : null;
-    if (!d?.ok) {
-      skipped.push(id);
-      continue;
+    let child = cloudCopies.get(id);
+    if (!child) {
+      const doc = await p.fetchChild(id);
+      const d = doc ? await decodeChild(doc) : null;
+      if (!d?.ok) {
+        skipped.push(id);
+        continue;
+      }
+      child = d.child;
     }
-    children.push(d.child);
+    children.push(child);
     added.push(id);
     memo.kidsAt[id] = fam.kids[id];
-    memo.hash[id] = hashOf(d.child);
+    memo.hash[id] = hashOf(child);
     if (fam.resets[id]) memo.resets[id] = fam.resets[id];
   }
 
@@ -273,7 +321,7 @@ export async function planSync(p: SyncInput): Promise<SyncResult> {
   memo.force = {};
   fam.devices[p.device] = { label: p.label, at: p.now };
   memo.lastSync = p.now;
-  return { children, added, dropped, put, del, resets, family: fam, rules, memo, skipped };
+  return { children, added, dropped, put, del, resets, family: fam, rules, memo, skipped, renamed };
 }
 
 /** The latest moment this child played (ms). */

@@ -165,7 +165,7 @@ export async function signIn(app: App): Promise<SignInResult> {
     return 'error';
   }
   const a = await checkAccess(app);
-  if (a === 'approved') await syncNow(app);
+  if (a === 'approved') await syncNow(app, true);
   return a;
 }
 
@@ -221,12 +221,12 @@ export function noteReplaced(id: string): void {
 export const lastSync = (): number => memo().lastSync;
 
 /** Back up and sync now. Only one at a time. */
-export function syncNow(app: App): Promise<SyncOutcome> {
-  running ??= doSync(app).finally(() => (running = null));
+export function syncNow(app: App, asking = false): Promise<SyncOutcome> {
+  running ??= doSync(app, asking).finally(() => (running = null));
   return running;
 }
 
-async function doSync(app: App): Promise<SyncOutcome> {
+async function doSync(app: App, asking: boolean): Promise<SyncOutcome> {
   const b = backend(app);
   if (!b?.session) return { ok: false, why: 'signed-out', message: 'Not signed in.' };
   if (!googleGate(app).ok && !isOwnerAccount(app)) {
@@ -247,7 +247,7 @@ async function doSync(app: App): Promise<SyncOutcome> {
       }
       family = null;
     }
-    const r = await planSync({ local: app.save.data.children, rules: familyRules(app.save.data.settings), memo: m, family, fetchChild: (id) => b.getChild(id), device: d.id, label: d.label, now });
+    const r = await planSync({ local: app.save.data.children, rules: familyRules(app.save.data.settings), memo: m, family, fetchChild: (id) => b.getChild(id), device: d.id, label: d.label, now, combineWith: asking ? (here, there) => askCombine(app, here, there) : undefined });
     // Something was saved while we worked (a level finished): try again in a moment.
     if (saves !== startedAt) return { ok: false, why: 'busy', message: 'Busy, trying again soon.' };
     for (const doc of r.put) await b.putChild(doc);
@@ -256,6 +256,12 @@ async function doSync(app: App): Promise<SyncOutcome> {
     if (saves !== startedAt) return { ok: false, why: 'busy', message: 'Busy, trying again soon.' };
     applying = true;
     app.save.update((data) => {
+      // Combined with the same child from another phone: it takes that child's id.
+      for (const [old, id] of Object.entries(r.renamed)) {
+        const here = data.children.find((x) => x.id === old);
+        if (here) here.id = id;
+        if (data.activeChildId === old) data.activeChildId = id;
+      }
       for (const c of r.children) {
         const here = data.children.find((x) => x.id === c.id);
         if (!here) data.children.push(c);
@@ -280,6 +286,22 @@ async function doSync(app: App): Promise<SyncOutcome> {
     if (ce?.kind === 'offline') return { ok: false, why: 'offline', message: 'No internet connection.' };
     return { ok: false, why: 'error', message: ce?.message ?? 'Couldn’t back up just now.' };
   }
+}
+
+/** The same name on this phone and in the family's backup: one child or two? */
+async function askCombine(app: App, here: Child, there: Child): Promise<boolean> {
+  const stars = (c: Child) => Object.values(c.progress.levels).reduce((n, l) => n + l.stars, 0);
+  const { result } = app.sheet(
+    `<h2>Combine ${esc(here.name)}?</h2>
+     <p>Your family’s backup already has <b>${esc(there.name)}</b> (age ${there.age}, ${stars(there)} ⭐) from another phone. This phone has <b>${esc(here.name)}</b> (age ${here.age}, ${stars(here)} ⭐).</p>
+     <p>Combine them into one? Stars, coins, rewards and play from both phones are all kept.</p>`,
+    [
+      { label: `Yes, it’s the same child`, value: true, kind: 'mint' },
+      { label: 'No, keep both', value: false, kind: 'ghost', back: true },
+    ],
+    `Combine ${here.name}`,
+  );
+  return (await result) === true;
 }
 
 /** Keep the cloud up to date: at start, a little after changes, and back from the background. */

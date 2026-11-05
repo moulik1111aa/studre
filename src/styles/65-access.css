@@ -106,3 +106,4 @@
 .gsi-btn:active{background:#EEF0F2}
 .gsi-btn:focus-visible{outline:2px solid #0B57D0;outline-offset:2px}
 .gsi-btn:disabled{opacity:.6;cursor:default}
+.pa-invite{padding:12px 14px;display:flex;flex-direction:column;gap:10px;margin-bottom:4px}.pa-invite p{margin:0;display:flex;flex-direction:column;gap:2px}.pa-invite small{font-size:13px;opacity:.8}

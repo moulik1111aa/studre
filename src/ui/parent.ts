@@ -90,7 +90,7 @@ function cloudCard(app: App): string {
   if (!cloudOn(app)) return '';
   const who = account(app);
   if (!who)
-    return `<div class="card pa-cloud"><p><b>☁️ Back up automatically</b><small>Sign in with Google: progress is backed up and the same on every phone. ${esc(LOCAL_NOTE)} right now.</small></p>${googleButton('cl-in')}</div>`;
+    return `<div class="card pa-cloud"><p><b>☁️ Back up with Google</b><small>Sign in to keep progress safe and the same on every phone. What’s on this phone now is kept and joins your account. ${esc(LOCAL_NOTE)} right now.</small></p>${googleButton('cl-in')}</div>`;
   return `<div class="card pa-cloud on"><p><b>☁️ ${esc(who.email)}</b><small class="cl-status">${esc(syncText(lastSync()))}</small></p>
     <div class="cl-btns"><button class="btn small cl-sync">Back up now</button><button class="btn ghost small cl-out">Sign out</button></div>
     <button class="linkish warn cl-del">Delete the cloud copy</button></div>`;
@@ -98,7 +98,9 @@ function cloudCard(app: App): string {
 
 function basicHtml(app: App): string {
   const st = app.save.data.settings;
-  return `
+  // Not signed in yet: a short invite at the top (the full card is under Backup).
+  const invite = cloudOn(app) && !account(app) ? `<div class="card pa-invite"><p><b>☁️ Keep progress safe with Google</b><small>Sign in once. Everything on this phone is kept and backed up.</small></p>${googleButton('cl-in')}</div>` : '';
+  return `${invite}
     <section class="pa-sec"><h2 class="pa-h">👧 Children</h2>
       <div class="pa-kids">${app.save.data.children
         .map((c) => `<div class="pa-kid card">${avatarHtml(c.avatar, 48)}<div class="pk-who"><b>${esc(c.name)}</b><small>${kidLine(c)}</small></div>
@@ -233,7 +235,7 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
   });
   on('.cl-sync', 'click', async (b) => {
     (b as HTMLButtonElement).disabled = true;
-    const r = await syncNow(app);
+    const r = await syncNow(app, true);
     (b as HTMLButtonElement).disabled = false;
     const st = body.querySelector('.cl-status');
     if (r.ok) {
