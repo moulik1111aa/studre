@@ -8,6 +8,15 @@ import type { Access, IssuedKey } from '../storage/save.ts';
 import { plusFaceSvg } from './plus.ts';
 import { ICONS } from './icons.ts';
 import { stagger, popIn } from '../render/motion.ts';
+import { account, checkAccess, cloudOn, googleGate, signIn, signOut } from './cloud.ts';
+import { mountOwnerGoogle } from './ownergoogle.ts';
+
+/** Google's "G" (for the sign-in buttons). */
+export const GOOGLE_G = '<svg class="g-logo" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
+
+/** The standard "Sign in with Google" button (Google's own look, not the app's toy buttons). */
+export const googleButton = (cls: string, label = 'Sign in with Google'): string =>
+  `<button class="gsi-btn ${cls}" type="button"><span class="gsi-icon">${GOOGLE_G}</span><span class="gsi-text">${label}</span></button>`;
 
 export { isOwnerCode };
 
@@ -42,7 +51,7 @@ const access = (app: App): Access => (app.save.data.access ??= {});
 /** "20 Nov 2026". */
 export const niceDay = (n: number): string => new Date(`${dayOf(n)}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
-export type AccessState = { locked: false; owner: boolean; until?: number; phone: string } | { locked: true; reason: 'none' | 'bad' | 'expired' | 'revoked' | 'clock' | 'old'; until?: number; phone: string };
+export type AccessState = { locked: false; owner: boolean; until?: number; phone: string; via?: 'google' } | { locked: true; reason: 'none' | 'bad' | 'expired' | 'revoked' | 'clock' | 'old' | 'google-stale' | 'google-ended'; until?: number; phone: string };
 
 let ownerCache: { master: string; ok: boolean } | null = null;
 async function isOwnerPhone(app: App): Promise<boolean> {
@@ -63,10 +72,22 @@ export async function accessState(app: App): Promise<AccessState> {
   // The date going back more than a day means the clock was turned back.
   if (a.maxDay && dayNo(today) < dayNo(a.maxDay) - 1) return { locked: true, reason: 'clock', phone };
   if (!a.maxDay || dayNo(today) > dayNo(a.maxDay)) app.save.update(() => (access(app).maxDay = today));
-  if (!a.key) return { locked: true, reason: 'none', phone };
-  const r: KeyCheck = await checkKey(a.key, phone, today);
-  if (r.ok) return { locked: false, owner: false, until: r.until, phone };
-  return { locked: true, reason: r.reason === 'other-phone' ? 'bad' : r.reason, until: r.until, phone };
+  // An approved Google account (checked online at least every 14 days).
+  let google = googleGate(app);
+  if (!google.ok && google.reason === 'stale' && account(app)) {
+    // Due a check: ask now (quickly), and carry on if the answer is yes.
+    const answer = await Promise.race([checkAccess(app), new Promise<'slow'>((r) => setTimeout(() => r('slow'), 6000))]);
+    if (answer !== 'slow') google = googleGate(app);
+  }
+  if (google.ok) return { locked: false, owner: false, phone, via: 'google' };
+  if (a.key) {
+    const r: KeyCheck = await checkKey(a.key, phone, today);
+    if (r.ok) return { locked: false, owner: false, until: r.until, phone };
+    return { locked: true, reason: r.reason === 'other-phone' ? 'bad' : r.reason, until: r.until, phone };
+  }
+  if (google.reason === 'stale' || google.reason === 'clock') return { locked: true, reason: google.reason === 'clock' ? 'clock' : 'google-stale', phone };
+  if (google.reason === 'ended') return { locked: true, reason: 'google-ended', phone };
+  return { locked: true, reason: 'none', phone };
 }
 
 async function copy(app: App, text: string, what = 'Copied'): Promise<void> {
@@ -99,18 +120,28 @@ const REASON: Record<string, (until?: number) => string> = {
   revoked: () => 'This key has been switched off. Ask for a new one. All progress is safe on this phone.',
   clock: () => 'This phone’s date looks wrong. Set the correct date and time in your phone’s settings, then try again.',
   old: () => 'This phone’s web engine is too old to check keys. Update “Android System WebView” from the Play Store, then open MN again.',
+  'google-stale': () => 'MN needs to check your Google account. Connect to the internet, then tap “Check again”.',
+  'google-ended': () => 'Your access has ended. Ask the person who gave you MN, or use a key.',
 };
 
 /** The lock screen (or, with `renew`, the "enter a new key" screen from the parent area). */
 export function lockScreen(state: AccessState, then: () => void, o: { renew?: boolean; back?: () => void } = {}) {
   return (app: App): Screen => {
     const reason = state.locked ? state.reason : 'none';
+    const google = !o.renew && cloudOn(app);
+    const who = account(app);
     const el = html(`<section class="screen lock" aria-label="${o.renew ? 'New key' : 'Unlock MN'}">
       ${o.back ? `<header class="topbar"><button class="icon-btn back-btn" aria-label="Back">${ICONS.back}</button><span class="t">Access key</span><span style="width:50px"></span></header>` : ''}
       <div class="scroll lk-body">
         <div class="lk-coach">${plusFaceSvg({ cls: 'alive' })}</div>
         <h1 class="lk-title">${o.renew ? 'Enter a new key' : 'Unlock MN'}</h1>
-        <p class="lk-why">${o.renew ? `${!state.locked && state.until !== undefined ? `Your key works until ${niceDay(state.until)}. ` : ''}Got a new key? Paste it here. Progress carries on as it is.` : esc(REASON[reason](state.until))}</p>
+        <p class="lk-why">${o.renew ? `${!state.locked && state.until !== undefined ? `Your key works until ${niceDay(state.until)}. ` : ''}Got a new key? Paste it here. Progress carries on as it is.` : google && reason === 'none' ? 'Sign in with an approved Google account. No Google account? Send your phone code to the person who gave you MN, and they’ll send you a key.' : esc(REASON[reason](state.until))}</p>
+        ${google ? `<div class="card lk-google">
+          ${who ? '<button class="btn lk-g">Check again</button>' : googleButton('lk-g')}
+          <p class="lk-gmsg" aria-live="polite">${who ? `Signed in as <b>${esc(who.email)}</b>. Waiting for approval.` : 'For grown-ups. Your account needs to be approved once.'}</p>
+          ${who ? '<button class="linkish lk-other">Use another account</button>' : ''}
+        </div>
+        <p class="lk-or"><span>or use a key</span></p>` : ''}
         <div class="card lk-phone"><small>Your phone code</small><b>${esc(state.phone)}</b><button class="btn ghost small lk-copy">Copy code</button></div>
         <label class="field lk-field"><span>Your key</span><textarea class="lk-key" rows="3" placeholder="Paste the key here (it starts with SH-)" autocomplete="off" autocapitalize="characters" spellcheck="false"></textarea></label>
         <p class="lk-msg" aria-live="polite"></p>
@@ -119,6 +150,44 @@ export function lockScreen(state: AccessState, then: () => void, o: { renew?: bo
       </div>
     </section>`);
     const msg = el.querySelector<HTMLElement>('.lk-msg')!;
+    const gmsg = el.querySelector<HTMLElement>('.lk-gmsg');
+    const unlocked = () => {
+      const rect = el.querySelector('.lk-g')!.getBoundingClientRect();
+      app.fx.confetti(rect.x + rect.width / 2, rect.y, 60);
+      app.toast('Unlocked with Google.');
+      then();
+    };
+    const answer = (a: string) => {
+      if (!gmsg) return;
+      if (a === 'approved') return unlocked();
+      const email = esc(account(app)?.email ?? '');
+      gmsg.innerHTML =
+        a === 'waiting'
+          ? `Signed in as <b>${email}</b>. We’ve asked for your account to be approved. Tap “Check again” once you hear back.`
+          : a === 'offline'
+            ? 'No internet connection. Connect and try again.'
+            : a === 'cancelled'
+              ? 'For grown-ups. Your account needs to be approved once.'
+              : 'That didn’t work. Please try again.';
+      const old = el.querySelector('.lk-g')!;
+      const fresh = html(account(app) ? '<button class="btn lk-g">Check again</button>' : googleButton('lk-g'));
+      old.replaceWith(fresh);
+      fresh.addEventListener('click', () => void go(fresh as HTMLButtonElement));
+      popIn(gmsg, 0, 0.95);
+    };
+    const go = async (b: HTMLButtonElement) => {
+      b.disabled = true;
+      try {
+        answer(account(app) ? await checkAccess(app) : await signIn(app));
+      } finally {
+        b.disabled = false;
+      }
+    };
+    el.querySelector('.lk-g')?.addEventListener('click', (e) => void go(e.currentTarget as HTMLButtonElement));
+    el.querySelector('.lk-other')?.addEventListener('click', async () => {
+      await signOut(app);
+      answer(await signIn(app));
+    });
     el.querySelector('.lk-copy')!.addEventListener('click', () => void copy(app, state.phone, 'Phone code copied'));
     el.querySelector('.back-btn')?.addEventListener('click', () => o.back?.());
     el.querySelector('.lk-adult')?.addEventListener('click', async () => {
@@ -176,6 +245,13 @@ export function ownerScreen(leave: () => void) {
     const body = el.querySelector<HTMLElement>('.ow-body')!;
     let signer: CryptoKey | null = null;
 
+    const google = () => {
+      const g = document.createElement('div');
+      g.className = 'ow-google';
+      body.prepend(g);
+      mountOwnerGoogle(app, g);
+    };
+
     const paintSetup = () => {
       body.innerHTML = `<div class="card ow-card">
         <h2>Set up your phone</h2>
@@ -196,6 +272,7 @@ export function ownerScreen(leave: () => void) {
         app.toast('Master key saved. This phone is the owner’s phone.');
         paint();
       });
+      google();
     };
 
     const status = (k: IssuedKey): string => {
@@ -284,6 +361,7 @@ export function ownerScreen(leave: () => void) {
         });
       });
       stagger(body.children, { gap: 50 });
+      google();
     };
 
     const message = (k: IssuedKey) => `Your MN key for ${k.name} (works until ${niceDay(k.until)}):\n${k.key}`;

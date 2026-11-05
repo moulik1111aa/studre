@@ -1,27 +1,66 @@
 rules_version = '2';
 
-// MN (Mission Next): each family's data is readable and writable only by the grown-up who
-// signed in with Google. One document per child: families/{uid}/children/{childId}, holding
-// the same checked backup as a report card (see src/core/cloud.ts). Nothing else is stored.
+// MN (Mission Next) — who can do what in the cloud (see src/core/cloud.ts, src/platform/cloudapi.ts).
+//
+//   access/{email}            the owner's approved Google accounts (only the owner writes them)
+//   requests/{uid}            "please let me in": written by the person, read by the owner
+//   checkins/{uid}            which phones an account uses, and when (read by the owner)
+//   families/{uid}            a family's sync document (approved accounts only)
+//   families/{uid}/children/* one child each: the gzipped, checked backup
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn(uid) {
-      return request.auth != null && request.auth.uid == uid;
+    function signedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    function email() {
+      return request.auth.token.email.lower();
+    }
+    function isOwner() {
+      return signedIn() && email() == 'moulik1111a@gmail.com';
+    }
+    function approved() {
+      return signedIn() && (isOwner() || (exists(/databases/$(database)/documents/access/$(email()))
+        && (get(/databases/$(database)/documents/access/$(email())).data.until == 0
+          || get(/databases/$(database)/documents/access/$(email())).data.until > request.time.toMillis())));
+    }
+    function mine(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    match /access/{addr} {
+      allow read: if isOwner() || (signedIn() && email() == addr);
+      allow list, write: if isOwner();
+    }
+
+    match /requests/{uid} {
+      allow read, list, delete: if isOwner();
+      allow get: if mine(uid);
+      allow create, update: if mine(uid)
+        && request.resource.data.keys().hasOnly(['email', 'name', 'phone', 'device', 'version', 'at'])
+        && request.resource.data.email == email();
+    }
+
+    match /checkins/{uid} {
+      allow read, list, delete: if isOwner();
+      allow create, update: if mine(uid)
+        && request.resource.data.keys().hasOnly(['email', 'name', 'devices'])
+        && request.resource.data.email == email();
     }
 
     match /families/{uid} {
-      allow read, delete: if signedIn(uid);
-      allow create, update: if signedIn(uid)
-        && request.resource.data.keys().hasOnly(['v', 'updatedAt', 'device', 'consentAt']);
+      allow read, delete: if mine(uid);
+      allow create, update: if mine(uid) && (
+        (approved() && request.resource.data.keys().hasOnly(['v', 'policy', 'consentAt', 'kids', 'removed', 'resets', 'devices', 'rules', 'rulesAt', 'deletedAt']))
+        // "Delete the cloud copy" leaves only this note, even for an account no longer approved.
+        || request.resource.data.keys().hasOnly(['v', 'deletedAt']));
 
       match /children/{childId} {
-        allow read, delete: if signedIn(uid);
-        allow create, update: if signedIn(uid)
-          && request.resource.data.keys().hasOnly(['v', 'backup', 'updatedAt', 'device'])
-          && request.resource.data.v == 1
-          && request.resource.data.backup.format == 'mn-child-backup'
-          && request.resource.data.backup.child.id == childId
-          && request.resource.data.updatedAt is int;
+        allow read, delete: if mine(uid);
+        allow create, update: if mine(uid) && approved()
+          && request.resource.data.keys().hasOnly(['v', 'childId', 'updatedAt', 'device', 'data'])
+          && request.resource.data.childId == childId
+          && request.resource.data.data is bytes
+          && request.resource.data.data.size() < 1000000;
       }
     }
 

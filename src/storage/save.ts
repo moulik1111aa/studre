@@ -10,6 +10,7 @@ import type { AdventureState } from '../core/adventure.ts';
 import type { ReminderSettings } from '../core/reminders.ts';
 import type { FixBank } from '../core/fixit.ts';
 import type { QuietSettings } from '../core/quiet.ts';
+import type { GoogleGate } from '../core/gate.ts';
 
 export const SAVE_VERSION = 1;
 const PRIMARY = 'studyhard.save';
@@ -171,6 +172,8 @@ export interface Access {
   /** Owner's phone only: the master key and the keys made. */
   master?: string;
   issued?: IssuedKey[];
+  /** Unlocked with an approved Google account (core/gate.ts). */
+  google?: GoogleGate;
 }
 
 export interface SaveData {

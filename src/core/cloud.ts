@@ -1,59 +1,292 @@
-// Google sign-in for grown-ups (groundwork; switched on once the Firebase project exists).
-// The cloud keeps one document per child, families/{uid}/children/{childId}, holding the
-// same checked backup as a report card. Syncing reuses the two-phone merge (mergeChild), so
-// a phone and the cloud combine exactly like two phones do.
+// Google sign-in for grown-ups: backup, restore and sync (first version, decided 5 Nov).
 //
-// Children never sign in. Everything a child learns with works the same without Google;
-// signing in adds backup, sync and the parent's own phone (see claude/study-hard-google-login.md).
+// In the cloud (Firestore, asia-south1), each family has:
+//   families/{uid}                     consent, devices, when each child last changed, removed
+//                                      children, and the family's rules (limits, quiet hours…)
+//   families/{uid}/children/{childId}  one child: the checked report-card backup, gzipped
+// A phone and the cloud combine exactly like two phones do (mergeChild). Question history and
+// undo notes stay on the phone. Children never sign in.
+//
+// This file is pure: it decides what to send and what to keep. platform/firebase.ts talks to
+// Google, ui/cloud.ts runs it.
 
-import type { Child } from '../storage/save.ts';
+import { newChild, type Child, type Settings } from '../storage/save.ts';
 import { makeBackup, mergeChild, readBackup, type Backup } from './backup.ts';
 
-/** Off until the Firebase config is in the app. */
-export const GOOGLE_LOGIN = false;
+/** Which version of the privacy policy a grown-up agrees to when signing in. */
+export const POLICY_VERSION = '2026-11-05';
 
-/** What a family without Google keeps (shown to grown-ups; nothing a child plays with). */
-export const LOCAL_LIMITS = { children: 3, logDays: 90 } as const;
+// ── a child in the cloud ────────────────────────────────────────────────────
 
-export interface CloudChildDoc {
-  v: 1;
-  backup: Backup;
-  /** When this phone last changed it (ms), and which phone. */
+/** A child as stored: the backup without this phone's question history, gzipped. */
+export interface CloudChild {
+  childId: string;
   updatedAt: number;
   device: string;
+  /** gzipped JSON of the Backup, base64. */
+  data: string;
 }
 
-export async function toCloud(child: Child, device: string, now = Date.now()): Promise<CloudChildDoc> {
-  return { v: 1, backup: await makeBackup(child, new Date(now)), updatedAt: now, device };
+const toB64 = (u8: Uint8Array): string => {
+  let s = '';
+  for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode(...u8.subarray(i, i + 0x8000));
+  return btoa(s);
+};
+const fromB64 = (b64: string): Uint8Array => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+
+async function gzip(text: string): Promise<Uint8Array> {
+  const stream = new Blob([text]).stream().pipeThrough(new CompressionStream('gzip'));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+async function gunzip(bytes: Uint8Array): Promise<string> {
+  const stream = new Blob([bytes as BlobPart]).stream().pipeThrough(new DecompressionStream('gzip'));
+  return new Response(stream).text();
 }
 
-export type FromCloud = { ok: true; child: Child; changed: boolean } | { ok: false; reason: string };
+/** What goes up: no question history (rebuilt on each phone), no undo notes. */
+export function forCloud(child: Child): Child {
+  const c = JSON.parse(JSON.stringify(child)) as Child;
+  c.progress.history = {};
+  delete c.undo;
+  return c;
+}
+
+export async function encodeChild(child: Child, device: string, now: number): Promise<CloudChild> {
+  const backup = await makeBackup(forCloud(child), new Date(now));
+  return { childId: child.id, updatedAt: now, device, data: toB64(await gzip(JSON.stringify(backup))) };
+}
+
+export type Decoded = { ok: true; child: Child; backup: Backup } | { ok: false; reason: string };
+
+export async function decodeChild(doc: CloudChild): Promise<Decoded> {
+  let text: string;
+  try {
+    text = await gunzip(fromB64(doc.data));
+  } catch {
+    return { ok: false, reason: 'The cloud copy could not be read.' };
+  }
+  const r = await readBackup(text);
+  if (!r.ok) return r;
+  if (r.backup.child.id !== doc.childId) return { ok: false, reason: 'A different child.' };
+  return { ok: true, child: complete(r.backup.child), backup: r.backup };
+}
+
+/** Fill in anything an older copy didn't have (as a restored report card is). */
+export function complete(c: Child): Child {
+  const base = newChild(c.name, c.age ?? 6, c.avatar ?? 0, c.createdDay ?? '');
+  return { ...base, ...c, id: c.id, progress: { ...base.progress, ...c.progress }, wallet: { ...base.wallet, ...c.wallet }, stats: { ...base.stats, ...c.stats }, undo: c.undo ?? [] };
+}
+
+/** The same child in the merge's own shape, for "did anything change?" (it fills in empty fields). */
+const shape = (c: Child): string => JSON.stringify(mergeChild(forCloud(c), forCloud(c), false));
+export const sameChild = (a: Child, b: Child): boolean => shape(a) === shape(b);
 
 /**
- * Bring a cloud copy into this phone: checked like a report card, then combined with the
- * phone's own copy of that child (if any). `localAt` is when this phone last synced it.
+ * Combine the phone's copy with the cloud's. The newer side gives name, age and picture; the
+ * rest takes the best of both. This phone's question history and undo notes stay.
  */
-export async function fromCloud(local: Child | undefined, doc: CloudChildDoc, localAt = 0): Promise<FromCloud> {
-  const r = await readBackup(JSON.stringify(doc.backup));
-  if (!r.ok) return r;
-  const remote = r.backup.child;
-  if (!local) return { ok: true, child: { ...remote, undo: [] }, changed: true };
-  if (local.id !== remote.id) return { ok: false, reason: 'A different child.' };
-  const merged = mergeChild(local, remote, doc.updatedAt > localAt);
-  // Changed: compare both in the merge's own shape (it fills in empty fields).
-  const shape = (c: Child) => JSON.stringify({ ...mergeChild(c, c, false), undo: 0 });
-  return { ok: true, child: merged, changed: shape(merged) !== shape(local) };
+export function combine(local: Child, remote: Child, remoteNewer: boolean): Child {
+  const out = mergeChild(local, remote, remoteNewer);
+  out.progress.history = local.progress.history;
+  out.undo = local.undo ?? [];
+  return out;
 }
 
-/** Which children go up, come down, or both (a child on both sides is merged, then sent up). */
-export function syncPlan(localIds: string[], cloudIds: string[]): { up: string[]; down: string[]; both: string[] } {
-  const here = new Set(localIds);
-  const there = new Set(cloudIds);
-  return {
-    up: localIds.filter((id) => !there.has(id)),
-    down: cloudIds.filter((id) => !here.has(id)),
-    both: localIds.filter((id) => there.has(id)),
-  };
+// ── the family document ─────────────────────────────────────────────────────
+
+/** The family's rules, shared by every phone. Look, sound and voice stay with each phone. */
+export const FAMILY_KEYS = ['limitMinutes', 'timeUpMode', 'treatPace', 'goalPace', 'holiday', 'hiddenCategories', 'timerSeconds', 'confirmAnswers', 'teach', 'ownRewards', 'quiet'] as const;
+export type FamilyKey = (typeof FAMILY_KEYS)[number];
+export type FamilyRules = Partial<Pick<Settings, FamilyKey>>;
+
+export const familyRules = (s: Settings): FamilyRules => {
+  const out: Record<string, unknown> = {};
+  for (const k of FAMILY_KEYS) if (s[k] !== undefined) out[k] = JSON.parse(JSON.stringify(s[k]));
+  return out as FamilyRules;
+};
+export const sameRules = (a: FamilyRules, b: FamilyRules): boolean => FAMILY_KEYS.every((k) => JSON.stringify(a[k]) === JSON.stringify(b[k]));
+
+export interface FamilyDoc {
+  v: 1;
+  consentAt: number;
+  policy: string;
+  /** childId → when its cloud copy last changed (ms). */
+  kids: Record<string, number>;
+  /** childId → when a grown-up removed that child (it is removed on every phone). */
+  removed: Record<string, number>;
+  /** childId → when a phone replaced the cloud copy (undo, starting over): other phones take it as it is. */
+  resets: Record<string, number>;
+  /** deviceId → its label and last sync (ms). */
+  devices: Record<string, { label: string; at: number }>;
+  rules: FamilyRules;
+  rulesAt: number;
+  /** A grown-up deleted the cloud copy then (only this is left; phones that synced before sign out). */
+  deletedAt?: number;
+}
+
+// ── what this phone remembers about syncing (kept on the phone, never in a backup) ──
+
+export interface SyncMemo {
+  /** childId → the cloud's updatedAt this phone last had in hand, and a fingerprint of what it sent. */
+  kidsAt: Record<string, number>;
+  hash: Record<string, number>;
+  /** Children removed on this phone, not yet told to the cloud. */
+  removed: Record<string, number>;
+  /** Children whose copy here replaces the cloud's next time (after undo or starting over). */
+  force?: Record<string, true>;
+  /** childId → the latest replacement this phone has taken. */
+  resets?: Record<string, number>;
+  /** The family rules as last synced, and when they changed. */
+  rules?: FamilyRules;
+  rulesAt: number;
+  lastSync: number;
+}
+export const freshMemo = (): SyncMemo => ({ kidsAt: {}, hash: {}, removed: {}, rulesAt: 0, lastSync: 0 });
+
+// ── one sync, decided ───────────────────────────────────────────────────────
+
+export interface SyncInput {
+  local: Child[];
+  rules: FamilyRules;
+  memo: SyncMemo;
+  family: FamilyDoc | null;
+  /** Fetches a child's cloud copy (only called for children that changed in the cloud). */
+  fetchChild: (id: string) => Promise<CloudChild | null>;
+  device: string;
+  label: string;
+  now: number;
+}
+
+export interface SyncResult {
+  /** The children this phone should have now (same order, new ones at the end). */
+  children: Child[];
+  /** Ids added to this phone from the cloud, and ids removed here because they were removed elsewhere. */
+  added: string[];
+  dropped: string[];
+  /** What to send: child copies to write, child copies to delete, and the new family document. */
+  put: CloudChild[];
+  del: string[];
+  /** Children whose cloud copy this phone just replaced. */
+  resets: string[];
+  family: FamilyDoc;
+  /** Family rules to apply here (when another phone changed them later). */
+  rules?: FamilyRules;
+  memo: SyncMemo;
+  /** Children whose cloud copy couldn't be read (kept as they are on this phone). */
+  skipped: string[];
+}
+
+export async function planSync(p: SyncInput): Promise<SyncResult> {
+  const fam: FamilyDoc = p.family
+    ? JSON.parse(JSON.stringify(p.family))
+    : { v: 1, consentAt: p.now, policy: POLICY_VERSION, kids: {}, removed: {}, resets: {}, devices: {}, rules: {}, rulesAt: 0 };
+  fam.resets ??= {};
+  const memo: SyncMemo = { ...freshMemo(), ...JSON.parse(JSON.stringify(p.memo)) };
+  memo.resets ??= {};
+  const resets: string[] = [];
+  // Removed anywhere is removed everywhere.
+  const removed = { ...fam.removed, ...memo.removed };
+  fam.removed = removed;
+  memo.removed = {};
+  const dropped = p.local.filter((c) => removed[c.id]).map((c) => c.id);
+  const del = Object.keys(fam.kids).filter((id) => removed[id]);
+  for (const id of del) delete fam.kids[id];
+
+  const children: Child[] = [];
+  const put: CloudChild[] = [];
+  const skipped: string[] = [];
+  const added: string[] = [];
+  for (const here of p.local) {
+    if (removed[here.id]) continue;
+    const cloudAt = fam.kids[here.id];
+    let c = here;
+    let send = cloudAt === undefined || !!memo.force?.[here.id];
+    if (memo.force?.[here.id]) {
+      // Undo or starting over on this phone: this copy replaces the cloud's, everywhere.
+      fam.resets[here.id] = p.now;
+      resets.push(here.id);
+    } else if ((fam.resets[here.id] ?? 0) > (memo.resets[here.id] ?? 0)) {
+      // Another phone replaced the cloud copy: take it as it is (keeping this phone's history).
+      const doc = await p.fetchChild(here.id);
+      const d = doc ? await decodeChild(doc) : null;
+      if (!d?.ok) {
+        skipped.push(here.id);
+        children.push(here);
+        continue;
+      }
+      c = { ...d.child, progress: { ...d.child.progress, history: here.progress.history }, undo: [] };
+      send = false;
+    } else if (cloudAt !== undefined && cloudAt !== memo.kidsAt[here.id]) {
+      // Changed in the cloud since this phone last looked: bring it in.
+      const doc = await p.fetchChild(here.id);
+      const d = doc ? await decodeChild(doc) : null;
+      if (d?.ok) {
+        c = combine(here, d.child, cloudAt > lastPlayed(here));
+        send = !sameChild(c, d.child);
+      } else {
+        skipped.push(here.id);
+        children.push(here);
+        continue;
+      }
+    } else if (cloudAt !== undefined) {
+      // Same cloud copy as last time: send only if this phone has new play (or changes).
+      send = memo.hash[here.id] !== hashOf(here);
+    }
+    children.push(c);
+    if (send) {
+      const doc = await encodeChild(c, p.device, p.now);
+      put.push(doc);
+      fam.kids[c.id] = doc.updatedAt;
+    }
+    memo.kidsAt[c.id] = fam.kids[c.id];
+    memo.hash[c.id] = hashOf(c);
+    if (fam.resets[c.id]) memo.resets[c.id] = fam.resets[c.id];
+  }
+  // Children only in the cloud: restore them here.
+  for (const id of Object.keys(fam.kids)) {
+    if (children.some((c) => c.id === id) || removed[id] || skipped.includes(id)) continue;
+    const doc = await p.fetchChild(id);
+    const d = doc ? await decodeChild(doc) : null;
+    if (!d?.ok) {
+      skipped.push(id);
+      continue;
+    }
+    children.push(d.child);
+    added.push(id);
+    memo.kidsAt[id] = fam.kids[id];
+    memo.hash[id] = hashOf(d.child);
+    if (fam.resets[id]) memo.resets[id] = fam.resets[id];
+  }
+
+  // Family rules. A phone joining a family takes the family's; after that, the side that
+  // changed since the last sync wins (this phone, if both did: it is the one syncing now).
+  let rules: FamilyRules | undefined;
+  const changedHere = !!memo.rules && !sameRules(memo.rules, p.rules);
+  const changedThere = fam.rulesAt > memo.rulesAt;
+  if (!fam.rulesAt || changedHere) {
+    fam.rules = p.rules;
+    fam.rulesAt = p.now;
+  } else if (changedThere || !memo.rules) rules = fam.rules;
+  memo.rules = rules ?? fam.rules;
+  memo.rulesAt = fam.rulesAt;
+
+  memo.force = {};
+  fam.devices[p.device] = { label: p.label, at: p.now };
+  memo.lastSync = p.now;
+  return { children, added, dropped, put, del, resets, family: fam, rules, memo, skipped };
+}
+
+/** The latest moment this child played (ms). */
+export function lastPlayed(c: Child): number {
+  return c.log?.length ? c.log[c.log.length - 1].t : 0;
+}
+
+/** A short fingerprint of what would go up, so an unchanged child isn't sent again. */
+export function hashOf(c: Child): number {
+  const s = shape(c);
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return h >>> 0;
 }
 
 // ── gentle nudges (grown-ups only) ─────────────────────────────────────────
@@ -81,6 +314,3 @@ export function nudgeFor(state: NudgeState | undefined, kids: Child[], signedIn:
   if (!worth) return null;
   return `${worth.c.name} has ${worth.stars.toLocaleString('en-IN')} stars. Keep them safe with Google, in one tap.`;
 }
-
-/** Shown under Backup in the parent area while not signed in. */
-export const LOCAL_NOTE = 'Saved on this phone only';

@@ -33,6 +33,7 @@ import { startReminders } from './ui/remindsync.ts';
 import { parentScreen } from './ui/parent.ts';
 import { showLesson } from './ui/lesson.ts';
 import { accessState, lockScreen, ownerScreen } from './ui/access.ts';
+import { startCloud } from './ui/cloud.ts';
 import * as addsub from './core/teach/addsub.ts';
 import * as muldiv from './core/teach/muldiv.ts';
 import * as fractions from './core/teach/fractions.ts';
@@ -108,6 +109,12 @@ async function boot(): Promise<void> {
     startReminders(app);
   } catch (e) {
     console.error('reminders', e);
+  }
+  // Google sign-in: keep the family's progress backed up and in sync (when signed in).
+  try {
+    startCloud(app);
+  } catch (e) {
+    console.error('cloud', e);
   }
   const demo = params.get('demo');
   const seeded = app.debug && demo ? seedDemo(app, demo, { coins: Number(params.get('coins')) || 0, age: Number(params.get('age')) || 8, tips: params.has('tips') }) : null;

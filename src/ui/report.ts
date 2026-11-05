@@ -25,6 +25,7 @@ import { makeBackup } from '../core/backup.ts';
 import { reportCardHtml, reportFileName } from './reportfile.ts';
 import { saveTextFile } from '../platform/files.ts';
 import { markBackedUp } from './backup.ts';
+import { account, noteRemoved, noteReplaced, syncNow } from './cloud.ts';
 import { FIXED, fixCounts, stepOf } from '../core/fixit.ts';
 
 const STRANDS: [string, string][] = [
@@ -344,10 +345,13 @@ export function reportScreen(child: Child, start: Tab = 'overview') {
           { label: 'Remove', value: true, kind: 'mint' },
           { label: 'Cancel', value: false, kind: 'ghost', back: true },
         ], 'Undo recent play');
-        void result.then((yes) => {
+        void result.then(async (yes) => {
           if (!yes) return;
+          // Signed in: bring in the other phones' play first, so only this phone's goes.
+          if (account(app)) await syncNow(app);
           let n = 0;
           app.save.update(() => (n = rollback(child, since)));
+          if (n) noteReplaced(child.id);
           app.toast(`Removed ${n} result${n === 1 ? '' : 's'}.`);
           void app.show(reportScreen(child, 'manage'));
         });
@@ -370,13 +374,14 @@ export function reportScreen(child: Child, start: Tab = 'overview') {
         });
       });
       body.querySelector('.reset-kid')!.addEventListener('click', () => {
-        const { result } = app.sheet(`<h2>Start ${esc(child.name)} over?</h2><p>All stars, coins, jars, rewards earned, statistics and play history are cleared. Name, age and picture stay, and placement runs again. This can’t be undone.</p>`, [
+        const { result } = app.sheet(`<h2>Start ${esc(child.name)} over?</h2><p>All stars, coins, jars, rewards earned, statistics and play history are cleared. Name, age and avatar stay, and placement runs again. This can’t be undone.</p>`, [
           { label: 'Start over', value: true, kind: 'danger' },
           { label: 'Cancel', value: false, kind: 'ghost', back: true },
         ], 'Start over');
         void result.then((yes) => {
           if (!yes) return;
           app.save.update(() => resetChild(child, app.today));
+          noteReplaced(child.id);
           app.toast(`${child.name} is starting fresh.`);
           void app.show(reportScreen(child, 'manage'));
         });
@@ -389,6 +394,7 @@ export function reportScreen(child: Child, start: Tab = 'overview') {
         void result.then((yes) => {
           if (!yes) return;
           app.save.update((d) => removeChild(d, child.id));
+          noteRemoved(child.id);
           app.toast(`${child.name}’s profile was deleted.`);
           void app.show(app.save.data.children.length ? parentScreen : addChildScreen(false));
         });

@@ -64,7 +64,7 @@ const total = (t: Tally | undefined) => Object.values(t ?? {}).reduce((a, r) => 
 /**
  * Combine the same child from two phones. Progress takes the best of both; the jars and
  * rewards come from whichever side has earned more coins (mixing two jars could double a
- * treat); the play log is merged without duplicates. Name, age and picture come from the
+ * treat); the play log is merged without duplicates. Name, age and avatar come from the
  * newer side (`incomingNewer`).
  */
 export function mergeChild(here: Child, incoming: Child, incomingNewer: boolean): Child {

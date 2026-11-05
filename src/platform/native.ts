@@ -30,6 +30,9 @@ export interface StudyHardPlugin {
   askNotifications?(): Promise<{ enabled?: boolean; canAsk?: boolean }>;
   openNotificationSettings?(): Promise<void>;
   launchAction?(): Promise<{ open?: string }>;
+  /** Sign in with Google (Credential Manager); newer apps only. */
+  googleSignIn?(o: { webClientId: string }): Promise<{ idToken?: string; email?: string; name?: string; cancelled?: boolean; error?: string }>;
+  googleSignOut?(): Promise<void>;
   addListener(event: 'back', cb: () => void): unknown;
   addListener(event: 'launch', cb: (d: { open?: string }) => void): unknown;
 }

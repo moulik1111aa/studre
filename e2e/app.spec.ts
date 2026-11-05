@@ -1285,3 +1285,89 @@ test('map ☰ menu: trophies, tips, switch child, and the parent area behind the
   await grownUp(page);
   await expect(page.locator('.parent')).toBeVisible();
 });
+
+// ── Google sign-in (the stand-in cloud: ?cloudmock) ──────────────────────────
+
+type CloudW = { __app: { show(m: unknown): void; save: { data: { children: { name: string }[] } } }; __screens: { parentScreen: unknown; ownerScreen: (leave: () => void) => unknown }; __mockGoogle?: string };
+const asGoogle = (page: Page, who: string) => page.evaluate((w) => Object.assign(window, { __mockGoogle: w }), who);
+
+test('google: a new account asks to get in, the owner approves it, then it unlocks MN', async ({ page }) => {
+  await page.goto('/?debug&noloader&lock&cloudmock');
+  await expect(page.locator('.lock .lk-g')).toBeVisible();
+  await asGoogle(page, 'asha@example.com|Asha');
+  await page.click('.lk-g');
+  // The grown-up agrees to what is kept in the cloud, once.
+  await expect(page.locator('.sheet')).toContainText('first name, age and avatar');
+  await page.click('.sheet .btn.mint');
+  await expect(page.locator('.lk-gmsg')).toContainText('asked for your account to be approved');
+  // The owner, on their phone (here: the same browser), sees the request and approves it.
+  await page.evaluate(() => { const w = window as unknown as CloudW; w.__app.show(w.__screens.ownerScreen(() => undefined)); });
+  await asGoogle(page, 'moulik1111a@gmail.com|Moulik');
+  await page.click('.og-in');
+  await expect(page.locator('.og-req')).toContainText('asha@example.com');
+  await page.click('.og-req .og-ok');
+  await page.click('.sheet .btn.mint'); // no end date
+  await expect(page.locator('.og-acc')).toContainText('asha@example.com');
+  await expect(page.locator('.og-req')).toHaveCount(0);
+  // Back on Asha's phone: check again, and it opens.
+  await page.click('.og-out');
+  await page.goto('/?debug&noloader&lock&cloudmock');
+  await asGoogle(page, 'asha@example.com|Asha');
+  await page.click('.lk-g');
+  await expect(page.locator('.lock')).toHaveCount(0);
+  await expect(page.locator('.welcome, .whos')).toBeVisible();
+  // It stays open after a restart (the approval is remembered on the phone).
+  await page.goto('/?debug&noloader&lock&cloudmock');
+  await expect(page.locator('.welcome, .whos')).toBeVisible();
+  // The owner removes Asha: the next check locks it.
+  const store = await page.evaluate(() => JSON.parse(localStorage.getItem('studyhard.mockcloud.access') ?? '{}'));
+  expect(Object.keys(store)).toEqual(['asha@example.com']);
+  // (Changed before the app starts, so it can't save over it.)
+  await page.addInitScript(() => {
+    if (sessionStorage.getItem('removed')) return;
+    sessionStorage.setItem('removed', '1');
+    localStorage.setItem('studyhard.mockcloud.access', '{}');
+    const s = JSON.parse(localStorage.getItem('studyhard.save')!);
+    s.access.google.checkedAt -= 15 * 86_400_000; // due a check
+    localStorage.setItem('studyhard.save', JSON.stringify(s));
+  });
+  await page.goto('/?debug&noloader&lock&cloudmock');
+  await expect(page.locator('.lock')).toBeVisible();
+  await expect(page.locator('.lk-gmsg')).toContainText('Waiting for approval');
+});
+
+test('google: back up from the parent area; a new phone signs in and gets the children back', async ({ page, browser }) => {
+  await page.goto('/?debug&demo=s4.x7%231&cloudmock');
+  await expect(page.locator('.map')).toBeVisible();
+  await asGoogle(page, 'moulik1111a@gmail.com|Moulik');
+  await page.evaluate(() => { const w = window as unknown as CloudW; w.__app.show(w.__screens.parentScreen); });
+  await expect(page.locator('.pa-cloud')).toContainText('Saved on this phone only');
+  await page.click('.cl-in');
+  await page.click('.sheet .btn.mint');
+  await expect(page.locator('.pa-cloud.on')).toContainText('moulik1111a@gmail.com');
+  await page.click('.cl-sync');
+  await expect(page.locator('.cl-status')).toHaveText('Backed up just now');
+  const cloud = await page.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith('studyhard.mockcloud')).map((k) => [k, localStorage.getItem(k)!])));
+  const fam = JSON.parse(Object.entries(cloud).find(([k]) => k.includes('.family.'))![1]);
+  expect(Object.keys(fam.kids)).toHaveLength(1);
+  const name = await page.evaluate(() => (window as unknown as CloudW).__app.save.data.children[0].name);
+  // A new phone: nothing on it, the same cloud.
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const p2 = await ctx.newPage();
+  const errors: string[] = [];
+  p2.on('pageerror', (e) => errors.push(e.message));
+  await p2.addInitScript((c) => {
+    if (!sessionStorage.getItem('seeded')) {
+      for (const [k, v] of Object.entries(c)) localStorage.setItem(k, v);
+      sessionStorage.setItem('seeded', '1');
+    }
+    Object.assign(window, { __mockGoogle: 'moulik1111a@gmail.com|Moulik', __quietPlus: true });
+  }, cloud);
+  await p2.goto('/?debug&noloader&lock&cloudmock');
+  await p2.click('.lk-g');
+  await p2.click('.sheet .btn.mint');
+  await expect(p2.locator('.whos')).toBeVisible();
+  await expect(p2.locator('.kid').first()).toContainText(name);
+  expect(errors).toEqual([]);
+  await ctx.close();
+});

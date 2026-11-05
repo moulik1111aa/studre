@@ -32,6 +32,20 @@ import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.core.app.NotificationManagerCompat;
+import androidx.credentials.ClearCredentialStateRequest;
+import androidx.credentials.Credential;
+import androidx.credentials.CredentialManager;
+import androidx.credentials.CredentialManagerCallback;
+import androidx.credentials.CustomCredential;
+import androidx.credentials.GetCredentialRequest;
+import androidx.credentials.GetCredentialResponse;
+import androidx.credentials.exceptions.ClearCredentialException;
+import androidx.credentials.exceptions.GetCredentialCancellationException;
+import androidx.credentials.exceptions.GetCredentialException;
+import androidx.credentials.exceptions.NoCredentialException;
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption;
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential;
+import java.util.concurrent.Executors;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.PermissionState;
 import com.getcapacitor.Plugin;
@@ -290,6 +304,70 @@ public class StudyHardPlugin extends Plugin {
     }
 
     /** A stable id for this phone and app (survives reinstalling), for access keys. */
+    /**
+     * Sign in with Google (Credential Manager): the account sheet, then the Google ID token
+     * for the Web client ID. Resolves { idToken, email, name } or { cancelled: true } or { error }.
+     */
+    @PluginMethod
+    public void googleSignIn(PluginCall call) {
+        String clientId = call.getString("webClientId", "");
+        if (clientId == null || clientId.isEmpty()) {
+            JSObject r = new JSObject();
+            r.put("error", "no client id");
+            call.resolve(r);
+            return;
+        }
+        GetSignInWithGoogleOption option = new GetSignInWithGoogleOption.Builder(clientId).build();
+        GetCredentialRequest request = new GetCredentialRequest.Builder().addCredentialOption(option).build();
+        CredentialManager cm = CredentialManager.create(getContext());
+        cm.getCredentialAsync(getActivity(), request, null, Executors.newSingleThreadExecutor(), new CredentialManagerCallback<GetCredentialResponse, GetCredentialException>() {
+            @Override
+            public void onResult(GetCredentialResponse response) {
+                JSObject r = new JSObject();
+                Credential c = response.getCredential();
+                if (c instanceof CustomCredential && GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL.equals(c.getType())) {
+                    try {
+                        GoogleIdTokenCredential g = GoogleIdTokenCredential.createFrom(((CustomCredential) c).getData());
+                        r.put("idToken", g.getIdToken());
+                        r.put("email", g.getId());
+                        r.put("name", g.getDisplayName() == null ? "" : g.getDisplayName());
+                    } catch (Exception e) {
+                        r.put("error", "bad credential");
+                    }
+                } else {
+                    r.put("error", "unexpected credential");
+                }
+                call.resolve(r);
+            }
+
+            @Override
+            public void onError(GetCredentialException e) {
+                JSObject r = new JSObject();
+                if (e instanceof GetCredentialCancellationException) r.put("cancelled", true);
+                else if (e instanceof NoCredentialException) r.put("error", "no Google account on this phone");
+                else r.put("error", e.getClass().getSimpleName() + ": " + e.getMessage());
+                call.resolve(r);
+            }
+        });
+    }
+
+    /** Forget the chosen Google account on this phone (the next sign-in shows the account sheet). */
+    @PluginMethod
+    public void googleSignOut(PluginCall call) {
+        CredentialManager cm = CredentialManager.create(getContext());
+        cm.clearCredentialStateAsync(new ClearCredentialStateRequest(), null, Executors.newSingleThreadExecutor(), new CredentialManagerCallback<Void, ClearCredentialException>() {
+            @Override
+            public void onResult(Void v) {
+                call.resolve();
+            }
+
+            @Override
+            public void onError(ClearCredentialException e) {
+                call.resolve();
+            }
+        });
+    }
+
     @PluginMethod
     public void deviceId(PluginCall call) {
         String id = Settings.Secure.getString(getContext().getContentResolver(), Settings.Secure.ANDROID_ID);

@@ -28,6 +28,10 @@ import { MENU_ICON, openDrawer } from './drawer.ts';
 import { quietSettingsScreen } from './quiet.ts';
 import { quietSummary } from '../core/quiet.ts';
 import { saveWorksheet } from './worksheet.ts';
+import { account, cloudOn, deleteCloudCopy, lastSync, signIn, signOut, syncNow, syncText } from './cloud.ts';
+import { googleButton } from './access.ts';
+
+const LOCAL_NOTE = 'Saved on this phone only';
 
 
 export const CHALLENGE = [
@@ -81,6 +85,17 @@ let page: Page = 'basic';
 
 const kidLine = (c: Child): string => [`Age ${c.age}`, c.adventure?.on ? 'Adventure' : '', c.school?.on ? 'School path' : '', (c.challenge ?? 0) > 0 ? CHALLENGE[c.challenge ?? 0].name : ''].filter(Boolean).join(' · ');
 
+/** Google backup and sync (when this build has it). */
+function cloudCard(app: App): string {
+  if (!cloudOn(app)) return '';
+  const who = account(app);
+  if (!who)
+    return `<div class="card pa-cloud"><p><b>☁️ Back up automatically</b><small>Sign in with Google: progress is backed up and the same on every phone. ${esc(LOCAL_NOTE)} right now.</small></p>${googleButton('cl-in')}</div>`;
+  return `<div class="card pa-cloud on"><p><b>☁️ ${esc(who.email)}</b><small class="cl-status">${esc(syncText(lastSync()))}</small></p>
+    <div class="cl-btns"><button class="btn small cl-sync">Back up now</button><button class="btn ghost small cl-out">Sign out</button></div>
+    <button class="linkish warn cl-del">Delete the cloud copy</button></div>`;
+}
+
 function basicHtml(app: App): string {
   const st = app.save.data.settings;
   return `
@@ -100,11 +115,12 @@ function basicHtml(app: App): string {
       <div class="themes" role="radiogroup" aria-label="Look of the app">${THEME_CHOICES.map((t) => `<button class="theme-tile th-${t.id}${st.theme === t.id ? ' on' : ''}" role="radio" aria-checked="${st.theme === t.id}" data-theme-id="${t.id}"><span class="th-swatch"><i></i><i></i><i></i></span><b>${t.name}</b><small>${t.note}</small></button>`).join('')}</div></section>
     <section class="pa-sec"><h2 class="pa-h">💾 Backup</h2>
       <div class="card pa-backup">
-        <p class="pb-why"><small>Progress is saved only on this phone. A report card file (kept in Google Drive or email) brings it back on any phone.</small></p>
+        <p class="pb-why"><small>${account(app) ? 'A report card file is a copy you can keep anywhere, like Google Drive or email.' : 'Progress is saved only on this phone. A report card file (kept in Google Drive or email) brings it back on any phone.'}</small></p>
         <ul class="pb-kids">${app.save.data.children.map((c) => `<li>${avatarHtml(c.avatar, 28)}<span>${esc(c.name)}</span><small>${lastBackupText(c)}</small></li>`).join('')}</ul>
         <button class="btn small bk-all">Save report cards now</button>
         <button class="linkish restore-kid">⤓ Restore from a report card</button>
-      </div></section>
+      </div>
+      ${cloudCard(app)}</section>
     <button class="pa-more card to-adv"><span>☰</span><span><b>More settings</b><small>Timers, notes, voice, lock and help are in the menu</small></span><i aria-hidden="true">›</i></button>`;
 }
 
@@ -208,6 +224,44 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
   on('.report', 'click', (b) => void app.show(reportScreen(kid(b))));
   on('.add-kid', 'click', () => void app.show(addChildScreen(false)));
   on('.restore-kid', 'click', () => void restoreFromFile(app, () => void app.show(parentScreen)));
+  on('.cl-in', 'click', async () => {
+    const r = await signIn(app);
+    if (r === 'approved') app.toast('Signed in. Progress is backed up and syncs on every phone.', 5000);
+    else if (r === 'waiting') app.toast('Signed in. Your account is waiting to be approved; backup starts once it is.', 6000);
+    else if (r === 'offline') app.toast('No internet connection. Connect and try again.');
+    render(false);
+  });
+  on('.cl-sync', 'click', async (b) => {
+    (b as HTMLButtonElement).disabled = true;
+    const r = await syncNow(app);
+    (b as HTMLButtonElement).disabled = false;
+    const st = body.querySelector('.cl-status');
+    if (r.ok) {
+      if (st) st.textContent = syncText(r.at);
+      app.toast(r.added.length ? `Backed up. ${r.added.map((c) => c.name).join(' and ')} came from the cloud.` : 'Backed up.');
+      if (r.added.length || r.dropped.length) render(false);
+    } else app.toast(r.why === 'not-approved' ? 'Your account isn’t approved yet.' : r.message);
+  });
+  on('.cl-out', 'click', async () => {
+    const viaGoogle = !!app.save.data.access?.google && !app.save.data.access?.key;
+    const { result } = app.sheet(`<h2>Sign out of Google?</h2><p>Progress stays on this phone, but stops backing up.${viaGoogle ? ' MN was unlocked with this account, so it will need Google or a key to open next time.' : ''}</p>`, [
+      { label: 'Sign out', value: true, kind: 'danger' },
+      { label: 'Cancel', value: false, kind: 'ghost', back: true },
+    ], 'Sign out');
+    if (!(await result)) return;
+    await syncNow(app);
+    await signOut(app);
+    render(false);
+  });
+  on('.cl-del', 'click', async () => {
+    const { result } = app.sheet(`<h2>Delete the cloud copy?</h2><p>Your family’s progress is deleted from the cloud, and this phone signs out. Progress on this phone stays. Other phones keep their own progress too, but stop syncing.</p>`, [
+      { label: 'Delete cloud copy', value: true, kind: 'danger' },
+      { label: 'Cancel', value: false, kind: 'ghost', back: true },
+    ], 'Delete cloud copy');
+    if (!(await result)) return;
+    app.toast((await deleteCloudCopy(app)) ? 'The cloud copy is deleted.' : 'That didn’t work. Check the internet connection.');
+    render(false);
+  });
   on('.limits', 'click', () => void app.show(limitsScreen(false)));
   on('.quiet-row', 'click', () => void app.show(quietSettingsScreen(parentScreen)));
   on('.bk-all', 'click', async () => {

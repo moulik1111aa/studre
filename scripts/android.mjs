@@ -124,6 +124,10 @@ android {
 dependencies {
     implementation "androidx.core:core:$androidxCoreVersion"
     implementation "androidx.activity:activity:$androidxActivityVersion"
+    // Sign in with Google (Credential Manager), for grown-ups' backup and sync.
+    implementation "androidx.credentials:credentials:1.3.0"
+    implementation "androidx.credentials:credentials-play-services-auth:1.3.0"
+    implementation "com.google.android.libraries.identity.googleid:googleid:1.1.1"
 }
 `,
 );

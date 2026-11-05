@@ -67,3 +67,42 @@
 .gs-pinbox{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
 .gs-pinbox .gu-pad{width:100%;max-width:320px}
 .gs-pinbox .gu-pad .key{min-height:52px}
+
+/* Google sign-in: the lock screen's way in, the parent area's backup card, the owner's lists */
+.g-logo{width:20px;height:20px;flex:none;vertical-align:middle}
+.lk-google{display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:14px 16px}
+
+.lk-gmsg{margin:0;font-size:13.5px;text-align:center;opacity:.85}
+.lk-or{display:flex;align-items:center;gap:10px;margin:2px 0;font-size:13px;font-weight:700;opacity:.65}
+.lk-or::before,.lk-or::after{content:"";flex:1;height:1.5px;background:currentColor;opacity:.3}
+.pa-cloud{margin-top:10px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.pa-cloud p{margin:0;display:flex;flex-direction:column;gap:2px}
+.pa-cloud p b{font-size:15px;word-break:break-all}
+.pa-cloud p small{font-size:13px;opacity:.8}
+
+.cl-btns{display:flex;gap:8px;flex-wrap:wrap}
+.cl-btns .btn{flex:1 1 120px}
+.cl-list{margin:6px 0 8px;padding-left:20px;text-align:left}
+.cl-list li{margin:2px 0}
+.og-card{display:flex;flex-direction:column;gap:8px}
+.og-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.og-head h2{margin:0}
+
+.og-h{margin:10px 0 2px;font-size:15px}
+.og-row{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:10px 0;border-top:1.5px solid var(--line)}
+.og-who{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 180px}
+.og-who small{font-size:12.5px;opacity:.78;word-break:break-all}
+.og-phones{margin-top:2px}
+.og-btns{display:flex;gap:6px}
+.og-add{display:flex;gap:8px}
+.og-add input{flex:1;min-width:0;font:inherit;padding:10px 12px;border-radius:12px;border:2px solid var(--line);background:var(--surface,#fff);color:var(--ink)}
+
+/* "Sign in with Google": Google's standard button (white, grey outline, the G, Roboto), in every theme */
+.gsi-btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:44px;padding:0 16px;border-radius:22px;border:1px solid #747775;background:#FFFFFF;color:#1F1F1F;font:500 15px/1 Roboto,"Google Sans",Arial,sans-serif;letter-spacing:.25px;cursor:pointer;box-shadow:none;transform:none;text-shadow:none;-webkit-tap-highlight-color:transparent;transition:background-color .2s,box-shadow .2s}
+.gsi-btn .gsi-icon{display:inline-flex;width:20px;height:20px;flex:none}
+.gsi-btn .gsi-icon svg{width:20px;height:20px}
+.gsi-btn .gsi-text{white-space:nowrap}
+.gsi-btn:hover{background:#F8F9FA;box-shadow:0 1px 2px rgba(60,64,67,.3),0 1px 3px 1px rgba(60,64,67,.15)}
+.gsi-btn:active{background:#EEF0F2}
+.gsi-btn:focus-visible{outline:2px solid #0B57D0;outline-offset:2px}
+.gsi-btn:disabled{opacity:.6;cursor:default}
