@@ -97,6 +97,19 @@ const audioTag = () =>
   `<script type="text/plain" id="logo-audio">${readFileSync(join(root, 'assets', 'audio', 'mn-logo.mp3')).toString('base64')}</script>`;
 const threeTag = () => `<script type="text/plain" id="three-src">${readFileSync(join(root, 'assets', 'vendor', 'three.module.min.js'), 'utf8').replace(/<\/(script)/gi, '<\\/$1')}</script>`;
 
+/**
+ * The Firebase Web API key, from the FIREBASE_API_KEY secret in CI (or a local, untracked
+ * .firebase-key file). It is never committed; without it Google sign-in stays hidden.
+ */
+function firebaseKey() {
+  if (process.env.FIREBASE_API_KEY) return process.env.FIREBASE_API_KEY.trim();
+  try {
+    return readFileSync(join(root, '.firebase-key'), 'utf8').trim();
+  } catch {
+    return '';
+  }
+}
+
 export function build() {
   const css = readdirSync(join(src, 'styles'))
     .filter((f) => f.endsWith('.css'))
@@ -104,7 +117,7 @@ export function build() {
     .map((f) => readFileSync(join(src, 'styles', f), 'utf8'))
     .join('\n');
   const appSrc = bundle(join(src, 'main.ts'));
-  const buildInfo = { version: JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version, builtAt: new Date().toISOString() };
+  const buildInfo = { version: JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version, builtAt: new Date().toISOString(), firebaseKey: firebaseKey() };
   const scriptFor = (info) =>
     `window.__BUILD__=${JSON.stringify(info)};\n` + appSrc;
   const js = scriptFor(buildInfo);
@@ -119,7 +132,7 @@ export function build() {
   // Artifact variant: the host wraps the page in its own document skeleton, so it
   // carries only the title, styles, app root and script.
   // The shared preview link is a playtest build: it also offers preview tools.
-  const previewJs = scriptFor({ ...buildInfo, preview: true });
+  const previewJs = scriptFor({ ...buildInfo, firebaseKey: '', preview: true });
   const artifact =
     `<title>MN · Mission Next</title>\n<meta name="theme-color" content="#0F1530">\n<style>${fontCss}</style>\n<style>${css}</style>\n` +
     `<div id="app" aria-live="polite"></div>\n${threeTag()}\n${audioTag()}\n<script>${scriptSafe(previewJs)}</script>\n`;

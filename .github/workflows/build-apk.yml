@@ -72,6 +72,8 @@ jobs:
           { npm run typecheck && npm test; } 2>&1 | tee -a ci.log
 
       - name: Build the app
+        env:
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
         run: |
           set -o pipefail
           npm run build 2>&1 | tee -a ci.log

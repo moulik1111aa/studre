@@ -7,3 +7,6 @@ playwright-report/
 *.jks
 *.keystore
 .scratch/
+
+# Firebase Web API key for local builds (CI uses the FIREBASE_API_KEY secret)
+.firebase-key
