@@ -57,7 +57,7 @@ export function backend(app: App): CloudBackend | null {
   if (!cloudOn(app)) return null;
   const saved = readJson<Session>(SESSION_KEY);
   const keep = (s: Session | null) => (s ? ls.set(SESSION_KEY, JSON.stringify(s)) : ls.del(SESSION_KEY));
-  be = FIREBASE ? new FirebaseRest(FIREBASE, saved, keep) : new MemoryCloud(ls, saved, keep);
+  be = FIREBASE && !mock(app) ? new FirebaseRest(FIREBASE, saved, keep) : new MemoryCloud(ls, saved, keep);
   return be;
 }
 
@@ -137,7 +137,7 @@ async function consent(app: App): Promise<boolean> {
 
 /** The Google ID token from the phone's account sheet (a stand-in in test runs). */
 async function googleIdToken(app: App): Promise<{ token: string } | { cancelled: true } | { error: string }> {
-  if (!FIREBASE) return { token: (window as { __mockGoogle?: string }).__mockGoogle ?? 'parent@example.com|Grown-up' };
+  if (!FIREBASE || mock(app)) return { token: (window as { __mockGoogle?: string }).__mockGoogle ?? 'parent@example.com|Grown-up' };
   if (!app.native?.googleSignIn) return { error: 'Update MN to the newest version to sign in with Google.' };
   const r = await app.native.googleSignIn({ webClientId: FIREBASE.webClientId });
   if (r.idToken) return { token: r.idToken };
