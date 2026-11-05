@@ -456,6 +456,83 @@ test('practice together: a slip brings a twin question, and only first tries sco
   await expect(page.locator('.res-perfect')).toHaveCount(0);
 });
 
+test('fix-it: a missed question comes back the next day, and a right answer moves it on', async ({ page }) => {
+  test.setTimeout(90_000);
+  await seeded(page, 's4.x7#1', `window.__app.save.update((d) => { d.settings.teach = false; })`);
+  await expect(page.locator('.fix-btn')).toHaveCount(0);
+  await page.click('.play-next');
+  await answerWrong(page);
+  await playThrough(page, '.result');
+  let save = await page.evaluate(() => JSON.parse(localStorage.getItem('studyhard.save')!));
+  const missedSkill = Object.keys(save.children[0].fixit)[0];
+  const it = save.children[0].fixit[missedSkill];
+  expect(Object.keys(save.children[0].fixit)).toHaveLength(1);
+  expect(it.h.at(-1)[1]).toBe(0);
+  const today = await page.evaluate(() => (window as unknown as { __app: { today: string } }).__app.today);
+  expect(it.h.at(-1)[2] > today).toBe(true);
+  // Not due today: no button yet. Make it due (as if a day had passed).
+  await page.goto('/?debug&noloader');
+  await page.locator('.kid').first().click();
+  await expect(page.locator('.map')).toBeVisible();
+  await expect(page.locator('.fix-btn')).toHaveCount(0);
+  await page.evaluate(() => {
+    const app = (window as unknown as { __app: { today: string; save: { update: (f: (d: { children: { fixit: Record<string, { h: [number, number, string][] }> }[] }) => void) => void } } }).__app;
+    app.save.update((d) => {
+      for (const x of Object.values(d.children[0].fixit)) x.h[x.h.length - 1][2] = app.today;
+    });
+  });
+  await page.goto('/?debug&noloader');
+  await page.locator('.kid').first().click();
+  await expect(page.locator('.fix-btn i')).toHaveText('1');
+  await page.click('.fix-btn');
+  await expect(page.locator('.fixit .fix-skill')).toBeVisible();
+  await playThrough(page, '.fix-done', 1);
+  await expect(page.locator('.fix-done h2')).toHaveText('All fixed up!');
+  await expect(page.locator('.fd-list li')).toContainText('Back in 3 days');
+  await page.click('.fd-go');
+  await expect(page.locator('.map')).toBeVisible();
+  await expect(page.locator('.fix-btn')).toHaveCount(0);
+  save = await page.evaluate(() => JSON.parse(localStorage.getItem('studyhard.save')!));
+  expect(save.children[0].fixit[missedSkill].h.at(-1)[1]).toBe(1);
+});
+
+test('quiet hours: bedtime stops play, a grown-up can unlock it; set in the parent area', async ({ page }) => {
+  await seeded(page, '@0', `window.__app.save.update((d) => { d.settings.quiet = { bed: { on: true, from: '00:00', to: '23:59' } }; })`);
+  await expect(page.locator('.quiet-bed')).toBeVisible();
+  await expect(page.locator('.quiet-bed .title')).toContainText('Time to sleep');
+  await page.click('.quiet-unlock');
+  await grownUp(page);
+  await expect(page.locator('.map')).toBeVisible();
+  // The unlock holds: a level opens.
+  await page.click('.play-next');
+  await expect(page.locator('.qcard')).toBeVisible();
+  // Parent area: the row shows the times; switch bedtime off and school time on.
+  type W = { __app: { show(m: unknown): void }; __screens: { parentScreen: unknown } };
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
+  await expect(page.locator('.quiet-row small')).toHaveText('Bedtime 12 am–11:59 pm');
+  await page.click('.quiet-row');
+  await page.click('.qs-card [data-on="bed"]');
+  await expect(page.locator('[data-for="bed"]')).toBeHidden();
+  await page.click('.qs-card [data-on="school"]');
+  await page.click('.qt-day[data-day="5"]');
+  await page.click('.quiet-set .back-btn');
+  await expect(page.locator('.quiet-row small')).toHaveText('School 8 am–2 pm · Mon, Tue, Wed, Thu');
+});
+
+test('worksheet: a printable sheet from where the child is, answers on the last page', async ({ page }) => {
+  type W = { __app: { show(m: unknown): void }; __screens: { parentScreen: unknown } };
+  await page.goto('/?debug&demo=s4.x7%231');
+  await expect(page.locator('.map')).toBeVisible();
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
+  await page.click('.kid-set');
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.click('.sheet-btn')]);
+  expect(dl.suggestedFilename()).toMatch(/^MN-.+-worksheet-\d{4}-\d{2}-\d{2}\.html$/);
+  const text = await (await dl.createReadStream()).toArray().then((b) => Buffer.concat(b).toString('utf8'));
+  expect(text.match(/<li class="q/g)?.length).toBe(20);
+  expect(text).toContain('Answers (for grown-ups)');
+  expect(text).toContain('× 7');
+});
+
 test('lessons can be switched off by a parent, and close with ×', async ({ page }) => {
   await seeded(page, 's4.x7#1', `window.__app.save.update((d) => { d.settings.teach = false; })`);
   await page.click('.play-next');

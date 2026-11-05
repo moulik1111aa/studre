@@ -12,7 +12,7 @@ import { ICONS, avatarHtml } from './icons.ts';
 import { JarBar } from './jars.ts';
 import { WORLDS, worldVars } from './worlds.ts';
 import { drawOn, stagger, popIn, reducedMotion, EASE_OUT } from '../render/motion.ts';
-import { playLevel, timeState } from './flow.ts';
+import { goHome, playLevel, timeState } from './flow.ts';
 import { questsFor, questUnlocked } from '../core/quest.ts';
 import { questScreen } from './quest.ts';
 import { timesUpScreen } from './timesup.ts';
@@ -28,6 +28,8 @@ import { dragonMapOn, foldStage, type FoldNode } from './foldmap.ts';
 import { mapPetHtml } from './pets.ts';
 import { MENU_ICON, openDrawer } from './drawer.ts';
 import { parentScreen } from './parent.ts';
+import { fixDueFor, startFixit } from './fixit.ts';
+import { quietNow, quietScreen } from './quiet.ts';
 
 interface Node {
   kind: 'skill' | 'review' | 'boss' | 'quest';
@@ -66,6 +68,8 @@ export function mapScreen(child: Child) {
     const left = Math.ceil(secondsLeft(child.wallet, app.today, app.save.data.settings.limitMinutes) / 60);
     const limit = app.save.data.settings.limitMinutes;
     const adv = adventureOn(child) ? questBadge(app, child) : null;
+    // Fix-it: questions like ones missed before, back for another go.
+    const fix = fixDueFor(app, child).length;
     // Adventure: Plus walks the map in his outfit, leaving his trail behind.
     const outfit = adv ? outfitFor(child) : {};
     const trailCls = outfit.trail ? ` trail-${outfit.trail}` : '';
@@ -77,7 +81,7 @@ export function mapScreen(child: Child) {
       </header>
       <div class="jar-slot"></div>
       <div class="worlds scroll"></div>
-      <div class="play-bar">${next ? `<button class="icon-btn skip-btn" aria-label="Skip this level (grown-up)">${ICONS.skip}</button>` : ''}<button class="btn play-next">${next ? `${ICONS.play} ${next.kind === 'skill' ? 'Play' : next.kind === 'boss' ? 'Fight the boss!' : 'Minion fight!'}` : 'All done!'}</button>${adv ? `<button class="icon-btn adv-btn${adv.ready ? ' ready' : ''}" aria-label="Quests and badges: ${adv.done} of 3 quests done today"><span aria-hidden="true">${adv.ready ? '🎁' : '📜'}</span><i aria-hidden="true">${adv.done}/3</i>${!adv.raid.claimed ? `<b class="raid-chip" title="${esc(adv.raid.monster.name)}" aria-hidden="true">${adv.raid.monster.icon}</b>` : ''}</button>` : ''}</div>
+      <div class="play-bar">${next ? `<button class="icon-btn skip-btn" aria-label="Skip this level (grown-up)">${ICONS.skip}</button>` : ''}<button class="btn play-next">${next ? `${ICONS.play} ${next.kind === 'skill' ? 'Play' : next.kind === 'boss' ? 'Fight the boss!' : 'Minion fight!'}` : 'All done!'}</button>${fix ? `<button class="icon-btn fix-btn" aria-label="Fix-it: ${fix} tricky ${fix === 1 ? 'one' : 'ones'} from before"><span aria-hidden="true">🔧</span><i aria-hidden="true">${fix}</i></button>` : ''}${adv ? `<button class="icon-btn adv-btn${adv.ready ? ' ready' : ''}" aria-label="Quests and badges: ${adv.done} of 3 quests done today"><span aria-hidden="true">${adv.ready ? '🎁' : '📜'}</span><i aria-hidden="true">${adv.done}/3</i>${!adv.raid.claimed ? `<b class="raid-chip" title="${esc(adv.raid.monster.name)}" aria-hidden="true">${adv.raid.monster.icon}</b>` : ''}</button>` : ''}</div>
     </section>`);
     const jar = new JarBar(child);
     el.querySelector('.jar-slot')!.appendChild(jar.el);
@@ -98,6 +102,8 @@ export function mapScreen(child: Child) {
         return;
       }
       if (n.kind === 'quest') {
+        const quiet = child.tester ? null : quietNow(app);
+        if (quiet) return void app.show(quietScreen(child, quiet, () => goHome(app)));
         if (timeState(app, child) === 'stop') return void app.show(timesUpScreen(child));
         return void app.show(questScreen(child, quests.find((x) => x.id === n.id)!), 'liquid');
       }
@@ -230,6 +236,7 @@ export function mapScreen(child: Child) {
       }),
     );
     el.querySelector('.adv-btn')?.addEventListener('click', () => void app.show(adventureScreen(child)));
+    el.querySelector('.fix-btn')?.addEventListener('click', () => startFixit(app, child));
     el.querySelector('.play-next')!.addEventListener('click', () => {
       if (next) playLevel(app, child, next);
     });

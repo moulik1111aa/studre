@@ -4,6 +4,7 @@
 // from both, and the jars from whichever phone earned more. A check value stops a file that
 // was edited by hand (say, to add coins) from being imported.
 
+import { mergeFix } from './fixit.ts';
 import { mergeAdventure } from './adventure.ts';
 import type { Child } from '../storage/save.ts';
 import type { LevelResult } from './path.ts';
@@ -104,6 +105,7 @@ export function mergeChild(here: Child, incoming: Child, incomingNewer: boolean)
   out.log = holder.log;
   out.tally = holder.tally;
   out.adventure = mergeAdventure(here.adventure, incoming.adventure);
+  out.fixit = mergeFix(here.fixit, incoming.fixit);
   // Undo notes stay with this phone's own play.
   out.undo = here.undo ?? [];
   if (!out.lastPlay || (other.lastPlay && other.lastPlay.day > out.lastPlay.day)) out.lastPlay = other.lastPlay ?? out.lastPlay;

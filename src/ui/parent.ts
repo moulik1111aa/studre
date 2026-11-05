@@ -25,6 +25,9 @@ import { reelScreen } from './reel.ts';
 import { accessState, lockScreen, niceDay } from './access.ts';
 import { freshProgress } from '../core/path.ts';
 import { MENU_ICON, openDrawer } from './drawer.ts';
+import { quietSettingsScreen } from './quiet.ts';
+import { quietSummary } from '../core/quiet.ts';
+import { saveWorksheet } from './worksheet.ts';
 
 
 export const CHALLENGE = [
@@ -89,6 +92,7 @@ function basicHtml(app: App): string {
       <button class="btn ghost small add-kid">+ Add a child</button></section>
     <section class="pa-sec"><h2 class="pa-h">⏱️ Daily play</h2>
       <button class="pa-row card limits"><b>${st.limitMinutes} minutes a day</b><small>${st.timeUpMode === 'stop' ? 'Stops when time is up' : 'Keeps playing without coins'} · treats ${paceText(st.treatPace, 'treat')}, big toy ${paceText(st.goalPace, 'goal')}</small></button>
+      <button class="pa-row card quiet-row"><b>🌙 Quiet hours</b><small>${esc(quietSummary(st.quiet))}</small></button>
       <div class="card pa-toggles">${toggleRows(st, [T('holiday', 'Holiday mode', 'Rewards don’t melt while you’re away or unwell.')])}</div></section>
     <section class="pa-sec"><h2 class="pa-h">🔊 Sound</h2>
       <div class="card pa-toggles">${toggleRows(st, [T('sound', 'Sound effects', 'Taps, cheers and coins.'), T('voice', 'Read questions aloud', 'Plus reads each question and tip.')])}</div></section>
@@ -205,6 +209,7 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
   on('.add-kid', 'click', () => void app.show(addChildScreen(false)));
   on('.restore-kid', 'click', () => void restoreFromFile(app, () => void app.show(parentScreen)));
   on('.limits', 'click', () => void app.show(limitsScreen(false)));
+  on('.quiet-row', 'click', () => void app.show(quietSettingsScreen(parentScreen)));
   on('.bk-all', 'click', async () => {
     const kids = app.save.data.children;
     const n = await backUpNow(app, kids);
@@ -310,6 +315,7 @@ export function childSettingsScreen(c: Child) {
       <div class="scroll pa-body">
         <div class="ks-hero">${avatarHtml(c.avatar, 64)}<b>${esc(c.name)}</b><small>Age ${c.age}</small></div>
         <button class="pa-row card report" data-id="${c.id}"><b>${ICONS.chart} Report</b><small>What ${esc(c.name)} has learned, and where they need help</small></button>
+        <button class="pa-row card sheet-btn"><b>🖨️ Print a worksheet</b><small>${c.age <= 6 ? 12 : 20} questions from where ${esc(c.name)} is now, with answers. Study time without a screen.</small></button>
         <h2 class="pa-h">Learning</h2>
         <button class="pa-row card age-btn"><b>🎂 Age</b><small>${c.age} · questions follow the age</small></button>
         <button class="pa-row card level-btn"><b>${CHALLENGE[c.challenge ?? 0].icon} Difficulty</b><small>${CHALLENGE[c.challenge ?? 0].name} · ${CHALLENGE[c.challenge ?? 0].note}</small></button>
@@ -329,6 +335,7 @@ export function childSettingsScreen(c: Child) {
     el.querySelector('.back-btn')!.addEventListener('click', back);
     el.querySelector('.report')!.addEventListener('click', () => void app.show(reportScreen(c)));
     el.querySelector('.age-btn')!.addEventListener('click', () => void app.show(ageScreen(c)));
+    el.querySelector('.sheet-btn')!.addEventListener('click', () => void saveWorksheet(app, c));
     el.querySelector('.school-btn')!.addEventListener('click', () => void app.show(schoolScreen(c, here)));
     el.querySelector('.level-btn')!.addEventListener('click', async () => {
       const actions: { label: string; value: number; kind: 'mint' | 'ghost'; back?: boolean }[] = [

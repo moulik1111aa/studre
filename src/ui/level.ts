@@ -11,7 +11,7 @@ import { createRng } from '../core/rng.ts';
 import { isCorrect, spoken, type Question } from '../core/question.ts';
 import { addCoins, addPlayTime, coinsForLevel, masterFraction } from '../core/economy.ts';
 import { coinSvg } from './icons.ts';
-import { visualHtml, optionHtml, prettyAnswer } from './visuals.ts';
+import { visualHtml, prettyAnswer } from './visuals.ts';
 import { ICONS } from './icons.ts';
 import { JarBar } from './jars.ts';
 import { ambientHtml, worldVars } from './worlds.ts';
@@ -36,9 +36,10 @@ import { goHome, timeState } from './flow.ts';
 import { stepBackAfterPlacement } from './placement.ts';
 import { stageForAge } from '../core/placement.ts';
 import { remember } from '../core/undo.ts';
-import { wireChoices, type Wired } from './confirm.ts';
+import { mountAnswers, escPrompt } from './answerpad.ts';
 import { lessonFor, showLesson } from './lesson.ts';
 import { adventureOn, outfitFor } from './adventure.ts';
+import { noteMisses } from '../core/fixit.ts';
 
 export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' }>, harder = false) {
   return (app: App): Screen => {
@@ -99,6 +100,8 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
     let timer: Animation | null = null;
     let timeout = 0;
     const asked: Question[] = [];
+    // First-try misses: they come back later as Fix-it questions.
+    const missed: Question[] = [];
     // What is picked or typed but not yet sent (it counts if time runs out).
     let pending: () => string | undefined = () => undefined;
     // While paused the question is hidden, and a new one replaces it on return.
@@ -195,50 +198,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
     };
 
     const renderAnswers = (q: Question) => {
-      answers.className = `answers fmt-${q.format}`;
-      if (q.format === 'pad' || q.format === 'pad-ext') {
-        const ext = q.format === 'pad-ext' || /[./,-]/.test(q.answer);
-        const keys = [7, 8, 9, 4, 5, 6, 1, 2, 3, ext ? '−' : '', 0, '⌫'];
-        const extra = ext ? ['.', '/', ','] : [];
-        answers.innerHTML = `<div class="entry" aria-live="polite"><span class="typed"></span><span class="caret"></span></div>
-          <div class="pad">${keys.map((k) => (k === '' ? '<span></span>' : `<button type="button" class="key" data-k="${k}">${k === '⌫' ? ICONS.backspace : k}</button>`)).join('')}</div>
-          <div class="pad-row">${extra.map((k) => `<button type="button" class="key small" data-k="${k}">${k === ',' ? 'and' : k}</button>`).join('')}<button type="button" class="btn mint ok">OK ${ICONS.check}</button></div>`;
-        let typed = '';
-        pending = () => typed || undefined;
-        const out = answers.querySelector<HTMLElement>('.typed')!;
-        const paint = () => (out.innerHTML = typed ? prettyAnswer(typed.replace(/−/g, '-')) : '');
-        answers.querySelector('.pad')!.addEventListener('pointerdown', (e) => {
-          const k = (e.target as HTMLElement).closest<HTMLElement>('[data-k]')?.dataset.k;
-          if (!k || done) return;
-          e.preventDefault();
-          app.sfx.key();
-          app.haptics.tap();
-          if (k === '⌫') typed = typed.slice(0, -1);
-          else if (k === '−') typed = typed.startsWith('-') ? typed.slice(1) : '-' + typed;
-          else if (typed.length < 9) typed += k;
-          paint();
-        });
-        answers.querySelector('.pad-row')!.addEventListener('pointerdown', (e) => {
-          const k = (e.target as HTMLElement).closest<HTMLElement>('[data-k]')?.dataset.k;
-          if (!k) return;
-          e.preventDefault();
-          if (typed.length < 9) typed += k;
-          paint();
-        });
-        answers.querySelector('.ok')!.addEventListener('click', () => {
-          if (typed) submit(q, typed);
-        });
-        stagger(answers.querySelectorAll('.key, .ok'), { gap: 18, y: 8 });
-        return;
-      }
-      answers.innerHTML = q.choices
-        .map((c) => `<button type="button" class="choice" data-v="${encodeURIComponent(c)}" aria-label="${c}">${optionHtml(c, q.optionObject)}</button>`)
-        .join('');
-      const wired: Wired = wireChoices(app, answers, (v, b) => {
-        if (!done) void submit(q, v, b);
-      });
-      pending = wired.picked;
-      stagger(answers.children, { gap: 70, y: 16 });
+      pending = mountAnswers(app, answers, q, () => done, (v, b) => void submit(q, v, b));
     };
 
     const startTimer = () => {
@@ -285,6 +245,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
         streak = 0;
         if (!retrying) {
           misses++;
+          missed.push(q);
           if (combo && run >= 3) comboEl?.classList.add('broke');
           run = 0;
           if (combo) setTimeout(() => comboEl && !run && (comboEl.hidden = true), reducedMotion() ? 0 : 450);
@@ -349,6 +310,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
         child.stats.answered += asked.length;
         child.stats.correct += correct;
         noteAsked(child.progress, asked, app.today);
+        noteMisses(child, missed, Date.now(), app.today);
         const wasPassed = (child.progress.levels[level.id]?.stars ?? 0) >= 1;
         recordResult(child.progress, level.id, stars);
         if (inside) {
@@ -389,6 +351,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
           app.save.update(() => {
             remember(child, [], Date.now(), app.today);
             addPlayTime(child.wallet, app.today, Math.round(activeMs / 1000), app.save.data.settings.limitMinutes);
+            noteMisses(child, missed, Date.now(), app.today);
           });
           activeMs = 0;
           goHome(app);
@@ -441,8 +404,4 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
       },
     };
   };
-}
-
-function escPrompt(p: string): string {
-  return p.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/(^|[^\w])-(?=\d)/g, '$1−').replace(/(\d+)\/(\d+)/g, (_, a, b) => `<span class="frac"><sup>${a}</sup><sub>${b}</sub></span>`);
 }

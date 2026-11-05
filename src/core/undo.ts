@@ -6,6 +6,7 @@ import type { LevelResult, Progress } from './path.ts';
 import type { Wallet } from './economy.ts';
 import { unlog, type StatsHolder } from './stats.ts';
 import { rollbackAdventure, type AdventureState } from './adventure.ts';
+import { rollbackFix, type FixBank } from './fixit.ts';
 
 export interface UndoEntry {
   /** When (ms since epoch) and on which local day the change happened. */
@@ -28,6 +29,7 @@ interface Undoable extends StatsHolder {
   bossesBeaten: string[];
   undo?: UndoEntry[];
   adventure?: AdventureState;
+  fixit?: FixBank;
 }
 
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
@@ -72,6 +74,7 @@ export function rollback(c: Undoable, since: number): number {
   }
   unlog(c, since);
   rollbackAdventure(c.adventure, since);
+  rollbackFix(c, since);
   c.undo = keep;
   return undo.length;
 }

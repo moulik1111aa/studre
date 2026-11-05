@@ -17,6 +17,7 @@ import { worldColors } from './worlds.ts';
 import { voiceChoiceScreen, useVoice } from './voicechoice.ts';
 import { belowAge } from '../core/placement.ts';
 import { AREAS } from '../core/areas/index.ts';
+import { quietNow, quietScreen } from './quiet.ts';
 
 export function enterChild(app: App, child: Child, how: 'fade' | 'liquid' = 'fade', checkMelt = true): void {
   app.save.update((d) => {
@@ -26,6 +27,9 @@ export function enterChild(app: App, child: Child, how: 'fade' | 'liquid' = 'fad
     if (child.placed) for (const id of belowAge(child.age, AREAS[0].skills.flat())) child.progress.skipped[id] = true;
   });
   useVoice(app, child);
+  // Bedtime or school time: a calm stop screen (a grown-up can unlock it).
+  const quiet = child.tester ? null : quietNow(app);
+  if (quiet) return void app.show(quietScreen(child, quiet, () => enterChild(app, child, how, checkMelt)), how);
   if (checkMelt) {
     let lost = { treat: 0, goal: 0, days: 0 };
     app.save.update(() => (lost = applyMelt(child.wallet, app.today, app.save.data.settings.holiday)));
@@ -59,6 +63,8 @@ export function timeState(app: App, child: Child): 'ok' | 'stop' | 'no-coins' {
 }
 
 export function playLevel(app: App, child: Child, level: Level, harder = false): void {
+  const quiet = child.tester ? null : quietNow(app);
+  if (quiet) return void app.show(quietScreen(child, quiet, () => playLevel(app, child, level, harder)));
   if (timeState(app, child) === 'stop') {
     void app.show(timesUpScreen(child));
     return;

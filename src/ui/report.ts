@@ -25,6 +25,7 @@ import { makeBackup } from '../core/backup.ts';
 import { reportCardHtml, reportFileName } from './reportfile.ts';
 import { saveTextFile } from '../platform/files.ts';
 import { markBackedUp } from './backup.ts';
+import { FIXED, fixCounts, stepOf } from '../core/fixit.ts';
 
 const STRANDS: [string, string][] = [
   ['number', 'Numbers & place value'],
@@ -145,6 +146,17 @@ export function reportScreen(child: Child, start: Tab = 'overview') {
     ].filter(Boolean);
     const kpi = (v: string, label: string, sub = '') => `<div class="rp-kpi"><b>${v}</b><small>${label}</small>${sub ? `<em>${sub}</em>` : ''}</div>`;
     const weekRow = (label: string, now: number, before: number, unit = '') => `<tr><th>${label}</th><td>${now}${unit}</td><td>${before}${unit}</td><td>${change(now, before, unit)}</td></tr>`;
+    // Fix-it: missed questions coming back until they stick.
+    const fc = fixCounts(child, today);
+    const waitingSkills = Object.entries(child.fixit ?? {})
+      .filter(([id, it]) => stepOf(it)[1] < FIXED && skillById(id))
+      .sort((a, b) => b[1].n - a[1].n)
+      .slice(0, 4)
+      .map(([id]) => esc(skillName(id)));
+    const fixCard =
+      fc.due + fc.waiting + fc.fixed
+        ? `<h3 class="pa-h">Fix-it</h3><div class="card rp-fix"><p>🔧 <b>${fc.fixed}</b> fixed for good · <b>${fc.due + fc.waiting}</b> still coming back${fc.due ? ` (<b>${fc.due}</b> ready today)` : ''}</p>${waitingSkills.length ? `<p class="fine">Working on: ${waitingSkills.join(', ')}</p>` : ''}<p class="fine">A question missed in a level comes back a day later, then after 3 days, then a week, with new numbers each time.</p></div>`
+        : '';
     const overview = `
       <div class="card rp-hero">${avatarHtml(child.avatar, 64)}<div><h2>${esc(child.name)}</h2>
         <p>Age ${child.age} · ${child.school?.on ? esc(schoolLabel(child.school)) : `Stage ${front?.stage ?? 7}: ${esc(stageInfo(front?.stage ?? 7).name)}`}</p>
@@ -168,6 +180,7 @@ export function reportScreen(child: Child, start: Tab = 'overview') {
       </tbody></table></div>
       <h3 class="pa-h">Last 14 days</h3>
       <div class="card rp-days">${limitLine}<div class="rp-bars">${bars}</div><p class="fine">Bars: minutes played. Numbers on top: % right that day.</p></div>
+      ${fixCard}
       ${highlights.length ? `<h3 class="pa-h">Highlights</h3><ul class="card rp-list">${highlights.map((h) => `<li>${h}</li>`).join('')}</ul>` : ''}
       ${note}`;
 

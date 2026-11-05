@@ -8,6 +8,7 @@
 // - Widgets: treat jars (with melting worked out on the phone each hour), a fun fact, and the
 //   Adventure level card.
 
+import { quietAt, type QuietSettings } from './quiet.ts';
 import { addDays, dayDiff, MELT, type Wallet } from './economy.ts';
 import { baseCostOf, costOf, rewardById } from './rewards.ts';
 
@@ -53,6 +54,8 @@ export interface PlanInput {
   /** "Now" as local time, and today's local day (YYYY-MM-DD). */
   now: Date;
   today: string;
+  /** Quiet hours: no melt-watch note at bedtime. */
+  quiet?: Partial<QuietSettings>;
 }
 
 const DAY_MS = 86_400_000;
@@ -266,6 +269,7 @@ export function planReminders(p: PlanInput): ReminderItem[] {
       slots.forEach(([hh, mm], s) => {
         const when = at(day, hh, mm);
         if (when < nowMs + 5 * 60_000) return;
+        if (p.quiet?.bed && quietAt({ bed: p.quiet.bed }, new Date(when))) return;
         const id = 100 + d * 10 + s;
         const fact = factFor(p.facts, day, s);
         let lines: string[];

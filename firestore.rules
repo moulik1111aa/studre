@@ -1,0 +1,33 @@
+rules_version = '2';
+
+// MN (Mission Next): each family's data is readable and writable only by the grown-up who
+// signed in with Google. One document per child: families/{uid}/children/{childId}, holding
+// the same checked backup as a report card (see src/core/cloud.ts). Nothing else is stored.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    match /families/{uid} {
+      allow read, delete: if signedIn(uid);
+      allow create, update: if signedIn(uid)
+        && request.resource.data.keys().hasOnly(['v', 'updatedAt', 'device', 'consentAt']);
+
+      match /children/{childId} {
+        allow read, delete: if signedIn(uid);
+        allow create, update: if signedIn(uid)
+          && request.resource.data.keys().hasOnly(['v', 'backup', 'updatedAt', 'device'])
+          && request.resource.data.v == 1
+          && request.resource.data.backup.format == 'mn-child-backup'
+          && request.resource.data.backup.child.id == childId
+          && request.resource.data.updatedAt is int;
+      }
+    }
+
+    // Everything else is closed.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

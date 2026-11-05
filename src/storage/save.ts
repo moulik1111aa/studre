@@ -8,6 +8,8 @@ import type { OwnReward } from '../core/rewards.ts';
 import type { PlayEntry, Tally } from '../core/stats.ts';
 import type { AdventureState } from '../core/adventure.ts';
 import type { ReminderSettings } from '../core/reminders.ts';
+import type { FixBank } from '../core/fixit.ts';
+import type { QuietSettings } from '../core/quiet.ts';
 
 export const SAVE_VERSION = 1;
 const PRIMARY = 'studyhard.save';
@@ -93,6 +95,8 @@ export interface Child {
   dragonMap?: boolean;
   /** Dragon map: the end of the last chapter this child has seen unfold (core/dragon.ts). */
   foldSeen?: number;
+  /** Fix-it: skills missed lately, coming back after 1, 3 and 7 days (core/fixit.ts). */
+  fixit?: FixBank;
 }
 
 /** The first levels a new child plays together with a grown-up. */
@@ -141,6 +145,9 @@ export interface Settings {
   notifAsked?: boolean;
   /** The grown-ups' "What is Adventure?" tips have been seen once (after that they can be skipped). */
   advTipsSeen?: boolean;
+  /** Bedtime and school time (core/quiet.ts), and a grown-up's unlock until then (ms). */
+  quiet?: QuietSettings;
+  quietUnlockUntil?: number;
 }
 
 export type Theme = 'playground' | 'glass' | 'schoolbook' | 'precision';
@@ -243,7 +250,7 @@ export function newChild(name: string, age: number, avatar: number, today: strin
  */
 export function resetChild(c: Child, today: string): void {
   const fresh = newChild(c.name, c.age, c.avatar, today);
-  Object.assign(c, { ...fresh, id: c.id, undo: [], sinceShowcase: 0, log: [], tally: {}, lastPlay: undefined });
+  Object.assign(c, { ...fresh, id: c.id, undo: [], sinceShowcase: 0, log: [], tally: {}, lastPlay: undefined, fixit: undefined });
 }
 
 /** Remove a child and their face-off records. */

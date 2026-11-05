@@ -49,6 +49,7 @@ export function buildPlan(app: App, now = new Date()): { items: ReturnType<typeo
     facts: FACTS,
     now,
     today: app.today,
+    quiet: d.settings.quiet,
   });
   const widget: WidgetData = {
     kids: kids.map(widgetKid).filter((k): k is WidgetKid => !!k),

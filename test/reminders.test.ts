@@ -88,3 +88,15 @@ test('widget data: the jar and a weekly handful of short facts', () => {
   assert.equal(f.length, 2);
   assert.deepEqual(widgetFacts(FACTS, '2026-10-27', 2), f);
 });
+
+test('no melt-watch note at bedtime', () => {
+  const now = new Date(2026, 9, 26, 9, 0);
+  const all = planReminders(input([kid('2026-10-25')], now, '2026-10-26')).filter((i) => i.kind === 'melt');
+  const bed = { on: true, from: '19:00', to: '07:00' };
+  const quiet = planReminders(input([kid('2026-10-25')], now, '2026-10-26', { quiet: { bed } })).filter((i) => i.kind === 'melt');
+  assert.ok(all.some((i) => new Date(i.at).getHours() === 19));
+  assert.ok(quiet.length < all.length);
+  assert.ok(quiet.every((i) => new Date(i.at).getHours() < 19));
+  // Bedtime switched off: every note again.
+  assert.equal(planReminders(input([kid('2026-10-25')], now, '2026-10-26', { quiet: { bed: { ...bed, on: false } } })).filter((i) => i.kind === 'melt').length, all.length);
+});
