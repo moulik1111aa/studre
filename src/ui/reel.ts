@@ -1,6 +1,7 @@
 // The opening video: a one-minute, reel-style ad made in code, with a recorded voiceover
 // (assets/audio/opening.mp3, one file). It moves in stops: each stop plays its line of the
-// voiceover and waits; Next plays the next line, Back replays the one before. One moment
+// voiceover (or, for the worked word problem, plays for a set time) and moves on by itself;
+// Back replays the one before and stays there until Next. One moment
 // lets the child tap the answer. It says what MN (Mission Next) is for (screen time that builds
 // something), how it keeps a child going (a treat they choose, a jar that fills with right
 // answers, lessons after mistakes, bosses) and who is in charge (the grown-up).
@@ -42,6 +43,8 @@ function flyCoins(from: Element, to: Element, n = 6): Promise<void> {
 
 interface ReelScene {
   id: string;
+  /** A stop without a line in the voiceover plays for this long instead (ms). */
+  silentMs?: number;
   /** Background colours (top, bottom). */
   bg: [string, string];
   caption: string;
@@ -91,6 +94,28 @@ function answerScene(el: HTMLElement, app: App, speed = 1): () => void {
   return () => clearTimeout(t);
 }
 
+/**
+ * The worked example, in beats: split the numbers (the box cuts into four), multiply each
+ * box (they fill one by one), add them up (the parts drop into the sum), and the answer.
+ */
+function complexScene(el: HTMLElement, app: App, speed = 1): () => void {
+  const box = el.querySelector<HTMLElement>('.rl-cx')!;
+  box.classList.remove('s1', 's2', 's3', 's4');
+  const beats: [number, string, () => void][] = [
+    [1400, 's1', () => app.sfx.whoosh()],
+    [3600, 's2', () => app.sfx.tap()],
+    [6600, 's3', () => app.sfx.coin(2)],
+    [8800, 's4', () => app.sfx.correct(3)],
+  ];
+  const timers = beats.map(([ms, cls, sound]) =>
+    window.setTimeout(() => {
+      box.classList.add(cls);
+      sound();
+    }, ms * speed),
+  );
+  return () => timers.forEach(clearTimeout);
+}
+
 function scenes(): ReelScene[] {
   return [
     {
@@ -135,6 +160,25 @@ function scenes(): ReelScene[] {
       art: `<div class="rl-lesson"><span class="rl-coach">${plusFaceSvg({ cls: 'oops' })}</span><div class="rl-steps"><p style="--k:0"><i>1</i>45 − 10 = 35</p><p style="--k:1"><i>2</i>35 − 8 = 27</p><p class="ok" style="--k:2"><i>✓</i>So 45 − 18 = 27</p></div></div>`,
     },
     {
+      // A hard one: 23 × 14 with the box method, built up on screen (no voiceover line).
+      id: 'complex',
+      silentMs: 11500,
+      bg: ['#4F46E5', '#0F766E'],
+      caption: 'Even the hard ones',
+      sub: 'A big sum becomes small, easy steps.',
+      art: `<div class="rl-cx">
+        <div class="cx-q"><b class="cx-sum">23 × 14 = ?</b><span class="cx-said"><span>You said <s>92</s></span><span>Answer <b>322</b></span></span></div>
+        <div class="cx-box">
+          <span class="cx-top"><i class="w">23</i><i class="p">20</i><i class="p">3</i></span>
+          <span class="cx-side"><i class="w">14</i><i class="p">10</i><i class="p">4</i></span>
+          <div class="cx-cells"><b class="c1"><em>20 × 10</em>200</b><b class="c2"><em>3 × 10</em>30</b><b class="c3"><em>20 × 4</em>80</b><b class="c4"><em>3 × 4</em>12</b></div>
+        </div>
+        <p class="cx-add"><span class="a1">200</span>+<span class="a2">30</span>+<span class="a3">80</span>+<span class="a4">12</span>=<b class="cx-ans">322</b></p>
+        <ol class="cx-steps"><li><i>1</i>Split</li><li><i>2</i>Multiply each box</li><li><i>3</i>Add them up</li></ol>
+      </div>`,
+      enter: complexScene,
+    },
+    {
       id: 'days',
       bg: ['#E11D48', '#9333EA'],
       caption: 'A treat about every 10 days',
@@ -169,7 +213,7 @@ function scenes(): ReelScene[] {
   ];
 }
 
-/** Where each line of the voiceover starts and ends (seconds), one per scene. */
+/** Where each line of the voiceover starts and ends (seconds), one per voiced scene, in order. */
 const LINES: [number, number][] = [
   [0, 6.28], [7.11, 9.77], [10.33, 16.82], [17.83, 22.9], [23.78, 29.98], [30.53, 34.63],
   [35.67, 40.58], [41.47, 46.4], [47.31, 49.84], [50.49, 57.3], [58.26, 62.36],
@@ -200,9 +244,10 @@ export interface ReelOptions {
 
 export function reelScreen(o: ReelOptions) {
   return (app: App): Screen => {
-    // Browser tests (?debug&fastreel) run it 20 times faster, without sound.
-    const fast = app.debug && new URLSearchParams(location.search).has('fastreel');
-    const speed = fast ? 0.05 : 1;
+    // Browser tests (?debug&fastreel) run it 20 times faster, without sound (&fastreel=0.25: 4 times).
+    const q = new URLSearchParams(location.search);
+    const fast = app.debug && q.has('fastreel');
+    const speed = fast ? Number(q.get('fastreel')) || 0.05 : 1;
     const list = scenes();
     const audio = fast ? null : voiceover();
     let i = -1;
@@ -212,6 +257,12 @@ export function reelScreen(o: ReelOptions) {
     let timer = 0;
     let frame = 0;
     let stopAt = 0;
+    /** A silent stop: when it ends, and how long was left when it was paused. */
+    let silentEnd = 0;
+    let silentLeft = 0;
+    /** It plays straight through on its own; going back (rewind) stops at that stop until Next. */
+    let auto = true;
+    let advance = 0;
     let cleanup: (() => void) | void;
     const el = html(`<section class="screen reel${o.first ? ' first' : ''}" aria-label="MN in one minute">
       <div class="rl-bars" aria-hidden="true">${list.map(() => '<i><b></b></i>').join('')}</div>
@@ -236,7 +287,13 @@ export function reelScreen(o: ReelOptions) {
     const prev = el.querySelector<HTMLButtonElement>('.rl-prev')!;
     if (audio) audio.muted = muted;
 
-    const lineMs = (k: number) => (LINES[k][1] - LINES[k][0]) * 1000 * speed;
+    // Which voiceover line goes with each stop (none for a silent stop).
+    let n = 0;
+    const lineOf = list.map((s) => (s.silentMs ? null : LINES[n++]));
+    const lineMs = (k: number) => {
+      const line = lineOf[k];
+      return (line ? (line[1] - line[0]) * 1000 : list[k].silentMs!) * speed;
+    };
     /** The line for this stop has finished: unlock Next (or show the end buttons). */
     const lineDone = () => {
       cancelAnimationFrame(frame);
@@ -249,15 +306,26 @@ export function reelScreen(o: ReelOptions) {
       nav.hidden = last;
       next.disabled = false;
       next.classList.add('ready');
+      // On to the next stop by itself (after a short breath), unless they went back to look again.
+      if (auto && !last && !paused) advance = window.setTimeout(() => go(i + 1), 650 * speed);
     };
     /** Play this stop's line; a fallback clock keeps going if the sound can't play. */
     const playLine = () => {
       cancelAnimationFrame(frame);
       clearTimeout(timer);
-      const [from, to] = LINES[i];
-      stopAt = to;
+      const line = lineOf[i];
       const ms = lineMs(i);
       bars[i].style.setProperty('--ms', `${ms}ms`);
+      if (!line) {
+        // A stop with no voiceover: it plays for its own time.
+        audio?.pause();
+        stopAt = 0;
+        silentEnd = performance.now() + ms;
+        timer = window.setTimeout(lineDone, ms);
+        return;
+      }
+      const [from, to] = line;
+      stopAt = to;
       if (audio) {
         audio.currentTime = from;
         const watch = () => {
@@ -272,6 +340,7 @@ export function reelScreen(o: ReelOptions) {
     };
     const go = (k: number) => {
       if (k < 0 || k >= list.length) return;
+      clearTimeout(advance);
       cleanup?.();
       cleanup = undefined;
       i = k;
@@ -300,17 +369,22 @@ export function reelScreen(o: ReelOptions) {
     };
     const pause = () => {
       if (paused || next.classList.contains('ready')) return;
+      clearTimeout(advance);
       paused = true;
       el.classList.add('paused');
       cancelAnimationFrame(frame);
       clearTimeout(timer);
       audio?.pause();
+      silentLeft = Math.max(0, silentEnd - performance.now());
     };
     const resume = () => {
       if (!paused) return;
       paused = false;
       el.classList.remove('paused');
-      if (audio && audio.currentTime < stopAt) {
+      if (!lineOf[i]) {
+        silentEnd = performance.now() + silentLeft;
+        timer = window.setTimeout(lineDone, silentLeft);
+      } else if (audio && audio.currentTime < stopAt) {
         const watch = () => {
           if (audio.currentTime >= stopAt - 0.03 || audio.ended) return lineDone();
           frame = requestAnimationFrame(watch);
@@ -328,9 +402,15 @@ export function reelScreen(o: ReelOptions) {
       (e.currentTarget as HTMLElement).textContent = muted ? '🔇' : '🔊';
     });
     next.addEventListener('click', () => {
-      if (!next.disabled) go(i + 1);
+      if (next.disabled) return;
+      auto = true;
+      go(i + 1);
     });
-    prev.addEventListener('click', () => go(i - 1));
+    // Rewind: replay the stop before, and stay there until Next (then it plays on again).
+    prev.addEventListener('click', () => {
+      auto = false;
+      go(i - 1);
+    });
     const finish = () => {
       cancelAnimationFrame(frame);
       clearTimeout(timer);
@@ -341,7 +421,10 @@ export function reelScreen(o: ReelOptions) {
       finish();
       o.done();
     });
-    el.querySelector('.rl-again')?.addEventListener('click', () => go(0));
+    el.querySelector('.rl-again')?.addEventListener('click', () => {
+      auto = true;
+      go(0);
+    });
     el.querySelector('.rl-skip')?.addEventListener('click', () => {
       finish();
       (o.leave ?? o.done)();
@@ -359,7 +442,10 @@ export function reelScreen(o: ReelOptions) {
       mounted: () => go(0),
       // Back goes to the stop before; from the first stop it leaves (not the first time).
       back: () => {
-        if (i > 0) go(i - 1);
+        if (i > 0) {
+          auto = false;
+          go(i - 1);
+        }
         else if (!o.first) {
           finish();
           (o.leave ?? o.done)();
@@ -369,6 +455,7 @@ export function reelScreen(o: ReelOptions) {
       destroy: () => {
         cancelAnimationFrame(frame);
         clearTimeout(timer);
+        clearTimeout(advance);
         cleanup?.();
         audio?.pause();
         document.removeEventListener('visibilitychange', onVis);

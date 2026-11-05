@@ -26,14 +26,9 @@ async function makePin(page: Page): Promise<void> {
   }
 }
 
-/** Step through the opening video: each stop's Next unlocks once its line has played. */
+/** Watch the opening video to its end (it plays on by itself). */
 async function watchReel(page: Page): Promise<void> {
-  for (let k = 0; k < 40 && !(await page.locator('.rl-go').isVisible()); k++) {
-    const next = page.locator('.rl-next');
-    if ((await next.isVisible()) && (await next.isEnabled())) await next.click();
-    else await page.waitForTimeout(100);
-  }
-  await expect(page.locator('.rl-go')).toBeVisible();
+  await expect(page.locator('.rl-go')).toBeVisible({ timeout: 30_000 });
 }
 
 /** Answer every question correctly until `done` appears. */
@@ -502,8 +497,8 @@ test('every skill shows its lesson without errors', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
-test('opening video: no skip the first time, skippable after', async ({ page }) => {
-  await page.goto('/?debug&fastreel');
+test('opening video: plays on by itself, rewind stays put, no skip the first time, skippable after', async ({ page }) => {
+  await page.goto('/?debug&fastreel=0.25');
   await expect(page.locator('.reel.first')).toBeVisible();
   // The first time there is no way round it: no Skip, and Back does nothing.
   await expect(page.locator('.rl-skip')).toHaveCount(0);
@@ -511,15 +506,18 @@ test('opening video: no skip the first time, skippable after', async ({ page }) 
   await expect(page.locator('.rl-next')).toBeDisabled();
   await page.evaluate(() => (window as unknown as { __app: { back(): void } }).__app.back());
   await expect(page.locator('.reel')).toBeVisible();
-  await expect(page.locator('.rl-count')).toHaveText('1 of 11');
-  await expect(page.locator('.rl-next')).toBeEnabled({ timeout: 5000 });
-  await page.click('.rl-next');
-  await expect(page.locator('.rl-count')).toHaveText('2 of 11');
+  // It plays on by itself, stop after stop.
+  await expect(page.locator('.rl-count')).toHaveText('3 of 12', { timeout: 15_000 });
+  // Rewind: back one stop, and it stays there (no moving on) until Next.
   await page.click('.rl-prev');
-  await expect(page.locator('.rl-count')).toHaveText('1 of 11');
-  // A stop already heard can be passed straight away.
-  await expect(page.locator('.rl-next')).toBeEnabled();
+  const at = (await page.locator('.rl-count').textContent())!;
+  await expect(page.locator('.rl-next')).toBeEnabled({ timeout: 5000 });
+  await page.waitForTimeout(1500);
+  await expect(page.locator('.rl-count')).toHaveText(at);
+  // Next: on it goes again by itself, through the worked 23 × 14 (all four beats shown), to the end.
+  await page.click('.rl-next');
   await watchReel(page);
+  await expect(page.locator('.rl-s-complex .rl-cx.s4')).toHaveCount(1);
   await expect(page.locator('.rl-again')).toHaveCount(0);
   await page.click('.rl-go');
   await grownUp(page);
