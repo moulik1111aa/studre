@@ -42,8 +42,10 @@ interface Node {
   id: string;
 }
 
-/** Stops shown past the current one before the clouds (about five swipes of road). */
-const CLOUD_AFTER = 12;
+/** Stops shown past the current one before the clouds (five or six swipes of road). */
+const CLOUD_AFTER = 30;
+/** How tall the cloud sea below is (px): a few swipes of clouds, so the road is hidden, not cut off. */
+const CLOUD_DEPTH = 1700;
 const CLOUD_LOCK = '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M13 36a9 9 0 0 1-1-17.9A12 12 0 0 1 35 16a8.5 8.5 0 0 1 1 20Z" fill="#fff" stroke="#5B6B8C" stroke-width="2.5" stroke-linejoin="round"/><rect x="19" y="24" width="12" height="10" rx="2.5" fill="#FFB020" stroke="#7A4B00" stroke-width="2"/><path d="M21.5 24v-3a3.5 3.5 0 0 1 7 0v3" fill="none" stroke="#7A4B00" stroke-width="2.2"/></svg>';
 
 function branchFor(n: Node) {
@@ -62,13 +64,39 @@ const STAR = 'M0,-1 L.29,-.4 .95,-.31 .47,.15 .59,.81 0,.5 -.59,.81 -.47,.15 -.9
 function orbStars(n: number): string {
   return `<svg class="orb-stars" viewBox="0 0 100 100">${ORB_SLOTS.map(([x, y], i) => `<path class="${i < n ? 'on' : ''}" d="${STAR}" transform="translate(${x} ${y}) scale(${i === 0 ? 14 : 11.5})"/>`).join('')}</svg>`;
 }
-function cloudSvg(): string {
-  const puff = (cx: number, cy: number, r: number, cls: string) => `<circle class="${cls}" cx="${cx}" cy="${cy}" r="${r}"/>`;
-  let b = '';
-  for (let i = 0; i < 8; i++) b += puff(-20 + i * 62, 110 + (i % 2) * 24, 66 + (i % 3) * 12, 'cl-back');
-  for (let i = 0; i < 7; i++) b += puff(10 + i * 66, 170 + ((i + 1) % 2) * 20, 72 + (i % 2) * 14, 'cl-mid');
-  for (let i = 0; i < 6; i++) b += puff(30 + i * 72, 240 + (i % 2) * 16, 80 + ((i + 1) % 3) * 10, 'cl-front');
-  return `<svg class="cb-svg" viewBox="0 0 390 360" preserveAspectRatio="xMidYMin slice" aria-hidden="true">${b}<rect class="cl-front" x="0" y="270" width="390" height="90"/></svg>`;
+/**
+ * A sea of clouds: a billowing top edge, then rows of soft puffs all the way down. Each puff is
+ * lit from above (white on top, a cool shade underneath), with a soft shadow beneath each row.
+ */
+function cloudSvg(depth: number): string {
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  let defs = '';
+  let body = '';
+  let k = 0;
+  // One cloud bank: puffs along a line plus smaller ones on its shoulders, all filled with one
+  // gradient for the row (lit from above, shaded underneath), so they merge into one shape.
+  const bank = (y: number, rMin: number, rMax: number, step: number, light: string, dark: string, soft = false) => {
+    const id = `clr${k++}`;
+    defs += `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="0" y1="${(y - rMax - 30).toFixed(0)}" x2="0" y2="${(y + rMax).toFixed(0)}"><stop offset="0" style="stop-color:var(${light})"/><stop offset=".55" style="stop-color:var(${light})"/><stop offset="1" style="stop-color:var(${dark})"/></linearGradient>`;
+    let g = `<ellipse class="cl-shade" cx="195" cy="${(y + rMax * 0.7).toFixed(0)}" rx="260" ry="${(rMax * 0.4).toFixed(0)}"/><g fill="url(#${id})"${soft ? ' filter="url(#cl-soft)"' : ''}>`;
+    for (let x = -50 + rnd() * 30; x < 450; x += step * (0.7 + rnd() * 0.6)) {
+      const r = rMin + rnd() * (rMax - rMin);
+      const cy = y + (rnd() - 0.5) * 24;
+      g += `<circle cx="${x.toFixed(0)}" cy="${cy.toFixed(0)}" r="${r.toFixed(0)}"/>`;
+      if (rnd() < 0.7) g += `<circle cx="${(x + (rnd() - 0.5) * r).toFixed(0)}" cy="${(cy - r * (0.55 + rnd() * 0.25)).toFixed(0)}" r="${(r * (0.42 + rnd() * 0.2)).toFixed(0)}"/>`;
+    }
+    body += `${g}</g>`;
+  };
+  // The top edge: a soft far bank, then nearer, bigger ones.
+  bank(130, 40, 58, 56, '--cl-b', '--cl-e', true);
+  bank(185, 56, 80, 70, '--cl-c', '--cl-d');
+  bank(260, 66, 92, 80, '--cl-a', '--cl-d');
+  // Below: bank after bank, so there is cloud all the way down.
+  for (let y = 370, i = 0; y < depth + 140; y += 110 + rnd() * 30, i++) bank(y, 58, 90, 78, i % 2 ? '--cl-c' : '--cl-a', '--cl-d');
+  return `<svg class="cb-svg" viewBox="0 0 390 ${depth}" preserveAspectRatio="xMidYMin slice" aria-hidden="true">
+    <defs>${defs}<filter id="cl-soft" x="-10%" y="-30%" width="120%" height="160%"><feGaussianBlur stdDeviation="2.5"/></filter><filter id="cl-blur" x="-30%" y="-60%" width="160%" height="220%"><feGaussianBlur stdDeviation="12"/></filter></defs>
+    <rect class="cl-body" x="-100" y="230" width="590" height="${depth}"/>${body}</svg>`;
 }
 
 function nodesFor(path: Level[]): Node[] {
@@ -232,7 +260,7 @@ export function mapScreen(child: Child) {
       worlds.appendChild(sec);
     }
     if (!fold && hidden > 0) {
-      worlds.appendChild(html(`<section class="cloudbank" aria-label="More stops are hidden in the clouds">${cloudSvg()}<div class="cb-fill"></div></section>`));
+      worlds.appendChild(html(`<section class="cloudbank" style="height:${CLOUD_DEPTH}px" aria-label="More stops are hidden in the clouds">${cloudSvg(CLOUD_DEPTH)}</section>`));
     }
     if (!fold && hidden <= 0 && stagesBuilt < 7 && !school) worlds.appendChild(html(`<section class="world soon" style="${worldVars(stagesBuilt + 1)}"><div class="world-head"><span class="chip">Stage ${stagesBuilt + 1}</span><h2>${AREAS[0].stages[stagesBuilt].name}</h2><p>Coming soon</p></div></section>`));
 
@@ -347,7 +375,7 @@ export function mapScreen(child: Child) {
               if (reducedMotion()) pop.remove();
               else pop.animate([{ opacity: 1 }, { opacity: 0, transform: 'translateY(16px)' }], { duration: 300, fill: 'forwards' }).finished.then(() => pop.remove());
             }, 4200);
-          }, { root: worlds, threshold: 0.35 });
+          }, { root: worlds, rootMargin: '0px 0px -40% 0px', threshold: 0 });
           io.observe(bank);
         }
       },

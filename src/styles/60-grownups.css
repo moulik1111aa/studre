@@ -318,10 +318,13 @@ i.lv4{background:var(--accent)}
 .qt-day.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 @media (max-width:360px){.qt-row{gap:8px;padding:0 12px}.qt-time input{font-size:15px;padding:8px 6px}.qt-days{padding:0 12px;gap:4px}}
 /* Report: ways that work */
+.rp-ways{padding:14px 18px;text-align:left}
+.rp-ways .fine{margin:6px 0 0;text-align:left;line-height:1.35}
 .rp-ways ul{list-style:none;margin:0 0 6px;padding:0;display:flex;flex-direction:column;gap:6px}
 .rp-ways li{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
 .rp-ways li:last-child{border-bottom:0}
-.rp-ways li b{color:var(--accent)}
+.rp-ways li span{min-width:0}
+.rp-ways li b{color:var(--accent);text-align:right;min-width:0;overflow-wrap:anywhere}
 .rp-branch span{display:flex;align-items:center;gap:6px}
 .rp-branch[data-br="num"] .rep-bar i{background:var(--br-num)}
 .rp-branch[data-br="mea"] .rep-bar i{background:var(--br-mea)}
