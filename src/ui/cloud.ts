@@ -6,7 +6,11 @@
 import { esc, type App } from './app.ts';
 import { FIREBASE } from '../platform/firebase-config.ts';
 import { CloudError, FirebaseRest, MemoryCloud, OWNER_EMAIL, type CloudBackend, type Session } from '../platform/cloudapi.ts';
-import { familyRules, freshMemo, planSync, POLICY_VERSION, type SyncMemo } from '../core/cloud.ts';
+import { decodeChild, familyRules, freshMemo, planSync, POLICY_VERSION, type SyncMemo } from '../core/cloud.ts';
+import type { Backup } from '../core/backup.ts';
+import { familyFileOf } from '../core/familyfile.ts';
+import { familyFileHtml, familyFileName } from './familyfile.ts';
+import { saveTextFile } from '../platform/files.ts';
 import { confirmGate, gateState, seen, type GateState } from '../core/gate.ts';
 import { myPhone } from './access.ts';
 import type { Child } from '../storage/save.ts';
@@ -302,6 +306,11 @@ async function doSync(app: App, asking: boolean, takeOver: boolean): Promise<Syn
       if (data.activeChildId && r.dropped.includes(data.activeChildId)) data.activeChildId = data.children[0]?.id ?? null;
       if (r.rules) Object.assign(data.settings, r.rules);
       if (r.added.length) data.setupDone = true;
+      // The cloud now holds every child: that counts as backed up (the reminder can rest).
+      for (const c of data.children) {
+        c.backupAt = now;
+        c.backupDays = Object.values(c.stats.secondsByDay).filter((x) => x > 0).length;
+      }
     });
     applying = false;
     saveMemo(r.memo);
@@ -313,6 +322,32 @@ async function doSync(app: App, asking: boolean, takeOver: boolean): Promise<Syn
     if (ce?.kind === 'signed-out') return { ok: false, why: 'signed-out', message: 'Please sign in again.' };
     if (ce?.kind === 'offline') return { ok: false, why: 'offline', message: 'No internet connection.' };
     return { ok: false, why: 'error', message: ce?.message ?? 'Couldn’t back up just now.' };
+  }
+}
+
+/**
+ * Download the family's cloud copy as a backup file: the very same checked backups the cloud
+ * keeps, so the file restores on any phone just like the cloud does.
+ */
+export async function downloadCloudCopy(app: App): Promise<'saved' | 'empty' | 'cancelled' | 'offline' | 'error'> {
+  const b = backend(app);
+  if (!b?.session) return 'error';
+  try {
+    const family = await b.getFamily();
+    if (!family || family.deletedAt) return 'empty';
+    const backups: Backup[] = [];
+    for (const id of Object.keys(family.kids)) {
+      if (family.removed?.[id]) continue;
+      const doc = await b.getChild(id);
+      if (!doc) continue;
+      const d = await decodeChild(doc);
+      if (d.ok) backups.push(d.backup);
+    }
+    if (!backups.length) return 'empty';
+    const f = familyFileOf(backups, family.rules ?? {}, 'cloud');
+    return (await saveTextFile(app, familyFileName(app.today, 'cloud'), 'text/html', familyFileHtml(f))) ? 'saved' : 'cancelled';
+  } catch (e) {
+    return e instanceof CloudError && e.kind === 'offline' ? 'offline' : 'error';
   }
 }
 

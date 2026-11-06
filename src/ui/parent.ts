@@ -31,7 +31,9 @@ import { MENU_ICON, openDrawer } from './drawer.ts';
 import { quietSettingsScreen } from './quiet.ts';
 import { quietSummary } from '../core/quiet.ts';
 import { saveWorksheet } from './worksheet.ts';
-import { account, cloudOn, deleteCloudCopy, lastSync, onePhone, otherPhone, signIn, signOut, syncNow, syncText } from './cloud.ts';
+import { account, cloudOn, deleteCloudCopy, downloadCloudCopy, lastSync, onePhone, otherPhone, signIn, signOut, syncNow, syncText } from './cloud.ts';
+import { saveFamilyFile } from './familyfile.ts';
+import { skillsIndexScreen } from './skillindex.ts';
 import { googleButton } from './access.ts';
 
 const LOCAL_NOTE = 'Saved on this phone only';
@@ -103,6 +105,7 @@ function cloudCard(app: App): string {
       : '';
   return `<div class="card pa-cloud on"><p><b>☁️ ${esc(who.email)}</b><small class="cl-status">${esc(other ? 'Not backing up from this phone' : syncText(lastSync()))}</small></p>${note}
     <div class="cl-btns"><button class="btn small cl-sync">Back up now</button><button class="btn ghost small cl-out">Sign out</button></div>
+    <button class="linkish cl-dl">⤓ Download the cloud copy as a backup file</button>
     <button class="linkish warn cl-del">Delete the cloud copy</button></div>`;
 }
 
@@ -124,6 +127,7 @@ function basicHtml(app: App): string {
     <section class="pa-sec"><h2 class="pa-h">⏱️ Daily play</h2>
       <button class="pa-row card limits"><b>${st.limitMinutes} minutes a day</b><small>${st.timeUpMode === 'stop' ? 'Stops when time is up' : 'Keeps playing without coins'} · treats ${paceText(st.treatPace, 'treat')}, big toy ${paceText(st.goalPace, 'goal')}</small></button>
       <button class="pa-row card quiet-row"><b>🌙 Quiet hours</b><small>${esc(quietSummary(st.quiet))}</small></button>
+      <button class="pa-row card skills-row"><b>📚 Skills list</b><small>Every skill MN teaches, with an example and how it’s taught</small></button>
       <div class="card pa-toggles">${toggleRows(st, [T('holiday', 'Holiday mode', 'Rewards don’t melt while you’re away or unwell.')])}</div></section>
     <section class="pa-sec"><h2 class="pa-h">🔊 Sound</h2>
       <div class="card pa-toggles">${toggleRows(st, [T('sound', 'Sound effects', 'Taps, cheers and coins.'), T('voice', 'Read questions aloud', 'Plus reads each question and tip.')])}</div></section>
@@ -133,12 +137,14 @@ function basicHtml(app: App): string {
       <div class="card pa-backup">
         ${(() => {
           const due = dueKids(app);
-          return due.length ? `<p class="pb-due" role="status">⚠️ <span>${esc(due.map((c) => c.name).join(' and '))} ${due.length === 1 ? 'has' : 'have'} new progress that isn’t backed up yet.${account(app) ? '' : cloudOn(app) ? ' Save a report card now, or back up with Google below.' : ' Save a report card now.'}</span></p>` : '';
+          return due.length ? `<p class="pb-due" role="status">⚠️ <span>${esc(due.map((c) => c.name).join(' and '))} ${due.length === 1 ? 'has' : 'have'} new progress that isn’t backed up yet.${account(app) ? '' : cloudOn(app) ? ' Save a backup file now, or back up with Google below.' : ' Save a backup file now.'}</span></p>` : '';
         })()}
-        <p class="pb-why"><small>${account(app) ? 'A report card file is a copy you can keep anywhere, like Google Drive or email.' : 'Progress is saved only on this phone. A report card file (kept in Google Drive or email) brings it back on any phone.'}</small></p>
+        <p class="pb-why"><small>${account(app) ? 'A backup file is a copy you can keep anywhere, like Google Drive or email.' : 'Progress is saved only on this phone. A backup file (kept in Google Drive or email) brings it back on any phone.'}</small></p>
         <ul class="pb-kids">${app.save.data.children.map((c) => `<li>${avatarHtml(c.avatar, 28)}<span>${esc(c.name)}</span><small>${lastBackupText(c)}</small></li>`).join('')}</ul>
-        <button class="btn small bk-all">Save report cards now</button>
-        <button class="linkish restore-kid">⤓ Restore from a report card</button>
+        <button class="btn small bk-family">Save a backup file</button>
+        <p class="fine pb-same">One file for the whole family, the same as the Google cloud copy: either one restores on any phone.</p>
+        <button class="linkish bk-all">Save a report card for each child instead</button>
+        <button class="linkish restore-kid">⤓ Restore from a backup file or report card</button>
       </div>
       ${cloudCard(app)}</section>
     <button class="pa-more card to-adv"><span>☰</span><span><b>More settings</b><small>Timers, notes, voice, lock and help are in the menu</small></span><i aria-hidden="true">›</i></button>`;
@@ -192,6 +198,7 @@ function parentMenu(app: App, go: (p: Page) => void): Promise<void> {
     items: [
       { id: 'basic', icon: '⭐', label: 'Everyday settings', note: 'Children, play time, sound, look, backup', current: page === 'basic', onPick: () => go('basic') },
       ...(storeBuild(app) ? [{ id: 'plus', icon: '✨', label: 'MN Plus', note: hasPlus(app) ? 'On · thank you!' : 'Plans and free trial', current: false, onPick: () => void app.show(plusScreen(parentScreen)) }] : []),
+      { id: 'skills', icon: '📚', label: 'Skills list', note: 'Every skill, with an example and how it’s taught', current: false, onPick: () => void app.show(skillsIndexScreen(parentScreen)) },
       { heading: 'More settings' },
       ...GROUPS.map((g) => ({ id: g.id, icon: g.icon, label: g.name, note: g.note, current: page === g.id, onPick: () => go(g.id) })),
     ],
@@ -296,6 +303,22 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
   });
   on('.limits', 'click', () => void app.show(limitsScreen(false)));
   on('.quiet-row', 'click', () => void app.show(quietSettingsScreen(parentScreen)));
+  on('.skills-row', 'click', () => void app.show(skillsIndexScreen(parentScreen)));
+  on('.bk-family', 'click', async () => {
+    if (await saveFamilyFile(app)) {
+      app.toast('Backup file saved. Keep it somewhere safe, like Google Drive.');
+      render(false);
+    }
+  });
+  on('.cl-dl', 'click', async (b) => {
+    (b as HTMLButtonElement).disabled = true;
+    const r = await downloadCloudCopy(app);
+    (b as HTMLButtonElement).disabled = false;
+    if (r === 'saved') app.toast('The cloud copy is saved as a backup file.');
+    else if (r === 'empty') app.toast('There’s nothing in the cloud yet. Tap Back up now first.');
+    else if (r === 'offline') app.toast('No internet connection.');
+    else if (r === 'error') app.toast('Couldn’t download the cloud copy just now.');
+  });
   on('.bk-all', 'click', async () => {
     const kids = app.save.data.children;
     const n = await backUpNow(app, kids);

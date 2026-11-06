@@ -1251,7 +1251,7 @@ test('parent area: everyday settings first, the rest in a ☰ menu, and each chi
   for (const sel of ['.pt-slider', '[data-r="melt"]', '.lock-row', '[data-k="showFps"]', '.adv-toggle']) await expect(page.locator(sel)).toHaveCount(0);
   // ☰: the groups, one page at a time.
   await page.click('.pa-menu');
-  await expect(page.locator('.drawer .dr-item')).toHaveCount(7);
+  await expect(page.locator('.drawer .dr-item')).toHaveCount(8);
   await expect(page.locator('.dr-item.on')).toContainText('Everyday settings');
   await page.click('.dr-item[data-id="learning"]');
   await expect(page.locator('.drawer')).toHaveCount(0);
@@ -1473,4 +1473,23 @@ test('MN Plus (Play Store build): paid features say so, the trial and plans come
   // The children got the sign-in thank-you.
   const cape = await page.evaluate(() => (window as unknown as { __app: { save: { data: { children: { adventure?: { gifted?: Record<string, number> } }[] } } } }).__app.save.data.children[0].adventure?.gifted?.['cloud-cape']);
   expect(cape).toBeTruthy();
+});
+
+test('parent area: the skills list shows every skill with an example and how it is taught', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto('/?debug&demo=%4060&noloader&fast');
+  await expect(page.locator('.map')).toBeVisible();
+  await page.evaluate(() => (window as unknown as { __app: { show: (s: unknown) => void }; __screens: Record<string, unknown> }).__app.show((window as unknown as { __screens: Record<string, unknown> }).__screens.parentScreen));
+  await page.click('.skills-row');
+  await expect(page.locator('.skill-index')).toBeVisible();
+  expect(await page.locator('.si-skill').count()).toBeGreaterThan(400);
+  await page.fill('.si-search', 'clock');
+  await expect(page.locator('.si-skill').first()).toBeVisible();
+  await page.locator('.si-skill').first().click();
+  await expect(page.locator('.si-sheet .si-q')).toBeVisible();
+  await expect(page.locator('.si-sheet .si-a')).toContainText('Answer');
+  await page.click('.si-show');
+  await expect(page.locator('.lesson')).toBeVisible();
+  expect(errors).toEqual([]);
 });

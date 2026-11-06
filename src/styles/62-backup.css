@@ -17,3 +17,6 @@
 .pa-widgets{padding:14px 18px;display:grid;gap:4px}
 
 .pb-due{margin:0 0 8px;display:flex;gap:8px;align-items:flex-start;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--warn,#F59E0B) 18%,transparent);font-size:14px;font-weight:700;line-height:1.35}
+.pa-backup .pb-same{margin:4px 0 2px}
+.pa-backup .bk-all{display:block;margin:6px 0 0}
+.pa-cloud .cl-dl{display:block;margin:8px 0 0}

@@ -48,6 +48,9 @@ export function forCloud(child: Child): Child {
   const c = JSON.parse(JSON.stringify(child)) as Child;
   c.progress.history = {};
   delete c.undo;
+  // When this phone last saved a backup is this phone's own business (the reminder).
+  delete c.backupAt;
+  delete c.backupDays;
   return c;
 }
 
