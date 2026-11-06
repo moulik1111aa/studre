@@ -584,17 +584,17 @@ test('opening video: plays on by itself, rewind stays put, no skip the first tim
   await page.evaluate(() => (window as unknown as { __app: { back(): void } }).__app.back());
   await expect(page.locator('.reel')).toBeVisible();
   // It plays on by itself, stop after stop.
-  await expect(page.locator('.rl-count')).toHaveText('3 of 12', { timeout: 15_000 });
+  await expect(page.locator('.rl-count')).toHaveText('3 of 11', { timeout: 15_000 });
   // Rewind: back one stop, and it stays there (no moving on) until Next.
   await page.click('.rl-prev');
   const at = (await page.locator('.rl-count').textContent())!;
   await expect(page.locator('.rl-next')).toBeEnabled({ timeout: 5000 });
   await page.waitForTimeout(1500);
   await expect(page.locator('.rl-count')).toHaveText(at);
-  // Next: on it goes again by itself, through the worked 23 × 14 (all four beats shown), to the end.
+  // Next: on it goes again by itself, through the worked fix of 99 × 7 (all three beats shown), to the end.
   await page.click('.rl-next');
   await watchReel(page);
-  await expect(page.locator('.rl-s-complex .rl-cx.s4')).toHaveCount(1);
+  await expect(page.locator('.rl-s-lesson .rl-fix.s3')).toHaveCount(1);
   await expect(page.locator('.rl-again')).toHaveCount(0);
   await page.click('.rl-go');
   await grownUp(page);

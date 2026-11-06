@@ -94,18 +94,14 @@ function answerScene(el: HTMLElement, app: App, speed = 1): () => void {
   return () => clearTimeout(t);
 }
 
-/**
- * The worked example, in beats: split the numbers (the box cuts into four), multiply each
- * box (they fill one by one), add them up (the parts drop into the sum), and the answer.
- */
-function complexScene(el: HTMLElement, app: App, speed = 1): () => void {
-  const box = el.querySelector<HTMLElement>('.rl-cx')!;
-  box.classList.remove('s1', 's2', 's3', 's4');
+/** The worked fix: 99 rounds up to 100 (700), then one 7 comes off (693), then a tick. */
+function fixScene(el: HTMLElement, app: App, speed = 1): () => void {
+  const box = el.querySelector<HTMLElement>('.rl-fix')!;
+  box.classList.remove('s1', 's2', 's3');
   const beats: [number, string, () => void][] = [
-    [1400, 's1', () => app.sfx.whoosh()],
-    [3600, 's2', () => app.sfx.tap()],
-    [6600, 's3', () => app.sfx.coin(2)],
-    [8800, 's4', () => app.sfx.correct(3)],
+    [700, 's1', () => app.sfx.whoosh()],
+    [1900, 's2', () => app.sfx.tap()],
+    [3000, 's3', () => app.sfx.correct(3)],
   ];
   const timers = beats.map(([ms, cls, sound]) =>
     window.setTimeout(() => {
@@ -153,30 +149,20 @@ function scenes(): ReelScene[] {
       enter: answerScene,
     },
     {
+      // A slip, fixed the clever way: 99 × 7 is "100 sevens, take one 7 away" (beats s1–s3).
       id: 'lesson',
       bg: ['#0EA5E9', '#4F46E5'],
       caption: 'Wrong? Plus shows how.',
       sub: 'One step at a time.',
-      art: `<div class="rl-lesson"><span class="rl-coach">${plusFaceSvg({ cls: 'oops' })}</span><div class="rl-steps"><p style="--k:0"><i>1</i>45 − 10 = 35</p><p style="--k:1"><i>2</i>35 − 8 = 27</p><p class="ok" style="--k:2"><i>✓</i>So 45 − 18 = 27</p></div></div>`,
-    },
-    {
-      // A hard one: 23 × 14 with the box method, built up on screen (no voiceover line).
-      id: 'complex',
-      silentMs: 11500,
-      bg: ['#4F46E5', '#0F766E'],
-      caption: 'Even the hard ones',
-      sub: 'A big sum becomes small, easy steps.',
-      art: `<div class="rl-cx">
-        <div class="cx-q"><b class="cx-sum">23 × 14 = ?</b><span class="cx-said"><span>You said <s>92</s></span><span>Answer <b>322</b></span></span></div>
-        <div class="cx-box">
-          <span class="cx-top"><i class="w">23</i><i class="p">20</i><i class="p">3</i></span>
-          <span class="cx-side"><i class="w">14</i><i class="p">10</i><i class="p">4</i></span>
-          <div class="cx-cells"><b class="c1"><em>20 × 10</em>200</b><b class="c2"><em>3 × 10</em>30</b><b class="c3"><em>20 × 4</em>80</b><b class="c4"><em>3 × 4</em>12</b></div>
+      art: `<div class="rl-fix">
+        <span class="rl-coach">${plusFaceSvg({ cls: 'oops' })}</span>
+        <div class="fx-card">
+          <p class="fx-q"><b>99 × 7 = ?</b><span>You said <s>683</s></span></p>
+          <p class="fx-line"><span class="fx-flip fx-n"><i class="a">99</i><i class="b">100</i></span><span>× 7</span><span class="fx-minus">− 7</span><span>=</span><span class="fx-flip fx-r"><i class="a">?</i><i class="b">700</i><i class="c">693</i></span></p>
+          <p class="fx-hint"><span class="h1">99 is nearly 100</span><span class="h2">100 sevens, take one 7 away</span><span class="h3">✓ 99 × 7 = 693</span></p>
         </div>
-        <p class="cx-add"><span class="a1">200</span>+<span class="a2">30</span>+<span class="a3">80</span>+<span class="a4">12</span>=<b class="cx-ans">322</b></p>
-        <ol class="cx-steps"><li><i>1</i>Split</li><li><i>2</i>Multiply each box</li><li><i>3</i>Add them up</li></ol>
       </div>`,
-      enter: complexScene,
+      enter: fixScene,
     },
     {
       id: 'days',
