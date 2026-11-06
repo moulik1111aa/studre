@@ -249,3 +249,16 @@
 @media (prefers-reduced-motion:reduce){
   .pf.fresh,.pf.fresh .mv-draw,.pf.fresh .mv-pop,.pf.fresh .mv-rot,.pf.fresh .mv-move,.pf.fresh .mv-drop,.pf.fresh .mv-spin,.pf.fresh .mv-fill{animation:none;stroke-dashoffset:0}
 }
+
+/* Sort and count */
+.mv-shapes .mv-shapeitem{width:54px}
+.mv-shapes .mv-shapeitem .mv-svg{width:48px}
+.mv-sort{gap:6px;align-items:stretch}
+.mv-sortrow{display:flex;align-items:center;gap:8px;padding:4px 10px;border-radius:14px;background:var(--mv-soft)}
+.mv-sortlabel{min-width:70px;font-size:14px;font-weight:800}
+.mv-sortitems{display:flex;flex-wrap:wrap;gap:2px;flex:1}
+.mv-sortitems .mv-svg{width:30px;height:auto}
+.mv-sortrow b{font-size:22px;font-weight:900;color:var(--mv-acc)}
+.mv .mv-sortrow.mv-pop{animation:none}
+.pf.fresh .mv-sortrow.mv-pop{animation:mvSlide .5s ease-out both;animation-delay:var(--d,0ms)}
+@keyframes mvSlide{from{opacity:0;transform:translateX(-24px)}}

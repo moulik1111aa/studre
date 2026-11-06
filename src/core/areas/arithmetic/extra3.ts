@@ -78,8 +78,10 @@ add('s3.skip34', 'clock5', 'measure', 'Time to 5 minutes', (r) => {
   });
 }, { format: 'choice' });
 
+// Clear clues only (morning, midday, evening), so am or pm comes from the words, not a guess.
 const DAYTIME: [string, number, number, 'am' | 'pm'][] = [
-  ['wakes up', 6, 7, 'am'], ['eats breakfast', 7, 8, 'am'], ['goes to school', 8, 9, 'am'], ['eats lunch', 1, 2, 'pm'], ['plays outside', 4, 6, 'pm'], ['eats dinner', 8, 9, 'pm'], ['has a maths class', 10, 11, 'am'],
+  ['wakes up early in the morning', 5, 7, 'am'], ['eats breakfast in the morning', 7, 9, 'am'], ['has a maths class in the morning', 9, 11, 'am'], ['eats lunch just after midday', 12, 13, 'pm'],
+  ['does homework in the afternoon', 3, 5, 'pm'], ['eats dinner in the evening', 7, 9, 'pm'], ['goes to bed at night', 8, 10, 'pm'],
 ];
 add('s2.oddeven', 'clockmin', 'measure', 'Time to the minute; am and pm', (r, d) => {
   if (d >= 0.5 && r.chance(0.5)) {
@@ -88,7 +90,7 @@ add('s2.oddeven', 'clockmin', 'measure', 'Time to the minute; am and pm', (r, d)
     const name = r.pick(['Riya', 'Kabir', 'Meera', 'Arjun']);
     const ans = `${hm(h, m)} ${ap}`;
     const other = `${hm(h, m)} ${ap === 'am' ? 'pm' : 'am'}`;
-    return made(`${name} ${what} at this time. What time is it?`, ans, [other, `${hm((h % 12) + 1, m)} ${ap}`, `${hm(h, (m + 10) % 60)} ${ap}`], {
+    return made(`${name} ${what}. This clock shows the time. Write it with am or pm.`, ans, [other, `${hm((h % 12) + 1, m)} ${ap}`, `${hm(h, (m + 10) % 60)} ${ap}`], {
       visual: { kind: 'clock', h, m },
       hint: 'am is from midnight to midday; pm is from midday to midnight.',
       teach: () => {
@@ -96,7 +98,7 @@ add('s2.oddeven', 'clockmin', 'measure', 'Time to the minute; am and pm', (r, d)
         L.show({ kind: 'clock', h, m, hl: 'min', fives: true });
         L.say(`Read the clock: ${hm(h, m)}.`);
         L.show({ kind: 'clock', h, m, ampm: ap });
-        L.say(ap === 'am' ? `${name} ${what} in the morning, before midday: that is am.` : `${name} ${what} after midday: that is pm.`);
+        L.say(ap === 'am' ? `The words say it is in the morning: before midday is am.` : `The words say it is after midday: from midday to midnight is pm.`);
         return L.end(ans, `So it is ${ans}.`);
       },
     });

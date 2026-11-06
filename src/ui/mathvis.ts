@@ -982,6 +982,7 @@ export function mathVisHtml(v: MathVisual): string {
     case 'fist': return fistSvg(v);
     case 'shape': return shapeSvg(v);
     case 'shapes': return wrap('shapes', v.items.map((s, i) => `<span class="mv-shapeitem${v.hl === i ? ' on' : ''}">${svg(160, 168, `<g${s.rot ? ` transform="rotate(${s.rot} 80 84)"` : ''}>${shapeEl(s.shape, col(s.color, SHAPE_COLORS[i % SHAPE_COLORS.length]))}</g>`)}</span>`).join(''));
+    case 'sort': return wrap('sort', v.groups.map((g, gi) => `<div class="mv-sortrow mv-pop" style="--d:${gi * 250}ms"><span class="mv-sortlabel">${esc(g.label)}</span><span class="mv-sortitems">${g.items.map((s) => svg(160, 168, shapeEl(s.shape, col(s.color, 'yellow')))).join('')}</span><b>${g.items.length}</b></div>`).join(''));
     case 'solid': return wrap('solid', solidSvg(v.solid, v.color, v.hl));
     case 'arrow': return arrowSvg(v);
     case 'gridmap': return gridmapSvg(v);
@@ -1014,7 +1015,7 @@ export function mathVisHtml(v: MathVisual): string {
   }
 }
 
-const MATH_KINDS = new Set(['compare', 'seesaw', 'emoji', 'row', 'where', 'strip', 'cubes', 'ruler', 'scale', 'thermo', 'jugs', 'clock', 'digital', 'calendar', 'fist', 'shape', 'shapes', 'solid', 'arrow', 'gridmap', 'tally', 'picgraph', 'growing', 'poly', 'cells', 'angle', 'lines', 'bars', 'lineg', 'pie', 'table', 'coord', 'net', 'protractor', 'geo', 'bag', 'dice', 'cards', 'cuboid', 'sticks', 'packs', 'rotsym', 'speed', 'cylinder', 'cone', 'pair']);
+const MATH_KINDS = new Set(['sort', 'compare', 'seesaw', 'emoji', 'row', 'where', 'strip', 'cubes', 'ruler', 'scale', 'thermo', 'jugs', 'clock', 'digital', 'calendar', 'fist', 'shape', 'shapes', 'solid', 'arrow', 'gridmap', 'tally', 'picgraph', 'growing', 'poly', 'cells', 'angle', 'lines', 'bars', 'lineg', 'pie', 'table', 'coord', 'net', 'protractor', 'geo', 'bag', 'dice', 'cards', 'cuboid', 'sticks', 'packs', 'rotsym', 'speed', 'cylinder', 'cone', 'pair']);
 export const isMathVisual = (v: { kind: string }): v is MathVisual => MATH_KINDS.has(v.kind);
 
 /** An answer option drawn as a picture. */

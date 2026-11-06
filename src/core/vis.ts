@@ -66,6 +66,7 @@ export type MathVisual =
   | { kind: 'calendar'; year: number; month: number; hl?: number[]; ring?: number; hop?: number[] }
   | { kind: 'shape'; shape: ShapeName; fold?: 'v' | 'h' | 'd'; corners?: boolean; sides?: boolean; color?: string; rot?: number; bad?: boolean }
   | { kind: 'shapes'; items: { shape: ShapeName; color?: string; rot?: number }[]; hl?: number }
+  | { kind: 'sort'; groups: { label: string; items: { shape: ShapeName; color?: string }[] }[] }
   | { kind: 'solid'; solid: SolidName; hl?: 'faces' | 'edges' | 'corners'; color?: string }
   | { kind: 'arrow'; dir: number; turn?: number; ghost?: boolean }
   | { kind: 'gridmap'; w: number; h: number; items: { at: Pt; e: string }[]; start: Pt; path?: Pt[] }
