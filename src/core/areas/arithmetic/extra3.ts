@@ -3,11 +3,12 @@
 
 import { extraSkills, made } from './extra.ts';
 import { PicLesson, withWays, pickN } from '../../teach/pics.ts';
-import { Line, LessonBuilder } from '../../teach/build.ts';
+import { Line, LessonBuilder, shiftBoard } from '../../teach/build.ts';
+import { columnAdd } from '../../teach/addsub.ts';
 import { nearNumbers } from '../../question.ts';
-import type { MathVisual, Pt, SolidName } from '../../vis.ts';
+import type { BarPart, BarRow, MathVisual, Pt, SolidName } from '../../vis.ts';
 import type { Rng } from '../../rng.ts';
-import type { Lesson } from '../../teach/types.ts';
+import type { ColsBoard, ColsCell, Lesson, PicBoard } from '../../teach/types.ts';
 import { MONTHS, notesFor } from './extra2.ts';
 
 const { list, add } = extraSkills(3, { format: 'choice', speedSec: 20 });
@@ -173,7 +174,10 @@ add('s3.howlong', 'monthdays', 'measure', 'Days in each month', (r, d) => {
     return L.end(n, `So ${what} has ${n} days.`);
   };
   const rhyme = (): Lesson => {
-    const L = new LessonBuilder();
+    const L = new PicLesson();
+    const short = [8, 3, 5, 10];
+    const grp = (label: string, ms: number[], tone: 0 | 1 | 2 | 3) => ({ label, items: ms.map((k) => MONTHS[k].slice(0, 3)), tone, hl: ms.flatMap((k, i) => (k === m ? [i] : [])) });
+    L.show({ kind: 'chain', rows: true, groups: [grp('30', short, 0), grp('31', [0, 2, 4, 6, 7, 9, 11], 2), grp('28/29', [1], 3)] });
     L.say('Thirty days has September, April, June and November.');
     L.say('All the rest have thirty-one, except February: 28, and 29 each leap year.');
     return L.end(n, `So ${what} has ${n} days.`);
@@ -262,19 +266,43 @@ add('s3.a33c', 'addmeas', 'measure', 'Adding measures in stories', (r) => {
   const tot = kg * 1000 + g + more;
   const item = r.pick(['rice', 'flour', 'sugar', 'dal']);
   const name = r.pick(['Riya', 'Kabir', 'Meera', 'Arjun', 'Zara']);
+  const kgs = (n: number, tone: 0 | 3 = 0): BarPart[] => Array.from({ length: n }, () => ({ v: 1000, t: '1 kg', sub: '1000 g', tone }));
+  const bar = (parts: BarPart[], total?: string, more: Partial<BarRow> = {}): MathVisual => ({ kind: 'bar', rows: [{ parts: parts.filter((p) => p.v > 0), total, ...more }] });
+  const start = kg * 1000 + g;
   const plain = (): Lesson => {
+    // Blocks show the change to grams; then the grams are added in columns.
     const L = new LessonBuilder();
-    L.say(`Change everything to grams. 1 kg = 1000 g.`, `${kg} kg ${g} g = ${kg * 1000 + g} g`);
-    L.say(`Add the ${more} g.`, `${kg * 1000 + g} + ${more} = ${tot}`);
+    const frames: PicBoard['frames'] = [{ step: 0, v: bar([...kgs(kg), { v: g, t: `${g} g`, tone: 1 }], `${start} g`) }];
+    L.say(`Change everything to grams. 1 kg = 1000 g.`, `${kg} kg ${g} g = ${start} g`);
+    const cols = columnAdd([start, more]);
+    frames.push({ step: 1, v: bar([...kgs(kg), { v: g, t: `${g} g`, tone: 1 }, { v: more, t: `${more} g`, tone: 2, new: true }], `${start} g + ${more} g`) });
+    L.take(cols);
+    frames.push({ step: L.i, v: bar([...kgs(kg), { v: g, t: `${g} g`, tone: 1 }, { v: more, t: `${more} g`, tone: 2 }], `${tot} g`) });
+    L.board = { kind: 'stack', boards: [{ kind: 'pic', frames }, shiftBoard(cols.board!, 1)] };
     return L.end(tot, `So there are ${tot} g.`);
   };
   const carry = (): Lesson => {
+    // kg | g columns: add the grams, 1000 g becomes a carried 1 kg, then add the kg.
     const L = new LessonBuilder();
     const gs = g + more;
+    const over = gs >= 1000;
+    const K = kg + (over ? 1 : 0);
+    const cells: ColsCell[] = [
+      { r: 1, c: 0, ch: String(kg) }, { r: 1, c: 1, ch: String(g) },
+      { r: 2, c: 1, ch: String(more) },
+    ];
+    const board: ColsBoard = { kind: 'cols', width: 2, heads: ['kg', 'g'], widths: [1.6, 2.6], rows: ['small', 'num', 'num', 'ans'], rules: [2], ops: [{ r: 2, ch: '+' }], cells, focus: [{ c: 1, at: 0, until: over ? 2 : 1 }] };
+    L.board = board;
+    cells.push({ r: 3, c: 1, ch: String(gs), tone: over ? 'new' : 'ans', at: 0, ...(over ? { until: 1 } : {}) });
     L.say('Add the grams first.', `${g} g + ${more} g = ${gs} g`);
-    if (gs >= 1000) L.say('1000 g make 1 kg: carry it.', `${gs} g = 1 kg ${gs - 1000} g`);
-    const K = kg + Math.floor(gs / 1000);
-    L.say(`That is ${K} kg ${gs % 1000} g.`, `${K} × 1000 + ${gs % 1000} = ${tot}`);
+    if (over) {
+      cells.push({ r: 3, c: 1, ch: String(gs - 1000), tone: 'ans', at: 1 }, { r: 0, c: 0, ch: '1', tone: 'carry', at: 1 });
+      L.sayThen('1000 g make 1 kg: carry it to the kg.', `${gs} g = 1 kg ${gs - 1000} g`, `Write ${gs - 1000} g, carry 1 kg.`);
+    }
+    board.focus!.push({ c: 0, at: L.i, until: L.i + 1 });
+    cells.push({ r: 3, c: 0, ch: String(K), tone: 'ans', at: L.i });
+    L.say(over ? 'Add the kg, with the carried 1.' : 'Now the kg.', over ? `${kg} + 1 = ${K} kg` : `${kg} kg`);
+    L.say(`That is ${K} kg ${gs % 1000} g. Change it to grams.`, `${K} × 1000 + ${gs % 1000} = ${tot}`);
     return L.end(tot, `So there are ${tot} g.`);
   };
   return made(`A bag of ${item} weighs ${kg} kg ${g} g. ${name} adds ${more} g more. How many grams is that now?`, tot, nums(r, tot, [kg * 1000 + g, kg * 100 + g + more, kg + g + more]), {

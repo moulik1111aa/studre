@@ -60,6 +60,29 @@ for (const [name, scale] of Object.entries(DENSITIES)) {
   await png(background(), layer, layer, `mipmap-${name}/ic_launcher_background.png`);
   await png(monochrome(), layer, layer, `mipmap-${name}/ic_launcher_monochrome.png`);
 }
+// The other launcher icons (MN Plus members pick one; see src/ui/appicons.ts): the same Plus in
+// front, a different sky behind. Each gets its own background layer, legacy icons and
+// adaptive-icon files; the foreground and themed (monochrome) layers are shared.
+const { APP_ICONS, iconFieldSvg, appIconSvg } = await import('../src/ui/appicons.ts');
+for (const { id } of APP_ICONS.filter((i) => i.id !== 'sky')) {
+  const bg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108">${iconFieldSvg(id)}</svg>`;
+  for (const [name, scale] of Object.entries(DENSITIES)) {
+    const legacySize = Math.round(48 * scale);
+    const layer = Math.round(108 * scale);
+    await png(appIconSvg(id, 'square'), legacySize, legacySize, `mipmap-${name}/ic_launcher_${id}.png`);
+    await png(appIconSvg(id, 'round'), legacySize, legacySize, `mipmap-${name}/ic_launcher_${id}_round.png`);
+    await png(bg, layer, layer, `mipmap-${name}/ic_launcher_${id}_background.png`);
+  }
+  const adaptive = `<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@mipmap/ic_launcher_${id}_background"/>
+    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+    <monochrome android:drawable="@mipmap/ic_launcher_monochrome"/>
+</adaptive-icon>
+`;
+  writeFileSync(join(res, `mipmap-anydpi-v26/ic_launcher_${id}.xml`), adaptive);
+  writeFileSync(join(res, `mipmap-anydpi-v26/ic_launcher_${id}_round.xml`), adaptive);
+}
 await png(splash(), 480, 480, 'drawable-nodpi/splash_logo.png');
 mkdirSync(join(root, 'docs/assets'), { recursive: true });
 writeFileSync(join(root, 'docs/assets/icon-512.png'), await sharp(Buffer.from(legacy('square'))).resize(512, 512).png().toBuffer());

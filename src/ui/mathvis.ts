@@ -4,6 +4,7 @@
 // just appeared (.pf.fresh), so question cards stay still.
 
 import type { MathVisual, Pt, ShapeName, SolidName, GeoSeg, GeoArc, GeoLabel } from '../core/vis.ts';
+import { methodVisHtml, METHOD_KINDS } from './methodvis.ts';
 
 export const PAL: Record<string, string> = {
   red: '#FF5A5F', blue: '#3D8BFF', green: '#2ED47A', yellow: '#FFC531', orange: '#FF9F1C', purple: '#9B5DE5',
@@ -964,6 +965,50 @@ function speedHtml(v: Extract<MathVisual, { kind: 'speed' }>): string {
   return wrap('speed', `<div class="mv-road"><span>🏠</span><i></i><span>🏫</span></div><p class="mv-key">${esc(v.dist)}</p><div class="mv-legs">${v.legs.map((l) => `<span><b>${esc(l.label)}</b> ${esc(l.time)}</span>`).join('')}</div>`);
 }
 
+// ── Bar model ─────────────────────────────────────────────────────────────
+
+function barSvg(v: Extract<MathVisual, { kind: 'bar' }>): string {
+  const W = 340;
+  const nameW = v.rows.some((r) => r.name) ? 70 : 0;
+  const avail = W - nameW - 6;
+  const max = Math.max(...v.rows.map((r) => r.parts.reduce((a, p) => a + p.v, 0)));
+  let y = 4;
+  let b = '';
+  let k = 0;
+  for (const row of v.rows) {
+    let ws = row.parts.map((p) => Math.max(44, (p.v / max) * avail));
+    const sum = ws.reduce((a, w) => a + w, 0);
+    const room = (row.parts.reduce((a, p) => a + p.v, 0) / max) * avail;
+    if (sum > avail || sum > room + 1) ws = ws.map((w) => (w * Math.min(avail, Math.max(room, sum))) / sum);
+    const xs: number[] = [];
+    let x = nameW;
+    for (const w of ws) (xs.push(x), (x += w));
+    const end = x;
+    if (row.group) {
+      const gx0 = xs[row.group.from] + 3, gx1 = xs[row.group.to] + ws[row.group.to] - 3;
+      b += `<g class="mv-pop" style="--d:${k * 220 + 300}ms"><path class="mv-brace" d="M${r1(gx0)},${y + 30} V${y + 22} H${r1(gx1)} V${y + 30}"/>${txt((gx0 + gx1) / 2, y + 16, row.group.t, 'mv-t mv-small hl')}</g>`;
+      y += 30;
+    }
+    const by = y + 4, bh = 44;
+    if (row.name) b += txt(nameW - 10, by + bh / 2 + 5, row.name, 'mv-t mv-small', 'end');
+    row.parts.forEach((p, i) => {
+      const w = ws[i];
+      const big = p.t.length * 8.6 < w - 8;
+      const cross = p.x ? `<line class="mv-barx mv-draw" pathLength="1" x1="${r1(xs[i] + 8)}" y1="${by + bh - 6}" x2="${r1(xs[i] + w - 8)}" y2="${by + 6}"/>` : '';
+      b += `<g class="${p.new ? 'mv-drop' : ''}${p.hl ? ' mv-hl' : ''}" style="--d:${k * 220}ms"><rect class="mv-barp t${p.x ? 'x' : p.tone ?? 0}" x="${r1(xs[i] + 1.5)}" y="${by}" width="${r1(w - 3)}" height="${bh}" rx="9"/>${cross}${txt(xs[i] + w / 2, by + bh / 2 + (big ? 6 : 5), p.t, `mv-t mv-onfill${big ? ' mv-barbig' : ' mv-small'}`)}${p.sub ? txt(xs[i] + w / 2, by + bh + 16, p.sub, 'mv-t mv-tiny') : ''}</g>`;
+      if (p.new) k++;
+    });
+    y = by + bh + (row.parts.some((p) => p.sub) ? 22 : 6);
+    if (row.total) {
+      const x0 = nameW + 3, x1 = end - 3, m = (x0 + x1) / 2;
+      b += `<g class="mv-pop" style="--d:${k * 220 + 250}ms"><path class="mv-brace" d="M${r1(x0)},${y} q0,9 9,9 H${r1(m - 9)} q9,0 9,9 q0,-9 9,-9 H${r1(x1 - 9)} q9,0 9,-9"/>${txt(m, y + 40, row.total, `mv-t mv-bartot${row.ask ? ' ask' : ' hl'}`)}</g>`;
+      y += 50;
+    }
+    y += 10;
+  }
+  return wrap('bar', svg(W, y, b));
+}
+
 // ── Entry points ──────────────────────────────────────────────────────────
 
 export function mathVisHtml(v: MathVisual): string {
@@ -1014,11 +1059,13 @@ export function mathVisHtml(v: MathVisual): string {
     case 'speed': return speedHtml(v);
     case 'cylinder': return cylinderSvg(v);
     case 'cone': return roundSolidSvg(v);
+    case 'bar': return barSvg(v);
+    default: return methodVisHtml(v) ?? '';
     case 'pair': return wrap('pair', `<div class="mv-pa">${mathVisHtml(v.a)}${v.la ? `<small>${esc(v.la)}</small>` : ''}</div>${v.op ? `<span class="mv-op">${esc(v.op)}</span>` : ''}<div class="mv-pa">${mathVisHtml(v.b)}${v.lb ? `<small>${esc(v.lb)}</small>` : ''}</div>`);
   }
 }
 
-const MATH_KINDS = new Set(['sort', 'compare', 'seesaw', 'emoji', 'row', 'where', 'strip', 'cubes', 'ruler', 'scale', 'thermo', 'jugs', 'clock', 'digital', 'calendar', 'fist', 'shape', 'shapes', 'solid', 'arrow', 'gridmap', 'tally', 'picgraph', 'growing', 'poly', 'cells', 'angle', 'lines', 'bars', 'lineg', 'pie', 'table', 'coord', 'net', 'protractor', 'geo', 'bag', 'dice', 'cards', 'cuboid', 'sticks', 'packs', 'rotsym', 'speed', 'cylinder', 'cone', 'pair']);
+const MATH_KINDS = new Set(['sort', 'compare', 'seesaw', 'emoji', 'row', 'where', 'strip', 'cubes', 'ruler', 'scale', 'thermo', 'jugs', 'clock', 'digital', 'calendar', 'fist', 'shape', 'shapes', 'solid', 'arrow', 'gridmap', 'tally', 'picgraph', 'growing', 'poly', 'cells', 'angle', 'lines', 'bars', 'lineg', 'pie', 'table', 'coord', 'net', 'protractor', 'geo', 'bag', 'dice', 'cards', 'cuboid', 'sticks', 'packs', 'rotsym', 'speed', 'cylinder', 'cone', 'pair', 'bar', ...METHOD_KINDS]);
 export const isMathVisual = (v: { kind: string }): v is MathVisual => MATH_KINDS.has(v.kind);
 
 /** An answer option drawn as a picture. */

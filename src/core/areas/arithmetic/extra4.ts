@@ -67,8 +67,10 @@ add('s4.m22', 'rectpa', 'measure', 'Rectangle perimeter and area', (r, d) => {
       L.say('Walk round the edge: the opposite sides are equal.', `${w} + ${h} + ${w} + ${h} = ${p}`);
       return L.end(p, `So the perimeter is ${p} cm.`);
     })(), 'Walk the edge', 'perim', [['2 × (length + width)', () => {
-      const L = new LessonBuilder();
+      const L = new PicLesson();
+      L.show({ ...v, labels: [String(w), String(h), null, null] } as MathVisual);
       L.say('One long side and one short side go half way round.', `${w} + ${h} = ${w + h}`);
+      L.show({ kind: 'bar', rows: [{ parts: [{ v: w + h, t: `${w} + ${h}`, tone: 0 }, { v: w + h, t: `${w} + ${h}`, tone: 1, new: true }], total: `2 × ${w + h} = ${p}` }] });
       L.say('Double it for all the way round.', `2 × ${w + h} = ${p}`);
       return L.end(p, `So the perimeter is ${p} cm.`);
     }]]),
@@ -119,7 +121,8 @@ add('s4.lshape', 'volcubes', 'measure', 'Volume by counting cubes', (r, d) => {
       L.say(`Stack ${h} layers.`, `${l * b} × ${h} = ${vol}`);
       return L.end(vol, `So it takes ${vol} cubes.`);
     })(), 'Layers', 'volume', [['length × width × height', () => {
-      const L = new LessonBuilder();
+      const L = new PicLesson();
+      L.show({ kind: 'cuboid', l, b, h, cubes: true, labels: [`${l} long`, `${b} deep`, `${h} high`] });
       L.say('Volume of a box = length × width × height.', `${l} × ${b} × ${h} = ${vol}`);
       return L.end(vol, `So it takes ${vol} cubes.`);
     }]]),
@@ -219,7 +222,8 @@ add('s4.hms', 'ymwd', 'measure', 'Years, months, weeks, days', (r) => {
     return made(`${tot} days = ? weeks and ${b} days`, a, nums(r, a, [Math.round(tot / 10)]), {
       hint: 'How many 7s go into it?',
       teach: () => {
-        const L = new LessonBuilder();
+        const L = new PicLesson();
+        L.show({ kind: 'bar', rows: [{ name: 'days', parts: [...Array.from({ length: a }, () => ({ v: 7, t: '7', sub: 'week', tone: 0 as const })), { v: b, t: String(b), tone: 1 as const }], total: `${tot} days` }] });
         L.say('A week is 7 days. Count how many whole 7s fit.', `${a} × 7 = ${a * 7}`);
         L.say('The days left over:', `${tot} − ${a * 7} = ${b}`);
         return L.end(a, `So ${tot} days = ${a} weeks and ${b} days.`);
@@ -230,8 +234,12 @@ add('s4.hms', 'ymwd', 'measure', 'Years, months, weeks, days', (r) => {
   return made(`${a} ${big} ${b} ${small} = ? ${small}`, ans, nums(r, ans, [a * 10 + b, a + b]), {
     hint: `1 ${big.slice(0, -1)} = ${k} ${small}.`,
     teach: () => {
-      const L = new LessonBuilder();
-      L.say(`1 ${big.slice(0, -1)} = ${k} ${small}.`, `${a} × ${k} = ${a * k}`);
+      const L = new PicLesson();
+      const one = big.slice(0, -1);
+      const blocks = (n: boolean) => [...Array.from({ length: a }, () => ({ v: k, t: String(k), sub: `1 ${one}`, tone: 0 as const })), ...(n ? [{ v: b, t: String(b), tone: 1 as const, new: true }] : [])];
+      L.show({ kind: 'bar', rows: [{ name: small, parts: blocks(false), total: `${a} × ${k} = ${a * k}` }] });
+      L.say(`1 ${one} = ${k} ${small}.`, `${a} × ${k} = ${a * k}`);
+      L.show({ kind: 'bar', rows: [{ name: small, parts: blocks(true), total: `${ans} ${small}` }] });
       L.say(`Add the ${b} ${small}.`, `${a * k} + ${b} = ${ans}`);
       return L.end(ans, `So it is ${ans} ${small}.`);
     },

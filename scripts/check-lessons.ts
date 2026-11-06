@@ -1,6 +1,6 @@
 // Lesson checks for every skill: each question has a lesson, it builds, it ends by stating the
-// right answer, no text says "undefined"/"NaN", board timings fit the steps, and no "slip" note
-// matches the correct answer.
+// right answer, every lesson (and other way) has a picture, no text says "undefined"/"NaN",
+// board timings fit the steps, and no "slip" note matches the correct answer.
 //   node scripts/check-lessons.ts [skill-id-prefix] [--show]
 import { allSkills } from '../src/core/areas/index.ts';
 import { makeQuestion } from '../src/core/path.ts';
@@ -52,6 +52,8 @@ export function checkLesson(skill: string, q: Question): Problem[] {
     return out;
   }
   if (!l.steps.length) p('no steps');
+  // Every lesson shows its method as a picture, not only in words.
+  if (!l.board) p('no picture');
   else if (!l.steps[l.steps.length - 1].end) p('last step is not the answer step');
   if (l.steps.length && !statesAnswer(q, l)) p(`answer ${q.answer} not in last step: "${[l.steps[l.steps.length - 1].say, ...(l.steps[l.steps.length - 1].math ?? [])].join(' | ')}"`);
   const all = JSON.stringify(l);
@@ -96,6 +98,7 @@ export function checkLesson(skill: string, q: Question): Problem[] {
       if (!a.steps.length || !a.steps[a.steps.length - 1].end) p(`${tag}last step is not the answer step`);
       else if (!statesAnswer(q, a)) p(`${tag}answer ${q.answer} not in last step`);
       if (a.steps.length > 9) p(`${tag}long lesson: ${a.steps.length} steps`);
+      if (!a.board) p(`${tag}no picture`);
       const txt = JSON.stringify(a);
       for (const bad of ['undefined', 'NaN', 'Infinity']) if (txt.includes(bad)) p(`${tag}text contains ${bad}`);
       turns(a, tag);

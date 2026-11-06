@@ -1493,3 +1493,37 @@ test('parent area: the skills list shows every skill with an example and how it 
   await expect(page.locator('.lesson')).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+test('a backup file shared to MN (from WhatsApp) asks a grown-up, then restores the child', async ({ page, browser }) => {
+  await page.goto('/?debug&demo=%4030&noloader');
+  await expect(page.locator('.map')).toBeVisible();
+  await page.evaluate(() => (window as unknown as { __app: { show: (s: unknown) => void }; __screens: Record<string, unknown> }).__app.show((window as unknown as { __screens: Record<string, unknown> }).__screens.parentScreen));
+  await page.click('.bk-family');
+  const file = await page.evaluate(() => (window as unknown as { __lastExport: { name: string; text: string } }).__lastExport);
+  expect(file.text).toContain('mn-family-backup');
+  const childId = await page.evaluate(() => (window as unknown as { __app: { child: { id: string } } }).__app.child.id);
+  // Another phone: the file arrives through Share → MN.
+  const other = await (await browser.newContext({ viewport: { width: 412, height: 915 } })).newPage();
+  await other.goto('/?debug&demo=%4012&noloader');
+  await expect(other.locator('.map')).toBeVisible();
+  void other.evaluate((t) => (window as unknown as { __share: (t: string) => Promise<void> }).__share(t), file.text);
+  await expect(other.locator('.grownup')).toBeVisible();
+  await grownUp(other);
+  await other.locator('.sheet .btn.mint').first().click();
+  await expect.poll(async () => other.evaluate((id) => JSON.parse(localStorage.getItem('studyhard.save')!).children.some((c: { id: string }) => c.id === id), childId)).toBe(true);
+  // Not an MN file: a clear note, nothing changes.
+  await other.evaluate(() => (window as unknown as { __share: (t: string) => Promise<void> }).__share('hello'));
+  await expect(other.locator('.toast').last()).toContainText('not an MN backup');
+  await other.close();
+});
+
+test('MN Plus: the app icon can be chosen from the Parent area', async ({ page }) => {
+  await page.goto('/?debug&demo=%4010&noloader');
+  await expect(page.locator('.map')).toBeVisible();
+  await page.evaluate(() => (window as unknown as { __app: { show: (s: unknown) => void }; __screens: Record<string, unknown> }).__app.show((window as unknown as { __screens: Record<string, unknown> }).__screens.parentScreen));
+  await page.click('.icon-row');
+  await expect(page.locator('.ic-opt')).toHaveCount(5);
+  await page.locator('.ic-opt[data-icon="night"]').click();
+  await expect(page.locator('.ic-opt.on')).toHaveAttribute('data-icon', 'night');
+  await expect(page.locator('.toast').last()).toContainText('Night');
+});

@@ -5,11 +5,16 @@
 import { clean } from '../question.ts';
 import { LessonBuilder, Line, f } from './build.ts';
 import type { Lesson } from './types.ts';
+import type { MathVisual } from '../vis.ts';
+import { pvShift } from './pics.ts';
+type Frames = { step: number; v: MathVisual }[];
 
 /** n × (10ᵏ − 1) = n × 10ᵏ − n. */
 export function nearPowerTimes(n: number, m: number): Lesson {
   const L = new LessonBuilder();
   const up = m + 1;
+  const box = (total?: string, hl = false): MathVisual => ({ kind: 'area', cols: [String(up), '− 1'], rows: [String(n)], cells: [[String(n * up), `− ${n}`]], cw: [4, 1], tone: [[0, 3]], ...(hl ? { hl: [[0, 1]] as [number, number][] } : {}), ...(total ? { total } : {}) });
+  L.board = { kind: 'pic', frames: [{ step: 0, v: box() }, { step: 1, v: box(`${n} × ${up} = ${n * up}`) }, { step: 2, v: box(`${n * up} − ${n} = ${n * m}`, true) }] as Frames };
   L.say(`${m} is 1 less than ${up}. So ${n} × ${m} is ${n} × ${up}, take away one ${n}.`);
   L.say(`Multiply by ${up}: add ${String(up).length - 1} zero${up > 10 ? 's' : ''}.`, `${n} × ${up} = ${n * up}`);
   L.say(`Take away one ${n}.`, `${n * up} − ${n} = ${n * m}`);
@@ -45,9 +50,11 @@ export function estimateProduct(a: number, b: number, toA: number, toB: number, 
   const B = Math.round(b / toB) * toB;
   const p = A * B;
   const ans = o.div ? clean(p / o.div) : p;
-  L.say(o.how ?? 'Round each number to 1 significant figure (its first digit, then zeros).', `${f(a)} ≈ ${A}`, `${f(b)} ≈ ${B}`);
   const za = String(A).length - String(A).replace(/0+$/, '').length;
   const zb = String(B).length - String(B).replace(/0+$/, '').length;
+  const box = (cell: string, total?: string): MathVisual => ({ kind: 'area', cols: [`${f(b)} ≈ ${B}`], rows: [`${f(a)} ≈ ${A}`], cells: [[cell]], tone: [[1]], ...(total ? { total } : {}) });
+  L.board = { kind: 'pic', frames: [{ step: 0, v: box('?') }, { step: 1, v: box(`${A / 10 ** za} × ${B / 10 ** zb} = ${(A / 10 ** za) * (B / 10 ** zb)}`, `put back ${za + zb} zero${za + zb === 1 ? '' : 's'}: ${p}`) }] };
+  L.say(o.how ?? 'Round each number to 1 significant figure (its first digit, then zeros).', `${f(a)} ≈ ${A}`, `${f(b)} ≈ ${B}`);
   L.say('Multiply the first digits, then put back all the zeros.', `${A / 10 ** za} × ${B / 10 ** zb} = ${(A / 10 ** za) * (B / 10 ** zb)}`, `${A} × ${B} = ${p}`);
   if (o.div) L.say(`Then ÷ ${o.div}.`, `${p} ÷ ${o.div} = ${f(ans)}`);
   if (o.exact !== false) L.slip(clean(o.div ? (a * b) / o.div : a * b), 'That is the exact answer. An estimate rounds first, so it is quick.');
@@ -61,6 +68,10 @@ export function timesFriendly(a: number, m: number): Lesson {
   const k = m === 5 ? 2 : m === 25 ? 4 : 8;
   const big = k * m;
   const q = a / k;
+  L.board = { kind: 'pic', frames: [
+    { step: 0, v: { kind: 'chain', groups: [{ items: [String(q)], tone: 0 }, { items: [String(k), String(m)], label: `= ${big}`, tone: 2 }], ops: ['×'] } },
+    { step: 1, v: { kind: 'chain', groups: [{ items: [String(q)], tone: 0 }, { items: [String(big)], tone: 2 }], ops: ['×'], note: `= ${q * big}` } },
+  ] as Frames };
   L.say(`${k} × ${m} = ${big}. So split ${a} into ${k} × ${q}.`, `${a} × ${m} = ${q} × ${k} × ${m}`);
   L.say(`${k} × ${m} makes ${big}.`, `${q} × ${big} = ${q * big}`);
   L.slip(a * m * 2, `Split off a ${k}: ${k} × ${m} = ${big}.`);
@@ -72,6 +83,11 @@ export function divFriendly(a: number, m: number): Lesson {
   const L = new LessonBuilder();
   const k = 100 / m === 20 ? 2 : 4;
   const t = m === 5 ? 10 : 100;
+  L.board = { kind: 'pic', frames: [
+    { step: 0, v: { kind: 'chain', groups: [{ items: [`÷ ${m}`], tone: 3 }, { items: [`× ${k}`], tone: 0 }, { items: [`÷ ${t}`], tone: 2 }], ops: ['=', 'then'] } },
+    { step: 1, v: { kind: 'chain', groups: [{ items: [String(a)], tone: 1 }, { items: [String(a * k)], tone: 0 }], ops: [`× ${k} →`] } },
+    { step: 2, v: pvShift(String(a * k), -Math.log10(t), `${a * k} ÷ ${t} = ${f(a / m)}`) },
+  ] as Frames };
   L.say(`÷ ${m} is the same as × ${k} then ÷ ${t}, because ${m} × ${k} = ${t}.`);
   L.say(`× ${k}:`, `${a} × ${k} = ${a * k}`);
   L.say(`÷ ${t}:`, `${a * k} ÷ ${t} = ${f(a / m)}`);
@@ -83,6 +99,7 @@ export function divFriendly(a: number, m: number): Lesson {
 export function times11Three(n: number): Lesson {
   const L = new LessonBuilder();
   const [a, b, c] = String(n).split('').map(Number);
+  L.board = { kind: 'pic', frames: [{ step: 0, v: { kind: 'chain', groups: [{ items: [String(a)], label: 'first', tone: 0 }, { items: [`${a} + ${b}`], label: 'pair', tone: 2 }, { items: [`${b} + ${c}`], label: 'pair', tone: 2 }, { items: [String(c)], label: 'last', tone: 0 }], ops: ['', '', ''] } }] as Frames };
   L.say(`× 11 = × 10 + × 1. A shortcut: keep the outside digits, and add neighbouring digits in between. Work from the right.`, `${a} | ${a} + ${b} | ${b} + ${c} | ${c}`);
   const ones = c;
   const s1 = b + c;
@@ -104,6 +121,9 @@ export function times11Three(n: number): Lesson {
 export function squareEnding5(n: number): Lesson {
   const L = new LessonBuilder();
   const t = (n - 5) / 10;
+  // Box model of (10t + 5)²: the two 5 × 10t strips join the big square into 10t × 10(t + 1).
+  const box = (total?: string, hl = false): MathVisual => ({ kind: 'area', cols: [String(10 * t), '5'], rows: [String(10 * t), '5'], cells: [[String(100 * t * t), String(50 * t)], [String(50 * t), '25']], cw: [3, 1], rh: [2.2, 1], tone: [[0, 2], [2, 1]], ...(hl ? { hl: [[0, 1], [1, 0]] as [number, number][] } : {}), ...(total ? { total } : {}) });
+  L.board = { kind: 'pic', frames: [{ step: 0, v: box(`${t} × ${t + 1} = ${t * (t + 1)} hundreds`) }, { step: 1, v: box(`${t * (t + 1) * 100} + 25 = ${n * n}`, false) }, { step: 2, v: box(`${100 * t * t} + ${50 * t} + ${50 * t} = ${t * 10} × ${(t + 1) * 10}`, true) }] };
   L.say(`For a number ending in 5, take the part before the 5 (${t}) and multiply it by the next number up (${t + 1}).`, `${t} × ${t + 1} = ${t * (t + 1)}`);
   L.say('Then write 25 on the end.', `${t * (t + 1)} | 25 → ${n * n}`);
   L.say(`Why it works: ${n}² = (${t}0 + 5)² = ${t}0 × ${t + 1}0 + 25.`, `${t * 10} × ${(t + 1) * 10} + 25 = ${n * n}`);
@@ -115,6 +135,9 @@ export function squareEnding5(n: number): Lesson {
 export function squareNear50(n: number): Lesson {
   const L = new LessonBuilder();
   const d = n - 50;
+  const D = Math.abs(d);
+  const box50 = (total: string, hl?: [number, number][]): MathVisual => ({ kind: 'area', cols: ['50', d > 0 ? `+ ${D}` : `− ${D}`], rows: ['50', d > 0 ? `+ ${D}` : `− ${D}`], cells: [['2500', `${d > 0 ? '+' : '−'} ${50 * D}`], [`${d > 0 ? '+' : '−'} ${50 * D}`, `+ ${D * D}`]], cw: [4, 1], rh: [2, 1], tone: [[0, d > 0 ? 2 : 3], [d > 0 ? 2 : 3, 1]], total, ...(hl ? { hl } : {}) });
+  L.board = { kind: 'pic', frames: [{ step: 0, v: box50('50² = 2500 = 25 hundreds', [[0, 0]]) }, { step: 1, v: box50(`2 × ${50 * D} = ${100 * D} = ${D} hundreds → ${25 + d} hundreds`, [[0, 1], [1, 0]]) }, { step: 2, v: box50(`+ ${D * D} → ${n * n}`, [[1, 1]]) }] as Frames };
   L.say(`${n} is 50 ${d > 0 ? '+' : '−'} ${Math.abs(d)}. 50² = 2500 is 25 hundreds.`);
   L.say(`Start from 25 ${d > 0 ? '+' : '−'} ${Math.abs(d)} hundreds.`, `25 ${d > 0 ? '+' : '−'} ${Math.abs(d)} = ${25 + d}`, `${25 + d} × 100 = ${(25 + d) * 100}`);
   L.say(`Add ${Math.abs(d)}² = ${d * d}.`, `${(25 + d) * 100} + ${d * d} = ${n * n}`);
@@ -128,6 +151,9 @@ export function squareNear100(n: number): Lesson {
   const L = new LessonBuilder();
   const d = n - 100;
   const X = n + d;
+  const D = Math.abs(d);
+  const box1 = (total: string, hl?: [number, number][]): MathVisual => ({ kind: 'area', cols: ['100', d > 0 ? `+ ${D}` : `− ${D}`], rows: ['100', d > 0 ? `+ ${D}` : `− ${D}`], cells: [['10000', `${d > 0 ? '+' : '−'} ${100 * D}`], [`${d > 0 ? '+' : '−'} ${100 * D}`, `+ ${D * D}`]], cw: [4, 1], rh: [2, 1], tone: [[0, d > 0 ? 2 : 3], [d > 0 ? 2 : 3, 1]], total, ...(hl ? { hl } : {}) });
+  L.board = { kind: 'pic', frames: [{ step: 0, v: box1(`${X} hundreds`, [[0, 0], [0, 1], [1, 0]]) }, { step: 1, v: box1(`+ ${D * D} → ${n * n}`, [[1, 1]]) }] as Frames };
   L.say(`${n} is 100 ${d > 0 ? '+' : '−'} ${Math.abs(d)}. ${d > 0 ? 'Add' : 'Take'} ${Math.abs(d)} ${d > 0 ? 'to' : 'from'} ${n} to get the hundreds.`, `${n} ${d > 0 ? '+' : '−'} ${Math.abs(d)} = ${X}`, `${X} × 100 = ${X * 100}`);
   L.say(`Add ${Math.abs(d)}² = ${d * d}.`, `${X * 100} + ${d * d} = ${n * n}`);
   L.say(`Why: (100 ${d > 0 ? '+' : '−'} ${Math.abs(d)})² = 10000 ${d > 0 ? '+' : '−'} 200 × ${Math.abs(d)} + ${d * d}.`);
@@ -143,6 +169,14 @@ export function base100(a: number, b: number): Lesson {
   const cross = a + s;
   const ps = p * s;
   const pm = (x: number) => (x < 0 ? `− ${-x}` : `+ ${x}`);
+  const bx = (x: number) => (x < 0 ? `(${f(x)})` : f(x));
+  const box = (cells: string[][], total?: string, hl?: [number, number][]): MathVisual => ({ kind: 'area', cols: ['100', pm(s)], rows: ['100', pm(p)], cells, cw: [3, 1], rh: [2, 1], tone: [[0, 2], [2, 1]], ...(hl ? { hl } : {}), ...(total ? { total } : {}) });
+  L.board = { kind: 'pic', frames: [
+    { step: 0, v: box([['', ''], ['', '']]) },
+    { step: 1, v: box([['10000', f(100 * s)], [f(100 * p), '']], `${a} ${pm(s)} = ${cross} hundreds`, [[0, 0], [0, 1], [1, 0]]) },
+    { step: 2, v: box([['10000', f(100 * s)], [f(100 * p), f(ps)]], `${bx(p)} × ${bx(s)} = ${f(ps)}`, [[1, 1]]) },
+    { step: 3, v: box([['10000', f(100 * s)], [f(100 * p), f(ps)]], `${cross * 100} ${pm(ps)} = ${a * b}`) },
+  ] };
   L.say(`How far is each from 100?`, `${a} = 100 ${pm(p)}`, `${b} = 100 ${pm(s)}`);
   L.say(`Cross: ${a} ${pm(s)} gives the hundreds.`, `${a} ${pm(s)} = ${cross}`, `${cross} × 100 = ${cross * 100}`);
   const br = (x: number) => (x < 0 ? `(${f(x)})` : f(x));

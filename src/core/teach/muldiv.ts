@@ -4,7 +4,32 @@
 
 import { clean } from '../question.ts';
 import { LessonBuilder, Line, f, parts, digits, list, PLACES } from './build.ts';
-import type { BusBoard, Lesson, TableBoard } from './types.ts';
+import type { Board, BusBoard, Lesson, TableBoard } from './types.ts';
+import type { MathVisual } from '../vis.ts';
+import { pvShift } from './pics.ts';
+
+const pic = (v: MathVisual, step = 0): Board => ({ kind: 'pic', frames: [{ step, v }] });
+/** The picture for a times-table strategy: n lots of t, drawn the way the strategy splits it. */
+export function strategyPic(t: number, n: number): MathVisual {
+  const box = (parts: number[], labels = parts.map(String)): MathVisual => ({ kind: 'area', cols: labels, rows: [f(n)], cells: [parts.map((p) => f(p * n))], cw: parts.map((p) => Math.max(1, Math.abs(p))), tone: [parts.map((p) => (p < 0 ? 3 : p === parts[0] ? 0 : 2))], total: `${parts.map((p) => f(p * n)).join(' + ').replace('+ −', '− ')} = ${f(t * n)}` });
+  const dbl = (k: number): MathVisual => ({ kind: 'chain', groups: Array.from({ length: k + 1 }, (_, i) => ({ items: [f(n * 2 ** i)], tone: (i % 4) as 0 | 1 | 2 | 3 })), ops: Array(k).fill('double →') });
+  switch (t) {
+    case 0: return { kind: 'chain', groups: Array.from({ length: Math.max(1, Math.min(n, 5)) }, () => ({ items: ['·'], label: '0', tone: 0 as const })), ops: Array(5).fill('+'), note: 'empty groups: 0' };
+    case 1: return { kind: 'bar', rows: [{ name: '1 lot', parts: [{ v: n || 1, t: f(n), tone: 0 }] }] };
+    case 2: return { kind: 'bar', rows: [{ parts: [{ v: n, t: f(n), tone: 0 }, { v: n, t: f(n), tone: 1 }], total: `${f(n)} + ${f(n)} = ${f(2 * n)}` }] };
+    case 10: return pvShift(f(n), 1, `${f(n)} × 10 = ${f(10 * n)}`);
+    case 5: return { kind: 'bar', rows: [{ name: '× 10', parts: [{ v: 10 * n, t: f(10 * n), tone: 0 }] }, { name: '× 5', parts: [{ v: 5 * n, t: f(5 * n), tone: 2 }, { v: 5 * n, t: 'half', tone: 0, x: true }], total: `half of ${f(10 * n)} = ${f(5 * n)}` }] };
+    case 3: return box([2, 1]);
+    case 6: return box([5, 1]);
+    case 7: return box([5, 2]);
+    case 9: return box([10, -1], ['10', '− 1']);
+    case 11: return box([10, 1]);
+    case 12: return box([10, 2]);
+    case 4: return dbl(2);
+    case 8: return dbl(3);
+    default: return box([t]);
+  }
+}
 
 const PREF = [0, 1, 10, 2, 5, 11, 9, 4, 3, 6, 8, 12, 7];
 /** Pick the friendlier table: returns [table, count]. */
@@ -25,6 +50,7 @@ export function timesFact(a: number, b: number, show = `${f(a)} × ${f(b)} = ${f
   if (o.picture !== false && p > 0 && p <= 60 && t <= 10 && n <= 10 && t > 1 && n > 1) {
     L.board = { kind: 'dots', layout: 'array', groups: Array.from({ length: n }, () => ({ n: t })), caption: `${f(n)} rows of ${f(t)}` };
   }
+  if (!L.board && o.picture !== false) L.board = pic(strategyPic(t, n));
   const swapped = a === t && a !== b;
   if (swapped) L.say(`${f(a)} × ${f(b)} is the same as ${f(b)} × ${f(a)}: ${f(b)} lots of ${f(a)}.`);
   switch (t) {
@@ -92,6 +118,7 @@ export function missingFactor(a: number, c: number, show = `${f(a)} × ${f(c / a
   }
   L.say(o.intro ?? `How many ${f(a)}s make ${f(c)}?`);
   if (a === 1 || k <= 1) {
+    L.board = pic({ kind: 'bar', rows: [{ name: `${f(k)} × ${f(a)}`, parts: k === 1 ? [{ v: a, t: f(a), tone: 0 }] : Array.from({ length: Math.min(c, 10) }, () => ({ v: 1, t: '1', tone: 0 as const })), total: f(c) }] });
     L.say(k === 1 ? `One ${f(a)} is ${f(c)}.` : `1 × anything is that number, so it is ${f(c)}.`);
     return L.end(k, undefined, show);
   }
@@ -138,6 +165,7 @@ export function divFact(c: number, d: number, show = `${f(c)} ÷ ${f(d)} = ${f(c
   if (d === 10 || d === 100) return divTen(c, d, show);
   if (d === 1) {
     const L = new LessonBuilder();
+    L.board = pic({ kind: 'bar', rows: [{ name: '1 group', parts: [{ v: c || 1, t: f(c), tone: 0 }], total: `all ${f(c)} in one group` }] });
     L.say('Dividing by 1 leaves the number the same.');
     return L.end(c, undefined, show);
   }
@@ -234,6 +262,10 @@ export function timesTens(a: number, b: number, show = `${f(a)} × ${f(b)} = ${f
   const [t, n] = a % 10 === 0 ? [a, b] : [b, a];
   const z = t / 10;
   const L = new LessonBuilder();
+  L.board = { kind: 'pic', frames: [
+    { step: 0, v: { kind: 'area', cols: [`${f(t)} = ${f(z)} tens`], rows: [f(n)], cells: [[`${f(z * n)} tens`]], tone: [[1]] } },
+    { step: 1, v: pvShift(f(z * n), 1, `${f(z * n)} tens = ${f(z * n * 10)}`) },
+  ] };
   L.say(`${f(t)} is ${f(z)} tens. Do ${f(z)} × ${f(n)} first.`, `${f(z)} × ${f(n)} = ${f(z * n)}`);
   L.say('Then × 10 for the tens.', `${f(z * n)} × 10 = ${f(z * n * 10)}`);
   L.slip(z * n, 'Remember the × 10: they were tens.');
@@ -337,6 +369,14 @@ export function gridDiv(c: number, d: number, show = `${f(c)} ÷ ${f(d)} = ${f(c
   const k = c / d;
   const L = new LessonBuilder();
   const tens = Math.floor(k / 10) * 10;
+  const rest0 = k - tens;
+  // The amount as a bar, cut into easy chunks of the divisor.
+  const chunk = (n: number, tone: 0 | 1 | 2, more = {}) => ({ v: n * d, t: `${f(n)} × ${f(d)}`, sub: f(n * d), tone, ...more });
+  const frames: { step: number; v: MathVisual }[] = [{ step: 0, v: { kind: 'bar', rows: [{ parts: [{ v: c, t: f(c), tone: 3 }], total: `how many ${f(d)}s?` }] } }];
+  if (tens) frames.push({ step: 1, v: { kind: 'bar', rows: [{ parts: [chunk(tens, 0, { new: true }), ...(rest0 ? [{ v: rest0 * d, t: '?', tone: 3 as const }] : [])] }] } });
+  if (rest0) frames.push({ step: tens ? 2 : 1, v: { kind: 'bar', rows: [{ parts: [...(tens ? [chunk(tens, 0)] : []), chunk(rest0, 2, { new: true })] }] } });
+  frames.push({ step: (tens ? 1 : 0) + (rest0 ? 1 : 0) + 1, v: { kind: 'bar', rows: [{ parts: [...(tens ? [chunk(tens, 0)] : []), ...(rest0 ? [chunk(rest0, 2)] : [])], total: `${tens ? `${f(tens)} + ` : ''}${f(rest0)} = ${f(k)}` }] } });
+  L.board = { kind: 'pic', frames };
   L.say(`How many ${f(d)}s make ${f(c)}? Take away easy chunks of ${f(d)}s.`);
   if (tens) L.say(`${f(tens)} × ${f(d)} = ${f(tens * d)}.`, `${f(c)} − ${f(tens * d)} = ${f(c - tens * d)}`);
   const rest = k - tens;

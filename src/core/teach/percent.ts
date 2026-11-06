@@ -270,6 +270,7 @@ export function discountThenGst(price: number, disc: number, gst: number): Lesso
 /** a% of b = b% of a. */
 export function pctSwapLesson(a: number, b: number): Lesson {
   const L = new LessonBuilder();
+  L.board = { kind: 'pic', frames: [{ step: 0, v: { kind: 'chain', groups: [{ items: [`${a}% of ${b}`], tone: 0 }, { items: [`${b}% of ${a}`], tone: 2 }], ops: ['='], note: `both: ${a} × ${b} ÷ 100` } }] };
   L.say(`${a}% of ${b} is the same as ${b}% of ${a}: both are ${a} × ${b} ÷ 100.`);
   L.say(`${b}% of ${a} is easier.`);
   const v = pctOfSteps(L, b, a);

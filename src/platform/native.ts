@@ -30,6 +30,11 @@ export interface StudyHardPlugin {
   askNotifications?(): Promise<{ enabled?: boolean; canAsk?: boolean }>;
   openNotificationSettings?(): Promise<void>;
   launchAction?(): Promise<{ open?: string }>;
+  /** A file shared to MN or opened with it (taken once): its text and name. Newer apps only. */
+  sharedFile?(): Promise<{ text?: string; name?: string }>;
+  /** The launcher icon (MN Plus members can pick one). Newer apps only. */
+  setAppIcon?(o: { name: string }): Promise<{ ok: boolean }>;
+  appIcon?(): Promise<{ name?: string }>;
   /** Sign in with Google (Credential Manager); newer apps only. */
   googleSignIn?(o: { webClientId: string }): Promise<{ idToken?: string; email?: string; name?: string; cancelled?: boolean; error?: string }>;
   googleSignOut?(): Promise<void>;
@@ -41,6 +46,7 @@ export interface StudyHardPlugin {
   billingManage?(o: { product?: string }): Promise<void>;
   addListener(event: 'back', cb: () => void): unknown;
   addListener(event: 'launch', cb: (d: { open?: string }) => void): unknown;
+  addListener(event: 'shared', cb: () => void): unknown;
   addListener(event: 'purchases', cb: (d: PurchasesEvent) => void): unknown;
 }
 

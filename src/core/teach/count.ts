@@ -205,6 +205,7 @@ export function makeN(x: number, n: number, o?: string, show = `${x} + ${n - x} 
 export function doubleLesson(a: number, show = `${a} + ${a} = ${2 * a}`): Lesson {
   const L = new LessonBuilder();
   if (a <= 10) L.board = { kind: 'dots', layout: 'groups', joiner: '+', groups: [{ n: a, count: 1 }, { n: a, count: 1, countFrom: a + 1 }] };
+  else L.board = { kind: 'pic', frames: [{ step: 0, v: { kind: 'bar', rows: [{ parts: [{ v: a, t: String(a), tone: 0 }, { v: a, t: String(a), tone: 1, new: true }], total: `${a} + ${a} = ${2 * a}` }] } }] };
   L.say('Double means the same number twice.', `${a} + ${a}`);
   if (a <= 10) L.say(`Count them all: ${seq(1, 2 * a)}.`);
   L.slip(a + 2, 'Double means two lots of the number, not add 2.');
@@ -228,6 +229,7 @@ export function halveLesson(n: number, show = `Half of ${n} = ${n / 2}`): Lesson
   const L = new LessonBuilder();
   const h = n / 2;
   if (n <= 20) L.board = { kind: 'dots', layout: 'groups', groups: [{ n: h, at: 1, label: String(h) }, { n: h, at: 1, label: String(h) }] };
+  else L.board = { kind: 'pic', frames: [{ step: 0, v: { kind: 'bar', rows: [{ name: String(n), parts: [{ v: n, t: String(n), tone: 0 }] }] } }, { step: 1, v: { kind: 'bar', rows: [{ name: String(n), parts: [{ v: h, t: String(h), tone: 3, new: true }, { v: h, t: String(h), tone: 3, new: true }], total: `two equal halves of ${h}` }] } }] };
   L.say(`Half means sharing ${n} into 2 equal groups.`);
   L.say(n <= 20 ? 'Give one to each group, again and again.' : `What number doubled makes ${n}?`, `${h} + ${h} = ${n}`);
   L.slip(n * 2, 'That is double. Half is smaller: share into 2.');
@@ -245,7 +247,11 @@ export function add3Lesson(a: number, b: number, c: number): Lesson {
   const pick = ten ?? dbl;
   if (pick) order = [pick[0], pick[1], 3 - pick[0] - pick[1]];
   const [x, y, z] = order.map((i) => ns[i]);
+  // Three groups of dots: the first pair lights up, then the last group joins.
+  const lit = new Set([order[0], order[1]]);
+  L.board = { kind: 'dots', layout: 'groups', joiner: '+', groups: ns.map((n, i) => ({ n, label: String(n), hl: lit.has(i) ? 0 : 1 })), caption: `${a} + ${b} + ${c}` };
   L.say(ten ? `Find two that make 10: ${x} and ${y}.` : dbl ? `Find a double: ${x} and ${y}.` : 'Add the first two numbers.', `${x} + ${y} = ${x + y}`);
+  L.you(`${x} + ${y} = ?`, x + y, [x + y + 1, x + y - 1, x * y === x + y ? x + y + 2 : x * y]);
   L.say('Then add the last one.', `${x + y} + ${z} = ${x + y + z}`);
   return L.end(a + b + c, undefined, `${a} + ${b} + ${c} = ${a + b + c}`);
 }
@@ -264,8 +270,15 @@ export function factFamily(a: number, b: number, prompt: string, ans: number): L
 export function whichSign(a: number, b: number, r: number): Lesson {
   const L = new LessonBuilder();
   const plus = r > a;
-  L.say(`Start with ${a}. The answer, ${r}, is ${plus ? 'bigger' : 'smaller'}.`);
-  L.say(plus ? 'Getting bigger means we added.' : 'Getting smaller means we took away.', `${a} ${plus ? '+' : '−'} ${b} = ${r}`);
+  const lo = Math.min(a, r), hi = Math.max(a, r);
+  const line = new Line('linear', { min: Math.max(0, lo - 2), max: Math.max(hi + 2, Math.max(0, lo - 2) + 10), tick: 1, labelEvery: hi + 2 - lo > 20 ? 5 : 1 });
+  L.board = line.b;
+  line.pt(a, 0, { tone: 'start' });
+  line.pt(r, 0, { tone: 'end' });
+  L.say(`Start with ${a}. The answer is ${r}. Find them on the number line.`);
+  L.you(`Is ${r} bigger or smaller than ${a}?`, plus ? 'bigger' : 'smaller', [plus ? 'smaller' : 'bigger']);
+  line.hop(a, r, L.i);
+  L.say(plus ? `${r} is bigger: the jump goes up. Getting bigger means we added.` : `${r} is smaller: the jump goes back. Getting smaller means we took away.`, `${a} ${plus ? '+' : '−'} ${b} = ${r}`);
   return L.end(plus ? '+' : '−', `So the sign is ${plus ? '+' : '−'}.`);
 }
 
@@ -274,7 +287,12 @@ export function equalNot(a: number, b: number, c: number, d: number): Lesson {
   const L = new LessonBuilder();
   const s1 = a + b;
   const s2 = c + d;
-  L.say('Work out each side.', `${a} + ${b} = ${s1}`, `${c} + ${d} = ${s2}`);
+  L.board = { kind: 'pic', frames: [
+    { step: 0, v: { kind: 'balance', left: `${a} + ${b}`, right: `${c} + ${d}`, sign: '?' } },
+    { step: 1, v: { kind: 'balance', left: String(s1), right: String(s2), sign: s1 === s2 ? '=' : '≠', tilt: s1 === s2 ? 0 : s1 > s2 ? 1 : -1 } },
+  ] };
+  L.say('Put each side on the scales and work it out.', `${a} + ${b} = ${s1}`, `${c} + ${d} = ${s2}`);
+  L.you(`Do ${s1} and ${s2} balance?`, s1 === s2 ? 'yes' : 'no', [s1 === s2 ? 'no' : 'yes']);
   return L.end(s1 === s2 ? '=' : '≠', s1 === s2 ? `Both make ${s1}, so they are equal: =` : `${s1} and ${s2} are different, so they are not equal: ≠`);
 }
 
@@ -285,6 +303,7 @@ export function oddEven(n: number): Lesson {
   const odd = n % 2 === 1;
   const show = n <= 20 ? n : ones;
   if (show) L.board = { kind: 'dots', layout: 'pairs', groups: [{ n: show - (odd ? 1 : 0) }, ...(odd ? [{ n: 1, hl: 1 }] : [])] };
+  if (n > 20 && !show) L.board = { kind: 'pic', frames: [{ step: 0, v: { kind: 'chain', groups: [{ items: String(n).slice(0, -1).split(''), label: 'tens: always pairs', tone: 0 }, { items: [String(ones)], label: 'ones', tone: 2, hl: [0] }], ops: [''] } }] };
   if (n > 20) L.say(`Only the ones digit matters: tens always share into pairs. The ones digit of ${n} is ${ones}.`);
   else L.say(`Put ${n} dots into pairs.`);
   if (!show) L.say('There are no ones, so nothing is left over.');

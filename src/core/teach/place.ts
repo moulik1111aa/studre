@@ -74,6 +74,7 @@ export function digitValue(n: number, p: number): Lesson {
 /** How many thousands make a lakh. */
 export function lakhThousands(): Lesson {
   const L = new LessonBuilder();
+  L.board = { kind: 'table', head: ['L', 'TTh', 'Th', 'H', 'T', 'O'], rows: [{ cells: ['1', '0', '0', '0', '0', '0'] }, { at: 1, cells: ['', '', '1', '0', '0', '0'], note: '× 100' }] };
   L.say('1 lakh is 1,00,000: a 1 and five zeros.');
   L.say('1 thousand is 1,000. How many thousands make 1,00,000?', '1,000 × 10 = 10,000', '1,000 × 100 = 1,00,000');
   return L.end(100, 'So 100 thousands make 1 lakh.');
@@ -118,6 +119,9 @@ export function roundLesson(n: number, to: number): Lesson {
   const nextPlace = to >= 1 ? (to === 1 ? 'tenths' : PLACES[Math.round(Math.log10(to)) - 1]) : ['hundredths', 'thousandths', 'ten-thousandths'][Math.round(-Math.log10(to)) - 1];
   const digit = Math.floor(clean((n - lo) / (to / 10)));
   if (clean(n - lo) === 0) {
+    const ln = new Line('linear', { min: clean(n - to), max: clean(n + to) });
+    ln.pt(clean(n - to), 0, { tone: 'mark' }).pt(clean(n + to), 0, { tone: 'mark' }).pt(n, 0, { tone: 'end', hl: 0 });
+    L.board = ln.b;
     L.say(`${f(n)} is already a whole number of ${to >= 1 ? PLACES[Math.round(Math.log10(to))] : nextPlace.replace('ths', 'ths')}: nothing to round.`);
     return L.end(n, `So ${f(n)} stays ${f(n)}.`);
   }
@@ -137,6 +141,15 @@ export function estimateSum(a: number, b: number): Lesson {
   const L = new LessonBuilder();
   const ra = Math.round(a / 100) * 100;
   const rb = Math.round(b / 100) * 100;
+  // Two number lines: each number between its hundreds, and the hundred it is nearer.
+  const lineFor = (n: number, r: number, at: number) => {
+    const lo = Math.floor(n / 100) * 100;
+    const ln = new Line('linear', { min: lo, max: lo + 100, tick: 10, labelEvery: 50 });
+    ln.pt(lo, at, { tone: 'mark' }).pt(lo + 100, at, { tone: 'mark' }).pt(n, at, { tone: 'start' }).pt(r, at, { tone: 'end', hl: at });
+    ln.hop(n, r, at, `≈ ${r}`);
+    return { ...ln.b, at } as typeof ln.b;
+  };
+  L.board = { kind: 'stack', boards: [lineFor(a, ra, 0), lineFor(b, rb, 1)] };
   L.say(`Round ${a} to the nearest hundred: the tens digit is ${Math.floor(a / 10) % 10}.`, `${a} ≈ ${ra}`);
   L.say(`Round ${b} the same way: the tens digit is ${Math.floor(b / 10) % 10}.`, `${b} ≈ ${rb}`);
   L.say('Add the rounded numbers.', `${ra} + ${rb} = ${ra + rb}`);

@@ -37,7 +37,9 @@ function blocksOf(n: number, at = 0, label?: string): BlocksBoard['groups'][numb
 export function addZero(a: number, b: number, show = `${f(a)} + ${f(b)} = ${f(a + b)}`): Lesson {
   const L = new LessonBuilder();
   const n = a || b;
-  L.say('Adding 0 means adding nothing at all.');
+  L.board = { kind: 'dots', layout: 'groups', joiner: '+', groups: a ? [{ n: a, label: f(a) }, { n: 0, label: '0', hollow: true }] : [{ n: 0, label: '0', hollow: true }, { n: b, label: f(b) }], caption: `${f(n)} and nothing more` };
+  L.say('Adding 0 means adding nothing at all: the empty group has no dots.');
+  L.you(`${f(a)} + ${f(b)} = ?`, n, [n + 1, n ? n - 1 : 2, 0]);
   return L.end(n, `So the number stays ${f(n)}.`, show);
 }
 
@@ -70,6 +72,7 @@ export function countBack(a: number, b: number, show = `${f(a)} − ${f(b)} = ${
   const L = new LessonBuilder();
   const res = a - b;
   if (b === 0) {
+    L.board = a <= 20 ? { kind: 'dots', layout: 'groups', groups: [{ n: a, label: `${f(a)}, none crossed out` }] } : { kind: 'pic', frames: [{ step: 0, v: { kind: 'bar', rows: [{ parts: [{ v: a, t: f(a), tone: 0 }], total: `take away nothing: ${f(a)}` }] } }] };
     L.say('Taking away 0 takes away nothing.');
     return L.end(a, `So the number stays ${f(a)}.`, show);
   }

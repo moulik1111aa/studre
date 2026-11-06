@@ -4,7 +4,28 @@
 
 import { clean } from '../question.ts';
 import { LessonBuilder, f } from './build.ts';
-import type { Bar, Lesson, TableBoard } from './types.ts';
+import type { Bar, Lesson, PicBoard, TableBoard } from './types.ts';
+import type { MathVisual } from '../vis.ts';
+
+// Equations as a balance: each frame shows both sides after the step, with what was done
+// to both sides dropped on each pan.
+const bal = (left: string, right: string, act?: string, more: Partial<Extract<MathVisual, { kind: 'balance' }>> = {}): MathVisual => ({ kind: 'balance', left, right, ...(act ? { act } : {}), ...more });
+const sides = (eq: string): [string, string] => {
+  const [l, ...r] = eq.replace(/\s*✓$/, '').split(' = ');
+  return [l, r[r.length - 1] ?? ''];
+};
+/** Pictures by step: frames[i] shows from step i. */
+function pics(L: LessonBuilder, frames: (MathVisual | null)[]): void {
+  const fr: PicBoard['frames'] = [];
+  frames.forEach((v, i) => v && fr.push({ step: i, v }));
+  L.board = { kind: 'pic', frames: fr };
+}
+/** A term table for substituting: term | with the number in | value. */
+const terms = (rows: string[][], filled: number, total?: string): MathVisual => ({
+  kind: 'table', head: ['term', 'put the number in', 'value'],
+  rows: [...rows.map((r) => [r[0], filled >= 1 ? r[1] : '', filled >= 2 ? r[2] : '']), ...(total ? [['total', '', total]] : [])],
+  hl: total ? [[rows.length, 2]] : filled >= 2 ? rows.map((_, i) => [i, 2] as [number, number]) : [],
+});
 
 /** "3x + 4" with tidy signs and coefficients (as the questions write it). */
 export function lin(a: number, b: number, v = 'x'): string {
@@ -38,6 +59,8 @@ const br = (n: number): string => (n < 0 ? `(${f(n)})` : f(n));
 export function substLinear(a: number, b: number, x: number): Lesson {
   const L = new LessonBuilder();
   const ax = a * x;
+  const rows = [[`${a}x`, `${a} × ${br(x)}`, f(ax)], ...(b ? [[sgn(b), sgn(b), sgn(b)]] : [])];
+  pics(L, [terms(rows, 1), terms(rows, 2), terms(rows, 2, f(ax + b))]);
   L.say(`Replace x with ${br(x)}. ${a}x means ${a} × x.`, `${a} × ${br(x)} ${sgn(b)}`);
   L.say('Multiply first.', `${a} × ${br(x)} = ${f(ax)}`);
   L.say(`Then ${b < 0 ? 'take away' : 'add'} ${Math.abs(b)}.`, `${f(ax)} ${sgn(b)} = ${f(ax + b)}`);
@@ -49,6 +72,8 @@ export function substLinear(a: number, b: number, x: number): Lesson {
 /** If x = v, x² + a = ? */
 export function substSquare(x: number, a: number): Lesson {
   const L = new LessonBuilder();
+  const rows = [['x²', `${br(x)} × ${br(x)}`, f(x * x)], [`+ ${a}`, `+ ${a}`, `+ ${a}`]];
+  pics(L, [terms(rows, 1), terms(rows, 2), terms(rows, 2, f(x * x + a))]);
   L.say(`Replace x with ${br(x)}. x² means x × x.`, `${br(x)}² + ${a}`);
   L.say(x < 0 ? 'A negative times a negative is positive.' : 'Square it first.', `${br(x)} × ${br(x)} = ${x * x}`);
   L.say(`Then add ${a}.`, `${x * x} + ${a} = ${x * x + a}`);
@@ -60,6 +85,8 @@ export function substSquare(x: number, a: number): Lesson {
 /** If a = p and b = q, 3a − 2b = ? */
 export function subst2(p: number, q: number): Lesson {
   const L = new LessonBuilder();
+  const rows = [['3a', `3 × ${br(p)}`, f(3 * p)], ['− 2b', `− 2 × ${br(q)}`, `− ${br(2 * q)}`]];
+  pics(L, [terms(rows, 1), terms(rows, 2), terms(rows, 2, f(3 * p - 2 * q))]);
   L.say(`Replace a with ${p} and b with ${q}. 3a means 3 × a.`, `3 × ${p} − 2 × ${q}`);
   L.say('Multiply first.', `3 × ${p} = ${3 * p}`, `2 × ${q} = ${2 * q}`);
   L.say('Then take away.', `${3 * p} − ${2 * q} = ${f(3 * p - 2 * q)}`);
@@ -124,6 +151,9 @@ export function factorCommon(k: number, a: number, b: number): Lesson {
   const L = new LessonBuilder();
   const inner = `${a === 1 ? '' : a}x + ${b}`;
   const ans = `${k}(${inner})`;
+  // Box model: the common factor along the side, the bracket along the top.
+  const box = (top: [string, string], cells: [string, string], total?: string): MathVisual => ({ kind: 'area', cols: top, rows: [String(k)], cells: [cells], ...(total ? { total } : {}) });
+  pics(L, [box(['?', '?'], [`${k * a}x`, String(k * b)]), box([`${a === 1 ? '' : a}x`, String(b)], [`${k * a}x`, String(k * b)], ans), null]);
   L.say(`Find the biggest number that goes into both ${k * a} and ${k * b}: ${k}.`);
   L.say(`Divide each term by ${k}. That goes inside the bracket.`, `${k * a}x ÷ ${k} = ${a === 1 ? '' : a}x`, `${k * b} ÷ ${k} = ${b}`);
   L.say('Check by multiplying out.', `${k} × ${a === 1 ? '' : a}x + ${k} × ${b} = ${k * a}x + ${k * b} ✓`);
@@ -172,6 +202,9 @@ export function diffSquares(a: number, b: number): Lesson {
   const L = new LessonBuilder();
   const ax = a === 1 ? 'x' : `${a}x`;
   const lhs = a === 1 ? `x² − ${b * b}` : `${a * a}x² − ${b * b}`;
+  const AX = a === 1 ? 'x' : `${a}x`, X2 = a === 1 ? 'x²' : `${a * a}x²`;
+  const grid = (hl: boolean): MathVisual => ({ kind: 'area', cols: [AX, `− ${b}`], rows: [AX, `+ ${b}`], cells: [[X2, `− ${a * b}x`], [`+ ${a * b}x`, `− ${b * b}`]], tone: [[0, 3], [2, 1]], ...(hl ? { hl: [[0, 1], [1, 0]] as [number, number][], total: `− ${a * b}x and + ${a * b}x cancel: ${lhs}` } : {}) });
+  pics(L, [{ kind: 'chain', groups: [{ items: [X2], label: `(${AX})²`, tone: 0 }, { items: [String(b * b)], label: `${b}²`, tone: 1 }], ops: ['−'] }, grid(false), grid(true)]);
   L.say(`Both parts are squares: ${a === 1 ? 'x²' : `${a * a}x² = (${ax})²`} and ${b * b} = ${b}².`, `${lhs} = ${a === 1 ? 'x²' : `(${ax})²`} − ${b}²`);
   L.say('A difference of two squares always splits like this: A² − B² = (A + B)(A − B).');
   const mid = `${a * b}x`;
@@ -203,6 +236,10 @@ export function eqOneStep(kind: 0 | 1 | 2 | 3, a: number, x: number): Lesson {
     [`x ÷ ${a} = ${f(x)}`, a * x, `Multiply both sides by ${a}.`, `x = ${f(x)} × ${a} = ${f(a * x)}`],
   ];
   const [eq, ans, how, work] = sides[kind];
+  const [el, er] = eq.split(' = ');
+  const acts = [`− ${a}`, `+ ${a}`, `÷ ${a}`, `× ${a}`];
+  const chk = [`${f(ans)} + ${a}`, `${f(ans)} − ${a}`, `${a} × ${br(ans)}`, `${f(ans)} ÷ ${a}`];
+  pics(L, [bal(el, er), bal('x', f(ans), acts[kind]), bal(chk[kind], er, undefined, { ok: true })]);
   L.say('An equation is a balance: do the same to both sides to get x on its own. Undo what is done to x.', eq);
   L.say(how, work);
   const checks = [`${f(ans)} + ${a} = ${f(x + a)} ✓`, `${f(ans)} − ${a} = ${f(x - a)} ✓`, `${a} × ${br(ans)} = ${f(a * x)} ✓`, `${f(ans)} ÷ ${a} = ${f(x)} ✓`];
@@ -216,6 +253,7 @@ export function eqOneStep(kind: 0 | 1 | 2 | 3, a: number, x: number): Lesson {
 export function eqTwoStep(a: number, b: number, R: number, o: { intro?: string } = {}): Lesson {
   const L = new LessonBuilder();
   const x = clean((R - b) / a);
+  pics(L, [bal(lin(a, b), f(R)), bal(`${a}x`, f(R - b), b < 0 ? `+ ${-b}` : `− ${b}`), bal('x', f(x), `÷ ${a}`), bal(`${a} × ${br(x)} ${sgn(b)}`, f(R), undefined, { ok: true })]);
   L.say(o.intro ?? `Undo in reverse order: first the ${b < 0 ? '− ' + -b : '+ ' + b}, then the × ${a}.`, `${lin(a, b)} = ${f(R)}`);
   L.say(b < 0 ? `Add ${-b} to both sides.` : `Take ${b} from both sides.`, `${a}x = ${f(R)} ${b < 0 ? '+' : '−'} ${Math.abs(b)} = ${f(R - b)}`);
   L.say(`Divide both sides by ${a}.`, `x = ${f(R - b)} ÷ ${a} = ${f(x)}`);
@@ -229,6 +267,8 @@ export function eqBoth(a: number, b: number, c: number, d: number): Lesson {
   const L = new LessonBuilder();
   const k = a - c;
   const x = clean((d - b) / k);
+  const cx = c === 1 ? 'x' : `${Math.abs(c)}x`;
+  pics(L, [bal(lin(a, b), lin(c, d)), bal(lin(k, b), f(d), c >= 0 ? `− ${cx}` : `+ ${cx}`), bal(`${k === 1 ? '' : k}x`, f(d - b), b < 0 ? `+ ${-b}` : b ? `− ${b}` : undefined), ...(k !== 1 ? [bal('x', f(x), `÷ ${k}`)] : []), bal(f(a * x + b), f(c * x + d), undefined, { ok: true })]);
   L.say('Get the x terms on one side. Take the smaller x term from both sides.', `${lin(a, b)} = ${lin(c, d)}`);
   L.say(`Take ${c === 1 ? '' : c}x from both sides.`, `${lin(k, b)} = ${f(d)}`);
   L.say(b < 0 ? `Add ${-b} to both sides.` : b ? `Take ${b} from both sides.` : 'Nothing to move.', `${k === 1 ? '' : k}x = ${f(d - b)}`);
@@ -243,6 +283,7 @@ export function eqBracket(k: number, b: number, R: number): Lesson {
   const L = new LessonBuilder();
   const inner = R / k;
   const x = inner - b;
+  pics(L, [bal(lin(1, b), f(inner), `÷ ${k}`), bal('x', f(x), b < 0 ? `+ ${-b}` : `− ${b}`), bal(`${k} × ${br(inner)}`, f(R), undefined, { ok: true })]);
   L.say(`The bracket is multiplied by ${k}. Divide both sides by ${k} first.`, `${k}(${lin(1, b)}) = ${f(R)}`, `${lin(1, b)} = ${f(R)} ÷ ${k} = ${f(inner)}`);
   L.say(b < 0 ? `Add ${-b} to both sides.` : `Take ${b} from both sides.`, `x = ${f(inner)} ${b < 0 ? '+' : '−'} ${Math.abs(b)} = ${f(x)}`);
   L.say('Check it.', `${k} × (${f(x)} ${sgn(b)}) = ${k} × ${br(inner)} = ${f(R)} ✓`);
@@ -255,6 +296,7 @@ export function eqBracket(k: number, b: number, R: number): Lesson {
 export function eqDivide(a: number, b: number, R: number): Lesson {
   const L = new LessonBuilder();
   const y = R - b;
+  pics(L, [bal(`x/${a} ${sgn(b)}`, f(R)), bal(`x/${a}`, f(y), b < 0 ? `+ ${-b}` : `− ${b}`), bal('x', f(y * a), `× ${a}`)]);
   L.say(`Undo in reverse order: first the ${sgn(b)}, then the ÷ ${a}.`, `x/${a} ${sgn(b)} = ${f(R)}`);
   L.say(b < 0 ? `Add ${-b} to both sides.` : `Take ${b} from both sides.`, `x/${a} = ${f(y)}`);
   L.say(`Multiply both sides by ${a}.`, `x = ${f(y)} × ${a} = ${f(y * a)}`);
@@ -267,6 +309,8 @@ export function ineqLesson(a: number, b: number, R: number): Lesson {
   const L = new LessonBuilder();
   const x = (R - b) / a;
   const ans = `x > ${signed(x)}`;
+  const gt = { sign: '>', tilt: 1 as const };
+  pics(L, [bal(lin(a, b), f(R), undefined, gt), bal(`${a}x`, f(R - b), b < 0 ? `+ ${-b}` : b ? `− ${b}` : undefined, gt), bal('x', f(x), `÷ ${a}`, gt), bal(`${a} × ${br(x + 1)} ${sgn(b)}`, f(R), undefined, gt)]);
   L.say('Solve it like an equation, keeping the > sign.', `${lin(a, b)} > ${f(R)}`);
   L.say(b < 0 ? `Add ${-b} to both sides.` : b ? `Take ${b} from both sides.` : 'Nothing to move yet.', `${a}x > ${f(R - b)}`);
   L.say(`Divide both sides by ${a}. ${a} is positive, so the sign stays the same way round.`, `x > ${f(x)}`);
@@ -341,6 +385,17 @@ export function simulLesson(x: number, y: number, a: number, b: number): Lesson 
   const R = a * x - b * y;
   const ax = a === 1 ? 'x' : `${a}x`;
   const by = b === 1 ? 'y' : `${b}y`;
+  // The equations as rows of terms; the y terms cancel when they are added.
+  const eq = (label: string, items: string[], tone: 0 | 1 | 2 | 3, more: { x?: number[]; hl?: number[] } = {}) => ({ label, items, tone, ...more });
+  const e1 = eq('①', ['x', '+ y', `= ${f(S)}`], 0);
+  const e1b = eq(b > 1 ? `① × ${b}` : '①', [`${b === 1 ? '' : b}x`, `+ ${by}`, `= ${f(b * S)}`], 0);
+  const e2 = eq('②', [ax, `− ${by}`, `= ${f(R)}`], 1);
+  const fr: (MathVisual | null)[] = [{ kind: 'chain', rows: true, groups: [e1, e2] }];
+  if (b > 1) fr.push({ kind: 'chain', rows: true, groups: [e1b, e2] });
+  fr.push({ kind: 'chain', rows: true, groups: [{ ...e1b, x: [1] }, { ...e2, x: [1] }, eq('add', [`${a + b}x`, `= ${f(R + b * S)}`], 2, { hl: [0] })] });
+  fr.push({ kind: 'balance', left: 'x', right: f(x), act: `÷ ${a + b}` });
+  fr.push({ kind: 'chain', rows: true, groups: [eq('①', [f(x), '+ y', `= ${f(S)}`], 0), eq('y', [`${f(S)} − ${br(x)}`, `= ${f(y)}`], 2, { hl: [1] })] });
+  pics(L, fr);
   L.say('Make the y terms cancel, so only x is left.', `x + y = ${f(S)}`, `${ax} − ${by} = ${f(R)}`);
   if (b > 1) L.say(`Multiply the first equation by ${b}, so it has + ${by}.`, `${b}x + ${by} = ${f(b * S)}`);
   L.say(`Add the two equations: + ${by} and − ${by} cancel.`, `${a + b}x = ${f(R + b * S)}`);
@@ -376,6 +431,15 @@ const FORMULAS: Record<string, [string, [string, string][]]> = {
 export function rearrangeLesson(formula: string, answer: string): Lesson {
   const L = new LessonBuilder();
   const [v, steps] = FORMULAS[formula] ?? ['x', []];
+  // What each step does to both sides, as a chip on the balance.
+  const actOf = (say: string): string | undefined => {
+    const m = /^(Take|Add|Multiply both sides by|Divide both sides by)\s+(.+?)(?: from both sides| to both sides)?\.$/.exec(say);
+    if (/square root/.test(say)) return '√';
+    if (!m) return undefined;
+    const what = m[2].replace(/^both sides by /, '');
+    return { Take: '−', Add: '+', 'Multiply both sides by': '×', 'Divide both sides by': '÷' }[m[1]] + ' ' + what;
+  };
+  pics(L, [bal(...sides(formula)), ...steps.map(([say, math]) => bal(...sides(math), actOf(say)))]);
   L.say(`Get ${v} on its own. Undo what is done to ${v}, last thing first, doing the same to both sides.`, formula);
   for (const [say, math] of steps) L.say(say, math);
   return L.end(answer, `So ${answer}.`);
@@ -389,6 +453,13 @@ export function evalPoly(x: number, a: number, b: number, c: number, cubic: bool
   const bx = b * x;
   const val = lead + bx + c;
   const sub = [cubic ? `${br(x)}³` : `${a === 1 ? '' : `${a} × `}${br(x)}²`, b ? `${b < 0 ? '−' : '+'} ${Math.abs(b) === 1 ? '' : `${Math.abs(b)} × `}${br(x)}` : '', c ? sgn(c) : ''].filter(Boolean).join(' ');
+  const trows = [
+    [cubic ? 'x³' : a === 1 ? 'x²' : `${a}x²`, cubic ? `${br(x)} × ${br(x)} × ${br(x)}` : `${a === 1 ? '' : `${a} × `}${br(x)} × ${br(x)}`, f(lead)],
+    ...(b ? [[`${b < 0 ? '−' : '+'} ${Math.abs(b) === 1 ? '' : Math.abs(b)}x`, `${b < 0 ? '−' : '+'} ${Math.abs(b) === 1 ? '' : `${Math.abs(b)} × `}${br(x)}`, `${bx < 0 ? '−' : '+'} ${f(Math.abs(bx))}`]] : []),
+    ...(c ? [[sgn(c), sgn(c), sgn(c)]] : []),
+  ];
+  const hasMul = (!cubic && a !== 1) || (b && Math.abs(b) !== 1);
+  pics(L, [terms(trows, 1), terms(trows, 2), ...(hasMul ? [null] : []), terms(trows, 2, f(val))]);
   L.say(`Replace every x with ${br(x)}.`, sub);
   L.say('Powers first.', cubic ? `${br(x)}³ = ${br(x)} × ${br(x)} × ${br(x)} = ${f(pow)}` : `${br(x)}² = ${br(x)} × ${br(x)} = ${f(pow)}`);
   const muls = [!cubic && a !== 1 ? `${a} × ${f(pow)} = ${f(lead)}` : '', b && Math.abs(b) !== 1 ? `${f(b)} × ${br(x)} = ${f(bx)}` : ''].filter(Boolean);

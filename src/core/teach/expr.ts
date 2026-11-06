@@ -3,7 +3,8 @@
 
 import { clean } from '../question.ts';
 import { LessonBuilder, f } from './build.ts';
-import type { Lesson } from './types.ts';
+import type { Lesson, PicBoard } from './types.ts';
+import type { ExprPart } from '../vis.ts';
 
 type Op = '+' | '−' | '×' | '÷' | '^';
 type Tok = { t: 'n'; v: number } | { t: 'o'; v: Op } | { t: '(' } | { t: ')' };
@@ -54,9 +55,17 @@ export function tokens(src: string): Tok[] {
   return out;
 }
 
+/** A "−1 ×" the reader put in for a leading minus sign (−2², −(3 + 1)). */
+const isSignOne = (ts: Tok[], k: number) => {
+  const t = ts[k], nx = ts[k + 1], pv = ts[k - 1];
+  return t?.t === 'n' && t.v === -1 && nx?.t === 'o' && nx.v === '×' && (!pv || pv.t === 'o' || pv.t === '(') && ts[k + 2] && (ts[k + 2].t === '(' || (ts[k + 3]?.t === 'o' && (ts[k + 3] as { v: Op }).v === '^'));
+};
+
 function show(ts: Tok[]): string {
   return ts
     .map((t, k) => {
+      if (isSignOne(ts, k)) return '−';
+      if (k > 0 && isSignOne(ts, k - 1)) return '';
       if (t.t === 'n') {
         const prev = ts[k - 1];
         const next = ts[k + 1];
@@ -90,10 +99,39 @@ function nextOp(ts: Tok[], from: number, to: number): number {
   return ops(['+', '−']);
 }
 
+/** Chips for the expression strip: tokens lo..hi (inclusive) are boxed as one chip. */
+function partsOf(ts: Tok[], lo = -1, hi = -1): ExprPart[] {
+  const out: ExprPart[] = [];
+  for (let k = 0; k < ts.length; k++) {
+    if (k === lo) {
+      out.push({ t: show(ts.slice(lo, hi + 1)), box: true });
+      k = hi;
+      continue;
+    }
+    const t = ts[k];
+    const nx = ts[k + 1];
+    if (isSignOne(ts, k) && k + 1 !== lo && k !== lo) {
+      out.push({ t: '−', sign: true });
+      k++;
+      continue;
+    }
+    if (t.t === 'n' && nx?.t === 'o' && nx.v === '^' && ts[k + 2]?.t === 'n' && k + 2 !== lo) {
+      out.push({ t: show(ts.slice(k, k + 3)) });
+      k += 2;
+    } else if (t.t === 'n') out.push({ t: show([t]) });
+    else if (t.t === 'o') out.push({ t: t.v === '^' ? '^' : t.v, sign: true });
+    else out.push({ t: t.t, sign: true });
+  }
+  return out;
+}
+
 /** Step-by-step working for an expression; returns the steps and the value. */
 export function evalLesson(expr: string, o: { intro?: string; show?: string } = {}): Lesson {
   let ts = tokens(expr);
   const L = new LessonBuilder();
+  const frames: PicBoard['frames'] = [];
+  const ruleOf = (inBr: boolean, op: Op) => (inBr ? 'B' : op === '^' ? 'O' : op === '×' || op === '÷' ? 'DM' : 'AS') as 'B' | 'O' | 'DM' | 'AS';
+  let turned = false;
   const all = ts.filter((t) => t.t === 'o').map((t) => (t as { v: Op }).v);
   const hasBr = ts.some((t) => t.t === '(');
   L.say(o.intro ?? (hasBr ? 'Brackets first, then powers, then × and ÷, then + and −.' : all.some((v) => v === '×' || v === '÷') && all.some((v) => v === '+' || v === '−') ? '× and ÷ come before + and −.' : 'Work from left to right.'), show(ts));
@@ -124,6 +162,10 @@ export function evalLesson(expr: string, o: { intro?: string; show?: string } = 
     const r = apply(a.v, op, b.v);
     const left = ts.filter((t) => t.t === 'o').map((t) => (t as { v: Op }).v);
     const why = inBr ? 'Brackets first:' : op === '^' ? 'Powers next:' : op === '×' || op === '÷' ? (left.some((v) => v === '+' || v === '−') ? `${op} before + and −:` : left.length > 1 ? 'Left to right:' : 'Finally:') : left.length > 1 ? 'Now + and −, from left to right:' : 'Finally:';
+    // Box the part being worked out (with its brackets, when they hold just this).
+    const wrapBr = inBr && ts[k - 2]?.t === '(' && ts[k + 2]?.t === ')';
+    if (!frames.length) frames.push({ step: 0, v: { kind: 'expr', parts: partsOf(ts), rule: ruleOf(inBr, op) } });
+    frames.push({ step: L.i, v: { kind: 'expr', parts: partsOf(ts, wrapBr ? k - 2 : k - 1, wrapBr ? k + 2 : k + 1), rule: ruleOf(inBr, op), under: `= ${f(r)}` } });
     const calc = op === '^' ? `${a.v < 0 ? `(${f(a.v)})` : f(a.v)}${String(b.v).split('').map((d) => '⁰¹²³⁴⁵⁶⁷⁸⁹'[Number(d)]).join('')} = ${f(r)}` : `${f(a.v)} ${op} ${b.v < 0 ? `(${f(b.v)})` : f(b.v)} = ${f(r)}`;
     ts = [...ts.slice(0, k - 1), { t: 'n', v: r }, ...ts.slice(k + 2)];
     // A bracket holding just one number is done: drop it.
@@ -131,8 +173,16 @@ export function evalLesson(expr: string, o: { intro?: string; show?: string } = 
     const rest = ts.length > 1 ? show(ts) : null;
     if (rest) L.sayThen(why, calc, `Now: ${rest}`);
     else L.say(why, calc);
+    if (!turned && rest && Number.isInteger(r) && Math.abs(r) < 10000) {
+      turned = true;
+      L.you(`${calc.split(' = ')[0]} = ?`, r, [r + 1, r - 1, a.v + b.v === r ? a.v * b.v : a.v + b.v]);
+    }
   }
   const val = (ts[0] as { v: number }).v;
+  if (frames.length) {
+    frames.push({ step: L.i, v: { kind: 'expr', parts: [{ t: f(val), done: true }], ladder: false } });
+    L.board = { kind: 'pic', frames };
+  }
   return L.end(f(val), undefined, o.show ?? `${show(tokens(expr))} = ${f(val)}`);
 }
 

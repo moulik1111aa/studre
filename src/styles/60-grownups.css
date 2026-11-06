@@ -368,3 +368,12 @@ i.lv4{background:var(--accent)}
 .si-tstars i{width:16px;height:16px;color:var(--hi-25);display:grid}
 .si-tstars i.on{color:#FFC531}
 .si-tstars svg{width:100%;height:100%}
+
+/* App icon (MN Plus) */
+.icon-row{display:flex;align-items:center;gap:12px;text-align:left}
+.icon-row .ic-now svg{display:block;border-radius:10px}
+.ic-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:10px;margin:12px 0 4px}
+.ic-opt{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 4px;border-radius:16px;border:2px solid transparent;background:var(--hi-10,rgba(0,0,0,.04));font-weight:800;color:inherit}
+.ic-opt svg{display:block;filter:drop-shadow(0 3px 6px rgba(0,0,0,.18))}
+.ic-opt.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent)}
+.ic-opt:focus-visible{outline:3px solid var(--accent);outline-offset:2px}

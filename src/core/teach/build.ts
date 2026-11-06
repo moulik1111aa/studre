@@ -49,6 +49,20 @@ export class LessonBuilder {
     return this;
   }
 
+  /** "Your turn" on the last step: the child taps the answer before going on. */
+  you(ask: string, answer: string | number, wrong: (string | number)[]): this {
+    const fmt = (x: string | number) => (typeof x === 'number' ? f(clean(x)) : x);
+    const a = fmt(answer);
+    const pool = [...new Set(wrong.map(fmt))].filter((x) => x !== a && x !== '' && !x.includes('NaN'));
+    if (!pool.length || !this.steps.length) return this;
+    const choices = [a, ...pool.slice(0, 2)];
+    // Answer position varies with the question, not always first.
+    const k = [...ask].reduce((h, ch) => h + ch.charCodeAt(0), 0) % choices.length;
+    [choices[0], choices[k]] = [choices[k], choices[0]];
+    this.steps[this.steps.length - 1].turn = { ask, answer: a, choices };
+    return this;
+  }
+
   /** A note for a likely wrong answer. */
   slip(answer: string | number, note: string): this {
     const a = typeof answer === 'number' ? num(clean(answer)) : answer;

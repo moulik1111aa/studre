@@ -6,6 +6,7 @@ import { gcd, lcm } from '../question.ts';
 import { LessonBuilder, Line, f } from './build.ts';
 import { mulLesson } from './muldiv.ts';
 import type { Lesson, TableBoard } from './types.ts';
+import type { MathVisual } from '../vis.ts';
 
 const br = (n: number): string => (n < 0 ? `(${f(n)})` : f(n));
 
@@ -115,6 +116,10 @@ export function nextMultiple(n: number, X: number): Lesson {
   const L = new LessonBuilder();
   const q = Math.floor(X / n);
   const ans = n * (q + 1);
+  const ln = new Line('even');
+  ln.pt(n * q, 0, { label: f(n * q) }).pt(X, 0, { tone: 'start', label: f(X) }).pt(ans, 1, { tone: 'end', label: f(ans), hl: 1 });
+  ln.hop(n * q, ans, 1, `+ ${n}`);
+  L.board = ln.b;
   L.say(`How many ${n}s fit into ${X}?`, `${X} ÷ ${n} = ${q} r ${X % n}`);
   L.say(`So ${n} × ${q} = ${n * q} is not bigger than ${X}. The next multiple is one more ${n}.`, `${n} × ${q + 1} = ${ans}`);
   L.slip(n * q, `${n * q} is smaller than ${X}. Go one ${n} further.`);
@@ -172,7 +177,9 @@ export function hcfLesson(A: number, B: number, o: { intro?: string; end?: strin
   const fa = divisors(A);
   const fb = divisors(B);
   const common = fa.filter((x) => fb.includes(x));
+  const venn = (pick?: string): MathVisual => ({ kind: 'venn', a: `factors of ${A}`, b: `factors of ${B}`, onlyA: fa.filter((x) => !common.includes(x)).map(String), both: common.map(String), onlyB: fb.filter((x) => !common.includes(x)).map(String), ...(pick ? { pick } : {}) });
   if (o.intro) L.say(o.intro);
+  L.board = { kind: 'pic', frames: [{ step: L.i, v: venn() }, { step: L.i + 1, v: venn(String(g)) }] };
   L.say('List the factors of each number.', `${A}: ${fa.join(', ')}`, `${B}: ${fb.join(', ')}`);
   L.say('Find the ones in both lists. The biggest is the HCF.', `both: ${common.join(', ')}`);
   L.slip(lcm(A, B), 'That is a common multiple. The HCF is the biggest number that goes into both.');
@@ -187,7 +194,14 @@ export function lcmLesson(a: number, b: number, o: { intro?: string; end?: strin
   const l = lcm(a, b);
   const list: number[] = [];
   for (let x = big; x <= l; x += big) list.push(x);
+  const smallList: number[] = [];
+  for (let x = small; x <= l && smallList.length < 14; x += small) smallList.push(x);
+  const row = (n: number, xs: number[], tone: 0 | 1, mark: boolean) => ({ label: `×${n}`, items: xs.map(String), tone, ...(mark ? { hl: xs.flatMap((x, i) => (x === l ? [i] : [])) } : {}) });
   if (o.intro) L.say(o.intro);
+  L.board = { kind: 'pic', frames: [
+    { step: L.i, v: { kind: 'chain', rows: true, groups: [row(big, list, 0, false)] } },
+    { step: L.i + 1, v: { kind: 'chain', rows: true, groups: [row(big, list, 0, true), row(small, smallList, 1, true)], note: `${l} is in both` } },
+  ] };
   L.say(`List the multiples of the bigger number, ${big}, until you reach one that ${small} also goes into.`, list.join(', '));
   L.say(`${l} is in the ${small} times table too.`, `${l} ÷ ${small} = ${l / small}`);
   if (a * b !== l) L.slip(a * b, `${a} × ${b} is a common multiple, but there is a smaller one.`);

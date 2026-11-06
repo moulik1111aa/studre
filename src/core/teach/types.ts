@@ -137,6 +137,8 @@ export interface ColsBoard {
   width: number;
   /** Headings over the columns, left to right ('' for none). */
   heads?: string[];
+  /** Column widths (1 = one digit), for columns that hold a whole amount ("750" grams). */
+  widths?: number[];
   /** Row kinds, top to bottom: small rows hold carries and exchanges. */
   rows: ('small' | 'num' | 'ans' | 'you')[];
   /** Draw a rule under these rows. */

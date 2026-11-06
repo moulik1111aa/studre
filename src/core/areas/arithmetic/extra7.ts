@@ -56,7 +56,10 @@ add('s7.trig', 'special', 'shape', 'Special angles', (r) => {
     } else if (angle === 30 || angle === 60) {
       L.show(rightTri(Math.sqrt(3), 1, '√3', '1', '2'));
       L.say('Cut an equilateral triangle of side 2 in half: sides 1, √3 and 2, with angles 30°, 60° and 90°.');
-    } else L.say(angle === 0 ? 'At 0° the opposite side has shrunk to nothing; the adjacent side equals the hypotenuse.' : 'At 90° the opposite side equals the hypotenuse; the adjacent side has shrunk to nothing.');
+    } else {
+      L.show({ kind: 'table', head: ['', '0°', '30°', '45°', '60°', '90°'], rows: (['sin', 'cos', 'tan'] as const).map((g) => [g, ...[0, 30, 45, 60, 90].map((x) => SPECIAL[g][x] ?? '—')]), hl: [[['sin', 'cos', 'tan'].indexOf(fn), angle === 0 ? 1 : 5]] });
+      L.say(angle === 0 ? 'At 0° the opposite side has shrunk to nothing; the adjacent side equals the hypotenuse.' : 'At 90° the opposite side equals the hypotenuse; the adjacent side has shrunk to nothing.');
+    }
     L.say(`${fn} ${angle}° = ${fn === 'sin' ? 'opposite ÷ hypotenuse' : fn === 'cos' ? 'adjacent ÷ hypotenuse' : 'opposite ÷ adjacent'}.`, `${fn} ${angle}° = ${ans}`);
     return L.end(ans, `So ${fn} ${angle}° = ${ans}.`);
   };
@@ -188,13 +191,17 @@ add('s7.evalpoly', 'ap', 'algebra', 'Arithmetic progressions', (r, d) => {
     return made(`Find the sum of the first ${n} terms of ${seq}, …`, S, nearNumbers(r, S, [n * nth, S + nth]), {
       hint: 'Pair the first and last terms.',
       teach: () => withWays((() => {
-        const L = new LessonBuilder();
+        const L = new PicLesson();
+        const pairRow = (hl: boolean): MathVisual => ({ kind: 'chain', rows: true, groups: [{ label: '→', items: [m(a), m(a + dd), m(a + 2 * dd), '…', m(nth)], tone: 0, ...(hl ? { hl: [0, 4] } : {}) }, { label: '←', items: [m(nth), m(nth - dd), m(nth - 2 * dd), '…', m(a)], tone: 1, ...(hl ? { hl: [0, 4] } : {}) }], ...(hl ? { note: `each pair = ${m(a + nth)}` } : {}) });
+        L.show({ kind: 'strip', cells: [m(a), m(a + dd), m(a + 2 * dd), '…', m(nth)], hl: 0, to: 2 });
         L.say(`The ${n}th term is a + (n − 1)d.`, `${m(a)} + ${n - 1} × ${m(dd)} = ${m(nth)}`);
+        L.show(pairRow(true));
         L.say('Pair the first and last, the second and second-last…: every pair has the same total.', `${m(a)} + ${m(nth)} = ${m(a + nth)}`);
         L.say(`${n} terms make ${n / 2} pairs.`, `${n} ÷ 2 × ${m(a + nth)} = ${m(S)}`);
         return L.end(S, `So the sum is ${m(S)}.`);
       })(), 'Pair them up', 'ap', [['The formula', () => {
-        const L = new LessonBuilder();
+        const L = new PicLesson();
+        L.show({ kind: 'chain', groups: [{ items: [`${n}/2`], label: 'n/2', tone: 0 }, { items: [`2 × ${m(a)} + ${n - 1} × ${m(dd)}`], label: '2a + (n − 1)d', tone: 2 }], ops: ['×'], note: `= ${m(S)}` });
         L.say('S = n/2 × (2a + (n − 1)d).', `${n}/2 × (2 × ${m(a)} + ${n - 1} × ${m(dd)}) = ${m(S)}`);
         return L.end(S, `So the sum is ${m(S)}.`);
       }]]),
@@ -224,8 +231,12 @@ add('s7.solvequad', 'roots', 'algebra', 'Nature of roots', (r) => {
   return made(`How many real roots does ${quad(a, b, c)} = 0 have?`, ans, ['two different real roots', 'two equal real roots', 'no real roots'].filter((x) => x !== ans), {
     hint: 'Work out the discriminant, b² − 4ac.',
     teach: () => {
-      const L = new LessonBuilder();
+      const L = new PicLesson();
+      const x0 = -b / (2 * a);
+      const rts = D > 0 ? [(-b - Math.sqrt(D)) / (2 * a), (-b + Math.sqrt(D)) / (2 * a)] : D === 0 ? [x0] : [];
+      L.show({ kind: 'chain', groups: [{ items: ['b² − 4ac > 0'], label: 'crosses twice', tone: 2 }, { items: ['= 0'], label: 'touches once', tone: 1 }, { items: ['< 0'], label: 'misses', tone: 3 }], ops: ['', ''] });
       L.say(`Here a = ${m(a)}, b = ${m(b)}, c = ${m(c)}. The discriminant b² − 4ac decides.`, `${m(b)}² − 4 × ${m(a)} × ${c < 0 ? `(${m(c)})` : c} = ${m(D)}`);
+      L.show({ kind: 'parab', a, b, c, min: Math.floor(x0 - 5), max: Math.ceil(x0 + 5), marks: rts });
       L.say(D > 0 ? 'Positive: the square root exists and ± gives two different roots.' : D === 0 ? 'Zero: ± 0 gives the same root twice.' : 'Negative: there is no real square root.');
       return L.end(ans, `So it has ${ans}.`);
     },
@@ -242,7 +253,11 @@ add('s7.roots', 'zeros', 'algebra', 'Zeros of a quadratic', (r) => {
     teach: () => {
       const bb = b === 0 ? 1 : b;
       const res = sum ? frac(-bb, a) : frac(c, a);
-      const L = new LessonBuilder();
+      const L = new PicLesson();
+      const DD = bb * bb - 4 * a * c;
+      const zs = DD >= 0 ? [(-bb - Math.sqrt(DD)) / (2 * a), (-bb + Math.sqrt(DD)) / (2 * a)] : [];
+      const x0 = -bb / (2 * a);
+      L.show({ kind: 'parab', a, b: bb, c, min: Math.floor(Math.min(x0 - 4, ...zs.map((z) => z - 1))), max: Math.ceil(Math.max(x0 + 4, ...zs.map((z) => z + 1))), marks: zs });
       L.say(`For ax² + bx + c, the zeros add up to −b/a and multiply to c/a. Here a = ${a}, b = ${m(bb)}, c = ${m(c)}.`);
       L.say(sum ? 'Sum:' : 'Product:', sum ? `−(${m(bb)}) ÷ ${a} = ${res.replace('-', '−')}` : `${m(c)} ÷ ${a} = ${res.replace('-', '−')}`);
       return L.end(res, `So the ${sum ? 'sum' : 'product'} is ${res.replace('-', '−')}.`);
@@ -314,7 +329,8 @@ add('s7.sector', 'solids', 'measure', 'Cones, spheres and hemispheres', (r) => {
       visual: { kind: 'cone', solid: 'hemisphere', r: `${rr2}`, h: '' },
       hint: 'Half of a sphere: ⅔ π r³.',
       teach: () => {
-        const L = new LessonBuilder();
+        const L = new PicLesson();
+        L.show({ kind: 'pair', a: { kind: 'cone', solid: 'sphere', r: `${rr2}`, h: '' }, b: { kind: 'cone', solid: 'hemisphere', r: `${rr2}`, h: '' }, op: '÷ 2', la: '4/3 π r³', lb: '2/3 π r³' });
         L.say('A sphere is 4/3 π r³; a hemisphere is half of it: 2/3 π r³.');
         L.say('Put in r = 21.', `2/3 × 22/7 × 21 × 21 × 21 = ${vol}`);
         return L.end(vol, `So the volume is ${vol} cm³.`);
@@ -327,7 +343,9 @@ add('s7.sector', 'solids', 'measure', 'Cones, spheres and hemispheres', (r) => {
     visual: { kind: 'cone', solid: 'cone', r: `${rr}`, h: '', l: `${l}` },
     hint: 'Curved surface of a cone = π r l.',
     teach: () => {
-      const L = new LessonBuilder();
+      const L = new PicLesson();
+      const sweep = Math.round((360 * rr) / l);
+      L.show({ kind: 'pair', a: { kind: 'cone', solid: 'cone', r: `${rr}`, h: '', l: `${l}` }, b: { kind: 'geo', w: 2.2 * l / 10, h: 2.2 * l / 10, segs: [{ a: [1.1 * l / 10, 1.1 * l / 10], b: [1.1 * l / 10 + l / 10, 1.1 * l / 10] }], arcs: [{ at: [1.1 * l / 10, 1.1 * l / 10], a0: 0, a1: Math.min(359, sweep), r: l / 10, hl: true }], labels: [{ at: [1.1 * l / 10 + l / 20, 1.1 * l / 10 - 0.2], t: `l = ${l}`, small: true }] }, op: '→', la: 'the cone', lb: 'its side unrolled' });
       L.say('Unroll the cone’s side: it is a sector of a circle of radius l. Its area works out to π r l.', `22/7 × ${rr} × ${l} = ${csa}`);
       return L.end(csa, `So the curved surface area is ${csa} cm².`);
     },
@@ -344,13 +362,17 @@ add('s7.solids', 'avgspeed', 'measure', 'Average speed for a round trip', (r) =>
     visual: { kind: 'speed', dist: `${D} km each way`, legs: [{ label: 'There:', time: `${a} km/h` }, { label: 'Back:', time: `${b} km/h` }] },
     hint: 'Average speed = total distance ÷ total time (not the middle of the two speeds).',
     teach: () => withWays((() => {
-      const L = new LessonBuilder();
+      const L = new PicLesson();
+      const tbl = (tot: boolean): MathVisual => ({ kind: 'table', head: ['', 'distance', 'speed', 'time'], rows: [['there', `${D} km`, `${a} km/h`, `${num(t1)} h`], ['back', `${D} km`, `${b} km/h`, `${num(t2)} h`], ...(tot ? [['total', `${2 * D} km`, '', `${num(t1 + t2)} h`]] : [])], hl: tot ? [[2, 1], [2, 3]] : [[0, 3], [1, 3]] });
+      L.show(tbl(false));
       L.say('Find the time for each way.', `${D} ÷ ${a} = ${num(t1)} h,  ${D} ÷ ${b} = ${num(t2)} h`);
+      L.show(tbl(true));
       L.say('Total distance ÷ total time.', `${2 * D} ÷ ${num(t1 + t2)} = ${num(avg)}`);
       L.say(`It is less than ${(a + b) / 2}: the bus spends longer at the slower speed.`);
       return L.end(num(avg), `So the average speed is ${num(avg)} km/h.`);
     })(), 'Total ÷ total', 'speed', [['2ab ÷ (a + b)', () => {
-      const L = new LessonBuilder();
+      const L = new PicLesson();
+      L.show({ kind: 'chain', groups: [{ items: [`2 × ${a} × ${b}`], label: 'top', tone: 0 }, { items: [`${a} + ${b}`], label: 'bottom', tone: 2 }], ops: ['÷'], note: `${2 * a * b} ÷ ${a + b} = ${num(avg)}` });
       L.say('For the same distance both ways, average speed = 2ab ÷ (a + b).', `2 × ${a} × ${b} ÷ (${a} + ${b}) = ${num(avg)}`);
       return L.end(num(avg), `So it is ${num(avg)} km/h.`);
     }]]),
@@ -412,7 +434,11 @@ add('s7.grouped', 'cards', 'data', 'Probability with cards and dice', (r) => {
       visual: { kind: 'cards', cards: ['K♥', 'Q♠', 'A♦', '7♣'] },
       hint: '52 cards: 4 suits of 13, half red and half black.',
       teach: () => {
-        const L = new LessonBuilder();
+        const L = new PicLesson();
+        const ranks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+        const suits = ['♥', '♦', '♠', '♣'];
+        const hit = (s: string, k: string) => ({ 'a king': k === 'K', 'a red card': s === '♥' || s === '♦', 'a heart': s === '♥', 'a face card (J, Q or K)': 'JQK'.includes(k), 'an ace': k === 'A', 'a black queen': k === 'Q' && (s === '♠' || s === '♣'), 'a red king': k === 'K' && (s === '♥' || s === '♦'), 'a spade': s === '♠' } as Record<string, boolean>)[what];
+        L.show({ kind: 'area', tiny: true, cols: ranks, rows: suits, cells: suits.map(() => ranks.map(() => '')), tone: suits.map((s) => ranks.map((k) => (hit(s, k) ? 2 : 4))) });
         L.say('A pack has 52 cards: 4 suits (♥ ♦ red, ♠ ♣ black), each with A, 2 … 10, J, Q, K.');
         L.say(`Count the cards that are ${what}: ${n}.`, `${n}/52${ans !== `${n}/52` ? ` = ${ans}` : ''}`);
         return L.end(ans, `So the probability is ${ans}.`);

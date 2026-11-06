@@ -14,6 +14,12 @@ import android.speech.tts.Voice;
 import android.util.Base64;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.InputStream;
+import java.io.ByteArrayOutputStream;
+import android.content.ComponentName;
+import android.content.pm.PackageManager;
+import android.database.Cursor;
+import android.provider.OpenableColumns;
 import java.io.FileOutputStream;
 import java.util.Locale;
 import android.media.AudioAttributes;
@@ -82,6 +88,11 @@ public class StudyHardPlugin extends Plugin {
     private float pendingRate = 0.95f;
     /** "play" or "backup" when the app was opened from a reminder (read once by the web app). */
     private String pendingOpen = null;
+    /** A file shared to MN (or opened with it): its text and name, read once by the web app. */
+    private String sharedText = null;
+    private String sharedName = null;
+    /** The launcher icons (activity-alias names in the manifest, added by scripts/android.mjs). */
+    static final String[] ICONS = { "sky", "night", "sunset", "space", "gold" };
 
     @Override
     public void load() {
@@ -114,6 +125,7 @@ public class StudyHardPlugin extends Plugin {
 
         AppCompatActivity activity = getActivity();
         Intent start = activity.getIntent();
+        readShared(start);
         if (start != null && start.hasExtra(Reminders.EXTRA_OPEN)) {
             pendingOpen = start.getStringExtra(Reminders.EXTRA_OPEN);
             start.removeExtra(Reminders.EXTRA_OPEN);
@@ -154,6 +166,7 @@ public class StudyHardPlugin extends Plugin {
     @Override
     protected void handleOnNewIntent(Intent intent) {
         super.handleOnNewIntent(intent);
+        if (readShared(intent)) notifyListeners("shared", new JSObject());
         if (intent == null || !intent.hasExtra(Reminders.EXTRA_OPEN)) return;
         pendingOpen = intent.getStringExtra(Reminders.EXTRA_OPEN);
         intent.removeExtra(Reminders.EXTRA_OPEN);
@@ -758,6 +771,122 @@ public class StudyHardPlugin extends Plugin {
     }
 
     /** What the app was opened for from a reminder ("play", "backup" or nothing), once. */
+    @PluginMethod
+    public void sharedFile(PluginCall call) {
+        JSObject r = new JSObject();
+        if (sharedText != null) {
+            r.put("text", sharedText);
+            r.put("name", sharedName == null ? "" : sharedName);
+        }
+        sharedText = null;
+        sharedName = null;
+        call.resolve(r);
+    }
+
+    /** Read a file handed to MN by Share or Open with (WhatsApp, Files, Gmail…). */
+    @SuppressWarnings("deprecation")
+    private boolean readShared(Intent intent) {
+        if (intent == null) return false;
+        String action = intent.getAction();
+        Uri uri = null;
+        try {
+            if (Intent.ACTION_SEND.equals(action)) {
+                uri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
+                if (uri == null) {
+                    CharSequence t = intent.getCharSequenceExtra(Intent.EXTRA_TEXT);
+                    if (t == null || t.length() == 0) return false;
+                    sharedText = t.toString();
+                    sharedName = "";
+                    intent.setAction(Intent.ACTION_MAIN);
+                    return true;
+                }
+            } else if (Intent.ACTION_VIEW.equals(action)) {
+                uri = intent.getData();
+            }
+            if (uri == null) return false;
+            ByteArrayOutputStream buf = new ByteArrayOutputStream();
+            try (InputStream in = getContext().getContentResolver().openInputStream(uri)) {
+                if (in == null) return false;
+                byte[] chunk = new byte[65536];
+                int n;
+                while ((n = in.read(chunk)) > 0) {
+                    buf.write(chunk, 0, n);
+                    if (buf.size() > 30 * 1024 * 1024) return false;
+                }
+            }
+            sharedText = new String(buf.toByteArray(), StandardCharsets.UTF_8);
+            sharedName = displayName(uri);
+            // Handled: a restart of the activity does not read it again.
+            intent.setAction(Intent.ACTION_MAIN);
+            intent.setData(null);
+            intent.removeExtra(Intent.EXTRA_STREAM);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private String displayName(Uri uri) {
+        try (Cursor c = getContext().getContentResolver().query(uri, new String[] { OpenableColumns.DISPLAY_NAME }, null, null, null)) {
+            if (c != null && c.moveToFirst()) return c.getString(0);
+        } catch (Exception ignored) {
+            // No name: fine.
+        }
+        String last = uri.getLastPathSegment();
+        return last == null ? "" : last;
+    }
+
+    /** Switch the launcher icon: enable one activity-alias, disable the others. */
+    @PluginMethod
+    public void setAppIcon(PluginCall call) {
+        String want = call.getString("name", "sky");
+        boolean known = false;
+        for (String n : ICONS) if (n.equals(want)) known = true;
+        if (!known) {
+            call.reject("unknown icon");
+            return;
+        }
+        try {
+            PackageManager pm = getContext().getPackageManager();
+            String pkg = getContext().getPackageName();
+            // Turn the new one on first, so there is never a moment with no icon.
+            pm.setComponentEnabledSetting(new ComponentName(pkg, pkg + ".Icon" + cap(want)), PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP);
+            for (String n : ICONS) {
+                if (n.equals(want)) continue;
+                pm.setComponentEnabledSetting(new ComponentName(pkg, pkg + ".Icon" + cap(n)), PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
+            }
+            JSObject r = new JSObject();
+            r.put("ok", true);
+            call.resolve(r);
+        } catch (Exception e) {
+            JSObject r = new JSObject();
+            r.put("ok", false);
+            call.resolve(r);
+        }
+    }
+
+    @PluginMethod
+    public void appIcon(PluginCall call) {
+        JSObject r = new JSObject();
+        String now = "sky";
+        try {
+            PackageManager pm = getContext().getPackageManager();
+            String pkg = getContext().getPackageName();
+            for (String n : ICONS) {
+                int st = pm.getComponentEnabledSetting(new ComponentName(pkg, pkg + ".Icon" + cap(n)));
+                if (st == PackageManager.COMPONENT_ENABLED_STATE_ENABLED) now = n;
+            }
+        } catch (Exception ignored) {
+            // Default icon.
+        }
+        r.put("name", now);
+        call.resolve(r);
+    }
+
+    private static String cap(String s) {
+        return s.substring(0, 1).toUpperCase(Locale.ROOT) + s.substring(1);
+    }
+
     @PluginMethod
     public void launchAction(PluginCall call) {
         JSObject r = new JSObject();

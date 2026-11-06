@@ -3,6 +3,8 @@
 
 import { clean, frac, gcd, num } from '../question.ts';
 import { LessonBuilder, f } from './build.ts';
+import type { Visual } from '../question.ts';
+import type { MathVisual } from '../vis.ts';
 import type { Lesson, TableBoard } from './types.ts';
 
 /** A place-value chart for decimals: ones . tenths hundredths. */
@@ -74,6 +76,14 @@ export function decFracLesson(fr: string, dec: string, toDecimal: boolean): Less
   const [n, d] = fr.split('/').map(Number);
   const [N, D] = TO_TENTH[fr] ?? [n, d];
   const places = D === 10 ? 'tenths' : D === 100 ? 'hundredths' : 'thousandths';
+  // Shade the parts: tenths on a bar of 10, hundredths on a 10 × 10 grid; the simpler
+  // fraction as a bar of the same length.
+  const pic = (k: number): MathVisual => (k === 100
+    ? { kind: 'cells', w: 10, h: 10, on: Array.from({ length: N }, (_, i) => [i % 10, Math.floor(i / 10)] as [number, number]) }
+    : { kind: 'fbar', rows: [{ name: `${N}/${D}`, bars: [{ d: D, on: N, tone: 1 }] }] });
+  const same: Visual = { kind: 'fbar', rows: [...(D <= 10 ? [{ name: `${N}/${D}`, bars: [{ d: D, on: N, tone: 1 as const }] }] : []), { name: `${n}/${d}`, bars: [{ d, on: n, tone: 2 as const, new: true }] }] };
+  const both: Visual = D === 100 ? { kind: 'pair', a: pic(100), b: { kind: 'fbar', rows: [{ bars: [{ d, on: n, tone: 2, new: true }] }] }, op: '=', la: `${N}/${D}`, lb: `${n}/${d}` } : same;
+  L.board = { kind: 'pic', frames: [{ step: 0, v: toDecimal && D !== d ? both : pic(D) }, ...(toDecimal ? [] : gcd(N, D) > 1 ? [{ step: 1, v: both }] : [])] };
   if (toDecimal) {
     if (D !== d) L.say(`Make the bottom ${D}: multiply the top and the bottom by ${D / d}.`, `${n}/${d} = ${N}/${D}`);
     else L.say(`${fr} is already ${places}.`);

@@ -29,6 +29,7 @@ import { meltedScreen } from './ui/unlock.ts';
 import { voiceChoiceScreen } from './ui/voicechoice.ts';
 import { lockSetupScreen } from './ui/grownup.ts';
 import { startReminders } from './ui/remindsync.ts';
+import { startInbox } from './ui/inbox.ts';
 import { parentScreen } from './ui/parent.ts';
 import { showLesson } from './ui/lesson.ts';
 import { accessState, lockScreen, ownerScreen } from './ui/access.ts';
@@ -110,6 +111,12 @@ async function boot(): Promise<void> {
     startReminders(app);
   } catch (e) {
     console.error('reminders', e);
+  }
+  // Backup files shared to MN from WhatsApp, Files… restore once the app is open and unlocked.
+  try {
+    startInbox(app, () => !locked && !!app.screen && !app.screen.el.classList.contains('reel'));
+  } catch (e) {
+    console.error('inbox', e);
   }
   // MN Plus (Play Store build): what the Play account owns; school paths need it.
   app.plus = () => hasPlus(app);

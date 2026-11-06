@@ -2,9 +2,26 @@
 // mixed numbers, multiplying and dividing, fractions of amounts, negative fractions.
 
 import { frac, gcd, lcm } from '../question.ts';
-import { LessonBuilder, f, rs } from './build.ts';
+import { LessonBuilder, Line, f, rs } from './build.ts';
 import { fracBar, pieces } from './fractions.ts';
-import type { Bar, Lesson } from './types.ts';
+import type { Bar, Board, Lesson, PicBoard } from './types.ts';
+import type { FBar, MathVisual } from '../vis.ts';
+
+// Fraction pictures: wholes as full bars (or one bar saying how many), parts as d pieces.
+const W = (n: number, more: Partial<FBar> = {}): FBar[] => (n <= 0 ? [] : n <= 2 ? Array.from({ length: n }, () => ({ d: 1, on: 1, tone: 0 as const, ...more })) : [{ d: 1, on: 1, tone: 0, t: `${n} wholes`, ...more }]);
+const FB = (n: number, d: number, tone: FBar['tone'] = 1, more: Partial<FBar> = {}): FBar => ({ d, on: n, tone, ...more });
+/** A number line for fractions with bottom m: points at tops a, b (as a/m), a hop between. */
+function fracLine(m: number, from: number, to: number, hopLabel: string, at = 0): Board {
+  const lo = Math.floor(Math.min(0, from, to) / m), hi = Math.ceil(Math.max(0, from, to) / m);
+  const span = Math.max(1, hi - lo);
+  const L = new Line('linear', { min: lo, max: lo + span, tick: span * m <= 24 ? 1 / m : span / 4, labelEvery: 1 });
+  L.pt(0, 0, { tone: 'zero', label: '0' });
+  L.pt(from / m, 0, { tone: 'start', label: fr(from, m) });
+  L.pt(to / m, at + 1, { tone: 'end', label: fr(to, m) });
+  L.hop(from / m, to / m, at + 1, hopLabel);
+  return L.b;
+}
+const fbar = (...rows: { name?: string; bars: FBar[]; after?: string }[]): MathVisual => ({ kind: 'fbar', rows });
 
 /** A fraction in lowest terms, with a real minus sign. */
 export const fr = (n: number, d: number): string => frac(n, d).replace('-', '−');
@@ -36,6 +53,7 @@ export function simplifyLesson(N: number, D: number): Lesson {
   const a = N / g;
   const b = D / g;
   if (D <= 30) L.board = { kind: 'bars', bars: [fracBar(N, D, { label: `${N}/${D}` }), fracBar(a, b, { label: `${a}/${b}`, at: 1, tone: 2 })] };
+  else L.board = { kind: 'pic', frames: [{ step: 0, v: { kind: 'chain', groups: [{ items: [`${N} = ${g} × ${a}`], label: 'top', tone: 0 }, { items: [`${D} = ${g} × ${b}`], label: 'bottom', tone: 1 }], ops: ['over'] } }, { step: 1, v: { kind: 'chain', groups: [{ items: [String(a)], label: `÷ ${g}`, tone: 0 }, { items: [String(b)], label: `÷ ${g}`, tone: 1 }], ops: ['over'], note: `${a}/${b}` } }] };
   L.say(`Divide the top and the bottom by the same number. Use the biggest number that goes into both ${N} and ${D}: ${g}.`, `${N} = ${g} × ${a}`, `${D} = ${g} × ${b}`);
   L.say(`Divide both by ${g}.`, `${N} ÷ ${g} = ${a}`, `${D} ÷ ${g} = ${b}`);
   L.say(`${a} and ${b} have no common factor except 1, so ${a}/${b} is as simple as it gets. The bars show it is the same amount.`);
@@ -69,6 +87,11 @@ export function addUnlike(x1: number, y1: number, x2: number, y2: number, sub: b
   const n2 = (x2 * m) / y2;
   const top = sub ? n1 - n2 : n1 + n2;
   const op = sub ? '−' : '+';
+  if (m > 24) L.board = { kind: 'pic', frames: [
+    { step: 0, v: { kind: 'chain', groups: [{ items: [`${x1}/${y1}`], label: `× ${m / y1}`, tone: 0 }, { items: [`${x2}/${y2}`], label: `× ${m / y2}`, tone: 1 }], ops: [op] } },
+    { step: 1, v: { kind: 'chain', groups: [{ items: [`${n1}/${m}`], tone: 0 }, { items: [`${n2}/${m}`], tone: 1 }], ops: [op], note: `same bottom: ${m}` } },
+    { step: 3, v: { kind: 'chain', groups: [{ items: [`${n1} ${op} ${n2} = ${top}`], label: 'tops', tone: 2 }, { items: [String(m)], label: 'bottom', tone: 0 }], ops: ['over'] } },
+  ] };
   if (m <= 24) {
     const bars: Bar[] = [fracBar(x1, y1, { label: `${x1}/${y1}` }), fracBar(n1, m, { label: `${n1}/${m}`, at: 1 }), fracBar(x2, y2, { label: `${x2}/${y2}`, tone: sub ? 3 : 2 }), fracBar(n2, m, { label: `${n2}/${m}`, at: 2, tone: sub ? 3 : 2 })];
     L.board = { kind: 'bars', bars };
@@ -89,25 +112,44 @@ export function addUnlike(x1: number, y1: number, x2: number, y2: number, sub: b
 export function mixedAddSub(w1: number, n1: number, w2: number, n2: number, d: number, sub: boolean): Lesson {
   const L = new LessonBuilder();
   const ans = mixed(sub ? w1 * d + n1 - (w2 * d + n2) : w1 * d + n1 + w2 * d + n2, d);
+  const frames: PicBoard['frames'] = [];
+  const at = (v: MathVisual) => frames.push({ step: L.i, v });
+  L.board = { kind: 'pic', frames };
   if (!sub) {
-    L.say('Add the wholes.', `${w1} + ${w2} = ${w1 + w2}`);
     const t = n1 + n2;
+    const A = `${w1} ${n1}/${d}`, B = `${w2} ${n2}/${d}`;
+    at(fbar({ name: A, bars: [...W(w1), FB(n1, d, 3)] }, { name: B, bars: [...W(w2), FB(n2, d, 3)] }, { name: '=', bars: W(w1 + w2, { new: true }), after: `${w1} + ${w2} = ${w1 + w2}` }));
+    L.say('Add the wholes.', `${w1} + ${w2} = ${w1 + w2}`);
+    at(fbar({ name: A, bars: [...W(w1), FB(n1, d, 1)] }, { name: B, bars: [...W(w2), FB(n2, d, 2)] }, { name: '=', bars: [...W(w1 + w2), ...(t >= d ? [FB(d, d, 1, { new: true }), ...(t > d ? [FB(t - d, d, 2, { new: true })] : [])] : [FB(t, d, 1, { new: true })])], after: `+ ${t}/${d}` }));
     L.say(`Add the fractions. The bottom stays ${d}.`, `${n1}/${d} + ${n2}/${d} = ${t}/${d}`);
     if (t >= d) {
       L.say(t === d ? `${t}/${d} is exactly 1 whole.` : `${t}/${d} is more than 1 whole (${d}/${d} = 1). Take out the whole.`, t === d ? `${t}/${d} = 1` : `${t}/${d} = 1 and ${t - d}/${d}`);
+      at(fbar({ name: '=', bars: [...W(w1 + w2 + 1), ...(t > d ? [FB(t - d, d, 2)] : [])], after: ans }));
       L.say('Put it all together.', `${w1 + w2} + 1${t - d ? ` + ${t - d}/${d}` : ''} = ${mixed((w1 + w2 + 1) * d + t - d, d)}`);
-    } else L.say('Put them together.', `${w1 + w2} + ${t}/${d} = ${mixed((w1 + w2) * d + t, d)}`);
+    } else {
+      at(fbar({ name: '=', bars: [...W(w1 + w2), FB(t, d, 1)], after: ans }));
+      L.say('Put them together.', `${w1 + w2} + ${t}/${d} = ${mixed((w1 + w2) * d + t, d)}`);
+    }
     L.slip(mixed((w1 + w2) * d + (n1 + n2) % d, d), `${n1}/${d} + ${n2}/${d} makes more than a whole: carry 1 whole.`);
     return L.end(ans, `So the answer is ${ans}.`);
   }
   let a = w1;
   let top = n1;
+  const borrow = n1 < n2;
+  // The first number as bars; the second number's amount gets crossed off it.
+  const first = (wx: number, fx: number): FBar[] => borrow
+    ? [...W(w1 - 1 - wx), ...W(wx, { x: 1 }), FB(d, d, 1, { x: Math.max(0, fx - n1) }), FB(n1, d, 1, { x: Math.min(n1, fx) })]
+    : [...W(w1 - wx), ...W(wx, { x: 1 }), FB(n1, d, 1, { x: fx })];
+  const second = { name: `− ${w2} ${n2}/${d}`, bars: [...W(w2, { tone: 3 }), FB(n2, d, 3)] };
   if (n1 < n2) {
+    at(fbar({ name: `${w1 - 1} ${n1 + d}/${d}`, bars: first(0, 0) }, second));
     L.say(`${n1}/${d} is smaller than ${n2}/${d}, so change 1 whole into ${d}/${d}.`, `${w1} ${n1}/${d} = ${w1 - 1} ${n1 + d}/${d}`);
     a = w1 - 1;
     top = n1 + d;
   }
+  at(fbar({ name: `${a} ${top}/${d}`, bars: first(w2, 0), after: `${a} − ${w2} = ${a - w2}` }, second));
   L.say('Take away the wholes.', `${a} − ${w2} = ${a - w2}`);
+  at(fbar({ name: `${a} ${top}/${d}`, bars: first(w2, n2), after: `${top - n2}/${d} left` }, second));
   if (top === n2) L.say(`The fractions are the same, so they cancel: ${top}/${d} − ${n2}/${d} = 0. Only the wholes are left.`);
   else {
     L.say(`Take away the fractions. The bottom stays ${d}.`, `${top}/${d} − ${n2}/${d} = ${top - n2}/${d}`);
@@ -124,6 +166,14 @@ export function fracTimesWhole(n: number, d: number, w: number): Lesson {
   const L = new LessonBuilder();
   const top = n * w;
   if (w <= 4 && d <= 8) L.board = { kind: 'bars', bars: Array.from({ length: w }, (_, i) => fracBar(n, d, { label: i === 0 ? `${n}/${d}` : '+', at: i ? 1 : 0, tone: 2 })) };
+  else {
+    // w lots of n pieces, regrouped into whole bars of d pieces.
+    const wholes = Math.floor(top / d), rem = top % d;
+    L.board = { kind: 'pic', frames: [
+      { step: 0, v: fbar({ name: `${w} ×`, bars: [FB(n, d, 2)], after: `${w} lots` }) },
+      { step: 1, v: fbar({ name: `${top}/${d}`, bars: [...W(wholes), ...(rem ? [FB(rem, d, 2)] : [])], after: `${top} pieces` }) },
+    ] };
+  }
   L.say(`${n}/${d} × ${w} means ${w} lots of ${n}/${d}.`, w <= 4 ? Array(w).fill(`${n}/${d}`).join(' + ') : null);
   L.say(`Multiply the top by ${w}. The bottom stays ${d}: the pieces are still ${pieces(d)}.`, `${n} × ${w} = ${top}`, `${top}/${d}`);
   simplifyStep(L, top, d);
@@ -135,9 +185,14 @@ export function fracTimesWhole(n: number, d: number, w: number): Lesson {
 /** a/b × c/d. */
 export function fracTimesFrac(a: number, b: number, c: number, d: number): Lesson {
   const L = new LessonBuilder();
-  L.say(`To multiply fractions, multiply the tops together and the bottoms together.`);
-  L.say('Tops:', `${a} × ${c} = ${a * c}`);
-  L.say('Bottoms:', `${b} × ${d} = ${b * d}`, `${a * c}/${b * d}`);
+  // A whole cut into b columns and d rows: a/b of it, then c/d of that part. The overlap
+  // is a × c small pieces out of b × d.
+  const grid = (rowsOn: number, label?: string): MathVisual => ({ kind: 'area', tiny: true, cols: Array(b).fill(''), rows: Array(d).fill(''), cells: [], tone: Array.from({ length: d }, (_, i) => Array.from({ length: b }, (_, j) => (j < a ? (i < rowsOn ? 2 : 5) : 4))), ...(label ? { total: label } : {}) });
+  L.board = { kind: 'pic', frames: [{ step: 0, v: grid(0, `${a}/${b} shaded`) }, { step: 1, v: grid(c, `${c}/${d} of it: ${a} × ${c} = ${a * c} pieces`) }, { step: 2, v: grid(c, `${a * c} pieces out of ${b} × ${d} = ${b * d}`) }] };
+  L.say(`To multiply fractions, multiply the tops together and the bottoms together. Picture ${a}/${b} of a whole.`);
+  L.say(`Take ${c}/${d} of that. Tops:`, `${a} × ${c} = ${a * c}`);
+  L.you(`${a} × ${c} = ?`, a * c, [a + c, a * c + 1, a * c - 1]);
+  L.say('Bottoms: the whole is now cut into', `${b} × ${d} = ${b * d}`, `${a * c}/${b * d}`);
   simplifyStep(L, a * c, b * d);
   L.slip(fr(a + c, b + d), 'For ×, multiply the tops and the bottoms. Adding them gives a different number.');
   L.slip(fr(a * d, b * c), 'That flips the second fraction: that is for ÷, not ×.');
@@ -150,11 +205,13 @@ export function wholeDivFrac(w: number, n: number, d: number): Lesson {
   const ans = fr(w * d, n);
   if (n === 1) {
     if (w <= 5 && d <= 8) L.board = { kind: 'bars', bars: Array.from({ length: w }, () => fracBar(d, d, { tone: 1 })) };
+    else L.board = { kind: 'pic', frames: [{ step: 0, v: fbar({ name: `${w} wholes`, bars: Array.from({ length: Math.min(w, 6) }, () => FB(d, d, 1)), after: w > 6 ? '…' : undefined }) }, { step: 1, v: fbar({ name: `${w} × ${d}`, bars: Array.from({ length: Math.min(w, 6) }, () => FB(d, d, 2)), after: `= ${w * d} ${pieces(d)}` }) }] };
     L.say(`${w} ÷ 1/${d} asks: how many ${pieces(d)} fit into ${w}?`);
     L.say(`Each whole has ${d} ${pieces(d)}. ${w} wholes have ${w} lots of ${d}.`, `${w} × ${d} = ${w * d}`);
     L.slip(fr(w, d), `Dividing by 1/${d} counts how many ${pieces(d)} fit: it makes the number bigger.`);
     return L.end(ans, undefined, `${w} ÷ 1/${d} = ${ans}`);
   }
+  L.board = { kind: 'pic', frames: [{ step: 0, v: { kind: 'chain', groups: [{ items: [String(w)], label: 'keep', tone: 0 }, { items: ['÷ → ×'], label: 'change', tone: 1 }, { items: [`${n}/${d} → ${d}/${n}`], label: 'flip', tone: 2 }], ops: ['', ''] } }, { step: 1, v: { kind: 'chain', groups: [{ items: [`${w} × ${d}`], label: 'top', tone: 0 }, { items: [String(n)], label: 'bottom', tone: 2 }], ops: ['over'], note: `${w * d}/${n}` } }] };
   L.say(`Dividing by a fraction is the same as multiplying by it flipped over: ${n}/${d} becomes ${d}/${n}.`, `${w} ÷ ${n}/${d} = ${w} × ${d}/${n}`);
   L.say(`Multiply the top by ${w}.`, `${w} × ${d} = ${w * d}`, `${w * d}/${n}`);
   simplifyStep(L, w * d, n);
@@ -165,7 +222,12 @@ export function wholeDivFrac(w: number, n: number, d: number): Lesson {
 /** a/b ÷ c/d: keep, change, flip. */
 export function fracDivFrac(a: number, b: number, c: number, d: number): Lesson {
   const L = new LessonBuilder();
+  L.board = { kind: 'pic', frames: [
+    { step: 0, v: { kind: 'chain', groups: [{ items: [`${a}/${b}`], label: 'keep', tone: 0 }, { items: ['÷ → ×'], label: 'change', tone: 1 }, { items: [`${c}/${d} → ${d}/${c}`], label: 'flip', tone: 2 }], ops: ['', ''] } },
+    { step: 1, v: { kind: 'chain', groups: [{ items: [`${a} × ${d}`], label: 'tops', tone: 0 }, { items: [`${b} × ${c}`], label: 'bottoms', tone: 2 }], ops: ['over'], note: `${a * d}/${b * c}` } },
+  ] };
   L.say('Keep the first fraction, change ÷ to ×, and flip the second fraction.', `${a}/${b} ÷ ${c}/${d} = ${a}/${b} × ${d}/${c}`);
+  L.you(`Flip ${c}/${d}: ?`, `${d}/${c}`, [`${c}/${d}`, `${d}/${d}`, `${c}/${c}`]);
   L.say('Multiply the tops and the bottoms.', `${a} × ${d} = ${a * d}`, `${b} × ${c} = ${b * c}`, `${a * d}/${b * c}`);
   simplifyStep(L, a * d, b * c);
   L.slip(fr(a * c, b * d), 'That multiplies without flipping. For ÷, flip the second fraction first.');
@@ -197,6 +259,7 @@ export function signedFracLesson(a: number, b: number, c: number, d: number, op:
   const L = new LessonBuilder();
   if (op === '×') {
     const neg = (a < 0) !== (c < 0);
+    L.board = { kind: 'pic', frames: [{ step: 1, v: { kind: 'table', head: ['signs', 'answer'], rows: [['+ × +', '+'], ['− × −', '+'], ['+ × −', '−'], ['− × +', '−']], hl: [[a >= 0 ? (c >= 0 ? 0 : 2) : c < 0 ? 1 : 3, 1]] } }] };
     L.say(`Multiply the sizes: tops together, bottoms together.`, `${Math.abs(a)}/${b} × ${Math.abs(c)}/${d} = ${Math.abs(a * c)}/${b * d}`);
     L.say(neg ? 'One fraction is negative and one is positive: different signs give a negative answer.' : 'The signs are the same, so the answer is positive.');
     simplifyStep(L, Math.abs(a * c), b * d);
@@ -206,6 +269,7 @@ export function signedFracLesson(a: number, b: number, c: number, d: number, op:
   const m = lcm(b, d);
   const A = (a * m) / b;
   const C = (c * m) / d;
+  L.board = fracLine(m, A, A + C, C < 0 ? `− ${fr(-C, m)}` : `+ ${fr(C, m)}`);
   if (b === d) L.say(`The bottoms are already the same: ${m}.`);
   else L.say(`Make the bottoms the same: ${m}.`, b === m ? null : `${frb(a, b)} = ${frb(A, m)}`, d === m ? null : `${frb(c, d)} = ${frb(C, m)}`);
   L.say(`Now add the tops (keep their signs). The bottom stays ${m}.`, `${A < 0 ? f(A) : A} ${C < 0 ? '−' : '+'} ${Math.abs(C)} = ${f(A + C)}`, `${A + C < 0 ? '−' : ''}${Math.abs(A + C)}/${m}`);
@@ -220,6 +284,7 @@ export function negFracLesson(a: number, b: number, c: number, d: number): Lesso
   const m = lcm(b, d);
   const A = (a * m) / b;
   const C = (c * m) / d;
+  L.board = fracLine(m, -A, -(A + C), `− ${c}/${d}`, 1);
   L.say(`Start at −${a}/${b} and go down another ${c}/${d}: both take you further below zero.`);
   if (b === d) L.say(`The bottoms are already the same: ${m}.`);
   else L.say(`Make the bottoms the same: ${m}.`, b === m ? null : `${a}/${b} = ${A}/${m}`, d === m ? null : `${c}/${d} = ${C}/${m}`);
@@ -233,6 +298,10 @@ export function negFracLesson(a: number, b: number, c: number, d: number): Lesso
 /** 1/a + 1/b = (a + b)/ab. */
 export function unitFracSum(a: number, b: number): Lesson {
   const L = new LessonBuilder();
+  L.board = { kind: 'pic', frames: [
+    { step: 0, v: { kind: 'chain', groups: [{ items: [`1/${a}`, `→ ${b}/${a * b}`], label: `× ${b}/${b}`, tone: 0 }, { items: [`1/${b}`, `→ ${a}/${a * b}`], label: `× ${a}/${a}`, tone: 1 }], ops: ['+'] } },
+    { step: 1, v: { kind: 'chain', groups: [{ items: [`${b} + ${a}`], label: 'top: a + b', tone: 0 }, { items: [`${a} × ${b}`], label: 'bottom: a × b', tone: 2 }], ops: ['over'], note: `${a + b}/${a * b}` } },
+  ] };
   L.say(`Use ${a} × ${b} = ${a * b} as the common bottom.`, `1/${a} = ${b}/${a * b}`, `1/${b} = ${a}/${a * b}`);
   L.say('Add the tops. This is the shortcut: the top is a + b, the bottom is a × b.', `${b}/${a * b} + ${a}/${a * b} = ${a + b}/${a * b}`);
   simplifyStep(L, a + b, a * b);

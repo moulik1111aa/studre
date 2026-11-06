@@ -87,6 +87,9 @@
 .cgrid .d.k-new{color:var(--coral);font-weight:700}
 .cgrid .d.k-ans{color:var(--good)}
 .cgrid .d.k-pt{font-weight:700}
+.cgrid .cc.multi > .d{grid-area:1/1}
+.cgrid.wide .cc.head{font-size:14px;font-weight:800;color:var(--ink-soft)}
+.cgrid.wide .cc[data-col]:not(:last-child){border-right:2px dashed color-mix(in srgb,var(--ink) 18%,transparent)}
 .cgrid .d.crossed{opacity:.45}
 .cgrid .d.crossed::after{content:'';position:absolute;left:-3px;right:-3px;top:50%;border-top:2px solid var(--bad);transform:rotate(-20deg)}
 

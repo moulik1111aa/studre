@@ -4,6 +4,14 @@
 import { clean, gcd, num } from '../question.ts';
 import { LessonBuilder, f, list, rs } from './build.ts';
 import type { Bar, Lesson, TableBoard } from './types.ts';
+import type { MathVisual } from '../vis.ts';
+
+/** A bar chart scale for these values. */
+const scale = (vals: number[]) => {
+  const top = Math.max(...vals);
+  const step = top <= 12 ? 2 : top <= 30 ? 5 : top <= 60 ? 10 : 20;
+  return { step, max: Math.ceil(top / step) * step };
+};
 
 const m = (x: number, money: boolean) => (money ? rs(x) : f(x));
 
@@ -11,6 +19,10 @@ const m = (x: number, money: boolean) => (money ? rs(x) : f(x));
 export function ratioSimplify(A: number, B: number): Lesson {
   const L = new LessonBuilder();
   const g = gcd(A, B);
+  // Both amounts cut into groups of g: the ratio counts the groups.
+  const grp = (n: number, t: string, tone: 0 | 1 | 2 | 3) => (n <= 10 ? Array.from({ length: n }, () => ({ v: g, t, tone })) : [{ v: n * g, t: `${n} groups`, tone }]);
+  const pic = (t: string, totals: boolean): MathVisual => ({ kind: 'bar', rows: [{ name: f(A), parts: grp(A / g, t, 0), ...(totals ? { total: `${A / g} groups` } : {}) }, { name: f(B), parts: grp(B / g, t, 1), ...(totals ? { total: `${B / g} groups` } : {}) }] });
+  L.board = { kind: 'pic', frames: [{ step: 0, v: pic(f(g), false) }, { step: 1, v: pic('1', true) }] };
   L.say(`Find the biggest number that divides both ${A} and ${B}: ${g}.`, `${A} = ${g} × ${A / g}`, `${B} = ${g} × ${B / g}`);
   L.say(`Divide both sides by ${g}. Keep them in the same order.`, `${A} : ${B} = ${A / g} : ${B / g}`);
   L.slip(`${B / g}:${A / g}`, `Keep the order: ${A} comes first, so ${A / g} comes first.`);
@@ -131,6 +143,11 @@ export function squareProportion(x1: number, y1: number, x2: number): Lesson {
   const L = new LessonBuilder();
   const k = clean(y1 / (x1 * x1));
   const y2 = clean(k * x2 * x2);
+  L.board = { kind: 'pic', frames: [
+    { step: 0, v: { kind: 'table', head: ['x', 'x²', 'y = k × x²'], rows: [[f(x1), f(x1 * x1), f(y1)], [f(x2), f(x2 * x2), '?']] } },
+    { step: 1, v: { kind: 'table', head: ['x', 'x²', 'y = k × x²'], rows: [[f(x1), f(x1 * x1), `${f(y1)} → k = ${f(k)}`], [f(x2), f(x2 * x2), '?']], hl: [[0, 2]] } },
+    { step: 2, v: { kind: 'table', head: ['x', 'x²', 'y = k × x²'], rows: [[f(x1), f(x1 * x1), f(y1)], [f(x2), f(x2 * x2), `${f(k)} × ${f(x2 * x2)} = ${f(y2)}`]], hl: [[1, 2]] } },
+  ] };
   L.say('y is proportional to x² means y = k × x² for some number k.');
   L.say(`Use x = ${x1}, y = ${y1} to find k.`, `${y1} = k × ${x1}²`, `k = ${y1} ÷ ${x1 * x1} = ${f(k)}`);
   L.say(`So y = ${f(k)}x². Now put in x = ${x2}.`, `y = ${f(k)} × ${x2}² = ${f(k)} × ${x2 * x2} = ${f(y2)}`);
@@ -143,9 +160,16 @@ export function meanLesson(vals: number[]): Lesson {
   const L = new LessonBuilder();
   const sum = vals.reduce((p, c) => p + c, 0);
   const n = vals.length;
+  const m = sum / n;
+  const sc = scale(vals);
+  L.board = { kind: 'pic', frames: [
+    { step: 0, v: { kind: 'bars', bars: vals.map((v) => ({ label: f(v), v })), ...sc } },
+    { step: 1, v: { kind: 'bar', rows: [{ parts: vals.map((v, i) => ({ v, t: f(v), tone: (i % 4) as 0 | 1 | 2 | 3 })), total: `${sum}` }] } },
+    { step: 2, v: { kind: 'bars', bars: vals.map(() => ({ label: f(m), v: m })), ...sc, hl: vals.map((_, i) => i) } },
+  ] };
   L.say('The average (mean) shares the total out equally: add them all, then divide by how many there are.');
   L.say('Add them up.', `${vals.join(' + ')} = ${sum}`);
-  L.say(`There are ${n} numbers, so ÷ ${n}.`, `${sum} ÷ ${n} = ${f(sum / n)}`);
+  L.say(`There are ${n} numbers, so ÷ ${n}: level them out so they are all the same.`, `${sum} ÷ ${n} = ${f(sum / n)}`);
   L.slip(sum, `That is the total. Share it between the ${n} numbers.`);
   return L.end(f(sum / n));
 }
@@ -156,6 +180,11 @@ export function missingMeanLesson(n: number, mean: number, known: number[]): Les
   const total = mean * n;
   const s = known.reduce((p, c) => p + c, 0);
   const miss = total - s;
+  L.board = { kind: 'pic', frames: [
+    { step: 0, v: { kind: 'bar', rows: [{ name: 'all', parts: Array.from({ length: n }, () => ({ v: mean, t: f(mean), tone: 0 as const })), total: `${mean} × ${n} = ${total}` }] } },
+    { step: 1, v: { kind: 'bar', rows: [{ name: 'all', parts: [{ v: total, t: f(total), tone: 0 }] }, { name: 'known', parts: [...known.map((v) => ({ v, t: f(v), tone: 1 as const })), { v: Math.max(miss, 0.5), t: '?', tone: 2, new: true }], total: `${known.join(' + ')} = ${s}` }] } },
+    { step: 2, v: { kind: 'bar', rows: [{ name: 'all', parts: [{ v: total, t: f(total), tone: 0 }] }, { name: 'known', parts: [{ v: s, t: f(s), tone: 1 }, { v: Math.max(miss, 0.5), t: f(miss), tone: 2, hl: true }], total: `${total} − ${s} = ${f(miss)}` }] } },
+  ] };
   L.say(`An average of ${mean} for ${n} numbers means they add up to:`, `${mean} × ${n} = ${total}`);
   L.say(`The ${n - 1} you know add up to:`, `${known.join(' + ')} = ${s}`);
   L.say('The last one makes up the rest.', `${total} − ${s} = ${f(miss)}`);
@@ -169,6 +198,8 @@ export function averageSpeed(t: number, s1: number, s2: number): Lesson {
   const d1 = s1 * t;
   const d2 = s2 * t;
   L.say('Average speed = total distance ÷ total time.');
+  const tbl = (tot: boolean): MathVisual => ({ kind: 'table', head: ['part', 'time', 'speed', 'distance'], rows: [['1st', `${t} h`, `${s1} km/h`, `${d1} km`], ['2nd', `${t} h`, `${s2} km/h`, `${d2} km`], ...(tot ? [['total', `${2 * t} h`, '', `${d1 + d2} km`]] : [])], hl: tot ? [[2, 1], [2, 3]] : [[0, 3], [1, 3]] });
+  L.board = { kind: 'pic', frames: [{ step: 1, v: tbl(false) }, { step: 2, v: tbl(true) }] };
   L.say('Distance of each part:', `${t} × ${s1} = ${d1} km`, `${t} × ${s2} = ${d2} km`);
   L.say('Total distance and total time:', `${d1} + ${d2} = ${d1 + d2} km`, `${t} + ${t} = ${2 * t} h`);
   L.say('Divide:', `${d1 + d2} ÷ ${2 * t} = ${f((d1 + d2) / (2 * t))}`);

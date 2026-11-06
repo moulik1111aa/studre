@@ -4,7 +4,6 @@
 
 import { extraSkills, made } from './extra.ts';
 import { PicLesson, withWays, pickN } from '../../teach/pics.ts';
-import { LessonBuilder } from '../../teach/build.ts';
 import { frac, nearNumbers, num } from '../../question.ts';
 import type { MathVisual, Pt } from '../../vis.ts';
 import type { Rng } from '../../rng.ts';
@@ -53,7 +52,8 @@ add('s6.cbrt', 'pythag', 'shape', 'Pythagoras', (r, d) => {
     return L.end(c, `So the longest side is ${c} cm.`);
   };
   const triple = (): Lesson => {
-    const L = new LessonBuilder();
+    const L = new PicLesson();
+    L.show({ kind: 'table', head: ['triple', `× k`, 'sides'], rows: TRIPLES.slice(0, 4).map((t) => { const k = a / t[0]; const ok = Number.isInteger(k) && b === k * t[1]; return [t.join(', '), ok ? `× ${k}` : '', ok ? `${a}, ${b}, ${c}` : '']; }), hl: TRIPLES.slice(0, 4).flatMap((t, i) => (a / t[0] === b / t[1] && Number.isInteger(a / t[0]) ? [[i, 2] as [number, number]] : [])) });
     const base = TRIPLES.find(([x, y, z]) => a % x === 0 && b % y === 0 && c % z === 0 && a / x === b / y && b / y === c / z && x < a)
       ?? null;
     if (base) {
@@ -166,10 +166,19 @@ add('s6.sqrt', 'heron', 'measure', "Heron's formula", (r) => {
   return made(`A triangle has sides ${a} cm, ${b} cm and ${c} cm. What is its area? (cm²)`, area, nums(r, area, [s * (s - a), a * b / 2]), {
     hint: 's = half the perimeter; area = √(s(s − a)(s − b)(s − c)).',
     teach: () => {
-      const L = new LessonBuilder();
+      const L = new PicLesson();
+      // The triangle drawn to scale: base a, then b and c meet at the top.
+      const x = (a * a + c * c - b * b) / (2 * a);
+      const y = Math.sqrt(Math.max(0.5, c * c - x * x));
+      const tri: MathVisual = { kind: 'poly', pts: [[0, 0], [a, 0], [x, y]], labels: [`${a}`, `${b}`, `${c}`], unit: 'cm' };
+      const four = (note?: string): MathVisual => ({ kind: 'chain', groups: [{ items: [String(s)], label: 's', tone: 0 }, { items: [String(s - a)], label: `s − ${a}`, tone: 1 }, { items: [String(s - b)], label: `s − ${b}`, tone: 2 }, { items: [String(s - c)], label: `s − ${c}`, tone: 3 }], ops: ['×', '×', '×'], ...(note ? { note } : {}) });
+      L.show(tri);
       L.say('Find s, half the perimeter.', `s = (${a} + ${b} + ${c}) ÷ 2 = ${s}`);
+      L.show(four());
       L.say('Take each side away from s.', `${s} − ${a} = ${s - a}, ${s} − ${b} = ${s - b}, ${s} − ${c} = ${s - c}`);
+      L.show(four(`= ${s * (s - a) * (s - b) * (s - c)}`));
       L.say('Multiply s by those three.', `${s} × ${s - a} × ${s - b} × ${s - c} = ${s * (s - a) * (s - b) * (s - c)}`);
+      L.show({ kind: 'area', cols: [String(area)], rows: [String(area)], cells: [[`${area} × ${area} = ${s * (s - a) * (s - b) * (s - c)}`]], tone: [[2]], rh: [1.6] });
       L.say('Square root:', `√${s * (s - a) * (s - b) * (s - c)} = ${area}`);
       return L.end(area, `So the area is ${area} cm².`);
     },
@@ -331,7 +340,8 @@ add('s6.proportion', 'twoevents', 'data', 'Two events', (r) => {
   return made(`You toss a coin and roll a dice. What is the probability of ${what}?`, ans, evenD ? ['1/2', '1/3', '1/6'] : ['1/6', '1/2', '1/8'], {
     hint: 'Multiply the two probabilities, or list all 12 outcomes.',
     teach: () => withWays((() => {
-      const L = new LessonBuilder();
+      const L = new PicLesson();
+      L.show({ kind: 'pair', a: { kind: 'chain', groups: [{ items: ['H', 'T'], tone: 0, hl: [evenD ? 0 : 1] }] }, b: { kind: 'dice', faces: evenD ? [2, 4, 6] : [6] }, op: '×', la: '1/2', lb: evenD ? '3/6 = 1/2' : '1/6' });
       L.say(evenD ? 'P(head) = 1/2 and P(even) = 3/6 = 1/2.' : 'P(tail) = 1/2 and P(6) = 1/6.');
       L.say('For both to happen, multiply.', evenD ? '1/2 × 1/2 = 1/4' : '1/2 × 1/6 = 1/12');
       return L.end(ans, `So the probability is ${ans}.`);
@@ -373,11 +383,13 @@ add('s6.sdt', 'kmhms', 'measure', 'km/h and m/s', (r) => {
   if (toMs) return made(`${kmh} km/h = ? m/s`, ms, nums(r, ms, [kmh / 3.6 * 2, Math.round(kmh / 60)]), {
     hint: '1 km/h = 1000 m in 3600 s, so × 5/18.',
     teach: () => withWays((() => {
-      const L = new LessonBuilder();
+      const L = new PicLesson();
+      L.show({ kind: 'chain', rows: true, groups: [{ label: 'goes', items: [`${kmh} km`, `= ${kmh * 1000} m`], tone: 0 }, { label: 'in', items: ['1 h', '= 3600 s'], tone: 1 }], note: `${kmh * 1000} m ÷ 3600 s = ${ms} m/s` });
       L.say(`${kmh} km/h is ${kmh} × 1000 metres in 3600 seconds.`, `${kmh * 1000} ÷ 3600 = ${ms}`);
       return L.end(ms, `So ${kmh} km/h = ${ms} m/s.`);
     })(), 'Metres per second', 'units', [['× 5/18', () => {
-      const L = new LessonBuilder();
+      const L = new PicLesson();
+      L.show({ kind: 'chain', groups: [{ items: ['1000/3600'], label: '÷ 200', tone: 0 }, { items: ['5/18'], tone: 2 }], ops: ['='], note: `${kmh} × 5/18 = ${ms}` });
       L.say('1000/3600 simplifies to 5/18, so multiply by 5/18.', `${kmh} × 5/18 = ${kmh / 18} × 5 = ${ms}`);
       return L.end(ms, `So it is ${ms} m/s.`);
     }]]),
@@ -385,8 +397,10 @@ add('s6.sdt', 'kmhms', 'measure', 'km/h and m/s', (r) => {
   return made(`${ms} m/s = ? km/h`, kmh, nums(r, kmh, [ms * 60, (ms * 5) / 18]), {
     hint: 'Multiply by 18/5 (that is × 3.6).',
     teach: () => {
-      const L = new LessonBuilder();
+      const L = new PicLesson();
+      L.show({ kind: 'chain', rows: true, groups: [{ label: 'goes', items: [`${ms} m`, `→ ${ms * 3600} m`], tone: 0 }, { label: 'in', items: ['1 s', '→ 3600 s = 1 h'], tone: 1 }] });
       L.say(`${ms} m every second is ${ms} × 3600 m every hour.`, `${ms} × 3600 = ${ms * 3600} m`);
+      L.show({ kind: 'pv', digits: String(ms * 3600), point: String(ms * 3600).length - 3, from: String(ms * 3600).length, note: `${ms * 3600} m = ${kmh} km` });
       L.say('Change metres to kilometres.', `${ms * 3600} ÷ 1000 = ${kmh}`);
       return L.end(kmh, `So ${ms} m/s = ${kmh} km/h.`);
     },

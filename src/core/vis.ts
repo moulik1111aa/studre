@@ -53,6 +53,35 @@ export interface GeoLabel {
   small?: boolean;
 }
 
+/** One block of a bar model, as long as its amount. */
+export interface BarPart {
+  v: number;
+  /** Text on the block ("1 kg"). */
+  t: string;
+  /** Small text under it ("1000 g"). */
+  sub?: string;
+  tone?: 0 | 1 | 2 | 3;
+  /** Drops in when its step appears. */
+  new?: boolean;
+  hl?: boolean;
+  /** Taken away (crossed out). */
+  x?: boolean;
+}
+export interface BarRow {
+  name?: string;
+  parts: BarPart[];
+  /** Brace under the row with this total. */
+  total?: string;
+  ask?: boolean;
+  /** Bracket over parts from..to (inclusive) with a label ("1000 g = 1 kg"). */
+  group?: { from: number; to: number; t: string };
+}
+
+/** A chip in an expression strip; `box` marks the part being worked out now. */
+export interface ExprPart { t: string; box?: boolean; done?: boolean; sign?: boolean }
+/** A fraction bar: d equal parts, `on` shaded; `x` of the shaded ones crossed out (taken away). */
+export interface FBar { d: number; on: number; tone?: 0 | 1 | 2 | 3; x?: number; new?: boolean; t?: string }
+
 export type MathVisual =
   | { kind: 'compare'; mode: 'long' | 'tall' | 'heavy' | 'holds' | 'big'; items: CompareItem[]; tip?: number }
   | { kind: 'emoji'; e: string; label?: string; big?: boolean }
@@ -100,4 +129,21 @@ export type MathVisual =
   | { kind: 'speed'; dist: string; legs: { label: string; time: string }[] }
   | { kind: 'pair'; a: MathVisual; b: MathVisual; op?: string; la?: string; lb?: string }
   | { kind: 'cylinder'; r: string; h: string; coins?: boolean }
+  | { kind: 'bar'; rows: BarRow[] }
+  /** Methods: an equation as a balance; the same action dropped on both pans. tilt 1 = left side heavier. */
+  | { kind: 'balance'; left: string; right: string; act?: string; sign?: string; tilt?: -1 | 0 | 1; ok?: boolean }
+  /** Methods: an expression with the part to do first boxed, and the order rule lit. */
+  | { kind: 'expr'; parts: ExprPart[]; rule?: 'B' | 'O' | 'DM' | 'AS'; under?: string; ladder?: boolean }
+  /** Methods: fraction bars in rows (several bars in a row make wholes). */
+  | { kind: 'fbar'; rows: { name?: string; bars: FBar[]; after?: string }[] }
+  /** Methods: a box (area) model; widths and heights are relative sizes. */
+  | { kind: 'area'; cols: string[]; rows: string[]; cells: string[][]; cw?: number[]; rh?: number[]; hl?: Pt[]; tone?: number[][]; total?: string; op?: string; tiny?: boolean }
+  /** Methods: two lists in a Venn diagram (factors of each, in both). */
+  | { kind: 'venn'; a: string; b: string; onlyA: string[]; both: string[]; onlyB: string[]; pick?: string; title?: string }
+  /** Methods: groups of tiles (a × a × a…), with some crossed out. */
+  | { kind: 'chain'; groups: { items: string[]; x?: number[]; hl?: number[]; tone?: 0 | 1 | 2 | 3; label?: string }[]; ops?: string[]; note?: string; rows?: boolean }
+  /** Methods: digits with a decimal point that hops (× and ÷ by 10s, standard form). */
+  | { kind: 'pv'; digits: string; point: number; from?: number; heads?: string[]; note?: string; lead?: number }
+  /** Methods: a parabola y = ax² + bx + c, with where it crosses the x-axis. */
+  | { kind: 'parab'; a: number; b: number; c: number; min: number; max: number; marks?: number[] }
   | { kind: 'cone'; r: string; h: string; l?: string; solid: 'cone' | 'sphere' | 'hemisphere' | 'cylinder' };

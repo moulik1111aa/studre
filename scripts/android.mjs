@@ -86,6 +86,48 @@ manifest = patch(
         </receiver>${widget('JarWidget', 'MN treat jars', 'widget_jar_info')}${widget('FactWidget', 'MN fun fact', 'widget_fact_info')}${widget('AdventureWidget', 'MN adventure', 'widget_adventure_info')}
     </application>`,
 );
+// Backup files shared to MN (WhatsApp, Files, Gmail: Share or Open with) open the app, which
+// restores them. And the launcher icon moves to activity-aliases, one per icon, so MN Plus
+// members can pick an icon (StudyHardPlugin.setAppIcon turns one on and the others off).
+const launcher = /<intent-filter>\s*<action android:name="android\.intent\.action\.MAIN"\s*\/>\s*<category android:name="android\.intent\.category\.LAUNCHER"\s*\/>\s*<\/intent-filter>/;
+if (!launcher.test(manifest)) throw new Error('patch anchor not found: the MainActivity launcher intent-filter');
+const mimes = ['text/html', 'application/json', 'text/plain', 'application/octet-stream'];
+const shareFilters = mimes
+  .map((m) => `
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="${m}" />
+            </intent-filter>`)
+  .join('') + `
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" android:mimeType="text/html" />
+                <data android:scheme="content" android:mimeType="application/json" />
+            </intent-filter>`;
+manifest = manifest.replace(launcher, shareFilters.trim());
+const ICONS = ['sky', 'night', 'sunset', 'space', 'gold'];
+const aliases = ICONS.map((n) => {
+  const Name = n[0].toUpperCase() + n.slice(1);
+  const icon = n === 'sky' ? 'ic_launcher' : `ic_launcher_${n}`;
+  return `
+        <activity-alias
+            android:name=".Icon${Name}"
+            android:targetActivity=".MainActivity"
+            android:enabled="${n === 'sky'}"
+            android:exported="true"
+            android:icon="@mipmap/${icon}"
+            android:roundIcon="@mipmap/${icon}_round">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>`;
+}).join('');
+const mainEnd = manifest.indexOf('</activity>', manifest.indexOf('android:name=".MainActivity"'));
+if (mainEnd < 0) throw new Error('patch anchor not found: </activity> after MainActivity');
+manifest = manifest.slice(0, mainEnd + '</activity>'.length) + aliases + manifest.slice(mainEnd + '</activity>'.length);
 writeFileSync(manifestPath, manifest);
 
 // 6. Gradle: version, release signing (from CI secrets), and the AndroidX libraries the plugin uses.

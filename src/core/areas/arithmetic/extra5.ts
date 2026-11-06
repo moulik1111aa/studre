@@ -100,7 +100,8 @@ add('s5.parangles', 'polyang', 'shape', 'Inside angles of polygons', (r, d) => {
   return made(`What do the inside angles of a ${name} (${n} sides) add up to? (degrees)`, sum, nums(r, sum, [n * 180, (n - 1) * 180]), {
     hint: 'Cut it into triangles from one corner.',
     teach: () => withWays(tris(), 'Cut into triangles', 'angles', [['(n − 2) × 180', () => {
-      const L = new LessonBuilder();
+      const L = new PicLesson();
+      L.show({ kind: 'chain', groups: [{ items: [`n = ${n}`], label: 'sides', tone: 0 }, { items: [`${n} − 2 = ${n - 2}`], label: 'triangles', tone: 1 }, { items: [`${n - 2} × 180`], label: 'degrees', tone: 2 }], ops: ['→', '→'], note: `${sum}°` });
       L.say(`For any polygon with n sides, the inside angles add up to (n − 2) × 180°. Here n = ${n}.`, `(${n} − 2) × 180 = ${sum}`);
       return L.end(sum, `So they add up to ${sum}°.`);
     }]]),
@@ -238,9 +239,30 @@ add('s5.polyang', 'congruent', 'shape', 'Congruent triangles', (r) => {
   return made(`In triangles ABC and PQR: ${given}. Which test shows they are congruent?`, ans, tests.map((t) => t[0]).filter((x) => x !== ans), {
     hint: 'S is a side, A is an angle; the middle letter sits between the other two.',
     teach: () => {
-      const L = new LessonBuilder();
+      // Two matching triangles, with the given sides (ticks) and angles (arcs) marked.
+      const rhs = ans === 'RHS';
+      const T: Pt[] = rhs ? [[0, 4], [0, 0], [5, 0]] : [[0, 0], [5, 0], [1.8, 4]];
+      const U: Pt[] = T.map(([x, y]) => [x + 7.5, y] as Pt);
+      const dir = (p: Pt, q: Pt) => (Math.atan2(q[1] - p[1], q[0] - p[0]) * 180) / Math.PI;
+      const arc = (P3: Pt[], i: number, hl = false): GeoArc => {
+        let a0 = dir(P3[i], P3[(i + 1) % 3]), a1 = dir(P3[i], P3[(i + 2) % 3]);
+        if ((((a1 - a0) % 360) + 360) % 360 > 180) [a0, a1] = [a1, a0];
+        return { at: P3[i], a0, a1, r: 0.9, hl };
+      };
+      const ticks: Record<string, [number, number, number]> = { SSS: [1, 2, 3], SAS: [1, 2, 0], ASA: [1, 0, 0], RHS: [1, 0, 2] };
+      const angs: Record<string, number[]> = { SSS: [], SAS: [1], ASA: [0, 1], RHS: [] };
+      const tri = (P3: Pt[], marks: boolean) => [0, 1, 2].map((i) => ({ a: P3[i], b: P3[(i + 1) % 3], ...(marks && ticks[ans][i] ? { ticks: ticks[ans][i] } : {}) }));
+      const geo = (marks: boolean): MathVisual => ({
+        kind: 'geo', w: 12.5, h: 4.6,
+        segs: [...tri(T, marks), ...tri(U, marks)],
+        arcs: marks ? [...angs[ans].flatMap((i) => [arc(T, i, true), arc(U, i, true)]), ...(rhs ? [{ at: T[1], a0: 0, a1: 90, r: 0.6, right: true }, { at: U[1], a0: 0, a1: 90, r: 0.6, right: true }] : [])] : [],
+        labels: [...['A', 'B', 'C'].map((t, i) => ({ at: [T[i][0] + (i === 2 ? 0 : i ? 0.35 : -0.35), T[i][1] + (T[i][1] > 2 ? 0.35 : -0.45)] as Pt, t })), ...['P', 'Q', 'R'].map((t, i) => ({ at: [U[i][0] + (i === 2 ? 0 : i ? 0.35 : -0.35), U[i][1] + (U[i][1] > 2 ? 0.35 : -0.45)] as Pt, t }))],
+      });
+      const L = new PicLesson();
+      L.show(geo(false));
       L.say('Congruent means exactly the same size and shape. Four tests: SSS, SAS, ASA and RHS.');
-      L.say(`Here: ${given}.`);
+      L.show(geo(true));
+      L.say(`Here: ${given}. Matching sides have the same ticks; matching angles the same arcs.`);
       L.say(why);
       return L.end(ans, `So the test is ${ans}.`);
     },
@@ -353,12 +375,15 @@ add('s6.subst', 'matchstick', 'algebra', 'Matchstick patterns', (r, d) => {
     hint: `Each new shape adds ${per} sticks.`,
     teach: () => withWays((() => {
       const L = new PicLesson();
-      if (shape === 'squares') L.show(v);
+      const rows = [1, 2, 3, 4].map((i) => [`shape ${i}`, String(sticks(i)), i > 1 ? `+ ${per}` : 'start']);
+      L.show(shape === 'squares' ? v : { kind: 'table', head: ['', 'sticks', ''], rows, hl: [[0, 1]] });
       L.say(`It starts with ${first} and each new shape adds ${per} more.`, `${sticks(1)}, ${sticks(2)}, ${sticks(3)} … (+${per} each time)`);
+      L.show({ kind: 'bar', rows: [{ name: `shape ${k}`, parts: [{ v: first, t: String(first), tone: 0 }, { v: per * (k - 1), t: `${k - 1} × ${per}`, tone: 2, new: true }], total: `${first} + ${per * (k - 1)} = ${ans}` }] });
       L.say(`Shape ${k} has ${k - 1} more steps after shape 1.`, `${first} + ${per} × ${k - 1} = ${ans}`);
       return L.end(ans, `So shape ${k} uses ${ans} matchsticks.`);
     })(), 'Start, then add', 'pattern', [['The rule', () => {
-      const L = new LessonBuilder();
+      const L = new PicLesson();
+      L.show({ kind: 'table', head: ['n', `${per}n + ${first - per}`, 'sticks'], rows: [1, 2, 3, k].map((i) => [String(i), `${per} × ${i} + ${first - per}`, String(sticks(i))]), hl: [[3, 2]] });
       L.say(`The rule for shape n is ${per}n + ${first - per}: check shape 1, ${per} × 1 + ${first - per} = ${first}.`);
       L.say(`Put n = ${k}.`, `${per} × ${k} + ${first - per} = ${ans}`);
       return L.end(ans, `So shape ${k} uses ${ans} matchsticks.`);

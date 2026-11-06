@@ -29,12 +29,13 @@ export const TRIAL_DAYS = 7;
 export const TRIAL_DAYS_SIGNED_IN = 14;
 
 /** What MN Plus adds, in the order the Plus page lists them. */
-export type PlusFeature = 'sync' | 'school' | 'report' | 'sheets';
+export type PlusFeature = 'sync' | 'school' | 'report' | 'sheets' | 'icons';
 export const FEATURES: { id: PlusFeature; icon: string; name: string; free: string; plus: string }[] = [
   { id: 'sync', icon: '☁️', name: 'Backup and sync', free: 'A safe copy from one phone', plus: 'Every phone in step, all the time' },
   { id: 'school', icon: '📚', name: 'School paths', free: 'The path for their age', plus: 'CBSE, ICSE or Common Core, by class, with the topics you pick' },
   { id: 'report', icon: '📊', name: 'Full report', free: 'Stars, time and this week', plus: 'Strengths, skills to practise, speed and best times' },
   { id: 'sheets', icon: '🖨️', name: 'Worksheets', free: '', plus: 'Printable sheets from where they are now, with answers' },
+  { id: 'icons', icon: '🎨', name: 'App icons', free: 'The sky icon', plus: 'Pick the MN icon on your home screen: Sky, Night, Sunset, Space or Gold' },
 ];
 
 /** The phone's record of MN Plus (kept on the phone, not in backups). */

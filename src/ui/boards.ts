@@ -2,7 +2,7 @@
 // objects, base-ten blocks, tables and short division. A board is drawn once with every item;
 // setBoardStep() then shows, highlights and animates items as the lesson's steps go by.
 
-import type { Board, BarsBoard, BlocksBoard, BusBoard, ColsBoard, DotsBoard, LineBoard, TableBoard, Timed } from '../core/teach/types.ts';
+import type { Board, BarsBoard, BlocksBoard, BusBoard, ColsBoard, ColsCell, DotsBoard, LineBoard, TableBoard, Timed } from '../core/teach/types.ts';
 import { beadsHtml, bundleHtml, setMoveStep, trackHtml } from './moveboards.ts';
 import { esc } from './app.ts';
 import { EMOJI } from './visuals.ts';
@@ -181,15 +181,17 @@ function colsHtml(b: ColsBoard): string {
       const rule = b.rules.includes(r) ? ' rule' : '';
       if (!items.length) cells.push(`<span class="cc k-${kind}${rule}" data-col="${c}"></span>`);
       else {
-        const it = items[items.length - 1];
-        const x = it.cross !== undefined ? ` data-x="${it.cross}"` : '';
-        cells.push(`<span class="cc k-${kind}${rule}" data-col="${c}"><i class="d${it.tone ? ` k-${it.tone}` : ''}${it.ch === '.' ? ' k-pt' : ''}" ${timed(it)}${x}>${esc(it.ch)}</i></span>`);
+        // Items that give way to a later one (until) share the cell; otherwise the last wins.
+        const show = items.slice(0, -1).every((x) => x.until !== undefined) ? items : [items[items.length - 1]];
+        const dig = (it: ColsCell) => `<i class="d${it.tone ? ` k-${it.tone}` : ''}${it.ch === '.' ? ' k-pt' : ''}" ${timed(it)}${it.cross !== undefined ? ` data-x="${it.cross}"` : ''}>${esc(it.ch)}</i>`;
+        cells.push(`<span class="cc k-${kind}${rule}${show.length > 1 ? ' multi' : ''}" data-col="${c}">${show.map(dig).join('')}</span>`);
       }
     }
     rows.push(cells.join(''));
   });
   const focus = JSON.stringify((b.focus ?? []).map((fz) => [fz.c, fz.at ?? 0, fz.until ?? 999]));
-  return `<div class="bd bd-cols"><div class="cgrid" style="--w:${b.width}" data-focus='${focus}'>${rows.join('')}</div></div>`;
+  const cols = b.widths ? ` grid-template-columns:24px ${b.widths.map((w) => `${Math.round(w * 34)}px`).join(' ')}` : '';
+  return `<div class="bd bd-cols"><div class="cgrid${b.widths ? ' wide' : ''}" style="--w:${b.width};${cols}" data-focus='${focus}'>${rows.join('')}</div></div>`;
 }
 
 // ── Bars ───────────────────────────────────────────────────────────────────

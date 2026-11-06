@@ -118,6 +118,7 @@ const FEATURE_LINE: Record<PlusFeature, string> = {
   school: 'School paths are part of MN Plus: CBSE, ICSE or Common Core, by class, with only the topics you choose.',
   report: 'The full report is part of MN Plus: strengths, the exact skills to practise, speed, and the days and times they learn best.',
   sheets: 'Printable worksheets are part of MN Plus: made from where your child is now, with an answer key for you.',
+  icons: 'Choosing the app icon is part of MN Plus: Sky, Night, Sunset, Space or Gold on your home screen.',
 };
 
 /**

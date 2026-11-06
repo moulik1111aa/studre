@@ -4,7 +4,20 @@
 import { frac, gcd } from '../question.ts';
 import { LessonBuilder, f, list } from './build.ts';
 import { timesFact, gridMult } from './muldiv.ts';
-import type { Lesson, TableBoard } from './types.ts';
+import type { Lesson, PicBoard, TableBoard } from './types.ts';
+import type { MathVisual } from '../vis.ts';
+import { pvShift } from './pics.ts';
+
+/** Pictures by step (frames[i] from step i). */
+function pics(L: LessonBuilder, frames: (MathVisual | null)[]): void {
+  const fr: PicBoard['frames'] = [];
+  frames.forEach((v, i) => v && fr.push({ step: i, v }));
+  if (fr.length) L.board = { kind: 'pic', frames: fr };
+}
+/** k tiles of b (long runs keep the start, … and the end). */
+const tiles = (b: string, k: number): string[] => (k <= 10 ? Array(k).fill(b) : [...Array(4).fill(b), '…', ...Array(3).fill(b)]);
+type Grp = Extract<MathVisual, { kind: 'chain' }>['groups'][number];
+const chain = (groups: Grp[], ops?: string[], note?: string): MathVisual => ({ kind: 'chain', groups, ...(ops ? { ops } : {}), ...(note ? { note } : {}) });
 
 const SUP: Record<string, string> = { '-': '⁻', '−': '⁻', 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
 export const sup = (n: number | string): string =>
@@ -31,6 +44,7 @@ function powerRows(b: number, e: number): TableBoard['rows'] {
 /** n² = n × n. */
 export function squareLesson(n: number, show = `${n}² = ${n * n}`): Lesson {
   const L = new LessonBuilder();
+  L.board = n <= 10 ? { kind: 'dots', layout: 'array', groups: Array.from({ length: n }, () => ({ n })), caption: `a square: ${n} rows of ${n}` } : { kind: 'pic', frames: [{ step: 0, v: { kind: 'area', cols: [String(n)], rows: [String(n)], cells: [[`${n} × ${n}`]], tone: [[2]], rh: [1.8] } }] };
   L.say(`${n}² means ${n} × ${n}: ${n} multiplied by itself.`);
   L.take(n <= 12 ? timesFact(n, n, `${n} × ${n} = ${n * n}`, { picture: false }) : gridMult(n, n));
   L.slip(2 * n, `${n}² is ${n} × ${n}, not ${n} × 2.`);
@@ -41,6 +55,7 @@ export function squareLesson(n: number, show = `${n}² = ${n * n}`): Lesson {
 /** n³ = n × n × n. */
 export function cubeLesson(n: number, show = `${n}³ = ${n ** 3}`): Lesson {
   const L = new LessonBuilder();
+  pics(L, [{ kind: 'cuboid', l: n, b: n, h: n, cubes: n <= 5, labels: [String(n), String(n), String(n)] }, n <= 10 ? { kind: 'cells', w: n, h: n, on: Array.from({ length: n * n }, (_, i) => [i % n, Math.floor(i / n)] as [number, number]), count: false } : null, { kind: 'cuboid', l: n, b: n, h: n, cubes: n <= 5, layers: true, labels: [String(n), String(n), `${n} layers`] }]);
   L.say(`${n}³ means ${n} × ${n} × ${n}: three ${n}s multiplied.`);
   L.say(`First ${n} × ${n}.`, `${n} × ${n} = ${n * n}`);
   L.say(`Then × ${n} again.`, `${n * n} × ${n} = ${n ** 3}`);
@@ -118,14 +133,20 @@ export function indexLaw(kind: 'mul' | 'div' | 'pow', b: string, m: number, n: n
   const ans = pw(b, e);
   const rep = (k: number) => Array(k).fill(b).join(' × ');
   if (kind === 'mul') {
+    pics(L, [chain([{ items: tiles(b, m), label: pw(b, m), tone: 0 }, { items: tiles(b, n), label: pw(b, n), tone: 1 }], ['×']), chain([{ items: [...tiles(b, m).slice(0, m <= 10 ? m : 8), ...tiles(b, n).slice(0, n <= 10 ? n : 8)].slice(0, 12), label: `${m} + ${n} = ${e} of them`, tone: 2 }], undefined, ans)]);
     L.say(`${pw(b, m)} is ${m} lots of ${b} multiplied together, and ${pw(b, n)} is ${n} more.`, m + n <= 10 ? `(${rep(m)}) × (${rep(n)})` : null);
     L.say('Same base, multiplying: add the powers.', `${m} + ${n} = ${e}`);
     L.slip(pw(b, m * n), 'When multiplying, add the powers (multiply them only for a power of a power).');
   } else if (kind === 'div') {
+    const top = tiles(b, m), bot = tiles(b, n);
+    const cut = (xs: string[], k: number) => xs.map((_, i) => i).filter((i) => i < k && xs[i] !== '…');
+    pics(L, [chain([{ items: top, label: pw(b, m), tone: 0 }, { items: bot, label: pw(b, n), tone: 1 }], ['÷']), chain([{ items: top, label: `${m} − ${n} = ${f(e)} left`, tone: 0, x: cut(top, Math.min(n, top.length)) }, { items: bot, tone: 1, x: cut(bot, bot.length) }], ['÷'], ans)]);
     L.say(`${pw(b, m)} ÷ ${pw(b, n)}: each ${b} on the bottom cancels one ${b} on the top, so ${Math.min(m, n)} of them cancel.`);
     L.say('Same base, dividing: subtract the powers.', `${m} − ${n} = ${f(e)}`);
     L.slip(pw(b, m + n), 'When dividing, subtract the powers.');
   } else {
+    const groups = Array.from({ length: Math.min(n, 5) }, (_, i) => ({ items: tiles(b, m), label: pw(b, m), tone: (i % 4) as 0 | 1 | 2 | 3 }));
+    pics(L, [chain(groups, Array(5).fill('×')), chain(groups, Array(5).fill('×'), `${n} groups of ${m}: ${m} × ${n} = ${e} → ${ans}`)]);
     L.say(`(${pw(b, m)})${sup(n)} means ${n} lots of ${pw(b, m)} multiplied.`, `${Array(n).fill(pw(b, m)).join(' × ')}`);
     L.say('A power of a power: multiply the powers.', `${m} × ${n} = ${e}`);
     L.slip(pw(b, m + n), 'For a power of a power, multiply the powers.');
@@ -136,13 +157,17 @@ export function indexLaw(kind: 'mul' | 'div' | 'pow', b: string, m: number, n: n
 /** b⁰ = 1 and b⁻ᵉ = 1/bᵉ. */
 export function zeroNegLesson(b: number, e: number): Lesson {
   const L = new LessonBuilder();
+  // The pattern: each step down the powers divides by b.
+  const ladder = (to: number, hl: boolean): MathVisual => ({ kind: 'table', head: ['power', 'value', ''], rows: [3, 2, 1, 0, -1, -2, -3].filter((k) => k >= to).map((k) => [pw(b, k), k >= 0 ? f(b ** k) : `1/${b ** -k}`, k > to ? `÷ ${b}` : '']), hl: hl ? [[3 - to, 1]] : [] });
   if (e === 0) {
+    pics(L, [chain([{ items: [String(b), String(b), String(b)], label: pw(b, 3), tone: 0, x: [0, 1, 2] }, { items: [String(b), String(b), String(b)], label: pw(b, 3), tone: 1, x: [0, 1, 2] }], ['÷'], 'everything cancels: 1'), ladder(0, true)]);
     L.say(`Think of ${pw(b, 3)} ÷ ${pw(b, 3)}: anything divided by itself is 1.`);
     L.say('By the rule, the powers subtract: 3 − 3 = 0.', `${pw(b, 3)} ÷ ${pw(b, 3)} = ${pw(b, 0)} = 1`);
     L.slip(0, `${pw(b, 0)} is 1, not 0.`);
     return L.end(1);
   }
-  L.say(`A negative power means 1 over the positive power.`, `${pw(b, -e)} = 1/${pw(b, e)}`);
+  pics(L, [ladder(-Math.min(e, 3), false), ladder(-Math.min(e, 3), true)]);
+  L.say(`A negative power means 1 over the positive power. Keep dividing by ${b} down the pattern.`, `${pw(b, -e)} = 1/${pw(b, e)}`);
   L.say(`Work out ${pw(b, e)}.`, `${pw(b, e)} = ${b ** e}`);
   L.slip(String(-(b ** e)), 'A negative power does not make the answer negative: it means 1 over.');
   return L.end(frac(1, b ** e), undefined, `${pw(b, -e)} = 1/${b ** e}`);
@@ -161,6 +186,8 @@ export function estRootLesson(x: number): Lesson {
 /** Write a big number in standard form. */
 export function stdFormLesson(n: number, m: number, e: number): Lesson {
   const L = new LessonBuilder();
+  const digits = String(n);
+  pics(L, [{ kind: 'pv', digits, point: digits.length }, { kind: 'pv', digits, point: 1, from: digits.length, note: `${e} places → × 10${sup(e)}` }]);
   L.say('Standard form has one digit before the decimal point, then × a power of 10.');
   L.say(`Put the point after the first digit: ${f(m)}.`);
   L.say(`The point moved ${e} places, so it is × 10${sup(e)}.`, `${f(m)} × 10${sup(e)} = ${n.toLocaleString('en-US')}`);
@@ -171,6 +198,7 @@ export function stdFormLesson(n: number, m: number, e: number): Lesson {
 export function stdDigitsLesson(m: number, e: number): Lesson {
   const L = new LessonBuilder();
   const n = Math.round(m * 10 ** e);
+  pics(L, [pvShift(f(m), e, `${e} places right`), { kind: 'chain', groups: [{ items: String(n).split(''), label: `${e + 1} digits`, tone: 1 }] }]);
   L.say(`× 10${sup(e)} moves the point ${e} places to the right.`, `${f(m)} × 10${sup(e)} = ${n.toLocaleString('en-US')}`);
   L.say(`Count the digits: one before the point, then ${e} more.`);
   return L.end(e + 1, `So it has ${e + 1} digits.`);
@@ -179,13 +207,16 @@ export function stdDigitsLesson(m: number, e: number): Lesson {
 /** Standard form × and ÷: numbers then powers, then tidy to one digit before the point. */
 export function stdMulLesson(a: number, m: number, b: number, n: number, div: boolean): Lesson {
   const L = new LessonBuilder();
+  const two = (x: string, y: string, op: string, nx?: string, ny?: string) => chain([{ items: [x], label: nx ?? 'numbers', tone: 1 }, { items: [y], label: ny ?? 'powers of 10', tone: 2 }], [op]);
   if (div) {
     const q = a / b;
+    pics(L, [two(`${f(a)} ÷ ${f(b)} = ${f(q)}`, `10${sup(m)} ÷ 10${sup(n)}`, '×'), two(f(q), `10${sup(m)} ÷ 10${sup(n)} = 10${sup(m - n)}`, '×', 'numbers', `${m} − ${n} = ${m - n}`)]);
     L.say('Divide the numbers.', `${f(a)} ÷ ${f(b)} = ${f(q)}`);
     L.say('Divide the powers of 10: subtract them.', `10${sup(m)} ÷ 10${sup(n)} = 10${sup(m - n)}`);
     return L.end(`${f(q)} × 10${sup(m - n)}`);
   }
   const p = a * b;
+  pics(L, [two(`${f(a)} × ${f(b)} = ${f(p)}`, `10${sup(m)} × 10${sup(n)}`, '×'), two(f(p), `10${sup(m)} × 10${sup(n)} = 10${sup(m + n)}`, '×', 'numbers', `${m} + ${n} = ${m + n}`), ...(p >= 10 ? [pvShift(f(p), -1, `one place left: add 1 to the power → 10${sup(m + n + 1)}`)] : [])]);
   L.say('Multiply the numbers.', `${f(a)} × ${f(b)} = ${f(p)}`);
   L.say('Multiply the powers of 10: add them.', `10${sup(m)} × 10${sup(n)} = 10${sup(m + n)}`);
   if (p >= 10) {
@@ -198,8 +229,10 @@ export function stdMulLesson(a: number, m: number, b: number, n: number, div: bo
 /** Fractional indices: ½ is a square root, ⅓ a cube root, 3/2 root then cube. */
 export function fracIndexLesson(kind: 0 | 1 | 2, base: number): Lesson {
   const L = new LessonBuilder();
+  const sq = (n: number, cell: string, side = '?'): MathVisual => ({ kind: 'area', cols: [side], rows: [side], cells: [[cell]], tone: [[2]], cw: [1], rh: [n > 9 ? 2.2 : 1.8] });
   if (kind === 0) {
     const n = Math.round(Math.sqrt(base));
+    pics(L, [sq(n, `area ${base}`), sq(n, `${n} × ${n} = ${base}`, String(n))]);
     L.say('A power of ½ means the square root.', `${base}${sup('1/2')} = √${base}`);
     L.say(`Which number times itself makes ${base}?`, `${n} × ${n} = ${base}`);
     L.slip(base / 2, 'Power ½ is the square root, not half.');
@@ -207,12 +240,14 @@ export function fracIndexLesson(kind: 0 | 1 | 2, base: number): Lesson {
   }
   if (kind === 1) {
     const n = Math.round(Math.cbrt(base));
+    pics(L, [{ kind: 'cuboid', l: n, b: n, h: n, cubes: n <= 5, labels: ['?', '?', '?'] }, { kind: 'cuboid', l: n, b: n, h: n, cubes: n <= 5, labels: [String(n), String(n), String(n)] }]);
     L.say('A power of ⅓ means the cube root.', `${base}${sup('1/3')} = ∛${base}`);
     L.say(`Which number cubed makes ${base}?`, `${n} × ${n} × ${n} = ${base}`);
     L.slip(base / 3, 'Power ⅓ is the cube root, not a third.');
     return L.end(n);
   }
   const n = Math.round(Math.sqrt(base));
+  pics(L, [chain([{ items: ['√'], label: 'the 2: root', tone: 1 }, { items: ['³'], label: 'the 3: cube', tone: 2 }], ['then']), sq(n, `√${base} = ${n}`, String(n)), { kind: 'cuboid', l: n, b: n, h: n, cubes: n <= 5, labels: [String(n), String(n), String(n)] }]);
   L.say('A power of 3/2 means: square root first (the 2), then cube (the 3).');
   L.say('Square root first.', `√${base} = ${n}`);
   L.say('Then cube it.', `${n}³ = ${n} × ${n} × ${n} = ${n ** 3}`);
@@ -225,6 +260,7 @@ export function logLesson(b: number, v: number): Lesson {
   const e = Math.round(Math.log(v) / Math.log(b));
   L.say(`log${b === 10 ? '₁₀' : '₂'} ${f(v)} asks: ${b} to what power makes ${f(v)}?`);
   if (e === 0) {
+    pics(L, [{ kind: 'table', head: ['power', 'value'], rows: [2, 1, 0].map((k) => [pw(b, k), f(b ** k)]), hl: [[2, 0]] }]);
     L.say(`Any number to the power 0 is 1.`, `${b}⁰ = 1`);
     return L.end(0);
   }
@@ -238,6 +274,7 @@ export function logLesson(b: number, v: number): Lesson {
 export function surdSimplify(k: number, s: number): Lesson {
   const L = new LessonBuilder();
   const n = k * k * s;
+  pics(L, [chain([{ items: [String(k * k)], label: 'square', tone: 2 }, { items: [String(s)], tone: 0 }], ['×'], `${n} = ${k * k} × ${s}`), chain([{ items: [`√${k * k} = ${k}`], tone: 2 }, { items: [`√${s}`], tone: 0 }], ['×'], `${k}√${s}`)]);
   L.say(`Find the biggest square number that divides ${n}.`, `${n} = ${k * k} × ${s}`);
   L.say('Split the root, and take the square root of the square.', `√${n} = √${k * k} × √${s} = ${k}√${s}`);
   return L.end(`${k}√${s}`);
@@ -255,6 +292,7 @@ export function surdMultiply(a: number, b: number): Lesson {
     }
   const rest = p / (k * k);
   const ans = rest === 1 ? String(k) : k === 1 ? `√${rest}` : `${k}√${rest}`;
+  pics(L, [a === b && a <= 100 ? { kind: 'area', cols: [`√${a}`], rows: [`√${a}`], cells: [[`area ${a}`]], tone: [[2]], rh: [1.8] } : chain([{ items: [`√${a}`], tone: 0 }, { items: [`√${b}`], tone: 1 }], ['×'], `= √${p}`), k > 1 && rest > 1 ? chain([{ items: [String(k * k)], label: 'square', tone: 2 }, { items: [String(rest)], tone: 0 }], ['×'], `√${p} = ${k}√${rest}`) : null]);
   L.say('Multiply under one square root.', `√${a} × √${b} = √${p}`);
   if (k > 1) L.say(`${p} = ${k * k} × ${rest}, and √${k * k} = ${k}.`, rest === 1 ? `√${p} = ${k}` : `√${p} = ${k}√${rest}`);
   else L.say(`${p} has no square factor, so it stays as √${p}.`);
@@ -266,6 +304,7 @@ export function surdMultiply(a: number, b: number): Lesson {
 export function rationaliseLesson(k: number, s: number): Lesson {
   const L = new LessonBuilder();
   const top = k / s;
+  pics(L, [chain([{ items: [`${k}/√${s}`], tone: 0 }, { items: [`√${s}/√${s}`], label: '= 1, so no change', tone: 1 }], ['×']), chain([{ items: [`${k}√${s}`], label: 'top', tone: 0 }, { items: [`√${s} × √${s} = ${s}`], label: 'bottom', tone: 2 }], ['over']), chain([{ items: [`${k} ÷ ${s} = ${top}`], tone: 2 }], undefined, top === 1 ? `√${s}` : `${top}√${s}`)]);
   L.say(`Multiply the top and the bottom by √${s}. That doesn’t change the value.`, `${k}/√${s} × √${s}/√${s}`);
   L.say(`√${s} × √${s} = ${s}, so the bottom becomes ${s}.`, `= ${k}√${s} / ${s}`);
   L.say(`${k} ÷ ${s} = ${top}.`, `= ${top === 1 ? '' : top}√${s}`);
@@ -280,6 +319,12 @@ export function recurringLesson(digits: string): Lesson {
   const nines = Number('9'.repeat(k));
   const rep = digits.repeat(k === 1 ? 3 : 2);
   const m = 10 ** k;
+  // The two rows line up after the point, so subtracting cancels the repeating tail.
+  const after = rep.split('').concat('…');
+  const rowX = { label: 'x', items: ['0', '.', ...after], tone: 1 as const };
+  const rowM = { label: `${m}x`, items: [...digits.split(''), '.', ...after], tone: 0 as const };
+  const tail = (r: { items: string[] }) => r.items.map((_, i) => i).filter((i) => i > r.items.indexOf('.'));
+  pics(L, [chain([rowX], undefined), { kind: 'chain', rows: true, groups: [rowM, rowX] }, { kind: 'chain', rows: true, groups: [{ ...rowM, x: tail(rowM) }, { ...rowX, x: tail(rowX) }], note: `${nines}x = ${digits}` }]);
   L.say(`Call the number x.`, `x = 0.${rep}…`);
   L.say(`${k === 1 ? '1 digit repeats' : `${k} digits repeat`}, so multiply by ${m}.`, `${m}x = ${digits}.${rep}…`);
   L.say('Subtract: the repeating parts cancel.', `${m}x − x = ${digits}`, `${nines}x = ${digits}`);

@@ -26,7 +26,12 @@ function complete(c: Child): Child {
 export async function restoreFromFile(app: App, done: () => void): Promise<void> {
   const file = await pickTextFile('.html,.htm,.json,text/html,application/json');
   if (!file) return;
-  const r = await readAnyBackup(file.text);
+  await restoreFromText(app, file.text, done);
+}
+
+/** Restore from a backup file's text (picked, or shared to MN from WhatsApp, Files…). */
+export async function restoreFromText(app: App, text: string, done: () => void): Promise<void> {
+  const r = await readAnyBackup(text);
   if (!r.ok) return void app.toast(r.reason);
   let changed = false;
   for (const b of r.backups) changed = (await restoreChild(app, b, r.family)) || changed;

@@ -12,6 +12,8 @@ import { DEFAULT_REMINDERS, type ReminderSettings } from '../core/reminders.ts';
 import { schoolScreen, schoolLabel } from './school.ts';
 import { reportScreen } from './report.ts';
 import { restoreFromFile } from './restore.ts';
+import { appIconSvg } from './appicons.ts';
+import { chooseAppIcon, currentIcon, iconsAvailable } from './iconpick.ts';
 import { html, esc, type App, type Screen } from './app.ts';
 import { type Child, type Settings, type Theme } from '../storage/save.ts';
 import { CATEGORIES } from '../core/rewards.ts';
@@ -128,6 +130,7 @@ function basicHtml(app: App): string {
       <button class="pa-row card limits"><b>${st.limitMinutes} minutes a day</b><small>${st.timeUpMode === 'stop' ? 'Stops when time is up' : 'Keeps playing without coins'} · treats ${paceText(st.treatPace, 'treat')}, big toy ${paceText(st.goalPace, 'goal')}</small></button>
       <button class="pa-row card quiet-row"><b>🌙 Quiet hours</b><small>${esc(quietSummary(st.quiet))}</small></button>
       <button class="pa-row card skills-row"><b>📚 Skills list</b><small>Every skill MN teaches, with an example and how it’s taught</small></button>
+      ${iconsAvailable(app) ? `<button class="pa-row card icon-row"><span class="ic-now" aria-hidden="true">${appIconSvg('sky', 'square', 40)}</span><span><b>🎨 App icon ${plusTag(app)}</b><small>Choose MN’s icon on the home screen</small></span></button>` : ''}
       <div class="card pa-toggles">${toggleRows(st, [T('holiday', 'Holiday mode', 'Rewards don’t melt while you’re away or unwell.')])}</div></section>
     <section class="pa-sec"><h2 class="pa-h">🔊 Sound</h2>
       <div class="card pa-toggles">${toggleRows(st, [T('sound', 'Sound effects', 'Taps, cheers and coins.'), T('voice', 'Read questions aloud', 'Plus reads each question and tip.')])}</div></section>
@@ -304,6 +307,14 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
   on('.limits', 'click', () => void app.show(limitsScreen(false)));
   on('.quiet-row', 'click', () => void app.show(quietSettingsScreen(parentScreen)));
   on('.skills-row', 'click', () => void app.show(skillsIndexScreen(parentScreen)));
+  on('.icon-row', 'click', async () => {
+    if (await needPlus(app, 'icons', parentScreen)) void chooseAppIcon(app);
+  });
+  // The row shows the icon in use now.
+  void currentIcon(app).then((id) => {
+    const now = body.querySelector('.ic-now');
+    if (now) now.innerHTML = appIconSvg(id, 'square', 40);
+  });
   on('.bk-family', 'click', async () => {
     if (await saveFamilyFile(app)) {
       app.toast('Backup file saved. Keep it somewhere safe, like Google Drive.');
