@@ -33,6 +33,7 @@ import { parentScreen } from './ui/parent.ts';
 import { showLesson } from './ui/lesson.ts';
 import { accessState, lockScreen, ownerScreen } from './ui/access.ts';
 import { startCloud } from './ui/cloud.ts';
+import { hasPlus, plusScreen, startPlus } from './ui/membership.ts';
 import { plusVideoScreen } from './ui/plusvideo.ts';
 import * as addsub from './core/teach/addsub.ts';
 import * as muldiv from './core/teach/muldiv.ts';
@@ -48,7 +49,7 @@ async function boot(): Promise<void> {
   const app = new App(document.getElementById('app')!, storage, native);
   if (app.debug) {
     // Screen factories for screenshots and tests.
-    Object.assign(window, { __app: app, __screens: { plusVideoScreen, mapScreen, adventureScreen, resultScreen, showcaseScreen, rewardsScreen, unlockScreen, timesUpScreen, trophyScreen, parentScreen, welcomeScreen, whosPlayingScreen, reportScreen, schoolScreen, faceoffSetupScreen, fightScreen, levelScreen, questScreen, placementScreen, addChildScreen, limitsScreen, meltedScreen, voiceChoiceScreen, lockSetupScreen, ownerScreen } });
+    Object.assign(window, { __app: app, __screens: { plusScreen, plusVideoScreen, mapScreen, adventureScreen, resultScreen, showcaseScreen, rewardsScreen, unlockScreen, timesUpScreen, trophyScreen, parentScreen, welcomeScreen, whosPlayingScreen, reportScreen, schoolScreen, faceoffSetupScreen, fightScreen, levelScreen, questScreen, placementScreen, addChildScreen, limitsScreen, meltedScreen, voiceChoiceScreen, lockSetupScreen, ownerScreen } });
     // Lessons: open one for a skill's question, or for a hand-made question.
     Object.assign(window, {
       __T: { addsub, muldiv, fractions },
@@ -69,7 +70,8 @@ async function boot(): Promise<void> {
   const home = () => (app.save.data.children.length ? whosPlayingScreen : welcomeScreen);
   // Access keys: the app opens only with a key for this phone (or on the owner's phone).
   // Browser test runs (?debug) skip it unless they ask for it with &lock.
-  const gated = !!native || !app.debug || params.has('lock');
+  // The Play Store build has no keys or approvals: anyone may use it (MN Plus is sold there).
+  const gated = !app.storeBuild && (!!native || !app.debug || params.has('lock'));
   let locked = false;
   const gate = async (how: 'fade' | 'liquid' = 'liquid') => {
     const st = gated ? await accessState(app) : null;
@@ -108,6 +110,13 @@ async function boot(): Promise<void> {
     startReminders(app);
   } catch (e) {
     console.error('reminders', e);
+  }
+  // MN Plus (Play Store build): what the Play account owns; school paths need it.
+  app.plus = () => hasPlus(app);
+  try {
+    startPlus(app);
+  } catch (e) {
+    console.error('plus', e);
   }
   // Google sign-in: keep the family's progress backed up and in sync (when signed in).
   try {

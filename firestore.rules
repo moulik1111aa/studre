@@ -6,7 +6,8 @@ rules_version = '2';
 //   requests/{uid}            "please let me in": written by the person, read by the owner
 //   checkins/{uid}            which phones an account uses, and when (read by the owner)
 //   owner/keys                the owner's list of phone-code keys made
-//   families/{uid}            a family's sync document (approved accounts only)
+//   families/{uid}            a family's sync document (any signed-in grown-up, their own only;
+//                             the Play Store build has no approvals)
 //   families/{uid}/children/* one child each: the gzipped, checked backup
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -18,11 +19,6 @@ service cloud.firestore {
     }
     function isOwner() {
       return signedIn() && email() == 'moulik1111a@gmail.com';
-    }
-    function approved() {
-      return signedIn() && (isOwner() || (exists(/databases/$(database)/documents/access/$(email()))
-        && (get(/databases/$(database)/documents/access/$(email())).data.until == 0
-          || get(/databases/$(database)/documents/access/$(email())).data.until > request.time.toMillis())));
     }
     function mine(uid) {
       return signedIn() && request.auth.uid == uid;
@@ -56,13 +52,13 @@ service cloud.firestore {
     match /families/{uid} {
       allow read, delete: if mine(uid);
       allow create, update: if mine(uid) && (
-        (approved() && request.resource.data.keys().hasOnly(['v', 'policy', 'consentAt', 'kids', 'removed', 'resets', 'devices', 'rules', 'rulesAt', 'deletedAt']))
+        request.resource.data.keys().hasOnly(['v', 'policy', 'consentAt', 'kids', 'removed', 'resets', 'devices', 'rules', 'rulesAt', 'deletedAt', 'primary'])
         // "Delete the cloud copy" leaves only this note, even for an account no longer approved.
         || request.resource.data.keys().hasOnly(['v', 'deletedAt']));
 
       match /children/{childId} {
         allow read, delete: if mine(uid);
-        allow create, update: if mine(uid) && approved()
+        allow create, update: if mine(uid)
           && request.resource.data.keys().hasOnly(['v', 'childId', 'updatedAt', 'device', 'data'])
           && request.resource.data.childId == childId
           && request.resource.data.data is bytes

@@ -24,12 +24,14 @@ import { lockSetupScreen } from './grownup.ts';
 import { reelScreen } from './reel.ts';
 import { plusVideoScreen } from './plusvideo.ts';
 import { accessState, lockScreen, niceDay } from './access.ts';
+import { hasPlus, needPlus, plusScreen, plusTag, storeBuild } from './membership.ts';
+import { TRIAL_DAYS, TRIAL_DAYS_SIGNED_IN } from '../core/membership.ts';
 import { freshProgress } from '../core/path.ts';
 import { MENU_ICON, openDrawer } from './drawer.ts';
 import { quietSettingsScreen } from './quiet.ts';
 import { quietSummary } from '../core/quiet.ts';
 import { saveWorksheet } from './worksheet.ts';
-import { account, cloudOn, deleteCloudCopy, lastSync, signIn, signOut, syncNow, syncText } from './cloud.ts';
+import { account, cloudOn, deleteCloudCopy, lastSync, onePhone, otherPhone, signIn, signOut, syncNow, syncText } from './cloud.ts';
 import { googleButton } from './access.ts';
 
 const LOCAL_NOTE = 'Saved on this phone only';
@@ -92,7 +94,14 @@ function cloudCard(app: App): string {
   const who = account(app);
   if (!who)
     return `<div class="card pa-cloud"><p><b>☁️ Back up with Google</b><small>Sign in to keep progress safe and the same on every phone. What’s on this phone now is kept and joins your account. ${esc(LOCAL_NOTE)} right now.</small></p>${googleButton('cl-in')}</div>`;
-  return `<div class="card pa-cloud on"><p><b>☁️ ${esc(who.email)}</b><small class="cl-status">${esc(syncText(lastSync()))}</small></p>
+  // Play Store build without MN Plus: a safe copy from one phone.
+  const other = onePhone(app) ? otherPhone() : null;
+  const note = other
+    ? `<div class="cl-other" role="status"><p>📱 The safe copy now comes from <b>${esc(other)}</b>. Progress made on this phone isn’t backed up.</p><button class="btn ghost small cl-take">Keep the safe copy from this phone</button><p class="fine">With MN Plus, every phone stays in step. <button class="linkish mp-from-cloud">See MN Plus</button></p></div>`
+    : onePhone(app)
+      ? `<p class="fine cl-one">Safe copy from this phone, every few hours. With MN Plus, every phone stays in step all the time. <button class="linkish mp-from-cloud">See MN Plus</button></p>`
+      : '';
+  return `<div class="card pa-cloud on"><p><b>☁️ ${esc(who.email)}</b><small class="cl-status">${esc(other ? 'Not backing up from this phone' : syncText(lastSync()))}</small></p>${note}
     <div class="cl-btns"><button class="btn small cl-sync">Back up now</button><button class="btn ghost small cl-out">Sign out</button></div>
     <button class="linkish warn cl-del">Delete the cloud copy</button></div>`;
 }
@@ -101,7 +110,11 @@ function basicHtml(app: App): string {
   const st = app.save.data.settings;
   // Not signed in yet: a short invite at the top (the full card is under Backup).
   const invite = cloudOn(app) && !account(app) ? `<div class="card pa-invite"><p><b>☁️ Keep progress safe with Google</b><small>Sign in once. Everything on this phone is kept and backed up.</small></p>${googleButton('cl-in')}</div>` : '';
-  return `${invite}
+  // Play Store build: the MN Plus card (what it is, or that it's on).
+  const plus = storeBuild(app)
+    ? `<button class="card mp-card${hasPlus(app) ? ' on' : ''}"><span class="mp-card-i" aria-hidden="true">✨</span><span><b>${hasPlus(app) ? 'MN Plus is on' : 'MN Plus'}</b><small>${hasPlus(app) ? 'Backup on every phone, school paths, the full report and worksheets' : `School paths, the full report, worksheets and sync on every phone. Free for ${account(app) ? TRIAL_DAYS_SIGNED_IN : TRIAL_DAYS} days.`}</small></span><i aria-hidden="true">›</i></button>`
+    : '';
+  return `${invite}${plus}
     <section class="pa-sec"><h2 class="pa-h">👧 Children</h2>
       <div class="pa-kids">${app.save.data.children
         .map((c) => `<div class="pa-kid card">${avatarHtml(c.avatar, 48)}<div class="pk-who"><b>${esc(c.name)}</b><small>${kidLine(c)}</small></div>
@@ -158,7 +171,7 @@ function groupHtml(app: App, group: Group): string {
     device: () => `<div class="card pa-toggles">${toggleRows(st, [T('fx3d', '3D boss fights', 'Turn off if fights feel slow on this phone.'), T('showFps', 'Show frame rate', 'For testing: how smoothly the app runs.')])}</div>`,
     security: () => `
       <button class="pa-row card lock-row"><b>Grown-up lock</b><small>${st.parentPin ? 'Parent PIN' : 'This phone’s screen lock'}</small></button>
-      <button class="pa-row card key-row"><b>Access key</b><small class="key-left">Checking…</small></button>`,
+      ${storeBuild(app) ? '' : '<button class="pa-row card key-row"><b>Access key</b><small class="key-left">Checking…</small></button>'}`,
     help: () => `
       <button class="pa-row card story-row"><b>▶ Watch the one-minute video</b><small>What MN does and how it keeps children going</small></button>
       <button class="pa-row card plus-row"><b>✨ What MN Plus adds</b><small>A short video for grown-ups: backup, school paths, the full report and worksheets</small></button>
@@ -178,6 +191,7 @@ function parentMenu(app: App, go: (p: Page) => void): Promise<void> {
     sub: 'Settings for grown-ups',
     items: [
       { id: 'basic', icon: '⭐', label: 'Everyday settings', note: 'Children, play time, sound, look, backup', current: page === 'basic', onPick: () => go('basic') },
+      ...(storeBuild(app) ? [{ id: 'plus', icon: '✨', label: 'MN Plus', note: hasPlus(app) ? 'On · thank you!' : 'Plans and free trial', current: false, onPick: () => void app.show(plusScreen(parentScreen)) }] : []),
       { heading: 'More settings' },
       ...GROUPS.map((g) => ({ id: g.id, icon: g.icon, label: g.name, note: g.note, current: page === g.id, onPick: () => go(g.id) })),
     ],
@@ -234,7 +248,7 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
   on('.restore-kid', 'click', () => void restoreFromFile(app, () => void app.show(parentScreen)));
   on('.cl-in', 'click', async () => {
     const r = await signIn(app);
-    if (r === 'approved') app.toast('Signed in. Progress is backed up and syncs on every phone.', 5000);
+    if (r === 'approved') app.toast(onePhone(app) ? 'Signed in. A safe copy of your family’s progress is kept with Google.' : 'Signed in. Progress is backed up and syncs on every phone.', 5000);
     else if (r === 'waiting') app.toast('Signed in. Your account is waiting to be approved; backup starts once it is.', 6000);
     else if (r === 'offline') app.toast('No internet connection. Connect and try again.');
     render(false);
@@ -248,8 +262,18 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
       if (st) st.textContent = syncText(r.at);
       app.toast(r.added.length ? `Backed up. ${r.added.map((c) => c.name).join(' and ')} came from the cloud.` : 'Backed up.');
       if (r.added.length || r.dropped.length) render(false);
-    } else app.toast(r.why === 'not-approved' ? 'Your account isn’t approved yet.' : r.message);
+    } else {
+      app.toast(r.why === 'not-approved' ? 'Your account isn’t approved yet.' : r.message);
+      if (r.why === 'other-phone') render(false);
+    }
   });
+  on('.cl-take', 'click', async (b) => {
+    (b as HTMLButtonElement).disabled = true;
+    const r = await syncNow(app, true, true);
+    app.toast(r.ok ? 'Backed up. The safe copy comes from this phone now.' : r.message, 5000);
+    render(false);
+  });
+  on('.mp-from-cloud', 'click', () => void app.show(plusScreen(parentScreen)));
   on('.cl-out', 'click', async () => {
     const viaGoogle = !!app.save.data.access?.google && !app.save.data.access?.key;
     const { result } = app.sheet(`<h2>Sign out of Google?</h2><p>Progress stays on this phone, but stops backing up.${viaGoogle ? ' MN was unlocked with this account, so it will need Google or a key to open next time.' : ''}</p>`, [
@@ -360,6 +384,7 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
       body.querySelector('.key-row')!.addEventListener('click', () => void app.show(lockScreen(st, () => void app.show(parentScreen), { renew: true, back: () => void app.show(parentScreen) })));
     });
   }
+  on('.mp-card', 'click', () => void app.show(plusScreen(parentScreen)));
   on('.plus-row', 'click', () => void app.show(plusVideoScreen(() => void app.show(parentScreen)), 'liquid'));
   on('.story-row', 'click', () => void app.show(reelScreen({ first: false, label: 'Done', done: () => void app.show(parentScreen) }), 'liquid'));
   on('.tips-row', 'click', () => {
@@ -378,11 +403,11 @@ export function childSettingsScreen(c: Child) {
       <div class="scroll pa-body">
         <div class="ks-hero">${avatarHtml(c.avatar, 64)}<b>${esc(c.name)}</b><small>Age ${c.age}</small></div>
         <button class="pa-row card report" data-id="${c.id}"><b>${ICONS.chart} Report</b><small>What ${esc(c.name)} has learned, and where they need help</small></button>
-        <button class="pa-row card sheet-btn"><b>🖨️ Print a worksheet</b><small>${c.age <= 6 ? 12 : 20} questions from where ${esc(c.name)} is now, with answers. Study time without a screen.</small></button>
+        <button class="pa-row card sheet-btn"><b>🖨️ Print a worksheet ${plusTag(app)}</b><small>${c.age <= 6 ? 12 : 20} questions from where ${esc(c.name)} is now, with answers. Study time without a screen.</small></button>
         <h2 class="pa-h">Learning</h2>
         <button class="pa-row card age-btn"><b>🎂 Age</b><small>${c.age} · questions follow the age</small></button>
         <button class="pa-row card level-btn"><b>${CHALLENGE[c.challenge ?? 0].icon} Difficulty</b><small>${CHALLENGE[c.challenge ?? 0].name} · ${CHALLENGE[c.challenge ?? 0].note}</small></button>
-        <button class="pa-row card school-btn"><b>📚 School path</b><small>${c.school?.on ? esc(schoolLabel(c.school)) : 'Off · follow the school syllabus instead of the age path'}</small></button>
+        <button class="pa-row card school-btn"><b>📚 School path ${plusTag(app)}</b><small>${c.school?.on ? (hasPlus(app) ? esc(schoolLabel(c.school)) : `${esc(schoolLabel(c.school))} · paused without MN Plus`) : 'Off · follow the school syllabus instead of the age path'}</small></button>
         <div class="card pa-toggles">
           <label class="toggle-row"><span><b>👪 With a grown-up</b><small>No timers; after a slip they try one like it. On by default for ages 3–6.</small></span><input type="checkbox" role="switch" class="assist-btn" ${c.assisted ? 'checked' : ''}></label>
         </div>
@@ -398,8 +423,12 @@ export function childSettingsScreen(c: Child) {
     el.querySelector('.back-btn')!.addEventListener('click', back);
     el.querySelector('.report')!.addEventListener('click', () => void app.show(reportScreen(c)));
     el.querySelector('.age-btn')!.addEventListener('click', () => void app.show(ageScreen(c)));
-    el.querySelector('.sheet-btn')!.addEventListener('click', () => void saveWorksheet(app, c));
-    el.querySelector('.school-btn')!.addEventListener('click', () => void app.show(schoolScreen(c, here)));
+    el.querySelector('.sheet-btn')!.addEventListener('click', async () => {
+      if (await needPlus(app, 'sheets', here)) void saveWorksheet(app, c);
+    });
+    el.querySelector('.school-btn')!.addEventListener('click', async () => {
+      if (await needPlus(app, 'school', here)) void app.show(schoolScreen(c, here));
+    });
     el.querySelector('.level-btn')!.addEventListener('click', async () => {
       const actions: { label: string; value: number; kind: 'mint' | 'ghost'; back?: boolean }[] = [
         ...CHALLENGE.map((x, i) => ({ label: `${x.icon} ${x.name} — ${x.note}`, value: i, kind: i === (c.challenge ?? 0) ? ('mint' as const) : ('ghost' as const) })),

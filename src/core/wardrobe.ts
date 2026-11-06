@@ -25,6 +25,8 @@ export interface Item {
   level: number;
   /** Raid-only: found in a raid monster's chest, never sold (core/raid.ts). */
   raid?: string;
+  /** A thank-you present, never sold and not shown until given (see giveThanks). */
+  gift?: 'signin';
 }
 
 export const ITEMS: Item[] = [
@@ -67,7 +69,12 @@ export const ITEMS: Item[] = [
   { id: 'stone', slot: 'colour', name: 'Stone', icon: '🪨', price: 0, level: 1, raid: 'rumble' },
   { id: 'jelly', slot: 'colour', name: 'Jelly pink', icon: '🪼', price: 0, level: 1, raid: 'wobbler' },
   { id: 'ghost-trail', slot: 'trail', name: 'Ghost trail', icon: '👻', price: 0, level: 1, raid: 'gus' },
+  // A thank-you from MN when a grown-up first signs in with Google (worn even without Adventure).
+  { id: 'cloud-cape', slot: 'neck', name: 'Cloud cape', icon: '☁️', price: 0, level: 1, gift: 'signin' },
 ];
+
+/** Thank-you presents a child can wear even with Adventure off. */
+const GIFTS = new Set(['cloud-cape']);
 export const itemById = (id: string): Item | undefined => ITEMS.find((i) => i.id === id);
 
 const has = (a: AdventureState | undefined, id: string) => !!(a?.owned?.[id] || a?.gifted?.[id]);
@@ -80,10 +87,36 @@ export const gemBalance = (c: AdvChild): number => Math.max(0, gemsEarned(c) - g
 /** What Plus is wearing (only items the child has; an undo may have taken one back). */
 export function outfitOf(a: AdventureState | undefined): Partial<Record<Slot, string>> {
   const out: Partial<Record<Slot, string>> = {};
-  if (!a?.on) return out;
-  for (const [slot, id] of Object.entries(a.equipped ?? {})) if (has(a, id) && itemById(id)?.slot === slot) out[slot as Slot] = id;
+  if (!a) return out;
+  for (const [slot, id] of Object.entries(a.equipped ?? {})) if (has(a, id) && itemById(id)?.slot === slot && (a.on || GIFTS.has(id))) out[slot as Slot] = id;
   return out;
 }
+
+/** Should the wardrobe list this item? (Presents only once given.) */
+export const listed = (a: AdventureState | undefined, item: Item): boolean => !item.gift || has(a, item.id);
+
+/**
+ * The sign-in thank-you: each child gets the Cloud cape (once), and Plus puts it on if
+ * nothing is worn round the neck. Returns the children who got it now.
+ */
+export function giveThanks<C extends { adventure?: AdventureState }>(kids: C[], now: number): C[] {
+  const got: C[] = [];
+  for (const c of kids) {
+    const a = (c.adventure ??= { on: false, claimed: {}, badges: {}, cheered: {} });
+    if (has(a, 'cloud-cape')) continue;
+    (a.gifted ??= {})['cloud-cape'] = now;
+    const eq = (a.equipped ??= {});
+    eq.neck ??= 'cloud-cape';
+    got.push(c);
+  }
+  return got;
+}
+
+/** A present the child hasn't been shown yet (shown once, on the way to the map). */
+export const unseenGift = (a: AdventureState | undefined): Item | null => {
+  for (const id of GIFTS) if (a?.gifted?.[id] && !a.giftSeen?.includes(id)) return itemById(id) ?? null;
+  return null;
+};
 
 export type TapResult = { kind: 'worn' | 'off' | 'bought' | 'raid'; item: Item } | { kind: 'locked' | 'short'; item: Item; need: number };
 
@@ -105,6 +138,7 @@ export function tapItem(c: AdvChild, id: string, now: number): TapResult | null 
     return { kind: 'worn', item };
   }
   if (item.raid) return { kind: 'raid', item };
+  if (item.gift) return null;
   const level = levelOf(xpOf(c)).level;
   if (level < item.level) return { kind: 'locked', item, need: item.level };
   const balance = gemBalance(c);
@@ -129,7 +163,7 @@ export function surpriseFor(c: AdvChild, now: number): Item | null {
   const n = chestsOpened(a);
   if (n === 0 || n % SURPRISE_EVERY !== 0) return null;
   const level = levelOf(xpOf(c)).level;
-  const next = ITEMS.filter((i) => !i.raid && !has(a, i.id) && i.level <= Math.max(level, 1)).sort((p, q) => p.price - q.price || p.id.localeCompare(q.id))[0];
+  const next = ITEMS.filter((i) => !i.raid && !i.gift && !has(a, i.id) && i.level <= Math.max(level, 1)).sort((p, q) => p.price - q.price || p.id.localeCompare(q.id))[0];
   if (!next) return null;
   (a.gifted ??= {})[next.id] = now;
   return next;

@@ -31,6 +31,8 @@ export interface AdventureState {
   /** The pet (core/pet.ts): when its egg turned up (ms), and the pet once hatched. */
   eggAt?: number;
   pet?: PetState;
+  /** Thank-you presents the child has been shown (core/wardrobe.ts unseenGift). */
+  giftSeen?: string[];
 }
 
 export const freshAdventure = (): AdventureState => ({ on: true, claimed: {}, badges: {}, cheered: {} });
@@ -346,7 +348,7 @@ export function mergeAdventure(x: AdventureState | undefined, y: AdventureState 
     for (const [k, t] of Object.entries(q)) out[k] = out[k] ? Math.min(out[k], t) : t;
     return out;
   };
-  return { on: x.on, claimed: both(x.claimed, y.claimed), badges: both(x.badges, y.badges), cheered: { ...x.cheered }, seenLevel: x.seenLevel, xpSeen: x.xpSeen, owned: both(x.owned ?? {}, y.owned ?? {}), gifted: both(x.gifted ?? {}, y.gifted ?? {}), equipped: { ...(y.equipped ?? {}), ...(x.equipped ?? {}) }, eggAt: Math.min(x.eggAt ?? Infinity, y.eggAt ?? Infinity) < Infinity ? Math.min(x.eggAt ?? Infinity, y.eggAt ?? Infinity) : undefined, pet: mergePet(x.pet, y.pet) };
+  return { on: x.on, claimed: both(x.claimed, y.claimed), badges: both(x.badges, y.badges), cheered: { ...x.cheered }, seenLevel: x.seenLevel, xpSeen: x.xpSeen, owned: both(x.owned ?? {}, y.owned ?? {}), gifted: both(x.gifted ?? {}, y.gifted ?? {}), equipped: { ...(y.equipped ?? {}), ...(x.equipped ?? {}) }, giftSeen: [...new Set([...(x.giftSeen ?? []), ...(y.giftSeen ?? [])])], eggAt: Math.min(x.eggAt ?? Infinity, y.eggAt ?? Infinity) < Infinity ? Math.min(x.eggAt ?? Infinity, y.eggAt ?? Infinity) : undefined, pet: mergePet(x.pet, y.pet) };
 }
 
 /** Days in a row on which every daily quest was finished, up to today. */

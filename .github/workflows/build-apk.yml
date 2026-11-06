@@ -23,6 +23,10 @@ on:
         description: Also run the emulator smoke test (slow)
         type: boolean
         default: false
+      play:
+        description: Also build the Google Play bundle (StudyHard-play.aab, sells MN Plus)
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -126,6 +130,67 @@ jobs:
         run: |
           mkdir -p ci-results && tail -n 400 ci.log > ci-results/build-log.txt 2>/dev/null || true
           bash scripts/push-ci-results.sh "Build ${{ github.run_number }} failed"
+
+  # The Google Play build: the same app with MN_STORE=play (no keys or approvals, MN Plus sold
+  # through Play Billing), as an Android App Bundle signed with the same key (Play's upload
+  # key). Run it from Actions → Build APK → Run workflow with "play" ticked; the bundle is the
+  # "play-aab" artifact of that run, to upload in Play Console. It is never published here.
+  aab:
+    if: github.event_name == 'workflow_dispatch' && inputs.play
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Install
+        run: npm install --no-audit --no-fund
+
+      - name: Build the Play version of the app
+        env:
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          MN_STORE: play
+        run: |
+          npm run typecheck && npm test
+          npm run build
+          node scripts/android.mjs
+
+      - name: Unlock the signing key
+        env:
+          PW: ${{ secrets.STUDYHARD_SIGNING_PASSWORD }}
+        run: |
+          printf '%s' "$PW" | gpg --batch --yes --quiet --pinentry-mode loopback --passphrase-fd 0 \
+            --output "$RUNNER_TEMP/studyhard-release.jks" --decrypt native/android/studyhard-release.jks.gpg
+
+      - name: Build the signed bundle
+        working-directory: android
+        env:
+          STUDYHARD_KEYSTORE: ${{ runner.temp }}/studyhard-release.jks
+          STUDYHARD_KEYSTORE_PASSWORD: ${{ secrets.STUDYHARD_SIGNING_PASSWORD }}
+          STUDYHARD_KEY_ALIAS: studyhard
+          STUDYHARD_KEY_PASSWORD: ${{ secrets.STUDYHARD_SIGNING_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          ./gradlew bundleRelease --no-daemon --stacktrace
+          rm -f "$RUNNER_TEMP/studyhard-release.jks"
+          cp app/build/outputs/bundle/release/app-release.aab ../StudyHard-play.aab
+          ls -l ../StudyHard-play.aab
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: play-aab
+          path: StudyHard-play.aab
+          retention-days: 30
 
   # The emulator test is optional (it can take 15–30 minutes on shared runners): run it from
   # Actions → Build APK → Run workflow with "smoke" ticked. Releases no longer wait for it.

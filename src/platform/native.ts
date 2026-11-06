@@ -33,8 +33,15 @@ export interface StudyHardPlugin {
   /** Sign in with Google (Credential Manager); newer apps only. */
   googleSignIn?(o: { webClientId: string }): Promise<{ idToken?: string; email?: string; name?: string; cancelled?: boolean; error?: string }>;
   googleSignOut?(): Promise<void>;
+  /** MN Plus purchases through Google Play (newer apps only; see platform/billing.ts). */
+  billingProducts?(o: { subs: string[]; inapp: string[] }): Promise<{ ok: boolean; products?: PlayProduct[]; code?: number; message?: string }>;
+  billingBuy?(o: { product: string; offer?: string }): Promise<{ ok: boolean; code?: number; message?: string }>;
+  billingOwned?(): Promise<{ ok: boolean; purchases?: PlayPurchase[] }>;
+  billingAck?(o: { token: string }): Promise<{ ok: boolean; code?: number }>;
+  billingManage?(o: { product?: string }): Promise<void>;
   addListener(event: 'back', cb: () => void): unknown;
   addListener(event: 'launch', cb: (d: { open?: string }) => void): unknown;
+  addListener(event: 'purchases', cb: (d: PurchasesEvent) => void): unknown;
 }
 
 interface SystemBarsPlugin {
@@ -92,4 +99,35 @@ export async function nativeStorage(plugin: StudyHardPlugin, web: StorageAdapter
       quietly(plugin.writeSave({ key, value }));
     },
   };
+}
+
+/** A Google Play product, as Billing.java describes it (prices in the phone's own currency). */
+export interface PlayProduct {
+  id: string;
+  type: 'subs' | 'inapp';
+  name: string;
+  price?: string;
+  micros?: number;
+  currency?: string;
+  offers?: { basePlan: string; offer: string | null; token: string; tags: string[]; phases: { price: string; micros: number; currency: string; period: string; cycles: number }[] }[];
+}
+
+/** Something the Play account owns. `state` 1 = purchased, 2 = pending. */
+export interface PlayPurchase {
+  products: string[];
+  token: string;
+  state: number;
+  acknowledged: boolean;
+  autoRenewing: boolean;
+  time: number;
+  json: string;
+  signature: string;
+}
+
+/** Play's answer after the purchase sheet closes. */
+export interface PurchasesEvent {
+  ok: boolean;
+  code: number;
+  cancelled: boolean;
+  purchases: PlayPurchase[];
 }

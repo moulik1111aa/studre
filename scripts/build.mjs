@@ -119,7 +119,9 @@ export function build() {
     .map((f) => readFileSync(join(src, 'styles', f), 'utf8'))
     .join('\n');
   const appSrc = bundle(join(src, 'main.ts'));
-  const buildInfo = { version: JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version, builtAt: new Date().toISOString(), firebaseKey: firebaseKey() };
+  // MN_STORE=play: the Google Play build (no keys or approvals; MN Plus is sold through Play).
+  const store = process.env.MN_STORE === 'play' ? 'play' : '';
+  const buildInfo = { version: JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version, builtAt: new Date().toISOString(), firebaseKey: firebaseKey(), store };
   const scriptFor = (info) =>
     `window.__BUILD__=${JSON.stringify(info)};\n` + appSrc;
   const js = scriptFor(buildInfo);
@@ -134,7 +136,7 @@ export function build() {
   // Artifact variant: the host wraps the page in its own document skeleton, so it
   // carries only the title, styles, app root and script.
   // The shared preview link is a playtest build: it also offers preview tools.
-  const previewJs = scriptFor({ ...buildInfo, firebaseKey: '', preview: true });
+  const previewJs = scriptFor({ ...buildInfo, firebaseKey: '', store: '', preview: true });
   const artifact =
     `<title>MN · Mission Next</title>\n<meta name="theme-color" content="#0F1530">\n<style>${fontCss}</style>\n<style>${css}</style>\n` +
     `<div id="app" aria-live="polite"></div>\n${threeTag()}\n${audioTag()}\n<script>${scriptSafe(previewJs)}</script>\n`;

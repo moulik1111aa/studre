@@ -18,6 +18,9 @@ import { voiceChoiceScreen, useVoice } from './voicechoice.ts';
 import { belowAge } from '../core/placement.ts';
 import { AREAS } from '../core/areas/index.ts';
 import { quietNow, quietScreen } from './quiet.ts';
+import { esc } from './app.ts';
+import { outfitOf, unseenGift } from '../core/wardrobe.ts';
+import { plusSvg } from './plus.ts';
 
 export function enterChild(app: App, child: Child, how: 'fade' | 'liquid' = 'fade', checkMelt = true): void {
   app.save.update((d) => {
@@ -45,7 +48,7 @@ export function enterChild(app: App, child: Child, how: 'fade' | 'liquid' = 'fad
   if (!w.treat.rewardId || !w.goal.rewardId) return void app.show(rewardsScreen(child, !w.treat.rewardId ? 'treat' : 'goal'), how);
   // First time: the child picks who reads to them, then Plus shows them the map.
   if (!child.voicePicked) return void app.show(voiceChoiceScreen(child, () => void app.show(mapScreen(child), 'liquid')), how);
-  void app.show(mapScreen(child), how);
+  void app.show(mapScreen(child), how).then(() => giftMoment(app, child));
 }
 
 export function goHome(app: App): void {
@@ -76,4 +79,19 @@ export function playLevel(app: App, child: Child, level: Level, harder = false):
     s.colors = worldColors(level.stage);
     return s;
   }, 'liquid');
+}
+
+/** A thank-you present (the Cloud cape after a grown-up signs in), shown to the child once. */
+function giftMoment(app: App, child: Child): void {
+  const item = unseenGift(child.adventure);
+  // Not over Plus's first map tips.
+  if (!item || !child.toured || app.screen?.el.querySelector('.tour, .tip-bubble')) return;
+  app.save.update(() => (child.adventure!.giftSeen = [...(child.adventure!.giftSeen ?? []), item.id]));
+  app.sfx.coin(3);
+  const outfit = { ...outfitOf(child.adventure), neck: item.id };
+  void app.sheet(
+    `<div class="gift-moment"><div class="gm-plus" aria-hidden="true">${plusSvg({ cls: 'alive', noShadow: true, outfit })}</div><h2>A present for Plus!</h2><p>Your grown-up is keeping your stars safe, so Plus got a <b>${esc(item.name)}</b>.</p></div>`,
+    [{ label: 'Yay!', value: true, kind: 'mint' }],
+    'A present for Plus',
+  ).result;
 }

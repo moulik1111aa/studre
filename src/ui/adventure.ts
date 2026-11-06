@@ -36,7 +36,7 @@ import {
 } from '../core/adventure.ts';
 import { plusSvg, plusFaceSvg, type Outfit } from './plus.ts';
 import { ADV_TIPS_AFTER, GEMS, chestsOpened } from '../core/adventure.ts';
-import { ITEMS, SLOTS, SURPRISE_EVERY, chestsToSurprise, gemBalance, itemById, outfitOf, ownsItem, raidItem, surpriseFor, tapItem, type Item } from '../core/wardrobe.ts';
+import { ITEMS, listed, SLOTS, SURPRISE_EVERY, chestsToSurprise, gemBalance, itemById, outfitOf, ownsItem, raidItem, surpriseFor, tapItem, type Item } from '../core/wardrobe.ts';
 import { JarBar } from './jars.ts';
 import { HIT, raidFor, tauntFor, type RaidState } from '../core/raid.ts';
 import { runTips, type Tip } from './tour.ts';
@@ -372,7 +372,7 @@ function wardrobeTab(c: Child): string {
         <p class="wd-how">Gems come from new levels (+${GEMS.level}), chests (+${GEMS.daily}, weekly +${GEMS.weekly}) and badges. They are only for Plus’s wardrobe.</p>
       </div>
     </div>
-    ${SLOTS.map((slot) => `<h3 class="pa-h">${slot.name}</h3><div class="wd-grid">${ITEMS.filter((i) => i.slot === slot.id).map((i) => itemTile(c, i, level, balance)).join('')}</div>`).join('')}
+    ${SLOTS.map((slot) => `<h3 class="pa-h">${slot.name}</h3><div class="wd-grid">${ITEMS.filter((i) => i.slot === slot.id && listed(c.adventure, i)).map((i) => itemTile(c, i, level, balance)).join('')}</div>`).join('')}
     <p class="fine wd-note">Tap an item to buy it and put it on. Tap again to take it off. Every fifth chest has a surprise item inside, and raid monsters guard their own.</p>`;
 }
 

@@ -10,6 +10,8 @@ import { familyRules, freshMemo, planSync, POLICY_VERSION, type SyncMemo } from 
 import { confirmGate, gateState, seen, type GateState } from '../core/gate.ts';
 import { myPhone } from './access.ts';
 import type { Child } from '../storage/save.ts';
+import { freeSyncDue } from '../core/membership.ts';
+import { giveThanks } from '../core/wardrobe.ts';
 
 const SESSION_KEY = 'studyhard.cloud.session';
 const MEMO_KEY = 'studyhard.cloud.memo';
@@ -91,6 +93,8 @@ export async function checkAccess(app: App): Promise<AccessAnswer> {
   const b = backend(app);
   const s = b?.session;
   if (!b || !s) return 'signed-out';
+  // The Play Store build has no approvals: every signed-in grown-up may back up.
+  if (app.store) return 'approved';
   try {
     const e = await b.myAccess();
     const now = Date.now();
@@ -165,7 +169,13 @@ export async function signIn(app: App): Promise<SignInResult> {
     return 'error';
   }
   const a = await checkAccess(app);
-  if (a === 'approved') await syncNow(app, true);
+  if (a === 'approved') {
+    await syncNow(app, true);
+    // A thank-you for the children: Plus gets a Cloud cape (shown to each child once).
+    let got: Child[] = [];
+    app.save.update((d) => (got = giveThanks(d.children, Date.now())));
+    if (got.length) setTimeout(() => app.toast(`Thank you! ${got.length === 1 ? got[0].name : 'Each child'} will find a present for Plus next time they play.`, 5000), 5200);
+  }
   return a;
 }
 
@@ -177,6 +187,7 @@ export async function signOut(app: App): Promise<void> {
     ls.del(SESSION_KEY);
   }
   ls.del(MEMO_KEY);
+  ls.del(OTHER_KEY);
   await app.native?.googleSignOut?.().catch(() => undefined);
   app.save.update((d) => {
     if (d.access) delete d.access.google;
@@ -198,7 +209,17 @@ export async function deleteCloudCopy(app: App): Promise<boolean> {
 
 // ── syncing ─────────────────────────────────────────────────────────────────
 
-export type SyncOutcome = { ok: true; added: Child[]; dropped: string[]; sent: number; at: number } | { ok: false; why: 'signed-out' | 'not-approved' | 'offline' | 'busy' | 'error'; message: string };
+export type SyncOutcome = { ok: true; added: Child[]; dropped: string[]; sent: number; at: number } | { ok: false; why: 'signed-out' | 'not-approved' | 'offline' | 'busy' | 'error' | 'other-phone'; message: string };
+
+/**
+ * Without MN Plus (Play Store build) the backup is a safe copy from one phone: the phone
+ * that last backed up. Another phone signing in takes it over (bringing the family's
+ * progress with it); the first phone then stops until a grown-up takes it back.
+ */
+export const onePhone = (app: App): boolean => app.store && !app.plus();
+const OTHER_KEY = 'studyhard.cloud.other';
+/** The other phone that keeps the safe copy now (one-phone backup), if any. */
+export const otherPhone = (): string | null => ls.get(OTHER_KEY);
 
 let running: Promise<SyncOutcome> | null = null;
 let saves = 0;
@@ -220,16 +241,16 @@ export function noteReplaced(id: string): void {
 
 export const lastSync = (): number => memo().lastSync;
 
-/** Back up and sync now. Only one at a time. */
-export function syncNow(app: App, asking = false): Promise<SyncOutcome> {
-  running ??= doSync(app, asking).finally(() => (running = null));
+/** Back up and sync now. Only one at a time. `takeOver`: this phone keeps the safe copy from now on. */
+export function syncNow(app: App, asking = false, takeOver = false): Promise<SyncOutcome> {
+  running ??= doSync(app, asking, takeOver).finally(() => (running = null));
   return running;
 }
 
-async function doSync(app: App, asking: boolean): Promise<SyncOutcome> {
+async function doSync(app: App, asking: boolean, takeOver: boolean): Promise<SyncOutcome> {
   const b = backend(app);
   if (!b?.session) return { ok: false, why: 'signed-out', message: 'Not signed in.' };
-  if (!googleGate(app).ok && !isOwnerAccount(app)) {
+  if (!app.store && !googleGate(app).ok && !isOwnerAccount(app)) {
     const a = await checkAccess(app);
     if (a !== 'approved') return { ok: false, why: a === 'offline' ? 'offline' : 'not-approved', message: a === 'waiting' ? 'Waiting for approval.' : 'Couldn’t check the account.' };
   }
@@ -246,6 +267,12 @@ async function doSync(app: App, asking: boolean): Promise<SyncOutcome> {
         return { ok: false, why: 'signed-out', message: 'The cloud copy was deleted on another phone, so this phone signed out.' };
       }
       family = null;
+    }
+    // One-phone backup: another phone took over the safe copy since this one last backed up.
+    if (onePhone(app) && family?.primary && family.primary !== d.id && m.lastSync && !takeOver) {
+      const label = family.devices[family.primary]?.label ?? 'another phone';
+      ls.set(OTHER_KEY, label);
+      return { ok: false, why: 'other-phone', message: `The safe copy now comes from ${label}.` };
     }
     const r = await planSync({ local: app.save.data.children, rules: familyRules(app.save.data.settings), memo: m, family, fetchChild: (id) => b.getChild(id), device: d.id, label: d.label, now, combineWith: asking ? (here, there) => askCombine(app, here, there) : undefined });
     // Something was saved while we worked (a level finished): try again in a moment.
@@ -278,6 +305,7 @@ async function doSync(app: App, asking: boolean): Promise<SyncOutcome> {
     });
     applying = false;
     saveMemo(r.memo);
+    ls.del(OTHER_KEY);
     return { ok: true, added: r.children.filter((c) => r.added.includes(c.id)), dropped: r.dropped, sent: r.put.length, at: now };
   } catch (e) {
     applying = false;
@@ -312,6 +340,8 @@ export function startCloud(app: App): void {
     clearTimeout(timer);
     timer = window.setTimeout(() => {
       if (!account(app)) return;
+      // One-phone backup: a safe copy every few hours (and never from a phone that handed it on).
+      if (onePhone(app) && (otherPhone() || !freeSyncDue(lastSync(), Date.now(), false))) return;
       void syncNow(app).then((r) => {
         if (!r.ok && r.why === 'busy') later(20_000);
       });

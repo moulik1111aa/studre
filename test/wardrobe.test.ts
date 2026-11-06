@@ -84,7 +84,7 @@ test('every fifth chest has a surprise: the cheapest item not owned yet, free (n
   assert.equal(surpriseFor(c, 3), null);
   a.claimed['d:2026-10-24'] = 3;
   const gift = surpriseFor(c, 3)!;
-  const cheapest = [...ITEMS].filter((i) => i.level <= 1 && !i.raid).sort((p, q) => p.price - q.price)[0];
+  const cheapest = [...ITEMS].filter((i) => i.level <= 1 && !i.raid && !i.gift).sort((p, q) => p.price - q.price)[0];
   assert.equal(gift.id, cheapest.id);
   assert.ok(a.gifted![gift.id]);
   // Surprise items cost nothing; raid items can't be bought.
@@ -92,4 +92,25 @@ test('every fifth chest has a surprise: the cheapest item not owned yet, free (n
   assert.equal(tapItem(c, gift.id, 4)!.kind, 'worn');
   c.stats.correct = 500;
   assert.equal(tapItem(c, 'dino-spikes', 5)!.kind, 'raid');
+});
+
+test('the sign-in thank-you: a Cloud cape for each child once, worn even without Adventure, never sold', async () => {
+  const { giveThanks, unseenGift, listed } = await import('../src/core/wardrobe.ts');
+  const a = newChild('Riya', 8, 0, '2026-11-06');
+  const b = newChild('Kabir', 5, 1, '2026-11-06');
+  b.adventure = { ...freshAdventure(), equipped: { neck: 'scarf' }, owned: { scarf: 1 } };
+  const cape = itemById('cloud-cape')!;
+  assert.equal(listed(a.adventure, cape), false, 'hidden until given');
+  assert.equal(giveThanks([a, b], 10).length, 2);
+  assert.equal(giveThanks([a, b], 11).length, 0, 'only once');
+  assert.equal(a.adventure!.on, false, 'Adventure stays off');
+  assert.equal(outfitOf(a.adventure).neck, 'cloud-cape', 'worn without Adventure');
+  assert.equal(outfitOf(b.adventure).neck, 'scarf', 'what they wear stays on');
+  assert.equal(listed(a.adventure, cape), true);
+  assert.equal(unseenGift(a.adventure)?.id, 'cloud-cape');
+  a.adventure!.giftSeen = ['cloud-cape'];
+  assert.equal(unseenGift(a.adventure), null);
+  const c = newChild('Zoe', 9, 2, '2026-11-06');
+  c.adventure = freshAdventure();
+  assert.equal(tapItem(c, 'cloud-cape', 1), null, 'not for sale');
 });

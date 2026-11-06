@@ -1,0 +1,76 @@
+/* MN Plus (ui/membership.ts): the Plus page, the Parent area card, Plus tags, the blurred
+   report tabs, the one-phone backup note, and the children's thank-you present. */
+
+.mp-tag{display:inline-block;vertical-align:2px;margin-left:6px;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:900;letter-spacing:.02em;color:#2A1650;background:linear-gradient(180deg,#FFE48A,var(--sun));box-shadow:inset 0 -2px 0 rgba(0,0,0,.12)}
+
+/* Parent area card */
+.mp-card{appearance:none;border:0;cursor:pointer;color:var(--ink);display:flex;align-items:center;gap:12px;padding:14px 16px;text-align:left;margin-bottom:4px;position:relative;overflow:hidden;
+  background:linear-gradient(120deg,rgba(168,121,255,.38),rgba(255,122,168,.26) 60%,rgba(255,210,90,.24)),linear-gradient(180deg,var(--card-2),var(--card))}
+.mp-card > span:nth-child(2){flex:1;display:flex;flex-direction:column;gap:2px}
+.mp-card small{color:var(--ink-soft);font-weight:700;font-size:14px}
+.mp-card i{font-style:normal;font-size:26px;color:var(--ink-faint)}
+.mp-card-i{font-size:28px}
+.mp-card.on{background:linear-gradient(180deg,var(--card-2),var(--card));box-shadow:var(--shadow),inset 0 0 0 2px rgba(67,224,168,.45)}
+
+/* The Plus page */
+.mplus .mp-body{display:flex;flex-direction:column;gap:14px;padding-bottom:18px}
+.mp-hero{display:grid;grid-template-columns:84px 1fr;align-items:center;gap:4px 14px;padding:6px 4px 0}
+.mp-hero .mp-logo{grid-row:span 2;width:84px;height:84px}
+.mp-hero .mp-logo svg{width:100%;height:100%}
+.mp-hero h2{margin:0;font-size:26px;line-height:1.1;align-self:end}
+.mp-hero p{margin:0;color:var(--ink-soft);font-weight:700;font-size:15px;align-self:start}
+.mp-list{list-style:none;margin:0;padding:6px 16px}
+.mp-f{display:flex;gap:12px;padding:12px 0;align-items:flex-start}
+.mp-f + .mp-f{border-top:1px solid var(--line)}
+.mp-fi{font-size:24px;line-height:1.2;flex:none;width:30px;text-align:center}
+.mp-f div{display:flex;flex-direction:column;gap:2px}
+.mp-f small{color:var(--ink-soft);font-weight:700;font-size:14px}
+.mp-f .mp-free{color:var(--ink-faint);font-weight:700;font-size:13px}
+.mp-video{margin:0}
+
+.mp-plans{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px}
+.mp-plan{appearance:none;cursor:pointer;position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:20px 6px 12px;border-radius:var(--r-md);color:var(--ink);font:inherit;text-align:center;
+  background:var(--surface,var(--card));border:0;box-shadow:inset 0 0 0 var(--stroke-w,2px) var(--stroke,var(--hi-15)),var(--surface-shadow,none);transition:transform .2s var(--ease-spring),box-shadow .2s}
+.mp-plan small{font-size:13px;font-weight:800;color:var(--ink-soft)}
+.mp-plan b{font-size:24px;line-height:1.1;font-weight:900}
+.mp-plan span{font-size:13px;font-weight:700;color:var(--ink-soft)}
+.mp-plan i{font-style:normal;margin-top:6px;font-size:12px;font-weight:800;color:var(--good,var(--mint))}
+.mp-plan em{position:absolute;top:-10px;left:50%;transform:translateX(-50%);white-space:nowrap;font-style:normal;font-size:11px;font-weight:900;padding:3px 8px;border-radius:999px;color:#2A1650;background:#FFC531}
+.mp-plan.on{transform:translateY(-3px);background:var(--surface-2,var(--card-2));box-shadow:inset 0 0 0 3px var(--accent,var(--mint)),0 5px 0 var(--accent,var(--mint))}
+.mp-plan.on i{color:var(--good-ink,var(--mint))}
+.mp-signin{display:flex;flex-direction:column;gap:10px;padding:14px 16px}
+.mp-signin p{margin:0;display:flex;flex-direction:column;gap:2px}
+.mp-signin small{color:var(--ink-soft);font-weight:700;font-size:14px}
+.mp-fine{margin:0;font-size:13px;line-height:1.45;color:var(--ink-faint);font-weight:700;text-align:center;padding:0 6px}
+.mp-note{margin:0;padding:12px 16px;font-size:15px;font-weight:700}
+.mp-restore{align-self:center}
+.mp-foot .btn{width:100%}
+
+/* "Part of MN Plus" sheet */
+.mp-sheet{text-align:center}
+.mp-sheet-i{font-size:44px;display:block}
+.mp-sheet h2{margin:6px 0 4px}
+
+/* Report tabs without Plus: the child's own report, blurred, with the way in on top */
+.mp-lock{position:relative;min-height:340px}
+.mp-lock-peek{filter:blur(7px) saturate(.8);opacity:.75;pointer-events:none;user-select:none;max-height:520px;overflow:hidden;-webkit-mask-image:linear-gradient(180deg,#000 55%,transparent);mask-image:linear-gradient(180deg,#000 55%,transparent)}
+.mp-lock-card{position:absolute;left:8px;right:8px;top:48px;padding:18px;display:flex;flex-direction:column;gap:8px;align-items:flex-start;box-shadow:var(--shadow),inset 0 0 0 2px rgba(255,210,90,.5)}
+.mp-lock-card p{margin:0;font-size:15px;font-weight:700;color:var(--ink-soft)}
+
+/* One-phone backup note (Parent area → Backup) */
+.cl-other{display:flex;flex-direction:column;gap:8px;margin:8px 0;padding:12px;border-radius:var(--r-sm);background:var(--hi-08);box-shadow:inset 0 0 0 2px rgba(255,210,90,.35)}
+.cl-other p{margin:0;font-size:15px;font-weight:700}
+.cl-other .fine,.cl-one{font-size:13px}
+.cl-one{margin:6px 0}
+.cl-other .linkish,.cl-one .linkish{font-size:13px;padding:0;min-height:0;display:inline}
+
+/* The children's thank-you present */
+.gift-moment{text-align:center}
+.gm-plus{width:150px;height:150px;margin:0 auto 4px}
+.gm-plus svg{width:100%;height:100%}
+.gift-moment h2{margin:4px 0}
+
+/* Owner area */
+.mp-preview .toggle-row{padding:10px 0}
+.mplus.owned .mp-free{display:none}
+html[data-theme="playground"] .mp-card:not(.on){background:linear-gradient(110deg,#FFF3C4,#FFFFFF 70%)}

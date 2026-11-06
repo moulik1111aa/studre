@@ -53,10 +53,27 @@ export class App {
   get path(): Level[] {
     return this.pathFor(this.child);
   }
-  /** A child's path: their school path when one is on, else the age path. */
+  /** Does this phone have MN Plus (always outside the Play build)? Set at boot by ui/membership.ts. */
+  plus: () => boolean = () => true;
+  /** The Play Store build: no keys or approvals, and MN Plus is sold. */
+  get store(): boolean {
+    if (this.storeBuild) return true;
+    if (this.debug && new URLSearchParams(location.search).has('store')) return true;
+    // The owner's "Play Store preview" (owner area): this phone acts like the Play build, with test purchases.
+    try {
+      return localStorage.getItem('studyhard.storepreview') === '1';
+    } catch {
+      return false;
+    }
+  }
+  /** Really the Play Store build (not a preview). */
+  get storeBuild(): boolean {
+    return (globalThis as { __BUILD__?: { store?: string } }).__BUILD__?.store === 'play';
+  }
+  /** A child's path: their school path when one is on (and available), else the age path. */
   pathFor(child: Child | undefined): Level[] {
     const sp = child?.school;
-    if (!sp?.on || !sp.skills.length) return this.agePath;
+    if (!sp?.on || !sp.skills.length || !this.plus()) return this.agePath;
     const key = `${sp.board}-${sp.grade}:${sp.skills.join(',')}`;
     if (this.bundleCache?.key !== key) this.bundleCache = { key, path: buildBundlePath(AREAS[0], sp.skills, `${sp.board}-${sp.grade}`) };
     return this.bundleCache.path;

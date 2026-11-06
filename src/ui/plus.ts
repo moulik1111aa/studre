@@ -94,6 +94,8 @@ const WING = `<path d="M74 54 C56 12 24 -4 -6 -10 C4 16 8 32 16 50 C28 42 42 44 
 const BACKS: Record<string, string> = {
   'dragon-wings': `${WING}<g transform="translate(200 0) scale(-1 1)">${WING}</g>`,
   cape: `<path d="M70 58 C50 90 40 150 32 192 Q100 206 168 192 C160 150 150 90 130 58 Z" fill="#E84A5F" stroke="${I}" stroke-width="5" stroke-linejoin="round"/>`,
+  // The sign-in thank-you: a sky cape with a cloud hem.
+  'cloud-cape': `<path d="M70 58 C50 90 40 150 32 190 Q100 204 168 190 C160 150 150 90 130 58 Z" fill="#5BB8FF" stroke="${I}" stroke-width="5" stroke-linejoin="round"/>${[[42, 184, 12], [66, 190, 13], [100, 192, 14], [134, 190, 13], [158, 184, 12]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#FFFFFF" stroke="${I}" stroke-width="4"/>`).join('')}<path d="${[[52, 120], [148, 132]].map(([x, y]) => `M${x - 5} ${y} h10 M${x} ${y - 5} v10`).join(' ')}" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>`,
 };
 
 function body(o: PlusOptions, u: number): string {

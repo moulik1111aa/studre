@@ -351,6 +351,62 @@ public class StudyHardPlugin extends Plugin {
         });
     }
 
+    // ── MN Plus purchases (Billing.java) ─────────────────────────────────────
+
+    private Billing billing;
+
+    private Billing billing() {
+        if (billing == null) billing = new Billing(getContext(), (r) -> notifyListeners("purchases", r));
+        return billing;
+    }
+
+    private static java.util.List<String> strings(com.getcapacitor.JSArray a) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        if (a == null) return out;
+        try {
+            for (int k = 0; k < a.length(); k++) out.add(a.getString(k));
+        } catch (Exception ignored) {
+        }
+        return out;
+    }
+
+    /** The MN Plus products and their offers, with prices from Play. */
+    @PluginMethod
+    public void billingProducts(PluginCall call) {
+        billing().products(strings(call.getArray("subs")), strings(call.getArray("inapp")), call::resolve);
+    }
+
+    /** Open Play's purchase sheet for a product (and, for a subscription, one of its offers). */
+    @PluginMethod
+    public void billingBuy(PluginCall call) {
+        billing().buy(getActivity(), call.getString("product", ""), call.getString("offer", ""), call::resolve);
+    }
+
+    /** What this Play account already owns. */
+    @PluginMethod
+    public void billingOwned(PluginCall call) {
+        billing().owned(call::resolve);
+    }
+
+    /** Confirm a new purchase to Play. */
+    @PluginMethod
+    public void billingAck(PluginCall call) {
+        billing().acknowledge(call.getString("token", ""), call::resolve);
+    }
+
+    /** Play's page for managing (or cancelling) the subscription. */
+    @PluginMethod
+    public void billingManage(PluginCall call) {
+        String sku = call.getString("product", "");
+        Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/account/subscriptions?package=" + getContext().getPackageName() + (sku.isEmpty() ? "" : "&sku=" + sku)));
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            getContext().startActivity(i);
+        } catch (Exception ignored) {
+        }
+        call.resolve();
+    }
+
     /** Forget the chosen Google account on this phone (the next sign-in shows the account sheet). */
     @PluginMethod
     public void googleSignOut(PluginCall call) {

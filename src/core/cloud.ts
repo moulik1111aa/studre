@@ -120,6 +120,8 @@ export interface FamilyDoc {
   devices: Record<string, { label: string; at: number }>;
   rules: FamilyRules;
   rulesAt: number;
+  /** The phone that last synced. Without MN Plus (Play build) only this phone keeps the safe copy. */
+  primary?: string;
   /** A grown-up deleted the cloud copy then (only this is left; phones that synced before sign out). */
   deletedAt?: number;
 }
@@ -320,6 +322,7 @@ export async function planSync(p: SyncInput): Promise<SyncResult> {
 
   memo.force = {};
   fam.devices[p.device] = { label: p.label, at: p.now };
+  fam.primary = p.device;
   memo.lastSync = p.now;
   return { children, added, dropped, put, del, resets, family: fam, rules, memo, skipped, renamed };
 }

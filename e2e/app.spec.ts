@@ -1393,3 +1393,45 @@ test('MN Plus video: from the Parent area Help page, plays through its 8 stops t
   await page.click('.rl-go');
   await expect(page.locator('.screen.parent')).toBeVisible();
 });
+
+test('MN Plus (Play Store build): paid features say so, the trial and plans come from Play, buying turns Plus on', async ({ page }) => {
+  type W = { __app: { show(m: unknown): void; save: { data: { children: unknown[] } } }; __screens: { parentScreen: unknown; reportScreen(c: unknown, t: string): unknown } };
+  await page.goto('/?debug&store&cloudmock&demo=%405');
+  await expect(page.locator('.map')).toBeVisible();
+  // The full report is blurred, with the way in.
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.reportScreen(w.__app.save.data.children[0], 'skills')); });
+  await expect(page.locator('.mp-lock-card')).toContainText('Part of MN Plus');
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
+  // A worksheet asks for Plus.
+  await page.locator('.kid-set').first().click();
+  await expect(page.locator('.sheet-btn .mp-tag')).toHaveText('Plus');
+  await page.click('.sheet-btn');
+  await expect(page.locator('.mp-sheet h2')).toHaveText('Worksheets');
+  await page.click('.sheet .btn:has-text("See MN Plus")');
+  // The Plus page: Play's prices, the yearly plan first, a 7-day trial (14 once signed in).
+  await expect(page.locator('.mplus')).toBeVisible();
+  await expect(page.locator('.mp-loading')).toHaveCount(0);
+  await expect(page.locator('.mp-plan[data-plan="monthly"] b')).toHaveText('₹150');
+  await expect(page.locator('.mp-plan[data-plan="yearly"]')).toHaveAttribute('aria-checked', 'true');
+  await expect(page.locator('.mp-plan[data-plan="yearly"] i')).toHaveText('₹80 a month');
+  await expect(page.locator('.mp-plan[data-plan="lifetime"] b')).toHaveText('₹1,989');
+  await expect(page.locator('.mp-buy')).toHaveText('Start 7 days free');
+  await page.click('.mp-g');
+  await page.click('.sheet .btn:has-text("I agree")');
+  await expect(page.locator('.mp-buy')).toHaveText('Start 14 days free');
+  await expect(page.locator('.mp-signin')).toHaveCount(0);
+  await page.click('.mp-plan[data-plan="lifetime"]');
+  await expect(page.locator('.mp-buy')).toHaveText('Buy for ₹1,989');
+  await page.click('.mp-plan[data-plan="monthly"]');
+  await page.click('.mp-buy');
+  await expect(page.locator('.mp-hero h2')).toHaveText('MN Plus is on');
+  const bought = await page.evaluate(() => (window as unknown as { __mockBilling: { bought: { product: string; offer?: string }[] } }).__mockBilling.bought);
+  expect(bought).toEqual([{ product: 'mn_plus', offer: 'monthly:trial14' }]);
+  // Now the report is all there.
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.reportScreen(w.__app.save.data.children[0], 'skills')); });
+  await expect(page.locator('.rp-body')).toBeVisible();
+  await expect(page.locator('.mp-lock')).toHaveCount(0);
+  // The children got the sign-in thank-you.
+  const cape = await page.evaluate(() => (window as unknown as { __app: { save: { data: { children: { adventure?: { gifted?: Record<string, number> } }[] } } } }).__app.save.data.children[0].adventure?.gifted?.['cloud-cape']);
+  expect(cape).toBeTruthy();
+});
