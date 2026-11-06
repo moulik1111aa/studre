@@ -1,6 +1,7 @@
 // The home map: one world per stage, a winding path of skill nodes (each with its 5 levels),
 // minion and boss stops, the treat bar on top and a big Play button for the next level.
 
+import { catchUp, ROAD_VERSION } from '../core/catchup.ts';
 import { schoolLabel } from './school.ts';
 import { html, esc, type App, type Screen } from './app.ts';
 import type { Child } from '../storage/save.ts';
@@ -54,6 +55,7 @@ function nodesFor(path: Level[]): Node[] {
 
 export function mapScreen(child: Child) {
   return (app: App): Screen => {
+    if ((child.roadV ?? 1) < ROAD_VERSION) app.save.update(() => catchUp(child, app.agePath));
     const path = app.path;
     const p = child.progress;
     const quests = questsFor(path);

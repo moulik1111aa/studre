@@ -420,14 +420,19 @@ test('a wrong answer opens a step-by-step lesson, then the level goes on', async
   await expect(page.locator('.lesson')).toBeVisible({ timeout: 5000 });
   await expect(page.locator('.ls-ans')).toContainText(ans);
   await expect(page.locator('.ls-board')).toBeVisible();
-  const steps = await page.locator('.ls-step').count();
+  const steps = await page.locator('.ls-dot').count();
   expect(steps).toBeGreaterThanOrEqual(3);
   for (let i = 1; i < steps; i++) {
     await page.waitForTimeout(700);
+    // A "Your turn" step: tap choices until one is right (two misses show the answer).
+    for (let t = 0; t < 3 && (await page.locator('.ls-next').isDisabled()); t++) {
+      await page.locator('.ls-opt:not(.wrong):not(.right)').first().click();
+      await page.waitForTimeout(200);
+    }
     await page.click('.ls-next');
   }
-  await expect(page.locator('.ls-step.end')).toBeVisible();
-  await expect(page.locator('.ls-step.end')).toContainText(ans);
+  await expect(page.locator('.ls-say.end')).toBeVisible();
+  await expect(page.locator('.ls-now')).toContainText(ans);
   await expect(page.locator('.ls-next')).toHaveText('Got it!');
   await page.waitForTimeout(700);
   await page.click('.ls-next');
@@ -435,6 +440,27 @@ test('a wrong answer opens a step-by-step lesson, then the level goes on', async
   // The level carries on with the next question.
   await expect(page.locator('.dots i.miss')).toHaveCount(1);
   await expect(page.locator('.qcard[data-answer]')).toBeVisible();
+});
+
+test('another way: the lesson switches method, and the way that helped is remembered', async ({ page }) => {
+  await page.goto('/?debug&demo=%405&noloader&fast');
+  await expect(page.locator('.map')).toBeVisible();
+  await page.evaluate(() => (window as unknown as { __lesson: (id: string, seed: string, given: string) => void }).__lesson('s2.add20b', 'shot', '15'));
+  await expect(page.locator('.lesson')).toBeVisible();
+  const first = (await page.locator('.ls-way').textContent()) ?? '';
+  await page.click('.ls-next');
+  await expect(page.locator('.ls-alt')).toBeVisible();
+  await page.click('.ls-alt');
+  const second = (await page.locator('.ls-way').textContent()) ?? '';
+  expect(second).not.toBe(first);
+  for (let i = 0; i < 12 && (await page.locator('.ls-next').textContent()) !== 'Got it!'; i++) {
+    for (let t = 0; t < 3 && (await page.locator('.ls-next').isDisabled()); t++) await page.locator('.ls-opt:not(.wrong):not(.right)').first().click();
+    await page.click('.ls-next');
+  }
+  await page.click('.ls-next');
+  await expect(page.locator('.lesson')).toHaveCount(0);
+  const methods = await page.evaluate(() => JSON.parse(localStorage.getItem('studyhard.save')!).children[0].methods);
+  expect(methods.add).toBe(second.replace('Way: ', ''));
 });
 
 test('practice together: a slip brings a twin question, and only first tries score', async ({ page }) => {
@@ -548,10 +574,10 @@ test('lessons can be switched off by a parent, and close with ×', async ({ page
 });
 
 test('every skill shows its lesson without errors', async ({ page }) => {
-  test.setTimeout(300_000);
+  test.setTimeout(400_000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto('/?debug&demo=%400');
+  await page.goto('/?debug&demo=%400&fast');
   await expect(page.locator('.map')).toBeVisible();
   const ids = await page.evaluate(() => (window as unknown as { __app: { path: { kind: string; skillId?: string }[] } }).__app.path.filter((l) => l.kind === 'skill').map((l) => l.skillId!).filter((id, i, a) => a.indexOf(id) === i && /^s[1-7]\./.test(id)));
   expect(ids.length).toBeGreaterThan(300);
@@ -559,17 +585,30 @@ test('every skill shows its lesson without errors', async ({ page }) => {
     const n = await page.evaluate(async (sid) => {
       const w = window as unknown as { __lesson: (id: string, seed: string) => { done: Promise<void> } };
       w.__lesson(sid, `e2e:${sid}`);
-      const steps = document.querySelectorAll('.lesson .ls-step').length;
-      // Step through to the end, then close.
-      for (let i = 1; i < steps; i++) {
-        (document.querySelector('.lesson .ls-next') as HTMLButtonElement).click();
-        await new Promise((r) => setTimeout(r, 0));
+      const tick = () => new Promise((r) => setTimeout(r, 0));
+      const walk = async () => {
+        const steps = document.querySelectorAll('.lesson .ls-dot').length;
+        for (let i = 1; i < steps; i++) {
+          const next = document.querySelector('.lesson .ls-next') as HTMLButtonElement;
+          for (let t = 0; t < 3 && next.disabled; t++) (document.querySelector('.lesson .ls-opt:not(.wrong):not(.right)') as HTMLButtonElement | null)?.click();
+          next.click();
+          await tick();
+        }
+        return steps;
+      };
+      const steps = await walk();
+      // Every other way too.
+      const alt = document.querySelector('.lesson .ls-alt') as HTMLButtonElement;
+      for (let k = 0; k < 3 && alt && !alt.hidden && !alt.textContent?.includes('Back to'); k++) {
+        alt.click();
+        await tick();
+        await walk();
       }
       (document.querySelector('.lesson .ls-close') as HTMLButtonElement).click();
       return steps;
     }, id);
     expect(n, id).toBeGreaterThanOrEqual(1);
-    await page.waitForTimeout(30);
+    await page.waitForTimeout(20);
   }
   expect(errors).toEqual([]);
 });

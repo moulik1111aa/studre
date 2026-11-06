@@ -9,6 +9,8 @@ import { LessonBuilder, Line, f, rs, list, digits, PLACES, PLACE_ONE, DEC_PLACES
 import type { BlocksBoard, ColsBoard, ColsCell, Lesson, TableBoard } from './types.ts';
 
 const isInt = (n: number): boolean => Number.isInteger(clean(n));
+const uniq = (xs: string[]): string[] => [...new Set(xs)];
+const between0 = (v: number): boolean => !Number.isFinite(v) || v <= 0;
 const decimals = (n: number): number => (num(n).split('.')[1] ?? '').length;
 export const ceilTo = (x: number, u: number): number => Math.ceil(clean(x / u)) * u;
 export const floorTo = (x: number, u: number): number => Math.floor(clean(x / u)) * u;
@@ -60,7 +62,7 @@ export function countOn(a: number, b: number, show = `${f(a)} + ${f(b)} = ${f(a 
   L.slip(sum - 1, `So close! Start counting on from the number after ${f(big)}.`);
   L.slip(sum + 1, `So close! Don't count ${f(big)} itself — start from the next number.`);
   if (a > b) L.slip(a - b, 'That is taking away. + means add, so count on.');
-  return L.end(sum, undefined, show);
+  return named(L.end(sum, undefined, show), 'Count on', 'add' as 'add' | 'sub', () => addWays(a, b));
 }
 
 /** Count back in ones. */
@@ -85,7 +87,7 @@ export function countBack(a: number, b: number, show = `${f(a)} − ${f(b)} = ${
   L.slip(res + 1, `So close! Don't count ${f(a)} itself — start from the number before it.`);
   L.slip(res - 1, 'So close! Count back carefully, one jump for each number.');
   L.slip(a + b, 'That is adding. − means take away, so count back.');
-  return L.end(res, undefined, show);
+  return named(L.end(res, undefined, show), 'Count back', 'sub' as 'add' | 'sub', () => subWays(a, b));
 }
 
 /** Count up from b to a (for a − b when the numbers are close). */
@@ -99,7 +101,7 @@ export function countUpSub(a: number, b: number, show = `${f(a)} − ${f(b)} = $
   for (let x = b; x < a; x++) line.hop(x, x + 1, L.i);
   L.say(`From ${f(b)} up to ${f(a)} is ${f(res)} jump${res === 1 ? '' : 's'}.`);
   L.slip(a + b, 'That is adding. − means take away.');
-  return L.end(res, undefined, show);
+  return named(L.end(res, undefined, show), 'Count up', 'sub' as 'add' | 'sub', () => subWays(a, b));
 }
 
 /** Make the next ten first: 8 + 5 = 8 + 2 + 3. (Needs the sum to pass a ten.) */
@@ -118,12 +120,14 @@ export function bridgeAdd(a: number, b: number, show = `${f(a)} + ${f(b)} = ${f(
   L.say(`${swap ? `Start with the bigger number, ${f(x)}.` : `Start at ${f(x)}.`} Make ${f(T)} first.`);
   line.hop(x, T, L.i);
   L.say(`${f(x)} needs ${f(k)} more to make ${f(T)}.`, `${f(x)} + ${f(k)} = ${f(T)}`);
+  L.steps[L.steps.length - 1].turn = { ask: `${f(x)} + ? = ${f(T)}`, answer: f(k), choices: uniq([f(k), f(k + 1), f(Math.max(0, k - 1)), f(T - x + 2)]).slice(0, 3) };
   line.hop(T, sum, L.i).pt(sum, L.i, { tone: 'end', hl: L.i + 1 });
   L.say(`${f(y)} is ${f(k)} and ${f(rest)}, so add the ${f(rest)} that is left.`, `${f(T)} + ${f(rest)} = ${f(sum)}`);
   L.slip(sum - 10, `Careful: you passed ${f(T)}, so the answer is in the next ten.`);
+  if (x !== y) L.slip(2 * x, `That is ${f(x)} + ${f(x)}, double ${f(x)}. The other number is ${f(y)}.`);
   L.slip(sum - 1, 'So close — check the last jump.');
   L.slip(sum + 1, 'So close — check the last jump.');
-  return L.end(sum, undefined, show);
+  return named(L.end(sum, undefined, show), 'Make ten', 'add' as 'add' | 'sub', () => addWays(a, b));
 }
 
 /** Take away down to the ten first: 13 − 5 = 13 − 3 − 2. (Needs b to pass the ten.) */
@@ -144,7 +148,7 @@ export function bridgeSub(a: number, b: number, show = `${f(a)} − ${f(b)} = ${
   L.say(`${f(b)} is ${f(k)} and ${f(rest)}, so take away the other ${f(rest)}.`, `${f(T)} − ${f(rest)} = ${f(res)}`);
   L.slip(res + 10, `Careful: you went below ${f(T)}, so the answer is in the ten below.`);
   L.slip(a + b, 'That is adding. − means take away.');
-  return L.end(res, undefined, show);
+  return named(L.end(res, undefined, show), 'Back to ten', 'sub' as 'add' | 'sub', () => subWays(a, b));
 }
 
 /** A multiple of ten take away a single digit: 50 − 7 (10 − 7 = 3, so 43). */
@@ -174,7 +178,7 @@ export function keepTheTen(a: number, b: number, op: '+' | '−', show = `${f(a)
   L.say(`${f(tens)} and ${f(onesRes)} make ${f(res)}.`, `${f(tens)} + ${f(onesRes)} = ${f(res)}`);
   L.slip(onesRes, `Don't forget the ${f(tens)}!`);
   L.slip(op === '+' ? a - b : a + b, op === '+' ? 'That is taking away. + means add.' : 'That is adding. − means take away.');
-  return L.end(res, undefined, show);
+  return named(L.end(res, undefined, show), 'Keep the ten', op === '+' ? 'add' : 'sub' as 'add' | 'sub', () => op === '+' ? addWays(a, b) : subWays(a, b));
 }
 
 // ── Jumps on an empty number line ──────────────────────────────────────────
@@ -351,7 +355,7 @@ export function partitionAdd(a: number, b: number, show = `${f(a)} + ${f(b)} = $
     L.say(tens ? 'Then add the ones.' : `Add ${f(ones)}.`, `${f(mid)} + ${f(ones)} = ${f(res)}`);
   }
   L.slip(a - b, 'That is taking away. + means add.');
-  return L.end(res, undefined, show);
+  return named(L.end(res, undefined, show), 'Split', 'add' as 'add' | 'sub', () => addWays(a, b));
 }
 
 /** Take the tens, then the ones, as jumps back (mental, no exchanging). */
@@ -374,7 +378,7 @@ export function partitionSub(a: number, b: number, show = `${f(a)} − ${f(b)} =
     L.say(tens ? 'Then take away the ones.' : `Take away ${f(ones)}.`, `${f(mid)} − ${f(ones)} = ${f(res)}`);
   }
   L.slip(a + b, 'That is adding. − means take away.');
-  return L.end(res, undefined, show);
+  return named(L.end(res, undefined, show), 'Split', 'sub' as 'add' | 'sub', () => subWays(a, b));
 }
 
 // ── Column methods ─────────────────────────────────────────────────────────
@@ -437,6 +441,7 @@ export function columnAdd(nums: number[], o: { money?: boolean; show?: string } 
   L.say(dp ? `Line up the decimal points, so each column is the same place.${padded ? ' Fill any gaps with 0.' : ''}` : 'Line up the numbers: ones under ones, tens under tens.');
   if (point >= 0) cells.push({ r: ansRow, c: point, ch: '.', at: 1, tone: 'ans' });
   let carry = 0;
+  let turned = false;
   let noCarry = '';
   const carried: { carry: number; name: string; value: number }[] = [];
   const bring: number[] = [];
@@ -483,9 +488,20 @@ export function columnAdd(nums: number[], o: { money?: boolean; show?: string } 
     if (next) cells.push({ r: 0, c: left, ch: String(next), tone: 'carry', at: L.i });
     const nextPlace = placeOf(left, width, dp).name;
     L.sayThen(`Add the ${place.name}${carry ? `, with the carried ${carry}` : ''}:`, `${terms.join(' + ')} = ${s}`, next ? `Write ${write} and carry ${next} to the ${nextPlace}.` : `Write ${write}.`);
+    // Your turn (the first carry): what goes to the next column?
+    if (next && !turned) {
+      turned = true;
+      L.steps[L.steps.length - 1].turn = { ask: `${s} is ${next} ${placeOf(left, width, dp).one}${next > 1 ? 's' : ''} and ${write}. What do we carry?`, answer: String(next), choices: uniq([String(next), String(write === next ? next + 1 : write), String(s)]) };
+    }
     carry = next;
   }
   flushBring();
+  // Two whole numbers to 999: base-ten blocks over the columns, bundling as they carry.
+  if (nums.length === 2 && twoInts(nums[0], nums[1]) && total < 1000 && !dp) {
+    const cols: { step: number }[] = [];
+    for (let p = 0; p < width; p++) cols.push({ step: board.focus!.find((z) => z.c === width - 1 - p)?.at ?? 0 });
+    L.board = { kind: 'stack', boards: [{ kind: 'bundle', nums, cols }, board] };
+  }
   const show = (s: string) => (o.money ? `₹${s}` : s);
   const totalStr = dp ? total.toFixed(dp) : String(total);
   const nc = withPoint(noCarry, dp);
@@ -494,7 +510,16 @@ export function columnAdd(nums: number[], o: { money?: boolean; show?: string } 
     const val = clean(total - ci.carry * ci.value);
     if (val > 0) L.slip(val, `Check the ${ci.name}: remember the carried ${ci.carry}.`);
   }
-  return L.end(show(o.money && dp ? total.toFixed(2) : totalStr), undefined, o.show ?? `${strs.map(show).join(' + ')} = ${show(totalStr)}`);
+  // Writing each column's whole total (47 + 38 → 715) instead of carrying.
+  if (!dp && nums.length === 2 && carried.length) {
+    let joined = '';
+    for (let c = 0; c < width; c++) {
+      const ds = strs.map((s) => digitAt(s, width, c)).filter((x): x is number => x !== undefined);
+      if (ds.length) joined += String(ds.reduce((p, x) => p + x, 0));
+    }
+    if (Number(joined) !== total) L.slip(Number(joined), 'You wrote each column’s whole total. When a column makes 10 or more, write the ones digit and carry the ten.');
+  }
+  return named(L.end(show(o.money && dp ? total.toFixed(2) : totalStr), undefined, o.show ?? `${strs.map(show).join(' + ')} = ${show(totalStr)}`), 'Column', 'add' as 'add' | 'sub', () => nums.length === 2 ? addWays(nums[0], nums[1]) : []);
 }
 
 /** Column subtraction, exchanging from the next column (and across zeros) when needed. */
@@ -544,6 +569,7 @@ export function columnSub(a: number, b: number, o: { money?: boolean; show?: str
     bring.length = 0;
   };
   let exchanged = false;
+  let notReduced = 0;
   let smallFromBig = '';
   for (let c = width - 1; c >= 0; c--) {
     if (c === point) continue;
@@ -574,6 +600,7 @@ export function columnSub(a: number, b: number, o: { money?: boolean; show?: str
       cur[c] += 10;
       rewrite(c, cur[c], at);
       const kp = placeOf(k, width, dp);
+      notReduced += kp.value;
       if (!between.length) lead = `${was} is less than ${bd}, so exchange 1 ${kp.one} for 10 ${place.name}. `;
       else {
         const bn = between.map((j) => placeOf(j, width, dp).name).reverse();
@@ -592,8 +619,9 @@ export function columnSub(a: number, b: number, o: { money?: boolean; show?: str
     const sfb = withPoint(smallFromBig, dp);
     if (Number.isFinite(sfb) && clean(sfb) !== res) L.slip(clean(sfb), 'You took the smaller digit from the bigger one. When the top digit is smaller, exchange from the next column first.');
   }
+  if (notReduced && !between0(notReduced)) L.slip(clean(res + notReduced), 'You exchanged, but the column you took from still needs to go down by 1: cross it out and write one less.');
   L.slip(clean(a + b), 'That is adding. − means take away.');
-  return L.end(show(resStr), undefined, o.show ?? `${show(top)} − ${show(bot)} = ${show(resStr)}`);
+  return named(L.end(show(resStr), undefined, o.show ?? `${show(top)} − ${show(bot)} = ${show(resStr)}`), 'Column', 'sub' as 'add' | 'sub', () => subWays(a, b));
 }
 
 // ── Choosing a method ──────────────────────────────────────────────────────
@@ -642,3 +670,183 @@ export function changeLesson(price: number, paid: number): Lesson {
 }
 
 export { digits };
+
+// ── Other ways (shown on "Another way") ────────────────────────────────────
+
+type Way = [name: string, make: () => Lesson | null];
+
+/** Name a lesson's method and attach the other ways of doing the same sum. */
+export function named(l: Lesson, method: string, family: 'add' | 'sub', ways: () => Way[]): Lesson {
+  return {
+    ...l,
+    method,
+    family,
+    alts: () =>
+      ways()
+        .filter(([n]) => n !== method)
+        .map(([n, mk]): Lesson | null => {
+          const x = mk();
+          return x ? { ...x, method: n, family, alts: undefined } : null;
+        })
+        .filter((x): x is Lesson => !!x && x.steps.length > 0)
+        .slice(0, 2),
+  };
+}
+
+const twoInts = (a: number, b: number) => isInt(a) && isInt(b) && a >= 0 && b >= 0;
+
+/** The ways to add a + b (whole numbers). */
+export function addWays(a: number, b: number): Way[] {
+  if (!twoInts(a, b) || a === 0 || b === 0) return [];
+  const s = a + b;
+  const big = Math.max(a, b);
+  const small = Math.min(a, b);
+  if (s <= 20) {
+    const ways: Way[] = [];
+    if (big < 10 && s > 10) ways.push(['Make ten', () => raw(bridgeAdd(a, b))]);
+    if (big >= 10) ways.push(['Keep the ten', () => raw(keepTheTen(big, small, '+'))]);
+    ways.push(['Count on', () => raw(countOn(a, b))]);
+    if (big <= 10) ways.push(['Bead frame', () => beadsAdd(a, b)]);
+    return ways;
+  }
+  const ways: Way[] = [['Column', () => raw(columnAdd([a, b]))]];
+  if (big < 100 && small >= 10) ways.push(['Split', () => raw(partitionAdd(big, small))]);
+  if (s < 1000) ways.push(['Number line', () => trackAdd(big, small)]);
+  return ways;
+}
+
+/** The ways to take b from a (whole numbers). */
+export function subWays(a: number, b: number): Way[] {
+  if (!twoInts(a, b) || b === 0 || b > a) return [];
+  const res = a - b;
+  if (a <= 20) {
+    const ways: Way[] = [];
+    if (b <= 9 && a > 10 && a % 10 < b && a % 10 !== 0) ways.push(['Back to ten', () => raw(bridgeSub(a, b))]);
+    if (a > 10 && a % 10 >= b) ways.push(['Keep the ten', () => raw(keepTheTen(a, b, '−'))]);
+    ways.push(['Count up', () => raw(countUpSub(a, b))]);
+    if (b <= 5) ways.push(['Count back', () => raw(countBack(a, b))]);
+    ways.push(['Bead frame', () => beadsSub(a, b)]);
+    return ways;
+  }
+  const ways: Way[] = [['Column', () => raw(columnSub(a, b))]];
+  if (jumpsUp(b, a).length <= 4) ways.push(['Count up', () => frog(b, a, `Count up from ${f(b)} to ${f(a)}: the jumps add up to the answer.`)]);
+  if (b >= 10 && b % 10 !== 0 && res > 0) ways.push(['Slide the gap', () => slideGap(a, b)]);
+  if (a < 100 && a % 10 >= b % 10) ways.push(['Split', () => raw(partitionSub(a, b))]);
+  return ways;
+}
+
+/** A lesson without its method name and other ways (so other ways don't nest). */
+const raw = (l: Lesson): Lesson => ({ ...l, method: undefined, family: undefined, alts: undefined });
+
+/** Bead frame: a on the top row, b on the bottom; read the reds (10) and the rest, or make ten. */
+export function beadsAdd(a: number, b: number): Lesson | null {
+  if (a > 10 || b > 10 || a + b > 20 || a < 1 || b < 1) return null;
+  const s = a + b;
+  const L = new LessonBuilder();
+  const say5 = (n: number) => (n > 5 ? `5 red and ${f(n - 5)} white` : n === 5 ? '5 red' : `${f(n)} red`);
+  const board: import('./types.ts').BeadsBoard = { kind: 'beads', rows: [{ slides: [{ step: 0, n: a }] }, { slides: [{ step: 1, n: b }] }], notes: [] };
+  L.board = board;
+  L.say(`Slide ${f(a)} beads on the top row: ${say5(a)}.`);
+  L.say(`Slide ${f(b)} on the bottom row: ${say5(b)}.`);
+  if (a >= 5 && b >= 5) {
+    board.readAt = L.i;
+    const rest = s - 10;
+    board.notes!.push({ text: `10 + ${f(rest)} = ${f(s)}`, at: L.i });
+    L.say(`The reds make 10. The whites make ${f(rest)}.`, `10 + ${f(rest)} = ${f(s)}`);
+  } else if (s > 10) {
+    const k = 10 - a;
+    board.hop = { step: L.i, n: k };
+    board.notes!.push({ text: `10 + ${f(b - k)} = ${f(s)}`, at: L.i });
+    L.say(`Move ${f(k)} up to fill the top row: that makes 10. ${f(b - k)} ${b - k === 1 ? 'is' : 'are'} left.`, `10 + ${f(b - k)} = ${f(s)}`);
+  } else {
+    board.notes!.push({ text: `${f(a)} + ${f(b)} = ${f(s)}`, at: L.i });
+    L.say(`Count them all: ${f(s)}.`);
+  }
+  return L.end(s);
+}
+
+/** Bead frame: a beads, slide b away (bottom row first), count what is left. */
+export function beadsSub(a: number, b: number): Lesson | null {
+  if (a > 20 || b > a || a < 1) return null;
+  const res = a - b;
+  const top = Math.min(10, a);
+  const bot = a - top;
+  const L = new LessonBuilder();
+  const rows: import('./types.ts').BeadsBoard['rows'] = [{ slides: [{ step: 0, n: top }] }];
+  if (a > 10) rows.push({ slides: [{ step: 0, n: bot }] });
+  const board: import('./types.ts').BeadsBoard = { kind: 'beads', rows, notes: [] };
+  L.board = board;
+  L.say(a > 10 ? `Show ${f(a)}: 10 on the top row and ${f(bot)} on the bottom.` : `Show ${f(a)} on the top row.`);
+  const fromBot = Math.min(b, bot);
+  const fromTop = b - fromBot;
+  if (fromBot) rows[1].slides.push({ step: L.i, n: bot - fromBot });
+  if (fromTop) rows[0].slides.push({ step: L.i, n: top - fromTop });
+  board.notes!.push({ text: `${f(a)} − ${f(b)} = ${f(res)}`, at: L.i });
+  L.say(fromBot && fromTop ? `Slide ${f(b)} back: ${f(fromBot)} from the bottom row, then ${f(fromTop)} from the top.` : `Slide ${f(b)} back.`);
+  L.say(`${f(res)} ${res === 1 ? 'is' : 'are'} left.`);
+  return L.end(res);
+}
+
+/** Moving number line for a + b: jump the hundreds and tens, then the ones (via the next ten). */
+export function trackAdd(a: number, b: number): Lesson | null {
+  if (!twoInts(a, b) || a + b >= 1000) return null;
+  const L = new LessonBuilder();
+  const line = new Line('even');
+  L.board = line.b;
+  line.pt(a, 0, { tone: 'start' });
+  L.say(`Start at ${f(a)} and jump on ${f(b)}, a bit at a time.`);
+  let x = a;
+  const big = floorTo(b, 10);
+  const ones = b - big;
+  if (big) {
+    line.hop(x, x + big, L.i).pt(x + big, L.i);
+    L.say(`Jump ${f(big)} first.`, `${f(x)} + ${f(big)} = ${f(x + big)}`);
+    x += big;
+  }
+  if (ones) {
+    const next = ceilTo(x + 1, 10);
+    if (x % 10 && x + ones > next) {
+      const k = next - x;
+      line.hop(x, next, L.i).pt(next, L.i);
+      L.say(`Jump ${f(k)} to the next ten, ${f(next)}.`, `${f(x)} + ${f(k)} = ${f(next)}`);
+      x = next;
+      line.hop(x, a + b, L.i).pt(a + b, L.i, { tone: 'end', hl: L.i + 1 });
+      L.say(`Then the last ${f(ones - k)}.`, `${f(x)} + ${f(ones - k)} = ${f(a + b)}`);
+    } else {
+      line.hop(x, a + b, L.i).pt(a + b, L.i, { tone: 'end', hl: L.i + 1 });
+      L.say(`Then jump the ${f(ones)}.`, `${f(x)} + ${f(ones)} = ${f(a + b)}`);
+    }
+  }
+  return L.end(a + b);
+}
+
+/** Slide the gap: a − b keeps its answer when both numbers move the same way (b becomes round). */
+export function slideGap(a: number, b: number): Lesson | null {
+  if (!twoInts(a, b) || b % 10 === 0 || b > a) return null;
+  const up = ceilTo(b, 10) - b;
+  const shift = up <= 5 || b % 10 > a % 10 ? up : -(b % 10);
+  const a2 = a + shift;
+  const b2 = b + shift;
+  const res = a - b;
+  const L = new LessonBuilder();
+  const board: import('./types.ts').TrackBoard = {
+    kind: 'track',
+    linear: true,
+    points: [
+      { v: b, tone: 'start', until: 1 },
+      { v: a, tone: 'mark', until: 1 },
+      { v: b2, tone: 'start', at: 1 },
+      { v: a2, tone: 'mark', at: 1 },
+    ],
+    hops: [],
+    gaps: [
+      { from: b, to: a, until: 1, label: `${f(a)} − ${f(b)}` },
+      { from: b2, to: a2, at: 1, label: `${f(a2)} − ${f(b2)}` },
+    ],
+  };
+  L.board = board;
+  L.say(`${f(a)} − ${f(b)} is the gap between ${f(b)} and ${f(a)}.`);
+  L.say(`Slide the gap ${f(Math.abs(shift))} ${shift > 0 ? 'up' : 'down'}: both numbers ${shift > 0 ? 'go up' : 'go down'} by ${f(Math.abs(shift))}, and the gap stays the same.`, `${f(a2)} − ${f(b2)}`);
+  L.say(`${f(b2)} is a round number, so this is easy.`, `${f(a2)} − ${f(b2)} = ${f(res)}`);
+  return L.end(res);
+}

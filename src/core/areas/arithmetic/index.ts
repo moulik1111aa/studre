@@ -8,6 +8,13 @@ import { STAGE4 } from './stage4.ts';
 import { STAGE5 } from './stage5.ts';
 import { STAGE6 } from './stage6.ts';
 import { STAGE7 } from './stage7.ts';
+import { EXTRA1 } from './extra1.ts';
+import { EXTRA2 } from './extra2.ts';
+import { EXTRA3 } from './extra3.ts';
+import type { Extra } from './extra.ts';
+
+/** New skills on the one road, each placed after a skill (see extra.ts). */
+export const EXTRAS: Extra[] = [...EXTRA1, ...EXTRA2, ...EXTRA3];
 
 export interface StageInfo {
   n: number;
@@ -113,6 +120,13 @@ function arrange(stages: Skill[][]): Skill[][] {
     out[from] = out[from].filter((s) => s !== skill);
     const at = out[to].findIndex((s) => s.id === m.after);
     out[to].splice(at + 1, 0, to + 1 <= 2 ? forLittleOnes({ ...skill, stage: to + 1 }) : { ...skill, stage: to + 1 });
+  }
+  for (const x of EXTRAS) {
+    const to = out.findIndex((st) => st.some((s) => s.id === x.after));
+    if (to < 0) throw new Error(`new skill ${x.skill.id} → after ${x.after}: not found`);
+    if (out.some((st) => st.some((s) => s.id === x.skill.id))) throw new Error(`skill id ${x.skill.id} used twice`);
+    const at = out[to].findIndex((s) => s.id === x.after);
+    out[to].splice(at + 1, 0, { ...x.skill, stage: to + 1 });
   }
   return out;
 }

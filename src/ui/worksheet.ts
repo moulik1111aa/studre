@@ -43,7 +43,7 @@ export function worksheetHtml(app: App, child: Child, qs: { q: Question; item: S
   const little = child.age <= 6;
   const today = app.today;
   const card = ({ q, item }: { q: Question; item: SheetItem }, n: number) => {
-    const choices = q.format === 'pad' || q.format === 'pad-ext' ? '' : `<div class="opts">${q.choices.map((c) => `<span class="opt"><i></i>${optionHtml(c, q.optionObject)}</span>`).join('')}</div>`;
+    const choices = q.format === 'pad' || q.format === 'pad-ext' ? '' : `<div class="opts">${q.choices.map((c) => `<span class="opt"><i></i>${optionHtml(c, q.optionObject, q.optionVisuals)}</span>`).join('')}</div>`;
     return `<li class="q${q.visual ? ' has-vis' : ''}"><span class="n">${n}</span>${item.why === 'fixit' ? '<span class="tag">🔧 Fix-it</span>' : ''}
       ${q.visual ? visualHtml(q.visual, q.key) : ''}
       <p class="p">${escPrompt(q.prompt)}</p>

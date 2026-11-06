@@ -56,7 +56,7 @@ export function placementScreen(child: Child) {
       body.innerHTML = `<div class="pl-card card">
         <p class="chip">${STRAND_NAMES[q.strand] ?? q.strand} · question ${count}</p>
         <p class="pl-q">Can ${esc(child.name)} easily do this?</p>
-        <div class="pl-example">${example.optionObject ? optionHtml(example.answer, example.optionObject) : ''}<b>${esc(example.prompt)}</b></div>
+        <div class="pl-example">${example.optionObject ? optionHtml(example.answer, example.optionObject, example.optionVisuals) : ''}<b>${esc(example.prompt)}</b></div>
         <p class="pl-skill">${esc(q.skill.name)}</p>
         <div class="pl-answers">
           <button class="btn mint" data-a="yes">Yes, easily</button>
@@ -95,7 +95,7 @@ export function placementScreen(child: Child) {
           const q = makeQuestion(skill, rng, 0.6, seen, 4);
           seen.add(q.key);
           body.innerHTML = `<div class="pl-card card try-card"><p class="chip">${n} of 6</p><h2 class="pl-example"><b>${esc(q.prompt)}</b></h2>
-            <div class="choices">${q.choices.map((c) => `<button class="choice" data-v="${encodeURIComponent(c)}">${optionHtml(c, q.optionObject)}</button>`).join('')}</div></div>`;
+            <div class="choices">${q.choices.map((c) => `<button class="choice" data-v="${encodeURIComponent(c)}">${optionHtml(c, q.optionObject, q.optionVisuals)}</button>`).join('')}</div></div>`;
           app.voice.say(q.speak ?? spoken(q.prompt));
           stagger(body.querySelectorAll('.choice'), { gap: 60 });
           wireChoices(app, body.querySelector<HTMLElement>('.choices')!, async (v, b) => {

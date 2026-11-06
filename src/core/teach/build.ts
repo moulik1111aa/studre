@@ -135,7 +135,8 @@ export function shiftBoard<T>(b: T, k: number): T {
     if (Array.isArray(v)) return v.map(walk);
     if (v && typeof v === 'object') {
       const out: Record<string, unknown> = {};
-      for (const [key, val] of Object.entries(v)) out[key] = keys.has(key) && typeof val === 'number' ? val + k : walk(val);
+      // A picture frame's own fields (a scale's step, a strip's hl…) are not step numbers.
+      for (const [key, val] of Object.entries(v)) out[key] = keys.has(key) && typeof val === 'number' ? val + k : key === 'v' && 'step' in v ? val : walk(val);
       return out;
     }
     return v;

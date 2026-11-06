@@ -7,7 +7,7 @@ import { checkLesson } from '../scripts/check-lessons.ts';
 import * as A from '../src/core/teach/addsub.ts';
 import * as M from '../src/core/teach/muldiv.ts';
 import { evalLesson } from '../src/core/teach/expr.ts';
-import type { ColsBoard, BusBoard } from '../src/core/teach/types.ts';
+import type { Board, ColsBoard, BusBoard } from '../src/core/teach/types.ts';
 
 const LESSON_STAGES = 7;
 
@@ -25,8 +25,9 @@ test('every question has a lesson that ends with the right answer', () => {
 });
 
 /** The answer row of a column board, as written (digits and point). */
-const answerRow = (b: ColsBoard): string => {
-  const ans = b.rows.length - 1;
+const answerRow = (board: Board): string => {
+  const b = (board.kind === 'stack' ? board.boards.find((x) => x.kind === 'cols') : board) as ColsBoard;
+  const ans = b.rows.findIndex((r) => r === 'ans') >= 0 ? b.rows.findIndex((r) => r === 'ans') : b.rows.length - 1;
   return Array.from({ length: b.width }, (_, c) => b.cells.filter((x) => x.r === ans && x.c === c).map((x) => x.ch).join('')).join('');
 };
 
@@ -36,16 +37,16 @@ test('column addition and subtraction write the right digits', () => {
     const a = rng.int(0, 9999);
     const b = rng.int(0, 9999);
     const add = A.columnAdd([a, b]);
-    assert.equal(answerRow(add.board as ColsBoard), String(a + b), `${a} + ${b}`);
+    assert.equal(answerRow(add.board!), String(a + b), `${a} + ${b}`);
     const [hi, lo] = a >= b ? [a, b] : [b, a];
     const sub = A.columnSub(hi, lo);
-    assert.equal(answerRow(sub.board as ColsBoard), String(hi - lo), `${hi} − ${lo}`);
+    assert.equal(answerRow(sub.board!), String(hi - lo), `${hi} − ${lo}`);
   }
   // Decimals and money.
-  assert.equal(answerRow(A.columnAdd([7.7, 2.8]).board as ColsBoard), '10.5');
-  assert.equal(answerRow(A.columnSub(5.4, 0.9).board as ColsBoard), '4.5');
-  assert.equal(answerRow(A.columnSub(7.4, 2.35).board as ColsBoard), '5.05');
-  assert.equal(answerRow(A.columnAdd([23.45, 12.8]).board as ColsBoard), '36.25');
+  assert.equal(answerRow(A.columnAdd([7.7, 2.8]).board!), '10.5');
+  assert.equal(answerRow(A.columnSub(5.4, 0.9).board!), '4.5');
+  assert.equal(answerRow(A.columnSub(7.4, 2.35).board!), '5.05');
+  assert.equal(answerRow(A.columnAdd([23.45, 12.8]).board!), '36.25');
 });
 
 test('short division writes the right quotient and remainder', () => {

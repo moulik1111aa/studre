@@ -64,7 +64,7 @@ export function questScreen(child: Child, quest: SideQuest) {
       qwrap.innerHTML = `<article class="qcard quick">${q.visual ? visualHtml(q.visual, q.key) : ''}<h2 class="prompt">${q.prompt.replace(/</g, '&lt;')}</h2></article>`;
       const card = qwrap.firstElementChild as HTMLElement;
       if (app.debug) card.dataset.answer = q.answer;
-      answers.innerHTML = q.choices.map((c) => `<button type="button" class="choice" data-v="${encodeURIComponent(c)}" aria-label="${esc(c)}">${optionHtml(c, q.optionObject)}</button>`).join('');
+      answers.innerHTML = q.choices.map((c) => `<button type="button" class="choice" data-v="${encodeURIComponent(c)}" aria-label="${esc(c)}">${optionHtml(c, q.optionObject, q.optionVisuals)}</button>`).join('');
       fitCard(card, qwrap);
       if (!reducedMotion()) card.animate([{ opacity: 0.2, transform: 'translateX(24px)' }, { opacity: 1, transform: 'none' }], { duration: 160, easing: EASE_OUT });
     };

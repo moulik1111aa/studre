@@ -28,6 +28,7 @@ import { saveTextFile } from '../platform/files.ts';
 import { markBackedUp } from './backup.ts';
 import { account, noteRemoved, noteReplaced, syncNow } from './cloud.ts';
 import { FIXED, fixCounts, stepOf } from '../core/fixit.ts';
+import { familyName } from '../core/teach/families.ts';
 
 const STRANDS: [string, string][] = [
   ['number', 'Numbers & place value'],
@@ -205,6 +206,7 @@ export function reportScreen(child: Child, start: Tab = 'overview') {
       return `<div class="rp-strand"><span>${name}</span><div class="rep-bar"><i style="width:${(100 * m) / list.length}%"></i><i class="sk" style="width:${(100 * sk) / list.length}%"></i></div><b>${m}/${list.length}</b><em>${n ? `${pct(ok, n)}% right` : '–'}</em></div>`;
     }).join('');
     const { best, practise } = strengths(tally);
+    const ways = Object.entries(child.methods ?? {});
     const skillLine = (f: SkillFigure) => `<li><b>${esc(skillName(f.id))}</b><span>${f.accuracy}% right · ${f.answers} questions · ${f.speed.toFixed(1)} s each</span></li>`;
     const allAns = figs.reduce((a, f) => a + f.answers, 0);
     const avgSpeed = allAns ? figs.reduce((a, f) => a + f.speed * f.answers, 0) / allAns : 0;
@@ -216,6 +218,7 @@ export function reportScreen(child: Child, start: Tab = 'overview') {
         <div class="card rp-good"><h3>💪 Strengths</h3>${best.length ? `<ul>${best.map(skillLine).join('')}</ul>` : '<p class="fine">Shows once a skill has 8 or more answers, with 80% or more right.</p>'}</div>
         <div class="card rp-work"><h3>🎯 Worth practising</h3>${practise.length ? `<ul>${practise.map(skillLine).join('')}</ul>` : '<p class="fine">Nothing below 80% right so far. 🎉</p>'}</div>
       </div>
+      ${ways.length ? `<h3 class="pa-h">Ways that work for ${esc(child.name)}</h3><div class="card rp-ways"><ul>${ways.map(([f, m]) => `<li><span>${esc(familyName(f))}</span><b>${esc(m)}</b></li>`).join('')}</ul><p class="fine">When a “Show me how” lesson didn’t click, ${esc(child.name)} tried another way and finished with it. Those lessons now open with that way first.</p></div>` : ''}
       <h3 class="pa-h">Speed and stars</h3>
       <div class="rp-kpis three">
         ${kpi(avgSpeed ? `${avgSpeed.toFixed(1)} s` : '–', 'per answer')}

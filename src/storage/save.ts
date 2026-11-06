@@ -72,6 +72,8 @@ export interface Child {
   voicePicked?: boolean;
   /** Practice-together levels left (the first few levels, played with a grown-up). */
   together?: number;
+  /** Road version this child was caught up to (see core/catchup.ts). */
+  roadV?: number;
   /** The owner's tester profile: every level open, no daily limit. */
   tester?: boolean;
   /**
@@ -98,6 +100,8 @@ export interface Child {
   foldSeen?: number;
   /** Fix-it: skills missed lately, coming back after 1, 3 and 7 days (core/fixit.ts). */
   fixit?: FixBank;
+  /** The way of working that helped, per method family ("add" → "Make ten"), from lessons. */
+  methods?: Record<string, string>;
 }
 
 /** The first levels a new child plays together with a grown-up. */

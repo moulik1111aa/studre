@@ -2,6 +2,8 @@
 
 import type { Visual } from '../core/question.ts';
 import { createRng, hashString } from '../core/rng.ts';
+import type { MathVisual } from '../core/vis.ts';
+import { mathVisHtml, optionVisHtml } from './mathvis.ts';
 
 export const EMOJI: Record<string, string> = {
   mango: '🥭', balloon: '🎈', duck: '🦆', star: '⭐', car: '🚗', flower: '🌸', apple: '🍎', fish: '🐟', ball: '⚽', cookie: '🍪', butterfly: '🦋', kite: '🪁',
@@ -57,6 +59,8 @@ export function visualHtml(v: Visual, key: string): string {
     }
     case 'money':
       return `<div class="vis money">${v.values.map((c, i) => moneyPiece(c, i)).join('')}</div>`;
+    default:
+      return mathVisHtml(v);
   }
 }
 
@@ -66,7 +70,9 @@ function moneyPiece(value: number, i: number): string {
 }
 
 /** Content of an answer option. */
-export function optionHtml(value: string, optionObject?: string): string {
+export function optionHtml(value: string, optionObject?: string, optionVisuals?: Record<string, MathVisual>): string {
+  const pic = optionVisuals?.[value];
+  if (pic) return optionVisHtml(pic);
   if (optionObject) return objectGroup(optionObject, Number(value), 0, 'sm');
   if (EMOJI[value]) return `<span class="opt-emoji">${EMOJI[value]}</span>`;
   const size = value.length > 14 ? ' xlong' : value.length > 7 ? ' long' : '';

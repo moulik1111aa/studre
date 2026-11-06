@@ -5,12 +5,20 @@
 // Pure data: no DOM here (see ui/lesson.ts and ui/boards.ts for drawing).
 
 /** A short lesson for one question. */
+import type { Visual } from '../question.ts';
+
 export interface Lesson {
   /** A picture that builds up with the steps (each item appears at its step). */
   board?: Board;
   steps: Step[];
   /** Notes for common wrong answers: when the child's answer equals `answer`, show `note`. */
   slips?: Slip[];
+  /** The method's short name ("Make ten", "Column"), shown on "Another way". */
+  method?: string;
+  /** The method family (e.g. 'add', 'sub'): a child's favourite method is remembered per family. */
+  family?: string;
+  /** Other ways to work out the same question (each ends on the same answer). */
+  alts?: () => Lesson[];
 }
 
 export interface Step {
@@ -22,6 +30,8 @@ export interface Step {
   after?: string;
   /** The last step: says the answer. */
   end?: boolean;
+  /** "Your turn": the child taps the answer to this small question before going on. */
+  turn?: { ask: string; answer: string; choices: string[] };
 }
 
 export interface Slip {
@@ -40,9 +50,61 @@ export interface Timed {
   hl?: number;
 }
 /** Fields that hold step numbers. */
-export const STEP_KEYS = ['at', 'until', 'hl', 'on', 'cross', 'goneAt', 'count', 'textAt', 'labelAt'] as const;
+export const STEP_KEYS = ['at', 'until', 'hl', 'on', 'cross', 'goneAt', 'count', 'textAt', 'labelAt', 'step', 'readAt'] as const;
 
-export type Board = LineBoard | ColsBoard | BarsBoard | DotsBoard | BlocksBoard | TableBoard | BusBoard;
+export type Board = LineBoard | ColsBoard | BarsBoard | DotsBoard | BlocksBoard | TableBoard | BusBoard | TrackBoard | BeadsBoard | BundleBoard | StackBoard | PicBoard;
+
+/** Pictures (clocks, rulers, shapes, charts…) that change from step to step: each frame shows
+ * from its step until the next frame's. Motion hints in a frame play when it appears. */
+export interface PicBoard {
+  kind: 'pic';
+  frames: { step: number; v: Visual }[];
+}
+
+/**
+ * A moving number line: points are spaced evenly along a long line, and the view slides along
+ * with each jump (a pointer rides the jumps). The last step shows the whole line when it fits.
+ */
+export interface TrackBoard {
+  kind: 'track';
+  /** Space the points to scale (so a slid gap keeps its length), instead of evenly. */
+  linear?: boolean;
+  points: LinePoint[];
+  hops: LineHop[];
+  /** A bar over the line between two points (the gap in "slide the gap"), with its own timing. */
+  gaps?: (Timed & { from: number; to: number; label?: string })[];
+}
+
+/** A bead frame (rekenrek): rows of 10 beads in fives (red, then white). */
+export interface BeadsBoard {
+  kind: 'beads';
+  /** Per row: from which step how many beads are slid to the left (later entries win). */
+  rows: { slides: { step: number; n: number }[]; label?: string }[];
+  /** Beads that hop from the bottom row to the end of the top row (make ten). */
+  hop?: { step: number; n: number };
+  /** Rings round the red beads and the white beads, from this step (reading 10 and the rest). */
+  readAt?: number;
+  /** Text under the frame from a step (e.g. "10 + 4 = 14"). */
+  notes?: (Timed & { text: string })[];
+}
+
+/**
+ * Base-ten blocks over a written column sum: each column's blocks join at the step that column
+ * is added; ten ones (or tens) bundle and move to the next column as the carried 1.
+ */
+export interface BundleBoard {
+  kind: 'bundle';
+  /** The numbers being added (whole, up to 3 digits). */
+  nums: number[];
+  /** For each column (0 = ones), the step at which it is added. */
+  cols: { step: number }[];
+}
+
+/** Two pictures one above the other, sharing the steps. */
+export interface StackBoard {
+  kind: 'stack';
+  boards: Board[];
+}
 
 /** A number line with points and hops. */
 export interface LineBoard {
@@ -76,7 +138,7 @@ export interface ColsBoard {
   /** Headings over the columns, left to right ('' for none). */
   heads?: string[];
   /** Row kinds, top to bottom: small rows hold carries and exchanges. */
-  rows: ('small' | 'num' | 'ans')[];
+  rows: ('small' | 'num' | 'ans' | 'you')[];
   /** Draw a rule under these rows. */
   rules: number[];
   /** Operator sign at the left of a row. */
@@ -89,7 +151,7 @@ export interface ColsCell extends Timed {
   r: number;
   c: number;
   ch: string;
-  tone?: 'carry' | 'ans' | 'new';
+  tone?: 'carry' | 'ans' | 'new' | 'you' | 'bad';
   /** Struck through from this step (exchanging). */
   cross?: number;
 }

@@ -5,7 +5,7 @@
 import { html, type App } from './app.ts';
 import { isCorrect, spoken, valueOf, type Question } from '../core/question.ts';
 import { lessonOf } from '../core/teach/index.ts';
-import type { Lesson, Step } from '../core/teach/types.ts';
+import type { Board, Lesson, Step } from '../core/teach/types.ts';
 import { boardHtml, setBoardStep } from './boards.ts';
 import { mathHtml } from './mathtext.ts';
 import { plusFaceSvg } from './plus.ts';
@@ -61,12 +61,39 @@ const stepSpeech = (s: Step): string => [s.say, ...(s.math ?? []), s.after ?? ''
 /** Whether a wrong answer to this question opens a lesson (it has one, and lessons are on). */
 export const lessonFor = (app: App, q: Question): boolean => !!q.teach && app.save.data.settings.teach !== false;
 
+/** The child's answer as a row under a column sum (the digits that differ light up). */
+function withYouRow(b: Board | undefined, given: string | null, at: number): Board | undefined {
+  if (!b || !given || !/^\d+$/.test(given)) return b;
+  if (b.kind === 'stack') return { ...b, boards: b.boards.map((x) => withYouRow(x, given, at)!) };
+  if (b.kind !== 'cols') return b;
+  const ansRow = b.rows.indexOf('ans');
+  if (ansRow < 0 || b.cells.some((c) => c.ch === '.')) return b;
+  if (given.length > b.width) return b;
+  const r = b.rows.length;
+  const ans = new Map(b.cells.filter((c) => c.r === ansRow).map((c) => [c.c, c.ch]));
+  const cells = given.split('').map((ch, j) => {
+    const c = b.width - given.length + j;
+    return { r, c, ch, at, tone: (ans.get(c) === ch ? 'you' : 'bad') as 'you' | 'bad' };
+  });
+  return { ...b, rows: [...b.rows, 'you'], ops: [...(b.ops ?? []), { r, ch: 'you' }], cells: [...b.cells, ...cells] };
+}
+
 /** Show the lesson for a question; resolves when it is closed. */
 export function showLesson(app: App, q: Question, given: string | null): Promise<void> {
-  const lesson = lessonOf(q);
-  const note = slipNote(lesson, q, given);
-  const steps = lesson.steps;
+  const first = lessonOf(q);
+  const note = slipNote(first, q, given);
   const timeout = given === '__timeout__';
+  const child = app.child;
+  // The main way and the other ways; a way that helped this child before comes first.
+  let ways: Lesson[] = [first];
+  try {
+    ways = [first, ...(first.alts?.() ?? [])];
+  } catch (e) {
+    console.error('other ways failed', e);
+  }
+  const liked = first.family ? child?.methods?.[first.family] : undefined;
+  const likedAt = liked ? ways.findIndex((w) => w.method === liked) : -1;
+  if (likedAt > 0) ways = [ways[likedAt], ...ways.filter((_, k) => k !== likedAt)];
   const prompt = mathHtml(q.prompt);
   const said = given && !timeout ? `<span class="ls-you">You said <b>${shown(given)}</b></span>` : timeout ? '<span class="ls-you">Time ran out</span>' : '';
   const ov = html(`<div class="overlay lesson-ov" role="dialog" aria-modal="true" aria-label="Learn how">
@@ -76,63 +103,159 @@ export function showLesson(app: App, q: Question, given: string | null): Promise
         <div class="ls-titles"><p class="ls-kicker">${given ? 'Let’s learn how' : 'Here’s how'}</p><h2 class="ls-q">${prompt}</h2></div>
         <button class="icon-btn ls-close" data-back aria-label="Close">${ICONS.cross}</button>
       </header>
-      <div class="ls-said">${said}<span class="ls-ans">Answer <b>${shown(q.answer)}</b></span></div>
-      ${note ? `<p class="ls-note">${mathHtml(note)}</p>` : ''}
-      ${lesson.board ? `<div class="ls-board">${boardHtml(lesson.board)}</div>` : ''}
-      <ol class="ls-steps">${steps
-        .map(
-          (s, i) => `<li class="ls-step${s.end ? ' end' : ''}" data-i="${i}">
-            <p class="ls-say">${mathHtml(s.say)}</p>
-            ${s.math ? `<div class="ls-math">${s.math.map((m) => `<span>${mathHtml(m)}</span>`).join('')}</div>` : ''}
-            ${s.after ? `<p class="ls-after">${mathHtml(s.after)}</p>` : ''}
-          </li>`,
-        )
-        .join('')}</ol>
-      <footer class="ls-foot"><button class="icon-btn ls-say-btn" aria-label="Read it again">${ICONS.speaker}</button><button class="btn ls-next">Next</button></footer>
+      <div class="ls-said">${said}<span class="ls-ans">Answer <b>${shown(q.answer)}</b></span><span class="ls-way" hidden></span></div>
+      <div class="ls-stage"></div>
+      <div class="ls-dots" role="tablist" aria-label="Steps"></div>
+      <div class="ls-now" aria-live="polite"></div>
+      <footer class="ls-foot"><button class="icon-btn ls-say-btn" aria-label="Read it again">${ICONS.speaker}</button><button class="ls-alt" hidden><small>↻ Another way</small><b></b></button><button class="btn ls-next">Next</button></footer>
     </div>
   </div>`);
-  const board = ov.querySelector<HTMLElement>('.ls-board');
-  const items = [...ov.querySelectorAll<HTMLElement>('.ls-step')];
+  const FAST = app.debug && new URLSearchParams(location.search).has('fast');
+  const sheet = ov.querySelector<HTMLElement>('.sheet.lesson')!;
+  const stage = ov.querySelector<HTMLElement>('.ls-stage')!;
+  const dots = ov.querySelector<HTMLElement>('.ls-dots')!;
+  const now = ov.querySelector<HTMLElement>('.ls-now')!;
   const next = ov.querySelector<HTMLButtonElement>('.ls-next')!;
-  const list = ov.querySelector<HTMLElement>('.ls-steps')!;
+  const altBtn = ov.querySelector<HTMLButtonElement>('.ls-alt')!;
+  const wayChip = ov.querySelector<HTMLElement>('.ls-way')!;
+  let w = 0;
+  let lesson = ways[0];
+  let steps = lesson.steps;
   let i = -1;
+  let reached = 0;
   let lockUntil = 0;
+  let turnDone = true;
+
+  // Shrink a tall picture (blocks above a column sum, say) to fit the space, never clip it.
+  const fitBoard = () => {
+    const board = stage.querySelector<HTMLElement>('.ls-board');
+    const inner = board?.firstElementChild as HTMLElement | null;
+    if (!board || !inner) return;
+    inner.style.zoom = '';
+    const cs = getComputedStyle(board);
+    const room = parseFloat(cs.maxHeight) - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    const need = inner.scrollHeight;
+    if (room > 0 && need > room) inner.style.zoom = String(Math.max(0.5, room / need));
+  };
+  const mount = (k: number) => {
+    w = k;
+    lesson = ways[k];
+    steps = lesson.steps;
+    i = -1;
+    reached = 0;
+    const board = withYouRow(lesson.board, given && !timeout ? given : null, steps.length - 1);
+    stage.innerHTML = board ? `<div class="ls-board">${boardHtml(board)}</div>` : '';
+    stage.hidden = !board;
+    dots.innerHTML = steps.map((_, j) => `<button class="ls-dot" role="tab" aria-label="Step ${j + 1}" data-j="${j}"></button>`).join('');
+    wayChip.hidden = ways.length < 2 || !lesson.method;
+    wayChip.textContent = lesson.method ? `Way: ${lesson.method}` : '';
+    const other = ways[(k + 1) % ways.length];
+    altBtn.querySelector('b')!.textContent = k + 1 < ways.length ? other.method ?? 'Another way' : `First way: ${ways[0].method ?? ''}`;
+    altBtn.querySelector('small')!.textContent = k + 1 < ways.length ? '↻ Another way' : '↺ Back to';
+  };
 
   return new Promise<void>((resolve) => {
-    const close = () => {
+    const close = (done: boolean) => {
       app.voice.stop();
+      // Remember the way that helped (an other way the child finished with "Got it!").
+      if (done && w > 0 && child && lesson.family && lesson.method) {
+        const fam = lesson.family;
+        const name = lesson.method;
+        app.save.update(() => ((child.methods ??= {})[fam] = name));
+      }
       if (reducedMotion()) ov.remove();
       else ov.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: 'forwards' }).finished.then(() => ov.remove());
       resolve();
     };
     const go = (k: number) => {
+      const prev = i;
       i = k;
-      items.forEach((el, j) => {
-        el.classList.toggle('on', j <= k);
-        el.classList.toggle('now', j === k);
+      reached = Math.max(reached, k);
+      const st = steps[k];
+      const board = stage.querySelector<HTMLElement>('.ls-board');
+      if (board) setBoardStep(board, k, prev);
+      dots.querySelectorAll<HTMLButtonElement>('.ls-dot').forEach((d, j) => {
+        d.classList.toggle('done', j < k);
+        d.classList.toggle('now', j === k);
+        d.disabled = j > reached;
       });
-      if (board) setBoardStep(board, k);
-      const el = items[k];
-      if (!reducedMotion()) el.animate([{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }], { duration: 360, easing: EASE_OUT });
-      requestAnimationFrame(() => list.scrollTo({ top: list.scrollHeight, behavior: reducedMotion() ? 'auto' : 'smooth' }));
       const last = k === steps.length - 1;
-      next.textContent = last ? 'Got it!' : 'Next';
+      const slip = last && note && w === 0 ? `<p class="ls-slip"><b>Here’s the slip.</b> ${mathHtml(note)}</p>` : '';
+      now.innerHTML = `<p class="ls-say${st.end ? ' end' : ''}">${mathHtml(st.say)}</p>
+        ${st.math ? `<div class="ls-math${st.end ? ' end' : ''}">${st.math.map((m) => `<span>${mathHtml(m)}</span>`).join('')}</div>` : ''}
+        ${st.after ? `<p class="ls-after">${mathHtml(st.after)}</p>` : ''}
+        ${st.turn && k === reached && prev < k ? `<div class="ls-turn"><p class="ls-turn-ask"><b>Your turn:</b> ${mathHtml(st.turn.ask)}</p><div class="ls-turn-opts">${st.turn.choices.map((c) => `<button class="ls-opt" data-v="${c}">${mathHtml(c)}</button>`).join('')}</div></div>` : ''}
+        ${slip}`;
+      turnDone = !(st.turn && k === reached && prev < k);
+      sheet.classList.toggle('has-turn', !turnDone);
+      fitBoard();
+      if (!turnDone) {
+        let misses = 0;
+        now.querySelectorAll<HTMLButtonElement>('.ls-opt').forEach((b) =>
+          b.addEventListener('click', () => {
+            if (turnDone) return;
+            if (b.dataset.v === st.turn!.answer) {
+              b.classList.add('right');
+              app.sfx.correct(1);
+              turnDone = true;
+              next.disabled = false;
+            } else {
+              b.classList.add('wrong');
+              app.sfx.tap();
+              if (++misses >= 2) {
+                now.querySelector<HTMLElement>(`.ls-opt[data-v="${st.turn!.answer}"]`)?.classList.add('right');
+                turnDone = true;
+                next.disabled = false;
+              }
+            }
+          }),
+        );
+      }
+      next.disabled = !turnDone;
+      if (!reducedMotion()) now.animate([{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 320, easing: EASE_OUT });
+      next.textContent = last ? 'Got it!' : turnDone ? 'Next' : 'Your turn';
       next.classList.toggle('mint', last);
-      lockUntil = performance.now() + 650;
-      app.voice.say((k === 0 && note ? speech(note) + ' ' : '') + stepSpeech(steps[k]));
+      altBtn.hidden = ways.length < 2 || k < 1;
+      // A short lock stops a double tap skipping a step (browser tests can turn it off with &fast).
+      lockUntil = performance.now() + (FAST ? 0 : 600);
+      app.voice.say((k === 0 && note && w === 0 ? speech(note) + ' ' : '') + stepSpeech(st) + (st.turn && !turnDone ? '. ' + speech(st.turn.ask) : ''));
     };
     next.addEventListener('click', () => {
-      if (performance.now() < lockUntil) return;
-      if (i >= steps.length - 1) close();
+      if (performance.now() < lockUntil || !turnDone) return;
+      if (i >= steps.length - 1) close(true);
       else go(i + 1);
     });
+    dots.addEventListener('click', (e) => {
+      const d = (e.target as HTMLElement).closest<HTMLButtonElement>('.ls-dot');
+      if (!d || d.disabled) return;
+      const j = Number(d.dataset.j);
+      if (j === i) return;
+      const board = stage.querySelector<HTMLElement>('.ls-board');
+      // Going back redraws the picture up to that step.
+      if (j < i && board) {
+        mountBoardOnly();
+      }
+      go(j);
+    });
+    const mountBoardOnly = () => {
+      const board = withYouRow(lesson.board, given && !timeout ? given : null, steps.length - 1);
+      if (board) stage.innerHTML = `<div class="ls-board">${boardHtml(board)}</div>`;
+      i = -1;
+    };
+    altBtn.addEventListener('click', () => {
+      app.voice.stop();
+      mount((w + 1) % ways.length);
+      if (!reducedMotion()) stage.animate([{ opacity: 0, transform: 'scale(.97)' }, { opacity: 1, transform: 'none' }], { duration: 300, easing: EASE_OUT });
+      go(0);
+    });
     ov.querySelector('.ls-say-btn')!.addEventListener('click', () => app.voice.say(stepSpeech(steps[Math.max(0, i)])));
-    ov.querySelector('.ls-close')!.addEventListener('click', close);
+    ov.querySelector('.ls-close')!.addEventListener('click', () => close(false));
     app.root.appendChild(ov);
     if (!reducedMotion()) {
       ov.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220 });
       ov.querySelector('.sheet')!.animate([{ transform: 'translateY(100%)' }, { transform: 'translateY(-6px)', offset: 0.75 }, { transform: 'none' }], { duration: 520, easing: EASE_OUT });
     }
+    mount(0);
     go(0);
   });
 }

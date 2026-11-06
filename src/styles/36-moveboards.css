@@ -1,0 +1,39 @@
+/* Lesson pictures that move (ui/moveboards.ts): the moving number line, the bead frame and
+   base-ten blocks that bundle. Positions are set as transforms; transitions do the motion. */
+
+.bd .board-svg{display:block;width:100%;max-width:520px;height:auto;margin:0 auto;font-family:var(--font-num,inherit)}
+.bstack{display:flex;flex-direction:column;gap:8px}
+
+/* Moving number line */
+.trk svg{overflow:hidden}
+.trk-world{transition:transform .7s cubic-bezier(.45,0,.25,1)}
+.trk-ptr{transition:transform .7s cubic-bezier(.45,0,.25,1)}
+.trk-ptr path{fill:var(--accent);stroke:var(--ink);stroke-width:2;stroke-linejoin:round}
+.trk-ptr .hole{fill:var(--sheet-bg,#fff)}
+.trk-gap rect{fill:color-mix(in srgb,var(--accent) 26%,transparent);stroke:var(--accent);stroke-width:2}
+.trk-gap line{stroke:var(--accent);stroke-width:2;stroke-dasharray:4 4}
+.trk-gap text{fill:var(--accent);font-size:13px;font-weight:800;text-anchor:middle}
+.trk-gap{transition:transform .7s cubic-bezier(.45,0,.25,1)}
+
+/* Bead frame */
+.bd-frame{fill:var(--surface,var(--card));stroke:var(--ink);stroke-width:2.5}
+.bd-wire{stroke:var(--ink-faint);stroke-width:3;stroke-linecap:round}
+.bead{stroke:var(--ink);stroke-width:2;transition:transform .6s cubic-bezier(.3,.9,.3,1),opacity .4s,stroke-width .3s;transition-delay:calc(var(--d,0) * 1ms)}
+.bead.red{fill:#FF5A5F}
+.bead.white{fill:#FFFFFF}
+.bead.read.red{stroke:#B3122B;stroke-width:4}
+.bead.read.white{stroke:var(--accent);stroke-width:4}
+.bead-note{fill:var(--ink);font-size:19px;font-weight:800;text-anchor:middle}
+
+/* Base-ten blocks */
+.bn-col{fill:var(--hi-08,rgba(0,0,0,.04))}
+.bn-h{fill:var(--ink-soft);font-size:12px;font-weight:700;text-anchor:middle}
+.bn{stroke:var(--ink);stroke-width:1.4;transition:transform .7s cubic-bezier(.45,0,.25,1),opacity .5s}
+.bn.who0{fill:var(--violet,#5B3DF5)}
+.bn.who1{fill:var(--orange,#FF9F1C)}
+.bn.who2{fill:var(--good,#2ED47A)}
+.bn.ten{stroke:var(--good,#2ED47A);stroke-width:2.6}
+
+@media (prefers-reduced-motion:reduce){
+  .trk-world,.trk-ptr,.bead,.bn,.trk-gap{transition:none}
+}

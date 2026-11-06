@@ -7,10 +7,11 @@
 
 import type { Rng } from './rng.ts';
 import type { Lesson } from './teach/types.ts';
+import type { MathVisual } from './vis.ts';
 
 export type AnswerFormat = 'picture' | 'choice' | 'pad' | 'pad-ext';
 
-export type Strand = 'number' | 'addsub' | 'muldiv' | 'fdp' | 'algebra' | 'mental' | 'word';
+export type Strand = 'number' | 'addsub' | 'muldiv' | 'fdp' | 'algebra' | 'mental' | 'word' | 'measure' | 'shape' | 'data';
 
 /** A counting picture: groups of the same object (Stage 1–2). */
 export interface PictureVisual {
@@ -42,7 +43,7 @@ export interface MoneyVisual {
   kind: 'money';
   values: number[];
 }
-export type Visual = PictureVisual | DotsVisual | PatternVisual | ShapeFractionVisual | MoneyVisual;
+export type Visual = PictureVisual | DotsVisual | PatternVisual | ShapeFractionVisual | MoneyVisual | MathVisual;
 
 /** What a skill generator produces. */
 export interface Made {
@@ -57,6 +58,8 @@ export interface Made {
   hint?: string;
   /** For a picture-choice question, each option rendered as an object group. */
   optionObject?: string;
+  /** Options drawn as pictures (a pencil, a clock, a net…), keyed by the option's value. */
+  optionVisuals?: Record<string, MathVisual>;
   /** When true, equivalent forms are not accepted (e.g. "simplify this fraction"). */
   exactForm?: boolean;
   /** How to work it out, step by step (built from this question's own numbers). */

@@ -3,9 +3,11 @@
 // setBoardStep() then shows, highlights and animates items as the lesson's steps go by.
 
 import type { Board, BarsBoard, BlocksBoard, BusBoard, ColsBoard, DotsBoard, LineBoard, TableBoard, Timed } from '../core/teach/types.ts';
+import { beadsHtml, bundleHtml, setMoveStep, trackHtml } from './moveboards.ts';
 import { esc } from './app.ts';
 import { EMOJI } from './visuals.ts';
 import { mathHtml } from './mathtext.ts';
+import { visualHtml } from './visuals.ts';
 
 /** data-* attributes for a timed item. */
 function timed(t: Timed, extra = ''): string {
@@ -18,7 +20,8 @@ function timed(t: Timed, extra = ''): string {
 export function boardHtml(b: Board): string {
   switch (b.kind) {
     case 'line':
-      return lineHtml(b);
+      // An empty number line moves: the view slides along with the jumps.
+      return b.scale === 'even' ? trackHtml({ kind: 'track', points: b.points, hops: b.hops }) : lineHtml(b);
     case 'cols':
       return colsHtml(b);
     case 'bars':
@@ -31,11 +34,22 @@ export function boardHtml(b: Board): string {
       return tableHtml(b);
     case 'bus':
       return busHtml(b);
+    case 'track':
+      return trackHtml(b);
+    case 'pic':
+      return `<div class="bd pic">${b.frames.map((f, k) => `<div class="pf" data-at="${f.step}"${k + 1 < b.frames.length ? ` data-until="${b.frames[k + 1].step}"` : ''}>${visualHtml(f.v, `pf${k}`)}</div>`).join('')}</div>`;
+    case 'beads':
+      return beadsHtml(b);
+    case 'bundle':
+      return bundleHtml(b);
+    case 'stack':
+      return `<div class="bstack">${b.boards.map((x) => `<div class="bstack-part">${boardHtml(x)}</div>`).join('')}</div>`;
   }
 }
 
 /** Show the board as it is at step i (items for step i animate in). */
-export function setBoardStep(root: HTMLElement, i: number): void {
+export function setBoardStep(root: HTMLElement, i: number, prev = i - 1): void {
+  setMoveStep(root, i, prev);
   const num = (el: Element, k: string): number | undefined => {
     const v = el.getAttribute(`data-${k}`);
     return v === null ? undefined : Number(v);

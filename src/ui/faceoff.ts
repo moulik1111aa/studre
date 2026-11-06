@@ -190,7 +190,7 @@ export function faceoffMatchScreen(a: Player, b: Player, mode: FaceoffMode) {
       const h = halves[i];
       h.querySelector('.fo-q')!.innerHTML = `${q.visual ? visualHtml(q.visual, q.key) : ''}<h2 class="prompt${q.prompt.length > 30 ? ' long' : ''}">${q.prompt.replace(/</g, '&lt;')}</h2>`;
       if (app.debug) h.dataset.answer = q.answer;
-      h.querySelector('.fo-choices')!.innerHTML = q.choices.map((c) => `<button class="choice" data-v="${encodeURIComponent(c)}" aria-label="${esc(c)}">${optionHtml(c, q.optionObject)}</button>`).join('');
+      h.querySelector('.fo-choices')!.innerHTML = q.choices.map((c) => `<button class="choice" data-v="${encodeURIComponent(c)}" aria-label="${esc(c)}">${optionHtml(c, q.optionObject, q.optionVisuals)}</button>`).join('');
       const qbox = h.querySelector<HTMLElement>('.fo-q')!;
       fitCard(qbox, qbox, 14);
       if (!reducedMotion()) h.querySelector('.fo-q')!.animate([{ opacity: 0, transform: 'scale(.92)' }, { opacity: 1, transform: 'none' }], { duration: 260, easing: EASE_OUT });

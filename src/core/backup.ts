@@ -106,6 +106,7 @@ export function mergeChild(here: Child, incoming: Child, incomingNewer: boolean)
   out.tally = holder.tally;
   out.adventure = mergeAdventure(here.adventure, incoming.adventure);
   out.fixit = mergeFix(here.fixit, incoming.fixit);
+  if (here.methods || incoming.methods) out.methods = { ...(incoming.methods ?? {}), ...(here.methods ?? {}) };
   // Undo notes stay with this phone's own play.
   out.undo = here.undo ?? [];
   if (!out.lastPlay || (other.lastPlay && other.lastPlay.day > out.lastPlay.day)) out.lastPlay = other.lastPlay ?? out.lastPlay;

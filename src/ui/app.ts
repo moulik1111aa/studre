@@ -1,6 +1,7 @@
 // App shell: shared services (save, sound, voice, haptics, photos), screen switching with
 // premium transitions, the Android back button, toasts and the grown-up check.
 
+import { catchUp, ROAD_VERSION } from '../core/catchup.ts';
 import { SaveStore, browserStorage, type Child, type StorageAdapter, type Theme } from '../storage/save.ts';
 
 /** Status-bar colour for each theme. */
@@ -109,6 +110,8 @@ export class App {
     this.haptics = new Haptics(st.vibration, native);
     this.photos = new Photos(native);
     this.agePath = buildPath(AREAS[0]);
+    // New skills in the middle of the road don't send a child back (core/catchup.ts).
+    if (this.save.data.children.some((c) => (c.roadV ?? 1) < ROAD_VERSION)) this.save.update((d) => d.children.forEach((c) => catchUp(c, this.agePath)));
     this.fx = new Fx(document.body);
     addEventListener('resize', () => this.fx.resize());
     const forced = this.debug ? (new URLSearchParams(location.search).get('theme') as Theme | null) : null;

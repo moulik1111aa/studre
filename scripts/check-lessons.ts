@@ -65,12 +65,42 @@ export function checkLesson(skill: string, q: Question): Problem[] {
     else if (v && typeof v === 'object')
       for (const [k, x] of Object.entries(v)) {
         if (keys.has(k) && typeof x === 'number' && (x < 0 || x > n)) p(`board ${k}=${x} outside ${n} steps`);
+        if (k === 'v' && 'step' in v) continue;
         walk(x);
       }
   };
   if (l.board) walk(l.board);
   for (const s of l.slips ?? []) if (isCorrect(q, s.answer)) p(`slip note matches the right answer (${s.answer}): ${s.note}`);
   if (l.steps.length > 9) p(`long lesson: ${l.steps.length} steps`);
+  // "Your turn" taps: the answer is one of the choices, and the choices differ.
+  const turns = (x: Lesson, tag: string) =>
+    x.steps.forEach((s, k) => {
+      if (!s.turn) return;
+      if (!s.turn.choices.includes(s.turn.answer)) p(`${tag}step ${k + 1}: turn answer ${s.turn.answer} not among ${s.turn.choices.join('/')}`);
+      if (new Set(s.turn.choices).size !== s.turn.choices.length) p(`${tag}step ${k + 1}: repeated turn choices ${s.turn.choices.join('/')}`);
+      if (s.turn.choices.length < 2) p(`${tag}step ${k + 1}: turn needs 2+ choices`);
+    });
+  turns(l, '');
+  // Another way: each one builds, has a name, and ends on the same answer.
+  if (l.alts) {
+    let alts: Lesson[] = [];
+    try {
+      alts = l.alts();
+    } catch (e) {
+      p(`other ways throw: ${(e as Error).message}`);
+    }
+    if (alts.length && !l.method) p('has other ways but no method name');
+    for (const a of alts) {
+      const tag = `way "${a.method ?? '?'}": `;
+      if (!a.method) p(`${tag}no method name`);
+      if (!a.steps.length || !a.steps[a.steps.length - 1].end) p(`${tag}last step is not the answer step`);
+      else if (!statesAnswer(q, a)) p(`${tag}answer ${q.answer} not in last step`);
+      if (a.steps.length > 9) p(`${tag}long lesson: ${a.steps.length} steps`);
+      const txt = JSON.stringify(a);
+      for (const bad of ['undefined', 'NaN', 'Infinity']) if (txt.includes(bad)) p(`${tag}text contains ${bad}`);
+      turns(a, tag);
+    }
+  }
   return out;
 }
 

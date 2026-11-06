@@ -49,7 +49,7 @@ export function mountAnswers(app: App, answers: HTMLElement, q: Question, isDone
     return () => typed || undefined;
   }
   answers.innerHTML = q.choices
-    .map((c) => `<button type="button" class="choice" data-v="${encodeURIComponent(c)}" aria-label="${c}">${optionHtml(c, q.optionObject)}</button>`)
+    .map((c) => `<button type="button" class="choice" data-v="${encodeURIComponent(c)}" aria-label="${c}">${optionHtml(c, q.optionObject, q.optionVisuals)}</button>`)
     .join('');
   const wired = wireChoices(app, answers, (v, b) => {
     if (!isDone()) submit(v, b);

@@ -51,7 +51,7 @@ function renderQuestion(app: App, qwrap: HTMLElement, answers: HTMLElement, q: Q
   card.querySelector('.say')!.addEventListener('click', () => app.voice.say(q.speak ?? spoken(q.prompt)));
   app.voice.say(q.speak ?? spoken(q.prompt));
   answers.className = `answers fight-answers fmt-${q.format === 'picture' ? 'picture' : 'choice'}`;
-  answers.innerHTML = q.choices.map((c) => `<button type="button" class="choice" data-v="${encodeURIComponent(c)}" aria-label="${esc(c)}">${optionHtml(c, q.optionObject)}</button>`).join('');
+  answers.innerHTML = q.choices.map((c) => `<button type="button" class="choice" data-v="${encodeURIComponent(c)}" aria-label="${esc(c)}">${optionHtml(c, q.optionObject, q.optionVisuals)}</button>`).join('');
   const wired = wireChoices(app, answers, onAnswer);
   stagger(answers.children, { gap: 50, y: 12 });
   fitCard(card, qwrap);
