@@ -33,6 +33,7 @@ import { parentScreen } from './ui/parent.ts';
 import { showLesson } from './ui/lesson.ts';
 import { accessState, lockScreen, ownerScreen } from './ui/access.ts';
 import { startCloud } from './ui/cloud.ts';
+import { plusVideoScreen } from './ui/plusvideo.ts';
 import * as addsub from './core/teach/addsub.ts';
 import * as muldiv from './core/teach/muldiv.ts';
 import * as fractions from './core/teach/fractions.ts';
@@ -47,7 +48,7 @@ async function boot(): Promise<void> {
   const app = new App(document.getElementById('app')!, storage, native);
   if (app.debug) {
     // Screen factories for screenshots and tests.
-    Object.assign(window, { __app: app, __screens: { mapScreen, adventureScreen, resultScreen, showcaseScreen, rewardsScreen, unlockScreen, timesUpScreen, trophyScreen, parentScreen, welcomeScreen, whosPlayingScreen, reportScreen, schoolScreen, faceoffSetupScreen, fightScreen, levelScreen, questScreen, placementScreen, addChildScreen, limitsScreen, meltedScreen, voiceChoiceScreen, lockSetupScreen, ownerScreen } });
+    Object.assign(window, { __app: app, __screens: { plusVideoScreen, mapScreen, adventureScreen, resultScreen, showcaseScreen, rewardsScreen, unlockScreen, timesUpScreen, trophyScreen, parentScreen, welcomeScreen, whosPlayingScreen, reportScreen, schoolScreen, faceoffSetupScreen, fightScreen, levelScreen, questScreen, placementScreen, addChildScreen, limitsScreen, meltedScreen, voiceChoiceScreen, lockSetupScreen, ownerScreen } });
     // Lessons: open one for a skill's question, or for a hand-made question.
     Object.assign(window, {
       __T: { addsub, muldiv, fractions },

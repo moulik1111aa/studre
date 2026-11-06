@@ -1377,3 +1377,19 @@ test('google: a phone already in use signs in and combines its child with the sa
   await expect(p2.locator('.pa-invite')).toHaveCount(0);
   await ctx.close();
 });
+
+test('MN Plus video: from the Parent area Help page, plays through its 8 stops to the end', async ({ page }) => {
+  type W = { __app: { show(m: unknown): void }; __screens: { parentScreen: unknown } };
+  await page.goto('/?debug&demo=%400&fastreel');
+  await expect(page.locator('.map')).toBeVisible();
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
+  await page.click('.pa-menu');
+  await page.click('.dr-item[data-id="help"]');
+  await page.click('.plus-row');
+  await expect(page.locator('.reel[aria-label="What MN Plus adds"]')).toBeVisible();
+  await expect(page.locator('.rl-count')).toHaveText(/of 8$/);
+  await expect(page.locator('.rl-go')).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('.rl-s-pv-school .pv-school.s5')).toHaveCount(1);
+  await page.click('.rl-go');
+  await expect(page.locator('.screen.parent')).toBeVisible();
+});

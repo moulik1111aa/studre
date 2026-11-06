@@ -22,6 +22,7 @@ import { addChildScreen, limitsScreen } from './setup.ts';
 import { voiceScreen } from './voicepick.ts';
 import { lockSetupScreen } from './grownup.ts';
 import { reelScreen } from './reel.ts';
+import { plusVideoScreen } from './plusvideo.ts';
 import { accessState, lockScreen, niceDay } from './access.ts';
 import { freshProgress } from '../core/path.ts';
 import { MENU_ICON, openDrawer } from './drawer.ts';
@@ -160,6 +161,7 @@ function groupHtml(app: App, group: Group): string {
       <button class="pa-row card key-row"><b>Access key</b><small class="key-left">Checking…</small></button>`,
     help: () => `
       <button class="pa-row card story-row"><b>▶ Watch the one-minute video</b><small>What MN does and how it keeps children going</small></button>
+      <button class="pa-row card plus-row"><b>✨ What MN Plus adds</b><small>A short video for grown-ups: backup, school paths, the full report and worksheets</small></button>
       <button class="pa-row card tips-row"><b>Show Plus’s map tips again</b><small>Each child sees the tips the next time they open the map</small></button>
       <button class="pa-row card adv-what"><b>🎮 What is Adventure?</b><small>Quests, chests, badges, the wardrobe, the raid and the pet</small></button>
       ${faceoffRows(app)}`,
@@ -358,6 +360,7 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
       body.querySelector('.key-row')!.addEventListener('click', () => void app.show(lockScreen(st, () => void app.show(parentScreen), { renew: true, back: () => void app.show(parentScreen) })));
     });
   }
+  on('.plus-row', 'click', () => void app.show(plusVideoScreen(() => void app.show(parentScreen)), 'liquid'));
   on('.story-row', 'click', () => void app.show(reelScreen({ first: false, label: 'Done', done: () => void app.show(parentScreen) }), 'liquid'));
   on('.tips-row', 'click', () => {
     app.save.update((d) => d.children.forEach((c) => (c.toured = false)));

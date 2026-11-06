@@ -93,6 +93,8 @@ function fonts() {
 /** The opening video's voiceover (assets/audio/opening.mp3), inlined for reel.ts. */
 const audioTag = () =>
   `<script type="text/plain" id="reel-audio">${readFileSync(join(root, 'assets', 'audio', 'opening.mp3')).toString('base64')}</script>` +
+  // The MN Plus video's voiceover (ui/plusvideo.ts).
+  `<script type="text/plain" id="plus-audio">${readFileSync(join(root, 'assets', 'audio', 'plus.mp3')).toString('base64')}</script>` +
   // MN's sound logo, "Chime Pop" (scripts/sound-logo), for the big moments (Sfx.chime).
   `<script type="text/plain" id="logo-audio">${readFileSync(join(root, 'assets', 'audio', 'mn-logo.mp3')).toString('base64')}</script>`;
 const threeTag = () => `<script type="text/plain" id="three-src">${readFileSync(join(root, 'assets', 'vendor', 'three.module.min.js'), 'utf8').replace(/<\/(script)/gi, '<\\/$1')}</script>`;

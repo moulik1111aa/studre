@@ -41,7 +41,7 @@ function flyCoins(from: Element, to: Element, n = 6): Promise<void> {
   return Promise.all(runs).then(() => undefined);
 }
 
-interface ReelScene {
+export interface ReelScene {
   id: string;
   /** A stop without a line in the voiceover plays for this long instead (ms). */
   silentMs?: number;
@@ -55,7 +55,7 @@ interface ReelScene {
 }
 
 /** A caption whose words pop in one after another. */
-const words = (text: string, delay = 0.15) =>
+export const words = (text: string, delay = 0.15) =>
   esc(text)
     .split(' ')
     .map((w, i) => `<span class="rl-w" style="--d:${(delay + i * 0.11).toFixed(2)}s">${w}</span>`)
@@ -205,17 +205,39 @@ const LINES: [number, number][] = [
   [35.67, 40.58], [41.47, 46.4], [47.31, 49.84], [50.49, 57.3], [58.26, 62.36],
 ];
 
-/** The voiceover, inlined by the build (scripts/build.mjs) as base64 MP3. */
-let audioUrl: string | null | undefined;
-function voiceover(): HTMLAudioElement | null {
-  if (audioUrl === undefined) {
-    const b64 = document.getElementById('reel-audio')?.textContent?.trim();
-    audioUrl = b64 ? URL.createObjectURL(new Blob([Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))], { type: 'audio/mpeg' })) : null;
+/** A voiceover, inlined by the build (scripts/build.mjs) as base64 MP3 in a <script> with this id. */
+const audioUrls = new Map<string, string | null>();
+function voiceover(id = 'reel-audio'): HTMLAudioElement | null {
+  if (!audioUrls.has(id)) {
+    const b64 = document.getElementById(id)?.textContent?.trim();
+    audioUrls.set(id, b64 ? URL.createObjectURL(new Blob([Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))], { type: 'audio/mpeg' })) : null);
   }
-  if (!audioUrl) return null;
-  const a = new Audio(audioUrl);
+  const url = audioUrls.get(id);
+  if (!url) return null;
+  const a = new Audio(url);
   a.preload = 'auto';
   return a;
+}
+
+/** Another video played the same way (the MN Plus video): its stops, its voiceover and where each line is. */
+export interface ReelVideo {
+  scenes: () => ReelScene[];
+  lines: [number, number][];
+  audioId: string;
+  /** What the screen is called for screen readers. */
+  name: string;
+}
+
+/** Run each beat (a class on `box`, and a sound) at its time; returns a clean-up. */
+export function beats(box: HTMLElement, list: [number, string, (() => void)?][], speed: number): () => void {
+  box.classList.remove(...list.map(([, c]) => c));
+  const timers = list.map(([ms, cls, sound]) =>
+    window.setTimeout(() => {
+      box.classList.add(cls);
+      sound?.();
+    }, ms * speed),
+  );
+  return () => timers.forEach(clearTimeout);
 }
 
 export interface ReelOptions {
@@ -226,6 +248,8 @@ export interface ReelOptions {
   done: () => void;
   /** Where Skip / Back go (later times only). */
   leave?: () => void;
+  /** Play another video instead of the opening one. */
+  video?: ReelVideo;
 }
 
 export function reelScreen(o: ReelOptions) {
@@ -234,8 +258,9 @@ export function reelScreen(o: ReelOptions) {
     const q = new URLSearchParams(location.search);
     const fast = app.debug && q.has('fastreel');
     const speed = fast ? Number(q.get('fastreel')) || 0.05 : 1;
-    const list = scenes();
-    const audio = fast ? null : voiceover();
+    const list = (o.video?.scenes ?? scenes)();
+    const LINES_OF = o.video?.lines ?? LINES;
+    const audio = fast ? null : voiceover(o.video?.audioId);
     let i = -1;
     let heard = -1; // the furthest stop whose line has finished
     let muted = !app.save.data.settings.voice;
@@ -250,7 +275,7 @@ export function reelScreen(o: ReelOptions) {
     let auto = true;
     let advance = 0;
     let cleanup: (() => void) | void;
-    const el = html(`<section class="screen reel${o.first ? ' first' : ''}" aria-label="MN in one minute">
+    const el = html(`<section class="screen reel${o.first ? ' first' : ''}" aria-label="${esc(o.video?.name ?? 'MN in one minute')}">
       <div class="rl-bars" aria-hidden="true">${list.map(() => '<i><b></b></i>').join('')}</div>
       <div class="rl-top"><button class="rl-btn rl-mute" aria-label="Sound">${muted ? '🔇' : '🔊'}</button>${o.first ? '' : '<button class="rl-btn rl-skip">Skip</button>'}</div>
       <div class="rl-stage">${list
@@ -275,7 +300,7 @@ export function reelScreen(o: ReelOptions) {
 
     // Which voiceover line goes with each stop (none for a silent stop).
     let n = 0;
-    const lineOf = list.map((s) => (s.silentMs ? null : LINES[n++]));
+    const lineOf = list.map((s) => (s.silentMs ? null : LINES_OF[n++]));
     const lineMs = (k: number) => {
       const line = lineOf[k];
       return (line ? (line[1] - line[0]) * 1000 : list[k].silentMs!) * speed;
@@ -401,7 +426,7 @@ export function reelScreen(o: ReelOptions) {
       cancelAnimationFrame(frame);
       clearTimeout(timer);
       audio?.pause();
-      app.save.update((d) => (d.settings.tourSeen = true));
+      if (!o.video) app.save.update((d) => (d.settings.tourSeen = true));
     };
     el.querySelector('.rl-go')!.addEventListener('click', () => {
       finish();
