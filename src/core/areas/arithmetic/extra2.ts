@@ -407,6 +407,8 @@ add('s2.turns', 'routes', 'shape', 'Left, right and routes', (r, d) => {
   const v: MathVisual = { kind: 'gridmap', w: W, h: H, items, start };
   const options: Record<string, MathVisual> = {};
   names.forEach((n, i) => (options[n] = { kind: 'emoji', e: things[i][1] }));
+  // Always 4 options: things not on this map are wrong too.
+  for (const [n, e] of PLACES) if (names.length < 4 && !names.includes(n)) { names.push(n); options[n] = { kind: 'emoji', e }; }
   const path: Pt[] = [start, [goal[0], start[1]], goal];
   return made(`Start at the child. Go ${ask}. What do you reach?`, names[0], names.slice(1), {
     visual: v,

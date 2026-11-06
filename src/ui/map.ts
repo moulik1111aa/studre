@@ -6,7 +6,9 @@ import { schoolLabel } from './school.ts';
 import { html, esc, type App, type Screen } from './app.ts';
 import type { Child } from '../storage/save.ts';
 import { AREAS, skillById } from '../core/areas/index.ts';
-import { frontier, isDone, isPassed, isSkipped, isPlayable, TIER_NAMES, type Level } from '../core/path.ts';
+import { frontier, isDone, isPassed, isSkipped, isPlayable, skillStars, TIER_NAMES, type Level } from '../core/path.ts';
+import { branchOf, branchInfo } from '../core/branches.ts';
+import { BRANCH_ICON } from './branchicons.ts';
 import { bossFor } from '../core/boss.ts';
 import { secondsLeft } from '../core/economy.ts';
 import { ICONS, avatarHtml } from './icons.ts';
@@ -38,6 +40,35 @@ interface Node {
   levels: Level[];
   label: string;
   id: string;
+}
+
+/** Stops shown past the current one before the clouds (about five swipes of road). */
+const CLOUD_AFTER = 12;
+const CLOUD_LOCK = '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M13 36a9 9 0 0 1-1-17.9A12 12 0 0 1 35 16a8.5 8.5 0 0 1 1 20Z" fill="#fff" stroke="#5B6B8C" stroke-width="2.5" stroke-linejoin="round"/><rect x="19" y="24" width="12" height="10" rx="2.5" fill="#FFB020" stroke="#7A4B00" stroke-width="2"/><path d="M21.5 24v-3a3.5 3.5 0 0 1 7 0v3" fill="none" stroke="#7A4B00" stroke-width="2.2"/></svg>';
+
+function branchFor(n: Node) {
+  const l = n.levels[0];
+  const sk = l && l.kind === 'skill' ? skillById(l.skillId) : undefined;
+  return branchOf(sk?.strand ?? 'number');
+}
+function branchBadge(n: Node): string {
+  if (n.kind !== 'skill') return '';
+  const b = branchFor(n);
+  return `<i class="br-badge br-${b}" title="${branchInfo(b).name}" aria-hidden="true">${BRANCH_ICON[b]}</i>`;
+}
+/** Seven star slots in an orb: one in the middle, six round it. */
+const ORB_SLOTS: [number, number][] = [[50, 50], [50, 20], [76, 35], [76, 65], [50, 80], [24, 65], [24, 35]];
+const STAR = 'M0,-1 L.29,-.4 .95,-.31 .47,.15 .59,.81 0,.5 -.59,.81 -.47,.15 -.95,-.31 -.29,-.4Z';
+function orbStars(n: number): string {
+  return `<svg class="orb-stars" viewBox="0 0 100 100">${ORB_SLOTS.map(([x, y], i) => `<path class="${i < n ? 'on' : ''}" d="${STAR}" transform="translate(${x} ${y}) scale(${i === 0 ? 14 : 11.5})"/>`).join('')}</svg>`;
+}
+function cloudSvg(): string {
+  const puff = (cx: number, cy: number, r: number, cls: string) => `<circle class="${cls}" cx="${cx}" cy="${cy}" r="${r}"/>`;
+  let b = '';
+  for (let i = 0; i < 8; i++) b += puff(-20 + i * 62, 110 + (i % 2) * 24, 66 + (i % 3) * 12, 'cl-back');
+  for (let i = 0; i < 7; i++) b += puff(10 + i * 66, 170 + ((i + 1) % 2) * 20, 72 + (i % 2) * 14, 'cl-mid');
+  for (let i = 0; i < 6; i++) b += puff(30 + i * 72, 240 + (i % 2) * 16, 80 + ((i + 1) % 3) * 10, 'cl-front');
+  return `<svg class="cb-svg" viewBox="0 0 390 360" preserveAspectRatio="xMidYMin slice" aria-hidden="true">${b}<rect class="cl-front" x="0" y="270" width="390" height="90"/></svg>`;
 }
 
 function nodesFor(path: Level[]): Node[] {
@@ -154,16 +185,22 @@ export function mapScreen(child: Child) {
 
     const school = child.school?.on ? child.school : null;
     if (!fold && school) worlds.appendChild(html(`<div class="school-chip card"><span>📚</span><b>${esc(schoolLabel(school))}</b><small>${school.skills.length} skills chosen by a grown-up</small></div>`));
+    // Clouds ahead: the child sees the next few swipes of the road; the rest waits under a
+    // cloud bank (grown-up testers see everything).
+    const curAt = nodes.findIndex((n) => nodeState(n).isCurrent);
+    const lastShown = child.tester || curAt < 0 ? nodes.length - 1 : Math.min(nodes.length - 1, curAt + CLOUD_AFTER);
+    const hidden = nodes.length - 1 - lastShown;
     for (let s = 1; !fold && s <= stagesBuilt; s++) {
       const info = AREAS[0].stages[s - 1];
       // A school path only shows the stages it uses.
       if (school && !nodes.some((n) => n.stage === s)) continue;
+      if (!nodes.some((n, k) => n.stage === s && k <= lastShown)) continue;
       const sec = html(`<section class="world" style="${worldVars(s)}" data-stage="${s}">
         <div class="world-head"><span class="chip">Stage ${s} · Ages ${info.ages}</span><h2>${info.name}</h2><p>${WORLDS[s - 1].name}</p></div>
         <div class="track"><svg class="trail" aria-hidden="true"><path class="trail-bg"/><path class="trail-done"/></svg></div>
       </section>`);
       const track = sec.querySelector<HTMLElement>('.track')!;
-      const stageNodes = nodes.filter((n) => n.stage === s);
+      const stageNodes = nodes.filter((n, k) => n.stage === s && k <= lastShown);
       let skillNo = 0;
       stageNodes.forEach((n, k) => {
         if (n.kind === 'skill') skillNo++;
@@ -177,10 +214,15 @@ export function mapScreen(child: Child) {
               ? `<span class="nd-face minion">⚔️</span>`
               : n.kind === 'quest'
               ? `<span class="nd-face quest">🧭</span>`
-              : `<span class="nd-face">${skillNo}</span>`;
-        const pips = n.kind === 'skill' ? `<span class="pips">${n.levels.map((l) => `<i class="${isPassed(p, l) ? 'on' : ''}"></i>`).join('')}</span>` : '';
-        const node = html(`<button class="node ${n.kind}${done ? ' done' : ''}${skipped ? ' skipped' : ''}${isCurrent ? ' current' : ''}${playable ? '' : ' locked'}" style="left:${x}%" data-node="${esc(n.id)}" aria-label="${esc(n.label)}${done ? ', done' : playable ? '' : ', locked'}">
-          ${face}${pips}<span class="nd-label">${esc(n.label)}${n.kind === 'quest' ? `<small>${qbest ? `Best ${qbest}/100` : '100 in 5 min'}</small>` : ''}</span>${playable ? '' : `<span class="nd-lock">${ICONS.lock}</span>`}
+              : `<span class="nd-face">${skillNo}${branchBadge(n)}</span>`;
+        // A finished skill becomes an orb holding its stars out of 7 (no number on it).
+        const orb = n.kind === 'skill' && n.levels.every((l) => isPassed(p, l));
+        const stars = orb ? skillStars(p, n.levels) : 0;
+        const faceHtml = orb ? `<span class="nd-face orb" aria-hidden="true">${orbStars(stars)}</span>` : face;
+        const pips = n.kind === 'skill' && !orb ? `<span class="pips">${n.levels.map((l) => `<i class="${isPassed(p, l) ? 'on' : ''}"></i>`).join('')}</span>` : '';
+        const br = n.kind === 'skill' ? branchFor(n) : null;
+        const node = html(`<button class="node ${n.kind}${done ? ' done' : ''}${orb ? ' orbed' : ''}${skipped ? ' skipped' : ''}${isCurrent ? ' current' : ''}${playable ? '' : ' locked'}" style="left:${x}%" data-node="${esc(n.id)}"${br ? ` data-br="${br}"` : ''} aria-label="${esc(n.label)}${orb ? `, ${stars} of 7 stars` : done ? ', done' : playable ? '' : ', locked'}">
+          ${faceHtml}${pips}<span class="nd-label">${orb && br ? `<i class="br-ic br-${br}" aria-hidden="true">${BRANCH_ICON[br]}</i>` : ''}${esc(n.label)}${n.kind === 'quest' ? `<small>${qbest ? `Best ${qbest}/100` : '100 in 5 min'}</small>` : ''}</span>${playable ? '' : `<span class="nd-lock">${ICONS.lock}</span>`}
         </button>`);
         if (isCurrent) currentNode = node;
         if (isCurrent && adv) node.appendChild(html(`<span class="map-buddy ${x < 50 ? 'right' : 'left'}" aria-hidden="true">${plusFaceSvg({ cls: 'alive', outfit })}</span>`));
@@ -189,7 +231,10 @@ export function mapScreen(child: Child) {
       });
       worlds.appendChild(sec);
     }
-    if (!fold && stagesBuilt < 7 && !school) worlds.appendChild(html(`<section class="world soon" style="${worldVars(stagesBuilt + 1)}"><div class="world-head"><span class="chip">Stage ${stagesBuilt + 1}</span><h2>${AREAS[0].stages[stagesBuilt].name}</h2><p>Coming soon</p></div></section>`));
+    if (!fold && hidden > 0) {
+      worlds.appendChild(html(`<section class="cloudbank" aria-label="More stops are hidden in the clouds">${cloudSvg()}<div class="cb-fill"></div></section>`));
+    }
+    if (!fold && hidden <= 0 && stagesBuilt < 7 && !school) worlds.appendChild(html(`<section class="world soon" style="${worldVars(stagesBuilt + 1)}"><div class="world-head"><span class="chip">Stage ${stagesBuilt + 1}</span><h2>${AREAS[0].stages[stagesBuilt].name}</h2><p>Coming soon</p></div></section>`));
 
     const layoutTrails = () => {
       worlds.querySelectorAll<HTMLElement>('.world .track').forEach((track) => {
@@ -289,6 +334,22 @@ export function mapScreen(child: Child) {
         if (sec) void drawOn(sec.querySelector('svg')!, { duration: 1400, fill: false });
         stagger([el.querySelector('.map-top')!, jar.el, el.querySelector('.play-bar')!], { gap: 90 });
         if (!child.toured || advTipsDue(child)) setTimeout(showTips, reducedMotion() ? 100 : 1100);
+        // Scrolling into the clouds: say what they are, once per visit.
+        const bank = el.querySelector<HTMLElement>('.cloudbank');
+        if (bank && 'IntersectionObserver' in window) {
+          const io = new IntersectionObserver((es) => {
+            if (!es.some((e) => e.isIntersecting)) return;
+            io.disconnect();
+            const pop = html(`<div class="cloud-pop" role="status"><div class="cp-ic">${CLOUD_LOCK}</div><div><b>More stops are in the clouds</b><span>Finish the stops above and the clouds will move to show new ones.</span></div></div>`);
+            el.appendChild(pop);
+            pop.addEventListener('click', () => pop.remove());
+            setTimeout(() => {
+              if (reducedMotion()) pop.remove();
+              else pop.animate([{ opacity: 1 }, { opacity: 0, transform: 'translateY(16px)' }], { duration: 300, fill: 'forwards' }).finished.then(() => pop.remove());
+            }, 4200);
+          }, { root: worlds, threshold: 0.35 });
+          io.observe(bank);
+        }
       },
     };
   };
@@ -309,6 +370,8 @@ function openSkill(app: App, child: Child, n: Node, path: Level[]): void {
     .join('');
   const ov = html(`<div class="overlay" role="dialog" aria-modal="true" aria-label="${esc(n.label)}"><div class="sheet skill-sheet" style="${worldVars(n.stage)}">
     <p class="chip">Stage ${n.stage}</p><h2>${esc(n.label)}</h2>
+    <div class="sk-stars" aria-label="${skillStars(child.progress, n.levels)} of 7 stars">${Array.from({ length: 7 }, (_, i) => `<i class="${i < skillStars(child.progress, n.levels) ? 'on' : ''}">${ICONS.star}</i>`).join('')}<small>${skillStars(child.progress, n.levels)} of 7 stars</small></div>
+    <p class="fine sk-stars-how">Pass all 5 levels for 5 stars. Get 3 stars on Learn, Practice and Practise more for one more, and on Speed and Master for the last one.</p>
     <label class="toggle-row harder-row"><span><b>🔥 Play it harder</b><small>Same skill, tougher numbers, no hints</small></span><input type="checkbox" role="switch" class="harder"${(child.challenge ?? 0) >= 2 ? ' disabled checked' : ''}></label>
     <div class="tiers">${rows}</div>
     <div class="actions"><button class="btn ghost" data-back>Close</button></div></div></div>`);

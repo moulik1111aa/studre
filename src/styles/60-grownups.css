@@ -322,3 +322,9 @@ i.lv4{background:var(--accent)}
 .rp-ways li{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
 .rp-ways li:last-child{border-bottom:0}
 .rp-ways li b{color:var(--accent)}
+.rp-branch span{display:flex;align-items:center;gap:6px}
+.rp-branch[data-br="num"] .rep-bar i{background:var(--br-num)}
+.rp-branch[data-br="mea"] .rep-bar i{background:var(--br-mea)}
+.rp-branch[data-br="sha"] .rep-bar i{background:var(--br-sha)}
+.rp-branch[data-br="dat"] .rep-bar i{background:var(--br-dat)}
+.rp-branch[data-br="alg"] .rep-bar i{background:var(--br-alg)}

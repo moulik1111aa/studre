@@ -29,6 +29,8 @@ import { markBackedUp } from './backup.ts';
 import { account, noteRemoved, noteReplaced, syncNow } from './cloud.ts';
 import { FIXED, fixCounts, stepOf } from '../core/fixit.ts';
 import { familyName } from '../core/teach/families.ts';
+import { BRANCHES, branchOf } from '../core/branches.ts';
+import { BRANCH_ICON } from './branchicons.ts';
 
 const STRANDS: [string, string][] = [
   ['number', 'Numbers & place value'],
@@ -38,6 +40,9 @@ const STRANDS: [string, string][] = [
   ['algebra', 'Algebra & powers'],
   ['mental', 'Mental tricks'],
   ['word', 'Word problems'],
+  ['measure', 'Measure & time'],
+  ['shape', 'Shapes & space'],
+  ['data', 'Data & chance'],
 ];
 const TABS = [
   ['overview', 'Stats', '📊'],
@@ -205,6 +210,16 @@ export function reportScreen(child: Child, start: Tab = 'overview') {
       const ok = t.reduce((a, f) => a + f.right, 0);
       return `<div class="rp-strand"><span>${name}</span><div class="rep-bar"><i style="width:${(100 * m) / list.length}%"></i><i class="sk" style="width:${(100 * sk) / list.length}%"></i></div><b>${m}/${list.length}</b><em>${n ? `${pct(ok, n)}% right` : '–'}</em></div>`;
     }).join('');
+    // By branch of maths: the same colours and badges as the map.
+    const branchRows = BRANCHES.map((b) => {
+      const list = skills.filter((s) => branchOf(s.strand) === b.id);
+      if (!list.length) return '';
+      const m = list.filter((s) => isMastered(child.progress, s.id)).length;
+      const t = figs.filter((f) => { const sk = skillById(f.id); return sk && branchOf(sk.strand) === b.id; });
+      const n = t.reduce((a, f) => a + f.answers, 0);
+      const ok = t.reduce((a, f) => a + f.right, 0);
+      return `<div class="rp-strand rp-branch" data-br="${b.id}"><span><i class="br-ic br-${b.id}" aria-hidden="true">${BRANCH_ICON[b.id]}</i>${esc(b.long)}</span><div class="rep-bar"><i style="width:${(100 * m) / list.length}%"></i></div><b>${m}/${list.length}</b><em>${n ? `${pct(ok, n)}% right` : '–'}</em></div>`;
+    }).join('');
     const { best, practise } = strengths(tally);
     const ways = Object.entries(child.methods ?? {});
     const skillLine = (f: SkillFigure) => `<li><b>${esc(skillName(f.id))}</b><span>${f.accuracy}% right · ${f.answers} questions · ${f.speed.toFixed(1)} s each</span></li>`;
@@ -213,6 +228,7 @@ export function reportScreen(child: Child, start: Tab = 'overview') {
     const tierMax = Math.max(1, ...prog.tiers);
     const skillsTab = `
       <h3 class="pa-h">Progress by stage</h3><div class="card rp-stages">${stageRows}<p class="fine">Lighter part: levels skipped at placement because they were too easy.</p></div>
+      <h3 class="pa-h">By branch of maths</h3><div class="card rp-strands">${branchRows}<p class="fine">The same colours and badges mark each stop on ${esc(child.name)}’s map. Bar: skills mastered.</p></div>
       <h3 class="pa-h">Skills by strand</h3><div class="card rp-strands">${strandRows}<p class="fine">Bar: skills mastered (lighter part skipped at placement). Right: share of answers right.</p></div>
       <div class="rp-two">
         <div class="card rp-good"><h3>💪 Strengths</h3>${best.length ? `<ul>${best.map(skillLine).join('')}</ul>` : '<p class="fine">Shows once a skill has 8 or more answers, with 80% or more right.</p>'}</div>

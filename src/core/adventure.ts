@@ -250,6 +250,9 @@ const STRAND_NAMES: [string, string, string][] = [
   ['algebra', '🔣', 'Algebra'],
   ['mental', '🧠', 'Mental maths'],
   ['word', '📖', 'Word problem'],
+  ['measure', '📏', 'Measure'],
+  ['shape', '🔺', 'Shape'],
+  ['data', '📊', 'Data'],
 ];
 
 export const BADGES: Badge[] = [

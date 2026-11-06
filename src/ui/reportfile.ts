@@ -51,7 +51,7 @@ export function reportCardHtml(app: App, child: Child, backup: Backup): string {
   const stage = AREAS[0].stages[(front?.stage ?? 7) - 1];
   const days14 = Array.from({ length: 14 }, (_, i) => addDays(today, i - 13));
   const max14 = Math.max(1, ...days14.map((d) => dayFigures(secs, log, d).minutes));
-  const strands: [string, string][] = [['number', 'Numbers & place value'], ['addsub', 'Adding & subtracting'], ['muldiv', 'Times & division'], ['fdp', 'Fractions & decimals'], ['algebra', 'Algebra & powers'], ['mental', 'Mental tricks'], ['word', 'Word problems']];
+  const strands: [string, string][] = [['number', 'Numbers & place value'], ['addsub', 'Adding & subtracting'], ['muldiv', 'Times & division'], ['fdp', 'Fractions & decimals'], ['algebra', 'Algebra & powers'], ['mental', 'Mental tricks'], ['word', 'Word problems'], ['measure', 'Measure & time'], ['shape', 'Shapes & space'], ['data', 'Data & chance']];
   const kpi = (v: string | number, l: string) => `<div class="k"><b>${v}</b><span>${l}</span></div>`;
   const row = (l: string, a: number, b: number, u = '') => `<tr><th>${l}</th><td>${a}${u}</td><td>${b}${u}</td></tr>`;
   const jar = (w: 'treat' | 'goal') => {

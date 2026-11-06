@@ -298,3 +298,15 @@ export function dueForRevision(p: Progress, skills: Skill[], today: string): Ski
 
 /** Compare an answer with normalisation (used by the round runner). */
 export const sameAnswer = (a: string, b: string): boolean => normalise(a) === normalise(b);
+
+/**
+ * A skill's stars out of 7: one for each of its 5 levels passed, one more for 3 stars on all of
+ * Learn, Practice and Practise more, and one more for 3 stars on both Speed and Master.
+ */
+export function skillStars(p: Progress, levels: Level[]): number {
+  const st = levels.map((l) => p.levels[l.id]?.stars ?? 0);
+  let n = st.filter((s) => s >= 1).length;
+  if (st.length >= 3 && st.slice(0, 3).every((s) => s === 3)) n++;
+  if (st.length >= 5 && st.slice(3, 5).every((s) => s === 3)) n++;
+  return Math.min(7, n);
+}
