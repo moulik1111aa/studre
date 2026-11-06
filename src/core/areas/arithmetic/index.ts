@@ -11,10 +11,14 @@ import { STAGE7 } from './stage7.ts';
 import { EXTRA1 } from './extra1.ts';
 import { EXTRA2 } from './extra2.ts';
 import { EXTRA3 } from './extra3.ts';
+import { EXTRA4 } from './extra4.ts';
+import { EXTRA5 } from './extra5.ts';
+import { EXTRA6 } from './extra6.ts';
+import { EXTRA7 } from './extra7.ts';
 import type { Extra } from './extra.ts';
 
 /** New skills on the one road, each placed after a skill (see extra.ts). */
-export const EXTRAS: Extra[] = [...EXTRA1, ...EXTRA2, ...EXTRA3];
+export const EXTRAS: Extra[] = [...EXTRA1, ...EXTRA2, ...EXTRA3, ...EXTRA4, ...EXTRA5, ...EXTRA6, ...EXTRA7];
 
 export interface StageInfo {
   n: number;

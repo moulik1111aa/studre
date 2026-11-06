@@ -5,7 +5,7 @@ import { createRng } from '../src/core/rng.ts';
 import { isCorrect, valueOf, buildChoices } from '../src/core/question.ts';
 
 const SEEDS = Number(process.env.SKILL_SEEDS ?? 300);
-const EXPECTED = [30, 48, 61, 53, 55, 43, 31]; // after moving skills to the right ages (arithmetic/index.ts MOVES)
+const EXPECTED = [37, 65, 76, 74, 70, 55, 45]; // after moves (arithmetic/index.ts MOVES) and the new branches (EXTRAS)
 
 /** Independent checker: evaluates simple written sums like "27 + 36 = ?" or "8 + ? = 15". */
 function check(prompt: string): number | null {

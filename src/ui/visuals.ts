@@ -81,6 +81,8 @@ export function optionHtml(value: string, optionObject?: string, optionVisuals?:
 
 /** Answers shown nicely: "3/4" as a stacked fraction, "-7" with a real minus. */
 export function prettyAnswer(a: string): string {
+  // Coordinates keep their comma: (3, −2).
+  if (/^\(.*\)$/.test(a)) return a.replace(/(^|[^\w])-(?=\d)/g, '$1−');
   const mx = /^(-?)(\d+) (\d+)\/(\d+)$/.exec(a);
   if (mx) return `${mx[1] ? '−' : ''}${mx[2]}<span class="frac"><sup>${mx[3]}</sup><sub>${mx[4]}</sub></span>`;
   const m = /^(-?)(\d+)\/(\d+)$/.exec(a);
