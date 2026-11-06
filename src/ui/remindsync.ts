@@ -10,8 +10,7 @@ import { streaks } from '../core/stats.ts';
 import { AVATARS } from './icons.ts';
 import { levelInfo, questBadge } from './adventure.ts';
 import { rankOf } from '../core/adventure.ts';
-import { backupScreen } from './backup.ts';
-import { whosPlayingScreen } from './whos.ts';
+import { parentScreen } from './parent.ts';
 import { quietly } from '../platform/native.ts';
 
 const remindChild = (c: Child): RemindChild => ({ id: c.id, name: c.name, avatar: AVATARS[c.avatar % AVATARS.length], wallet: c.wallet, stats: c.stats, backupAt: c.backupAt, backupDays: c.backupDays });
@@ -79,12 +78,12 @@ async function push(app: App): Promise<void> {
   }
 }
 
-/** What to do when a reminder was tapped: the backup note opens the grown-ups' backup screen. */
-function opened(app: App, open: string | undefined): void {
+/** What to do when a reminder was tapped: the backup note opens the Parent area (after the grown-up check). */
+async function opened(app: App, open: string | undefined): Promise<void> {
   if (open !== 'backup' || !app.save.data.children.length) return;
   // Not over the lock screen or setup: those come first.
   if (app.screen?.el.matches('.lock, .welcome, .reel')) return;
-  void app.show(backupScreen(whosPlayingScreen, app.save.data.children), 'fade');
+  if (await app.grownUp('Back up')) void app.show(parentScreen, 'fade');
 }
 
 export function startReminders(app: App): void {

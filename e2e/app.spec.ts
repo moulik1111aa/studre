@@ -893,8 +893,8 @@ test('adventure XP: past play counts, a new level is celebrated once, and a comb
   await expect(page.locator('.combo')).toContainText('3 in a row');
 });
 
-test('backup: grown-ups see it first, a child can only carry on, and saving a report card clears it', async ({ page }) => {
-  type W = { __app: { child: { stats: { secondsByDay: Record<string, number> }; backupAt?: number }; save: { update(f: () => void): void; data: { settings: { backupSnoozeUntil?: number } } } } };
+test('backup: no screen when the app opens; the Parent area says who needs it, and saving a report card clears it', async ({ page }) => {
+  type W = { __app: { child: { stats: { secondsByDay: Record<string, number> } }; save: { update(f: () => void): void }; show(m: unknown): void }; __screens: { parentScreen: unknown } };
   await page.goto('/?debug&demo=%4012');
   await expect(page.locator('.map')).toBeVisible();
   // Two days of play, never backed up.
@@ -905,52 +905,21 @@ test('backup: grown-ups see it first, a child can only carry on, and saving a re
       w.__app.child.stats.secondsByDay['2026-10-02'] = 600;
     });
   });
-  await page.goto('/?debug&noloader&backup');
-  await expect(page.locator('.bkgate')).toBeVisible();
-  await expect(page.locator('.bk-title')).toHaveText('Grown-ups first');
-  // A child can only carry on.
-  await page.click('.bk-kid-go');
-  await expect(page.locator('.whos')).toBeVisible();
-  // Next time the app opens, it is there again.
-  await page.goto('/?debug&noloader&backup');
-  await expect(page.locator('.bkgate')).toBeVisible();
-  // Backing up needs the grown-up check, then saves the report card.
-  await page.click('.bk-now');
-  await expect(page.locator('.grownup')).toBeVisible();
-  await grownUp(page);
-  await expect(page.locator('.whos')).toBeVisible({ timeout: 8000 });
-  const file = await page.evaluate(() => (window as unknown as { __lastExport: { name: string; text: string } }).__lastExport);
-  expect(file.name).toMatch(/report/);
-  expect(file.text).toContain('mn-backup');
+  // Opening the app goes straight to Who's playing (no "Grown-ups first" screen).
   await page.goto('/?debug&noloader&backup');
   await expect(page.locator('.whos')).toBeVisible();
   await expect(page.locator('.bkgate')).toHaveCount(0);
-});
-
-test('backup: "remind me in 3 days" needs a grown-up, and the parent area shows the last backup', async ({ page }) => {
-  type W = { __app: { child: { stats: { secondsByDay: Record<string, number> } }; save: { update(f: () => void): void; data: { settings: { backupSnoozeUntil?: number } } }; show(m: unknown): void }; __screens: { parentScreen: unknown } };
-  await page.goto('/?debug&demo=%4012');
-  await expect(page.locator('.map')).toBeVisible();
-  await page.evaluate(() => {
-    const w = window as unknown as W;
-    w.__app.save.update(() => {
-      w.__app.child.stats.secondsByDay['2026-10-01'] = 600;
-      w.__app.child.stats.secondsByDay['2026-10-02'] = 600;
-    });
-  });
-  await page.goto('/?debug&noloader&backup');
-  await page.click('.bk-later');
-  await grownUp(page);
-  await expect(page.locator('.whos')).toBeVisible();
-  const snooze = await page.evaluate(() => (window as unknown as W).__app.save.data.settings.backupSnoozeUntil ?? 0);
-  expect(snooze).toBeGreaterThan(Date.now() + 2 * 86_400_000);
-  await page.goto('/?debug&noloader&backup');
-  await expect(page.locator('.bkgate')).toHaveCount(0);
-  // Parent area: backups and reminders.
+  // The Parent area shows the reminder, and saving clears it.
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
+  await expect(page.locator('.pb-due')).toContainText('isn’t backed up yet');
   await expect(page.locator('.pa-backup')).toContainText('Never backed up');
   await page.click('.bk-all');
   await expect(page.locator('.pa-backup')).toContainText('Last backup today');
+  const file = await page.evaluate(() => (window as unknown as { __lastExport: { name: string; text: string } }).__lastExport);
+  expect(file.name).toMatch(/report/);
+  expect(file.text).toContain('mn-backup');
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
+  await expect(page.locator('.pb-due')).toHaveCount(0);
   // Reminder settings are saved (Advanced → Notes).
   await page.click('.pa-menu');
   await page.click('.dr-item[data-id="notes"]');

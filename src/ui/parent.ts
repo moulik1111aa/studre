@@ -6,7 +6,7 @@
 
 import { showParentAdventureTips, toggleAdventure } from './adventure.ts';
 import { DRAGON_MAP } from './foldmap.ts';
-import { backUpNow, lastBackupText } from './backup.ts';
+import { backUpNow, dueKids, lastBackupText } from './backup.ts';
 import { askNotifications, notificationState } from './remindsync.ts';
 import { DEFAULT_REMINDERS, type ReminderSettings } from '../core/reminders.ts';
 import { schoolScreen, schoolLabel } from './school.ts';
@@ -117,6 +117,10 @@ function basicHtml(app: App): string {
       <div class="themes" role="radiogroup" aria-label="Look of the app">${THEME_CHOICES.map((t) => `<button class="theme-tile th-${t.id}${st.theme === t.id ? ' on' : ''}" role="radio" aria-checked="${st.theme === t.id}" data-theme-id="${t.id}"><span class="th-swatch"><i></i><i></i><i></i></span><b>${t.name}</b><small>${t.note}</small></button>`).join('')}</div></section>
     <section class="pa-sec"><h2 class="pa-h">💾 Backup</h2>
       <div class="card pa-backup">
+        ${(() => {
+          const due = dueKids(app);
+          return due.length ? `<p class="pb-due" role="status">⚠️ <span>${esc(due.map((c) => c.name).join(' and '))} ${due.length === 1 ? 'has' : 'have'} new progress that isn’t backed up yet.${account(app) ? '' : cloudOn(app) ? ' Save a report card now, or back up with Google below.' : ' Save a report card now.'}</span></p>` : '';
+        })()}
         <p class="pb-why"><small>${account(app) ? 'A report card file is a copy you can keep anywhere, like Google Drive or email.' : 'Progress is saved only on this phone. A report card file (kept in Google Drive or email) brings it back on any phone.'}</small></p>
         <ul class="pb-kids">${app.save.data.children.map((c) => `<li>${avatarHtml(c.avatar, 28)}<span>${esc(c.name)}</span><small>${lastBackupText(c)}</small></li>`).join('')}</ul>
         <button class="btn small bk-all">Save report cards now</button>
@@ -143,7 +147,7 @@ function groupHtml(app: App, group: Group): string {
       <div class="card pa-remind">
         <label class="toggle-row"><span><b>🍫 Melt watch</b><small>Friendly notes when a treat jar is about to melt, each with a fun fact.</small></span><input type="checkbox" role="switch" data-r="melt" ${rs.melt ? 'checked' : ''}></label>
         <div class="seg pr-per" role="radiogroup" aria-label="Notes a day"${rs.melt ? '' : ' hidden'}>${([2, 3] as const).map((n) => `<button class="seg-b${rs.perDay === n ? ' on' : ''}" role="radio" aria-checked="${rs.perDay === n}" data-per="${n}"><b>${n} a day</b><small>${n === 3 ? '8 am · 4:30 pm · 7:30 pm' : '8 am · 6:30 pm'}</small></button>`).join('')}</div>
-        <label class="toggle-row"><span><b>💾 Backup reminder</b><small>When there’s a week of progress not backed up. Grown-ups also see it when the app opens.</small></span><input type="checkbox" role="switch" data-r="backup" ${rs.backup ? 'checked' : ''}></label>
+        <label class="toggle-row"><span><b>💾 Backup reminder</b><small>When there’s a week of progress not backed up: a note on this phone, and a reminder here in the Parent area.</small></span><input type="checkbox" role="switch" data-r="backup" ${rs.backup ? 'checked' : ''}></label>
         <p class="pr-status" hidden></p>
       </div>
       <div class="card pa-widgets"><b>📱 Home-screen widgets</b><small>Treat jars, a fun fact and the Adventure card. Touch and hold an empty spot on your home screen, tap Widgets, then find MN.</small></div>`,
