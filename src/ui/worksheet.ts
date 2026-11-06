@@ -12,6 +12,25 @@ import { worksheetPlan, type SheetItem } from '../core/worksheet.ts';
 import { visualHtml, optionHtml, prettyAnswer } from './visuals.ts';
 import { escPrompt } from './answerpad.ts';
 import { plusFaceSvg } from './plus.ts';
+
+/** The app's rules for Measure, Shapes and Data pictures, copied into the printable sheet (in print colours). */
+function mathVisCss(): string {
+  let rules = '';
+  try {
+    for (const sh of [...document.styleSheets]) {
+      let list: CSSRuleList;
+      try {
+        list = sh.cssRules;
+      } catch {
+        continue;
+      }
+      for (const r of [...list]) if (/\.mv[\s.,{:-]|\.opt-vis/.test(r.cssText) && !r.cssText.includes('.pf.fresh')) rules += r.cssText + '\n';
+    }
+  } catch {
+    /* no stylesheets (tests) */
+  }
+  return `.mv{--q-ink:#1A1446;--q-bg:#FFFFFF;--q-soft:#F1EEFF;--accent:#5B3DF5;--ink:#1A1446}\n${rules}.mv .mv-svg{max-height:150px}.opt-vis .mv-svg{max-height:60px}`;
+}
 import { saveTextFile } from '../platform/files.ts';
 
 const MONTH = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -54,6 +73,7 @@ export function worksheetHtml(app: App, child: Child, qs: { q: Question; item: S
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(child.name)}'s maths worksheet · ${esc(nice(today))}</title>
 <style>
+${mathVisCss()}
 @page{size:A4;margin:14mm}
 *{box-sizing:border-box}
 body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#1A1446;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}

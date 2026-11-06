@@ -72,7 +72,10 @@ add('s7.special', 'heights', 'shape', 'Heights and distances', (r) => {
   const dist = r.pick([10, 20, 30, 40, 50]) * (ang === 30 ? 3 : 1);
   const ans = ang === 45 ? `${dist}` : ang === 60 ? `${dist}√3` : `${dist / 3}√3`;
   const wrong = ang === 45 ? [`${dist}√3`, `${dist / 2}`, `${dist * 2}`] : ang === 60 ? [`${dist}`, `${dist / 3}√3`, `${dist}/√3`.replace('/√3', '√3 ÷ 3')] : [`${dist}√3`, `${dist}`, `${dist / 3}`];
-  const v: MathVisual = { kind: 'geo', w: 10, h: 6, segs: [{ a: [0.5, 0.5], b: [9, 0.5] }, { a: [9, 0.5], b: [9, 5.5], style: 'bold' }, { a: [0.5, 0.5], b: [9, 5.5], style: 'dash' }], arcs: [{ at: [0.5, 0.5], a0: 0, a1: 30, label: `${ang}°`, r: 1.4 }, { at: [9, 0.5], a0: 90, a1: 180, right: true }], labels: [{ at: [4.7, -0.2], t: `${dist} m` }, { at: [9.6, 3], t: 'h', ask: true }] };
+  const t = Math.tan((ang * Math.PI) / 180);
+  const base = Math.min(8.5, 5 / t);
+  const top = base * t;
+  const v: MathVisual = { kind: 'geo', w: base + 1.6, h: top + 1, segs: [{ a: [0.5, 0.5], b: [0.5 + base, 0.5] }, { a: [0.5 + base, 0.5], b: [0.5 + base, 0.5 + top], style: 'bold' }, { a: [0.5, 0.5], b: [0.5 + base, 0.5 + top], style: 'dash' }], arcs: [{ at: [0.5, 0.5], a0: 0, a1: ang, label: `${ang}°`, r: 1.2 }, { at: [0.5 + base, 0.5], a0: 90, a1: 180, right: true }], labels: [{ at: [0.5 + base / 2, -0.2], t: `${dist} m` }, { at: [1.1 + base, 0.5 + top / 2], t: 'h', ask: true }] };
   return made(`From ${dist} m away, the top of a tower is seen at an angle of ${ang}° above the ground. How tall is the tower? (m)`, ans, wrong, {
     visual: v,
     hint: 'tan(angle) = height ÷ distance.',
@@ -250,7 +253,8 @@ add('s7.roots', 'zeros', 'algebra', 'Zeros of a quadratic', (r) => {
 // ── Mensuration ───────────────────────────────────────────────────────────
 add('s7.ratioadv', 'sector', 'measure', 'Sectors and arcs', (r) => {
   const ang = r.pick([90, 60, 45, 180, 120]);
-  const rr = ang === 45 ? 14 : ang === 120 ? 21 : 7 * r.int(1, 3) * (ang === 60 ? 3 : 1);
+  // Radii that give whole-number answers with π = 22/7.
+  const rr = ang === 45 ? 14 * r.int(1, 2) : ang === 90 ? 14 * r.int(1, 2) : ang === 60 || ang === 120 ? 21 * r.int(1, 2) : 7 * r.int(1, 3);
   const area = r.chance(0.5);
   const fracs = frac(ang, 360);
   const full = area ? (22 / 7) * rr * rr : 2 * (22 / 7) * rr;

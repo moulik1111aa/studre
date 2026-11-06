@@ -346,7 +346,11 @@ add('s6.proportion', 'twoevents', 'data', 'Two events', (r) => {
 
 add('s6.ratio3', 'similar', 'shape', 'Similar shapes and scale factor', (r) => {
   const k = r.pick([2, 3, 4, 1.5, 2.5]);
-  const sides = [r.int(2, 6) * 2, r.int(2, 6) * 2, r.int(3, 8) * 2].sort((a, b) => a - b);
+  let sides = [6, 8, 10];
+  for (let t = 0; t < 50; t++) {
+    const c = [r.int(2, 6) * 2, r.int(2, 6) * 2, r.int(3, 8) * 2].sort((a, b) => a - b);
+    if (c[0] + c[1] > c[2] && new Set(c).size === 3) { sides = c; break; }
+  }
   const i = r.int(0, 2);
   const ans = sides[i] * k;
   const j = (i + 1) % 3;

@@ -154,14 +154,17 @@ function solidSvg(s: SolidName, colorName = 'blue', hl?: 'faces' | 'edges' | 'co
 function compareSvg(v: Extract<MathVisual, { kind: 'compare' }>): string {
   const items = v.items;
   if (v.mode === 'long') {
+    // A single pencil (an answer option) is drawn thicker so it reads at button size.
+    const th = items.length === 1 ? 44 : 22;
     const rows = items.map((it, i) => {
       const y = 14 + i * 44;
       const len = 70 + it.size * 230;
       const c = col(it.color);
-      return `<g class="${it.hl ? 'mv-hl' : ''}"><rect class="mv-pencil" x="14" y="${y}" width="${r1(len - 26)}" height="22" rx="4" fill="${c}"/><polygon class="mv-pencil-tip" points="${r1(14 + len - 26)},${y} ${r1(14 + len)},${y + 11} ${r1(14 + len - 26)},${y + 22}"/><polygon fill="#3A3A4A" points="${r1(14 + len - 8)},${y + 7} ${r1(14 + len)},${y + 11} ${r1(14 + len - 8)},${y + 15}"/><rect x="14" y="${y}" width="10" height="22" rx="3" fill="#FF9EB5" class="mv-eraser"/></g>`;
+      const tip = th + 4;
+      return `<g class="${it.hl ? 'mv-hl' : ''}"><rect class="mv-pencil" x="14" y="${y}" width="${r1(len - tip)}" height="${th}" rx="4" fill="${c}"/><polygon class="mv-pencil-tip" points="${r1(14 + len - tip)},${y} ${r1(14 + len)},${y + th / 2} ${r1(14 + len - tip)},${y + th}"/><rect x="14" y="${y}" width="${th / 2}" height="${th}" rx="3" fill="#FF9EB5" class="mv-eraser"/></g>`;
     });
     const tip = v.tip !== undefined ? `<line class="mv-guide" x1="${r1(14 + 70 + items[v.tip].size * 230)}" y1="4" x2="${r1(14 + 70 + items[v.tip].size * 230)}" y2="${items.length * 44 + 10}"/><line class="mv-guide" x1="14" y1="4" x2="14" y2="${items.length * 44 + 10}"/>` : '';
-    return wrap('compare', svg(320, items.length * 44 + 14, rows.join('') + tip));
+    return wrap('compare', svg(320, items.length === 1 ? 72 : items.length * 44 + 14, rows.join('') + tip));
   }
   if (v.mode === 'tall' || v.mode === 'big') {
     const n = items.length;
