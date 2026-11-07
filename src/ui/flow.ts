@@ -3,7 +3,7 @@
 
 import type { App } from './app.ts';
 import type { Child } from '../storage/save.ts';
-import { applyMelt, secondsLeft } from '../core/economy.ts';
+import { applyMelt, recheckJars, secondsLeft } from '../core/economy.ts';
 import type { Level } from '../core/path.ts';
 import { mapScreen } from './map.ts';
 import { placementScreen } from './placement.ts';
@@ -33,6 +33,10 @@ export function enterChild(app: App, child: Child, how: 'fade' | 'liquid' = 'fad
   // Bedtime or school time: a calm stop screen (a grown-up can unlock it).
   const quiet = child.tester ? null : quietNow(app);
   if (quiet) return void app.show(quietScreen(child, quiet, () => enterChild(app, child, how, checkMelt)), how);
+  // A jar that is already full (restored from a backup, or prices changed) is ready to give,
+  // even though it did not fill during play on this phone.
+  const w0 = child.wallet;
+  if ([w0.treat, w0.goal].some((j) => !j.waiting)) app.save.update(() => recheckJars(child.wallet));
   if (checkMelt) {
     let lost = { treat: 0, goal: 0, days: 0 };
     app.save.update(() => (lost = applyMelt(child.wallet, app.today, app.save.data.settings.holiday)));

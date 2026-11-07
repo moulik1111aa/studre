@@ -1527,3 +1527,11 @@ test('MN Plus: the app icon can be chosen from the Parent area', async ({ page }
   await expect(page.locator('.ic-opt.on')).toHaveAttribute('data-icon', 'night');
   await expect(page.locator('.toast').last()).toContainText('Night');
 });
+
+test('a jar that arrives full (restored from a backup) is ready to give', async ({ page }) => {
+  await seeded(page, '@0', `window.__app.save.update((d) => { const t = d.children[0].wallet.treat; t.coins = 2000; t.waiting = false; })`);
+  await expect(page.locator('.unlock')).toBeVisible();
+  await page.click('.given');
+  await grownUp(page);
+  await expect(page.locator('.rewards')).toContainText('Pick your treat');
+});
