@@ -39,3 +39,10 @@ test('week change: last 7 days against the 7 before, coloured up, down or steady
   assert.equal(trend({ now: 40, before: 60 }), 'down');
   assert.equal(weekChange(log, '2026-11-04', 'b'), null);
 });
+
+test('the voice says MN letter by letter, and MN × as M N Times', async () => {
+  const { sayable } = await import('../src/platform/voice.ts');
+  assert.equal(sayable('Welcome to MN!'), 'Welcome to M N!');
+  assert.equal(sayable('MN × is on'), 'M N Times is on');
+  assert.equal(sayable('MNOP and AMNESIA'), 'MNOP and AMNESIA');
+});

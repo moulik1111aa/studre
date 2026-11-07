@@ -42,6 +42,9 @@ function webScore(v: SpeechSynthesisVoice): number {
   return s;
 }
 
+/** Words the phone's voice gets wrong: "MN" is said letter by letter (not "man"), and "MN ×" is "M N Times". */
+export const sayable = (t: string): string => t.replace(/\bMN(?:\s|\u00a0)*×/g, 'M N Times').replace(/\bMN\b/g, 'M N');
+
 export class Voice {
   enabled: boolean;
   /** Parent's choice: a voice name ('' = automatic) and speed (0.75–1.15). */
@@ -117,6 +120,7 @@ export class Voice {
 
   say(text: string, rate = this.rate, force = false): void {
     if ((!this.enabled && !force) || !text) return;
+    text = sayable(text);
     if (this.native) {
       // QUEUE_FLUSH replaces whatever was being said; a separate stop could land after it.
       quietly(this.native.speak({ text, rate, pitch: this.pitch, voice: this.speaking || undefined }));
