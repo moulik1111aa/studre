@@ -4,7 +4,7 @@
 import { App, errorScreen } from './ui/app.ts';
 import { openerScreen } from './ui/opener.ts';
 import { nativeBridge, nativeStorage } from './platform/native.ts';
-import { browserStorage } from './storage/save.ts';
+import { browserStorage, PLUS_THEMES } from './storage/save.ts';
 import { welcomeScreen, startSetup } from './ui/setup.ts';
 import { whosPlayingScreen } from './ui/whos.ts';
 import { seedDemo } from './ui/demo.ts';
@@ -108,9 +108,9 @@ async function boot(): Promise<void> {
       void app.show(lockScreen(st, () => void gate()));
     }
   });
-  // Precision is an MN × look: without MN × (Play build) it shows as Studio until MN × is on
+  // Shapes, Print and Precision are MN × looks: without MN × (Play build) they show as Notebook until MN × is on
   // again. The saved choice is kept.
-  if (app.save.data.settings.theme === 'precision' && storeBuild(app) && !hasPlus(app) && !new URLSearchParams(location.search).has('theme')) app.applyTheme('studio');
+  if (PLUS_THEMES.includes(app.save.data.settings.theme) && storeBuild(app) && !hasPlus(app) && !new URLSearchParams(location.search).has('theme')) app.applyTheme('studio');
   // The phone's reminders and home-screen widgets follow the save (never in the way of opening).
   try {
     startReminders(app);

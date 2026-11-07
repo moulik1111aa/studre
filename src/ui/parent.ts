@@ -29,7 +29,7 @@ import { restoreFromFile } from './restore.ts';
 import { appIconSvg } from './appicons.ts';
 import { chooseAppIcon, currentIcon, iconsAvailable } from './iconpick.ts';
 import { html, esc, type App, type Screen } from './app.ts';
-import { type Child, type Settings, type Theme } from '../storage/save.ts';
+import { PLUS_THEMES, type Child, type Settings, type Theme } from '../storage/save.ts';
 import { CATEGORIES } from '../core/rewards.ts';
 import { ICONS, avatarHtml } from './icons.ts';
 import { stagger } from '../render/motion.ts';
@@ -167,7 +167,7 @@ function appHtml(app: App): string {
         <label class="toggle-row"><span><b>Reward ready</b><small>When a jar is full and a reward is waiting to be given.</small></span><input type="checkbox" role="switch" data-r="ready" ${rs.ready ? 'checked' : ''}></label>
         <label class="toggle-row"><span><b>Backup reminder</b><small>When a week of progress isn’t backed up.</small></span><input type="checkbox" role="switch" data-r="backup" ${rs.backup ? 'checked' : ''}></label>
       </div>`)}
-    ${sec('Look', `<div class="themes" role="radiogroup" aria-label="Look of the app">${THEME_CHOICES.map((t) => `<button class="theme-tile th-${t.id}${st.theme === t.id ? ' on' : ''}" role="radio" aria-checked="${st.theme === t.id}" data-theme-id="${t.id}"><span class="th-swatch"><i></i><i></i><i></i></span><b>${t.name}${t.id === 'precision' ? ` ${plusTag(app)}` : ''}</b><small>${t.note}</small></button>`).join('')}</div>
+    ${sec('Look', `<div class="themes" role="radiogroup" aria-label="Look of the app">${THEME_CHOICES.map((t) => `<button class="theme-tile th-${t.id}${st.theme === t.id ? ' on' : ''}" role="radio" aria-checked="${st.theme === t.id}" data-theme-id="${t.id}"><span class="th-swatch"><i></i><i></i><i></i></span><b>${t.name}${PLUS_THEMES.includes(t.id) ? ` ${plusTag(app)}` : ''}</b><small>${t.note}</small></button>`).join('')}</div>
       ${iconsAvailable(app) ? `<button class="pa-row card icon-row"><span class="ic-now" aria-hidden="true">${appIconSvg('sky', 'square', 40)}</span><span><b>App icon ${plusTag(app)}</b><small>Choose MN’s icon on the home screen</small></span></button>` : ''}
       <div class="card pa-toggles">${toggleRows(st, [T('vibration', 'Vibration', 'Gentle buzzes on taps and answers.'), T('fx3d', '3D challenges', 'Turn off if challenges feel slow on this phone.')])}</div>`)}
     ${sec('Rewards', `<div class="card pa-cats"><p class="cat-why">Rewards children can pick from. Tap to show or hide a kind.</p><div class="cat-chips">${CATEGORIES.map((c) => `<button class="cat-chip${st.hiddenCategories.includes(c.id) ? '' : ' on'}" aria-pressed="${!st.hiddenCategories.includes(c.id)}" data-c="${c.id}"><span aria-hidden="true">${c.icon}</span>${esc(c.name)}</button>`).join('')}</div></div>`)}
@@ -269,7 +269,7 @@ function premiumHtml(app: App): string {
   const peek = kid ? `<section class="pm-proof"><p class="pm-cap">${on ? 'Your full report' : 'Here’s what MN × shows you'}</p>${reportPeek(app, kid, on)}</section>` : '';
   const gains = `${on ? '<p class="pm-cap pm-have">What you have with MN ×</p>' : ''}<ul class="pm-gains${on ? ' have' : ''}">${GAINS.map((g) => `<li>${CHECK}<span><b>${esc(g.name)}</b><small>${esc(g.line)}</small></span><button class="pm-q" data-demo="${g.id}" aria-label="See what ${esc(g.name)} looks like">?</button></li>`).join('')}</ul>`;
   const free = on ? '' : '<p class="pm-free-note">Every level, lesson and reward is free for every child, with no ads.</p>';
-  const plans = !store || on ? '' : `<p class="pm-price">Then ${FALLBACK.yearly.price} a year, ${FALLBACK.monthly.price} a month, or ${FALLBACK.lifetime.price} once.</p>`;
+  const plans = !store || on ? '' : `<div class="pm-price" role="group" aria-label="Prices after the free days"><p>After the free days</p><div class="pm-price-row"><span><b>${FALLBACK.yearly.price}</b>a year</span><span><b>${FALLBACK.monthly.price}</b>a month</span><span><b>${FALLBACK.lifetime.price}</b>once</span></div></div>`;
   const cta = !store
     ? '<div class="pm-cta-bar"><p class="pm-incl">Everything in MN × is included in this version of MN.</p></div>'
     : on
@@ -448,7 +448,7 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
   on('.theme-tile', 'click', async (b) => {
     const theme = b.dataset.themeId as Theme;
     // Precision is an MN × look (with the app icons).
-    if (theme === 'precision' && !(await needPlus(app, 'icons', parentScreen))) return;
+    if (PLUS_THEMES.includes(theme) && !(await needPlus(app, 'icons', parentScreen))) return;
     app.save.update((d) => (d.settings.theme = theme));
     app.applyTheme(theme);
     body.querySelectorAll('.theme-tile').forEach((x) => {

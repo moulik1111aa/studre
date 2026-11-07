@@ -39,7 +39,7 @@ export const FEATURES: { id: PlusFeature; icon: string; name: string; free: stri
   { id: 'exam', icon: '📝', name: 'Exam practice', free: '', plus: 'A timed test on the topics you pick, no hints, then a score sheet by topic to share as a PDF' },
   { id: 'certs', icon: '🏅', name: 'Certificates', free: '', plus: 'A printable certificate for every challenge beaten and every stage finished' },
   { id: 'widgets', icon: '📱', name: 'Home-screen widgets', free: 'MN today, treat jars and a fun fact', plus: 'The Focus plan widget: this week’s 3 skills and how each is going, right on your home screen' },
-  { id: 'icons', icon: '🎨', name: 'App look', free: 'Notebook, Shapes, Print, Playground, Glass and Schoolbook', plus: 'The Precision look, and the MN icon on your home screen: Sky, Night, Sunset, Space or Gold' },
+  { id: 'icons', icon: '🎨', name: 'App look', free: 'Notebook, Playground, Glass and Schoolbook', plus: 'The Shapes, Print and Precision looks, and the MN icon on your home screen: Sky, Night, Sunset, Space or Gold' },
 ];
 
 /** The phone's record of MN × (kept on the phone, not in backups). */

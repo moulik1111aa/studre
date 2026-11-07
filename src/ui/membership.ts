@@ -6,6 +6,7 @@
 import { html, esc, type App, type Screen } from './app.ts';
 import { timesMarkSvg } from './mnx.ts';
 import { MockBilling, NativeBilling, type Billing } from '../platform/billing.ts';
+import { ICONS } from './icons.ts';
 import { FEATURES, freshPlus, fromPurchases, planOffers, plusOn, PLUS_LIFETIME, TRIAL_DAYS, TRIAL_DAYS_SIGNED_IN, type PlanId, type PlanOffer, type PlusFeature, type PlusState } from '../core/membership.ts';
 import type { PlayPurchase, PurchasesEvent } from '../platform/native.ts';
 import { account, cloudOn, isOwnerAccount, signIn } from './cloud.ts';
@@ -133,7 +134,7 @@ const FEATURE_LINE: Record<PlusFeature, string> = {
   exam: 'Exam practice is part of MN\u00a0×: a timed test on the topics you pick, then a score sheet by topic to share.',
   certs: 'Certificates are part of MN\u00a0×: a printable one for every challenge beaten and every stage finished.',
   widgets: 'The Focus plan widget is part of MN\u00a0×: this week’s 3 skills and how each is going, on your home screen.',
-  icons: 'The Precision look and the app icons are part of MN\u00a0×. Notebook, Shapes, Print, Playground, Glass and Schoolbook are free.',
+  icons: 'The Shapes, Print and Precision looks and the app icons are part of MN\u00a0×. Notebook, Playground, Glass and Schoolbook are free.',
 };
 
 /**
@@ -144,7 +145,7 @@ export async function needPlus(app: App, feature: PlusFeature, back: (app: App) 
   if (hasPlus(app)) return true;
   const f = FEATURES.find((x) => x.id === feature)!;
   const { result } = app.sheet(
-    `<div class="mp-sheet"><span class="mp-sheet-i" aria-hidden="true">${f.icon}</span><h2>${esc(f.name)}</h2><p>${esc(FEATURE_LINE[feature])}</p><p class="fine">${trialLine(app)}</p></div>`,
+    `<div class="mp-sheet"><span class="mp-sheet-i" aria-hidden="true">${featureIcon(f)}</span><h2>${esc(f.name)}</h2><p>${esc(FEATURE_LINE[feature])}</p><p class="fine">${trialLine(app)}</p></div>`,
     [
       { label: 'See MN ×', value: true, kind: 'mint' },
       { label: 'Not now', value: false, kind: 'ghost', back: true },
@@ -173,6 +174,10 @@ export function plusVideoFor(app: App, after: (app: App) => Screen, label?: stri
 const PLAN_NAME: Record<PlanId, string> = { monthly: 'Monthly', yearly: 'Yearly', lifetime: 'Lifetime' };
 
 /** The MN × page (Parent area). */
+/** Line icons for the MN × features (the same in every look). */
+const FEATURE_ICON: Record<string, string> = { focus: ICONS.target, sync: ICONS.cloud, school: ICONS.book, report: ICONS.chart, sheets: ICONS.printer, exam: ICONS.pencil, certs: ICONS.medal, widgets: ICONS.phone, icons: ICONS.palette };
+const featureIcon = (f: { id: string; icon: string }): string => FEATURE_ICON[f.id] ?? f.icon;
+
 export function plusScreen(back: (app: App) => Screen) {
   return (app: App): Screen => {
     let offers: PlanOffer[] = planOffers([], !!account(app));
@@ -196,7 +201,7 @@ export function plusScreen(back: (app: App) => Screen) {
 
     const featureRows = () =>
       FEATURES.map(
-        (f) => `<li class="mp-f"><span class="mp-fi" aria-hidden="true">${f.icon}</span><div><b>${esc(f.name)}</b><small>${esc(f.plus)}</small>${f.free ? `<small class="mp-free">Free: ${esc(f.free)}</small>` : ''}</div></li>`,
+        (f) => `<li class="mp-f"><span class="mp-fi" aria-hidden="true">${featureIcon(f)}</span><div><b>${esc(f.name)}</b><small>${esc(f.plus)}</small>${f.free ? `<small class="mp-free">Free: ${esc(f.free)}</small>` : ''}</div></li>`,
       ).join('');
 
     const paintOwned = () => {

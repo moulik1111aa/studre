@@ -175,6 +175,8 @@ function lookFrom(s: Partial<Settings> | undefined): Theme {
   return t === 'playground' && !s?.studioMoved ? 'studio' : t;
 }
 export type Theme = 'studio' | 'shapes' | 'print' | 'playground' | 'glass' | 'schoolbook' | 'precision';
+/** The looks that come with MN × (the rest are free). */
+export const PLUS_THEMES: Theme[] = ['shapes', 'print', 'precision'];
 export const THEMES: Theme[] = ['studio', 'shapes', 'print', 'playground', 'glass', 'schoolbook', 'precision'];
 
 /** A key the owner made (kept only on the owner's phone). */
