@@ -16,7 +16,12 @@ export interface SheetItem {
 export interface SheetChild extends FixHolder {
   age: number;
   progress: Progress;
+  /** Placement has run (their first play). Until then the map hasn't moved them up to their age. */
+  placed?: boolean;
 }
+
+/** The stage meant for an age: stage s is for ages 2s+1 and 2s+2. */
+export const stageForAge = (age: number): number => Math.min(7, Math.max(1, Math.ceil((age - 2) / 2)));
 
 /** Questions on a sheet: fewer, bigger ones for little children. */
 export const sheetSize = (age: number): number => (age <= 6 ? 12 : 20);
@@ -28,10 +33,15 @@ export function worksheetPlan(c: SheetChild, path: Level[], today: string, rng: 
   const skillLevels = path.filter((l): l is Extract<Level, { kind: 'skill' }> => l.kind === 'skill');
   const front = frontier(path, c.progress);
   // The skill the child is on now: the first skill level at or after the frontier (or the last one).
-  const nowLevel = skillLevels.find((l) => l.index >= front) ?? skillLevels[skillLevels.length - 1];
+  let nowLevel = skillLevels.find((l) => l.index >= front) ?? skillLevels[skillLevels.length - 1];
   if (!nowLevel) return [];
+  // Before their first play (placement), a child is still at the start of the map: begin at
+  // the stage for their age instead, as placement would, and treat what comes before as known.
+  const ageStage = stageForAge(c.age);
+  const early = !c.placed && (stageOf(nowLevel.skillId) ?? 1) < ageStage;
+  if (early) nowLevel = skillLevels.find((l) => (stageOf(l.skillId) ?? 1) >= ageStage && l.tier === 1) ?? nowLevel;
   const passedSkills: string[] = [];
-  for (const l of skillLevels) if (l.index < nowLevel.index && isPassed(c.progress, l) && !passedSkills.includes(l.skillId) && l.skillId !== nowLevel.skillId) passedSkills.push(l.skillId);
+  for (const l of skillLevels) if (l.index < nowLevel.index && (early || isPassed(c.progress, l)) && !passedSkills.includes(l.skillId) && l.skillId !== nowLevel.skillId) passedSkills.push(l.skillId);
   const recent = passedSkills.slice(-3).reverse();
   // Older ones to keep fresh: from the stage in progress or the one before it, not far below.
   const nowStage = stageOf(nowLevel.skillId) ?? 1;

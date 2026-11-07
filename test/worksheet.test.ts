@@ -17,6 +17,7 @@ const skillLevels = path.filter((l) => l.kind === 'skill') as Extract<(typeof pa
 function kidAt(age: number, upTo: number) {
   const c = newChild('Riya', age, 0, '2026-10-01');
   for (const l of path.slice(0, skillLevels[upTo].index)) recordResult(c.progress, l.id, 3);
+  c.placed = true;
   return c;
 }
 
@@ -49,4 +50,17 @@ test('little ones get 12; a brand-new child gets the first skill only', () => {
   assert.equal(plan.length, 12);
   assert.ok(plan.every((p) => p.why === 'now' && p.skillId === skillLevels[0].skillId));
   assert.ok(plan[0].d <= plan.at(-1)!.d);
+});
+
+test('before their first play, an older child gets a sheet at the stage for their age, not the start of the map', () => {
+  const c = newChild('Kabir', 8, 0, '2026-10-01');
+  const plan = worksheetPlan(c, path, '2026-11-05', createRng('z'), stageOf);
+  assert.equal(plan.length, 20);
+  // Stage 3 is for ages 7 and 8.
+  assert.ok(plan.every((p) => (stageOf(p.skillId) ?? 0) >= 2), plan.map((p) => p.skillId).join());
+  assert.ok(plan.filter((p) => p.why === 'now').every((p) => stageOf(p.skillId) === 3));
+  assert.ok(!plan.some((p) => p.skillId === skillLevels[0].skillId));
+  // Once placement has run, the map decides (here: still at the start).
+  c.placed = true;
+  assert.ok(worksheetPlan(c, path, '2026-11-05', createRng('z'), stageOf).every((p) => p.skillId === skillLevels[0].skillId));
 });
