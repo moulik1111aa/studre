@@ -161,3 +161,6 @@
 .dr-l b{font-size:17px}
 .dr-l small{color:var(--ink-soft);font-weight:700;font-size:13px;line-height:1.3}
 .map-top .map-menu{width:48px;height:48px;flex:none}
+/* Line icons in tab bars (the Parent area and the report). */
+.pa-tab > span svg,.rp-tab .rt-i svg{width:22px;height:22px;display:block;margin:0 auto}
+.rp-tab .rt-i:has(svg){display:block;line-height:0}
