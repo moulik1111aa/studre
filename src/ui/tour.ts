@@ -1,7 +1,7 @@
 // The quick tour, in two parts.
-//  1. For grown-ups: the opening video, in reel.ts.
+//  1. For parents: the opening video, in reel.ts.
 //  2. Map tips (for the child, the first time they reach the map): Plus points at the
-//     treat jar, the big goal, the path, a boss, the timer, Play and the trophy room, and
+//     treat jar, the big reward, the path, a boss, the timer, Play and the trophy room, and
 //     reads each tip aloud. A "?" button on the map plays them again.
 
 import { html, type App } from './app.ts';

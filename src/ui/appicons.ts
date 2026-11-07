@@ -1,4 +1,4 @@
-// The launcher icons an MN Plus member can pick: Plus on five skies. The same drawings make
+// The launcher icons an MN Premium member can pick: Plus on five skies. The same drawings make
 // the Android icon files (scripts/icons.mjs) and the previews in the Parent area.
 
 import { plusFaceSvg } from './plus.ts';

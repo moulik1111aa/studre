@@ -1,4 +1,4 @@
-// A child's backup, carried inside the exported report card (an .html file that opens in any
+// A child's backup, carried inside the exported progress file (an .html file that opens in any
 // browser). Importing the file in MN on another phone adds the child there, or, if the same
 // child is already on that phone, combines both: best stars, all play days, the play log
 // from both, and the jars from whichever phone earned more. A check value stops a file that
@@ -41,7 +41,7 @@ export const backupJson = (b: Backup): string => JSON.stringify(b).replace(/</g,
 
 export type ReadResult = { ok: true; backup: Backup } | { ok: false; reason: string };
 
-/** Read a backup from an exported report card (or its bare JSON) and check it is intact. */
+/** Read a backup from an exported progress file (or its bare JSON) and check it is intact. */
 export async function readBackup(text: string): Promise<ReadResult> {
   const m = /<script[^>]*id="mn-backup"[^>]*>([\s\S]*?)<\/script>/.exec(text);
   const raw = (m ? m[1] : text).trim();
@@ -49,13 +49,13 @@ export async function readBackup(text: string): Promise<ReadResult> {
   try {
     b = JSON.parse(raw) as Backup;
   } catch {
-    return { ok: false, reason: 'This file isn’t an MN report card.' };
+    return { ok: false, reason: 'This file isn’t an MN progress file.' };
   }
-  if (b?.format !== BACKUP_FORMAT || !b.child) return { ok: false, reason: 'This file isn’t an MN report card.' };
+  if (b?.format !== BACKUP_FORMAT || !b.child) return { ok: false, reason: 'This file isn’t an MN progress file.' };
   if (b.version > BACKUP_VERSION) return { ok: false, reason: 'This file comes from a newer MN. Update the app, then try again.' };
   if (b.check !== (await sha256(SALT + body(b)))) return { ok: false, reason: 'This file has been changed since it was saved, so it can’t be imported.' };
   const c = b.child;
-  if (typeof c.id !== 'string' || typeof c.name !== 'string' || !c.progress?.levels || !c.wallet || !c.stats) return { ok: false, reason: 'This report card is missing some of its data.' };
+  if (typeof c.id !== 'string' || typeof c.name !== 'string' || !c.progress?.levels || !c.wallet || !c.stats) return { ok: false, reason: 'This progress file is missing some of its data.' };
   return { ok: true, backup: b };
 }
 

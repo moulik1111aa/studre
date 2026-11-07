@@ -4,7 +4,7 @@
 // Back replays the one before and stays there until Next. One moment
 // lets the child tap the answer. It says what MN (Mission Next) is for (screen time that builds
 // something), how it keeps a child going (a treat they choose, a jar that fills with right
-// answers, lessons after mistakes, bosses) and who is in charge (the grown-up).
+// answers, lessons after mistakes, bosses) and who is in charge (the parent).
 // The first time it can't be skipped: Next unlocks once the line has played. Afterwards
 // (welcome screen, parent area) Skip and Next work straight away.
 
@@ -175,7 +175,7 @@ function scenes(): ReelScene[] {
       id: 'dream',
       bg: ['#2563EB', '#7C3AED'],
       caption: 'Big dreams take months',
-      sub: 'Skip a day and the jar melts a little.',
+      sub: 'Skip a day and the jar shrinks a little.',
       art: `<div class="rl-dream"><span class="rl-dreamjar"><i></i><b>🚲</b></span><span class="rl-drip"></span></div>`,
     },
     {
@@ -188,7 +188,7 @@ function scenes(): ReelScene[] {
       id: 'charge',
       bg: ['#0F766E', '#1E3A8A'],
       caption: 'And you’re in charge',
-      art: `<div class="rl-chips"><p style="--k:0">⏱️ A daily time limit</p><p style="--k:1">🔒 A grown-up lock</p><p style="--k:2">🎁 You hand prizes over</p><p style="--k:3">📵 No ads, works offline</p></div>`,
+      art: `<div class="rl-chips"><p style="--k:0">⏱️ A daily time limit</p><p style="--k:1">🔒 A parent PIN</p><p style="--k:2">🎁 You hand prizes over</p><p style="--k:3">📵 No ads, works offline</p></div>`,
     },
     {
       id: 'end',
@@ -219,7 +219,7 @@ function voiceover(id = 'reel-audio'): HTMLAudioElement | null {
   return a;
 }
 
-/** Another video played the same way (the MN Plus video): its stops, its voiceover and where each line is. */
+/** Another video played the same way (the MN Premium video): its stops, its voiceover and where each line is. */
 export interface ReelVideo {
   scenes: () => ReelScene[];
   lines: [number, number][];

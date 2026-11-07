@@ -30,7 +30,7 @@ export function enterChild(app: App, child: Child, how: 'fade' | 'liquid' = 'fad
     if (child.placed) for (const id of belowAge(child.age, AREAS[0].skills.flat())) child.progress.skipped[id] = true;
   });
   useVoice(app, child);
-  // Bedtime or school time: a calm stop screen (a grown-up can unlock it).
+  // Bedtime or school time: a calm stop screen (a parent can unlock it).
   const quiet = child.tester ? null : quietNow(app);
   if (quiet) return void app.show(quietScreen(child, quiet, () => enterChild(app, child, how, checkMelt)), how);
   // A jar that is already full (restored from a backup, or prices changed) is ready to give,
@@ -85,7 +85,7 @@ export function playLevel(app: App, child: Child, level: Level, harder = false):
   }, 'liquid');
 }
 
-/** A thank-you present (the Cloud cape after a grown-up signs in), shown to the child once. */
+/** A thank-you present (the Cloud cape after a parent signs in), shown to the child once. */
 function giftMoment(app: App, child: Child): void {
   const item = unseenGift(child.adventure);
   // Not over Plus's first map tips.
@@ -94,7 +94,7 @@ function giftMoment(app: App, child: Child): void {
   app.sfx.coin(3);
   const outfit = { ...outfitOf(child.adventure), neck: item.id };
   void app.sheet(
-    `<div class="gift-moment"><div class="gm-plus" aria-hidden="true">${plusSvg({ cls: 'alive', noShadow: true, outfit })}</div><h2>A present for Plus!</h2><p>Your grown-up is keeping your stars safe, so Plus got a <b>${esc(item.name)}</b>.</p></div>`,
+    `<div class="gift-moment"><div class="gm-plus" aria-hidden="true">${plusSvg({ cls: 'alive', noShadow: true, outfit })}</div><h2>A present for Plus!</h2><p>Your parent is keeping your stars safe, so Plus got a <b>${esc(item.name)}</b>.</p></div>`,
     [{ label: 'Yay!', value: true, kind: 'mint' }],
     'A present for Plus',
   ).result;

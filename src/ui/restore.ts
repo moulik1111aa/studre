@@ -1,4 +1,4 @@
-// Parent area → Restore from a report card: read an exported report card, check it, then add
+// Parent area → Restore from a progress file: read an exported progress file, check it, then add
 // the child to this phone, or combine with the same child if they are already here.
 
 import { esc, type App } from './app.ts';
@@ -35,9 +35,9 @@ export async function restoreFromText(app: App, text: string, done: () => void):
   if (!r.ok) return void app.toast(r.reason);
   let changed = false;
   for (const b of r.backups) changed = (await restoreChild(app, b, r.family)) || changed;
-  // A family file also carries the family's rules (time limits, quiet hours…).
+  // A family file also carries the family's rules (time limits, bedtime…).
   if (r.rules && !sameRules(r.rules, familyRules(app.save.data.settings))) {
-    const { result } = app.sheet('<h2>Use the rules from the file?</h2><p>The file also has your family’s daily time limit, quiet hours and reward pace. Use those on this phone, or keep this phone’s?</p>', [
+    const { result } = app.sheet('<h2>Use the rules from the file?</h2><p>The file also has your family’s daily time limit, bedtime and reward pace. Use those on this phone, or keep this phone’s?</p>', [
       { label: 'Use the file’s rules', value: true, kind: 'mint' },
       { label: 'Keep this phone’s', value: false, kind: 'ghost', back: true },
     ], 'Rules from the file');
@@ -47,7 +47,7 @@ export async function restoreFromText(app: App, text: string, done: () => void):
     }
   }
   if (!changed) return;
-  // Signed in with Google: the cloud copy takes the restored progress straight away.
+  // Signed in with Google: the online backup takes the restored progress straight away.
   if (account(app)) void syncNow(app);
   done();
 }
@@ -59,7 +59,7 @@ async function restoreChild(app: App, b: Backup, inFamily: boolean): Promise<boo
   const when = `${saved.getDate()} ${saved.toLocaleString('en', { month: 'short' })} ${saved.getFullYear()}`;
   const passed = Object.values(incoming.progress.levels).filter((l) => l.stars >= 1).length;
   const here = app.save.data.children.find((c) => c.id === incoming.id);
-  const title = inFamily ? 'Restore from a backup file' : 'Restore from a report card';
+  const title = inFamily ? 'Restore from a backup file' : 'Restore from a progress file';
   const summary = `<p>Saved on <b>${esc(when)}</b>: age ${incoming.age}, ${passed} levels passed, ${Math.round(incoming.wallet.lifetime)} coins earned.</p>`;
   if (here) {
     const { result } = app.sheet(

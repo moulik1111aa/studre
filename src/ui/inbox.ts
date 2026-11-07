@@ -1,5 +1,5 @@
 // Backup files shared to MN (WhatsApp, Files, Gmail… → Share or Open with → MN): the phone hands
-// the file to the app, which checks it is an MN backup, asks for a grown-up, and restores it
+// the file to the app, which checks it is an MN backup, asks for a parent, and restores it
 // the same way as "Restore from a backup file" in the Parent area.
 
 import type { App } from './app.ts';

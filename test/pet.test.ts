@@ -151,7 +151,7 @@ test('two phones: the pet that hatched first, with every snack; backups keep it'
   assert.equal(m.pet!.name, 'Pip');
   assert.equal(heartsOf(m.pet), 3);
   assert.equal(mergeChild(a, b, false).adventure!.pet!.species, 'fox');
-  // Report card: out and back in.
+  // Progress file: out and back in.
   const back = await readBackup(JSON.stringify(await makeBackup(a)));
   assert.ok(back.ok);
   if (back.ok) assert.deepEqual(back.backup.child.adventure!.pet, a.adventure!.pet);

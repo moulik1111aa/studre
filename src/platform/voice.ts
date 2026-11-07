@@ -51,12 +51,17 @@ export class Voice {
   pitch = 1;
   private readonly native: StudyHardPlugin | null;
   private webVoices: SpeechSynthesisVoice[] = [];
+  /** Automatic means a man's voice when the phone has one (the best-ranked), else the best voice. */
+  private autoName = '';
+  /** Which kind of voice "automatic" means: a man's (default) or a woman's. */
+  private gender: 'm' | 'f' = 'm';
 
-  constructor(enabled: boolean, native: StudyHardPlugin | null, name = '', rate = 0.95) {
+  constructor(enabled: boolean, native: StudyHardPlugin | null, name = '', rate = 0.95, gender: 'm' | 'f' = 'm') {
     this.enabled = enabled;
     this.native = native;
     this.name = name;
     this.rate = rate;
+    this.gender = gender;
     if (!native && 'speechSynthesis' in globalThis) {
       const pick = () => {
         this.webVoices = speechSynthesis
@@ -67,6 +72,29 @@ export class Voice {
       pick();
       speechSynthesis.addEventListener?.('voiceschanged', pick);
     }
+    void this.findAuto();
+  }
+
+  /** Switch the automatic voice between a man's and a woman's. */
+  setGender(g: 'm' | 'f'): void {
+    if (g === this.gender && this.autoName) return;
+    this.gender = g;
+    this.autoName = '';
+    void this.findAuto();
+  }
+
+  /** The automatic voice: the best voice of the chosen kind (voices come best first). */
+  private async findAuto(): Promise<void> {
+    for (let i = 0; i < 6 && !this.autoName; i++) {
+      const list = await this.list().catch(() => [] as VoiceInfo[]);
+      this.autoName = (list.find((v) => v.gender === this.gender) ?? list[0])?.name ?? '';
+      if (!this.autoName) await new Promise((r) => setTimeout(r, 800));
+    }
+  }
+
+  /** The voice that speaks: the parent's choice, or the automatic one. */
+  get speaking(): string {
+    return this.name || this.autoName;
   }
 
   /** Whether any voice can speak here. */
@@ -91,7 +119,7 @@ export class Voice {
     if ((!this.enabled && !force) || !text) return;
     if (this.native) {
       // QUEUE_FLUSH replaces whatever was being said; a separate stop could land after it.
-      quietly(this.native.speak({ text, rate, pitch: this.pitch, voice: this.name || undefined }));
+      quietly(this.native.speak({ text, rate, pitch: this.pitch, voice: this.speaking || undefined }));
       return;
     }
     this.stop();
@@ -99,7 +127,7 @@ export class Voice {
       const u = new SpeechSynthesisUtterance(text);
       u.rate = rate;
       u.pitch = this.pitch;
-      const v = this.webVoices.find((x) => x.name === this.name) ?? this.webVoices[0];
+      const v = this.webVoices.find((x) => x.name === this.speaking) ?? this.webVoices[0];
       if (v) {
         u.voice = v;
         u.lang = v.lang;

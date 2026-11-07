@@ -17,7 +17,7 @@ const kid = () => {
   return c;
 };
 
-test('a backup inside a report card reads back the same child', async () => {
+test('a backup inside a progress file reads back the same child', async () => {
   const c = kid();
   const b = await makeBackup(c, new Date('2026-10-25T10:00:00Z'));
   const page = `<html><body><h1>Report</h1><script type="application/json" id="mn-backup">${backupJson(b)}</script></body></html>`;
@@ -30,7 +30,7 @@ test('a backup inside a report card reads back the same child', async () => {
   }
 });
 
-test('a file edited by hand, or not a report card, is refused', async () => {
+test('a file edited by hand, or not a progress file, is refused', async () => {
   const b = await makeBackup(kid());
   const edited = backupJson(b).replace('"lifetime":120', '"lifetime":99999');
   const r = await readBackup(edited);

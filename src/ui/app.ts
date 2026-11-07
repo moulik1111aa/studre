@@ -1,5 +1,5 @@
 // App shell: shared services (save, sound, voice, haptics, photos), screen switching with
-// premium transitions, the Android back button, toasts and the grown-up check.
+// premium transitions, the Android back button, toasts and the parent check.
 
 import { catchUp, ROAD_VERSION } from '../core/catchup.ts';
 import { SaveStore, browserStorage, type Child, type StorageAdapter, type Theme } from '../storage/save.ts';
@@ -50,13 +50,13 @@ export class App {
   /** The age path (every skill). */
   readonly agePath: Level[];
   private bundleCache: { key: string; path: Level[] } | null = null;
-  /** The active child's path: their school path when one is on, else the age path. */
+  /** The active child's path: their school syllabus when one is on, else the age path. */
   get path(): Level[] {
     return this.pathFor(this.child);
   }
-  /** Does this phone have MN Plus (always outside the Play build)? Set at boot by ui/membership.ts. */
+  /** Does this phone have MN Premium (always outside the Play build)? Set at boot by ui/membership.ts. */
   plus: () => boolean = () => true;
-  /** The Play Store build: no keys or approvals, and MN Plus is sold. */
+  /** The Play Store build: no keys or approvals, and MN Premium is sold. */
   get store(): boolean {
     if (this.storeBuild) return true;
     if (this.debug && new URLSearchParams(location.search).has('store')) return true;
@@ -71,7 +71,7 @@ export class App {
   get storeBuild(): boolean {
     return (globalThis as { __BUILD__?: { store?: string } }).__BUILD__?.store === 'play';
   }
-  /** A child's path: their school path when one is on (and available), else the age path. */
+  /** A child's path: their school syllabus when one is on (and available), else the age path. */
   pathFor(child: Child | undefined): Level[] {
     const sp = child?.school;
     if (!sp?.on || !sp.skills.length || !this.plus()) return this.agePath;
@@ -79,8 +79,8 @@ export class App {
     if (this.bundleCache?.key !== key) this.bundleCache = { key, path: buildBundlePath(AREAS[0], sp.skills, `${sp.board}-${sp.grade}`) };
     return this.bundleCache.path;
   }
-  /** Opens the owner's hidden area (set at boot): the owner code typed into a grown-up check. */
-  /** Opens the owner area; `passed` is called on the way back (the owner counts as a grown-up). */
+  /** Opens the owner's hidden area (set at boot): the owner code typed into a parent check. */
+  /** Opens the owner area; `passed` is called on the way back (the owner counts as a parent). */
   ownerHook: ((passed: () => void) => void) | null = null;
   private current: Screen | null = null;
   /** How the screen on show was made (to come back to it, e.g. from the owner area). */
@@ -105,8 +105,8 @@ export class App {
     const st = this.save.data.settings;
     setPace(st.treatPace, st.goalPace);
     setOwnRewards(st.ownRewards);
-    this.sfx = new Sfx(st.sound);
-    this.voice = new Voice(st.voice, native, st.voiceName, st.voiceRate);
+    this.sfx = new Sfx(st.sound, st.volume ?? 0.8);
+    this.voice = new Voice(st.voice, native, st.voiceName, st.voiceRate, st.voiceGender === 'f' ? 'f' : 'm');
     this.haptics = new Haptics(st.vibration, native);
     this.photos = new Photos(native);
     this.agePath = buildPath(AREAS[0]);
@@ -287,8 +287,8 @@ export class App {
     return { el: ov, result };
   }
 
-  /** The grown-up check: the phone's screen lock or the parent PIN (see grownup.ts). Three misses lock it for 30 s. */
-  grownUp(reason = 'For grown-ups'): Promise<boolean> {
+  /** The parent check: the phone's screen lock or the parent PIN (see grownup.ts). Three misses lock it for 30 s. */
+  grownUp(reason = 'For parents'): Promise<boolean> {
     return grownUpCheck(this, reason);
   }
 }

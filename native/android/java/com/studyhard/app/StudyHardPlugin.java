@@ -407,6 +407,23 @@ public class StudyHardPlugin extends Plugin {
         billing().acknowledge(call.getString("token", ""), call::resolve);
     }
 
+    /** Open a web page in the phone's browser (only after a parent check, in the web app). */
+    @PluginMethod
+    public void openUrl(PluginCall call) {
+        String url = call.getString("url", "");
+        if (!url.startsWith("https://")) {
+            call.reject("https only");
+            return;
+        }
+        Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            getContext().startActivity(i);
+        } catch (Exception ignored) {
+        }
+        call.resolve();
+    }
+
     /** Play's page for managing (or cancelling) the subscription. */
     @PluginMethod
     public void billingManage(PluginCall call) {
@@ -850,10 +867,10 @@ public class StudyHardPlugin extends Plugin {
             PackageManager pm = getContext().getPackageManager();
             String pkg = getContext().getPackageName();
             // Turn the new one on first, so there is never a moment with no icon.
-            pm.setComponentEnabledSetting(new ComponentName(pkg, pkg + ".Icon" + cap(want)), PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP);
+            pm.setComponentEnabledSetting(new ComponentName(pkg, ICON_NS + ".Icon" + cap(want)), PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP);
             for (String n : ICONS) {
                 if (n.equals(want)) continue;
-                pm.setComponentEnabledSetting(new ComponentName(pkg, pkg + ".Icon" + cap(n)), PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
+                pm.setComponentEnabledSetting(new ComponentName(pkg, ICON_NS + ".Icon" + cap(n)), PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
             }
             JSObject r = new JSObject();
             r.put("ok", true);
@@ -865,6 +882,9 @@ public class StudyHardPlugin extends Plugin {
         }
     }
 
+    /** The icon aliases' class names are in the code's package, whatever the app's id. */
+    private static final String ICON_NS = MainActivity.class.getPackage().getName();
+
     @PluginMethod
     public void appIcon(PluginCall call) {
         JSObject r = new JSObject();
@@ -873,7 +893,7 @@ public class StudyHardPlugin extends Plugin {
             PackageManager pm = getContext().getPackageManager();
             String pkg = getContext().getPackageName();
             for (String n : ICONS) {
-                int st = pm.getComponentEnabledSetting(new ComponentName(pkg, pkg + ".Icon" + cap(n)));
+                int st = pm.getComponentEnabledSetting(new ComponentName(pkg, ICON_NS + ".Icon" + cap(n)));
                 if (st == PackageManager.COMPONENT_ENABLED_STATE_ENABLED) now = n;
             }
         } catch (Exception ignored) {

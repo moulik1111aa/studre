@@ -31,6 +31,7 @@ import { mapPetHtml } from './pets.ts';
 import { MENU_ICON, openDrawer } from './drawer.ts';
 import { parentScreen } from './parent.ts';
 import { fixDueFor, startFixit } from './fixit.ts';
+import { focusButton, startFocus } from './focus.ts';
 import { quietNow, quietScreen } from './quiet.ts';
 
 interface Node {
@@ -141,7 +142,7 @@ export function mapScreen(child: Child) {
       </header>
       <div class="jar-slot"></div>
       <div class="worlds scroll"></div>
-      <div class="play-bar">${next ? `<button class="icon-btn skip-btn" aria-label="Skip this level (grown-up)">${ICONS.skip}</button>` : ''}<button class="btn play-next">${next ? `${ICONS.play} ${next.kind === 'skill' ? 'Play' : next.kind === 'boss' ? 'Fight the boss!' : 'Minion fight!'}` : 'All done!'}</button>${fix ? `<button class="icon-btn fix-btn" aria-label="Fix-it: ${fix} tricky ${fix === 1 ? 'one' : 'ones'} from before"><span aria-hidden="true">🔧</span><i aria-hidden="true">${fix}</i></button>` : ''}${adv ? `<button class="icon-btn adv-btn${adv.ready ? ' ready' : ''}" aria-label="Quests and badges: ${adv.done} of 3 quests done today"><span aria-hidden="true">${adv.ready ? '🎁' : '📜'}</span><i aria-hidden="true">${adv.done}/3</i>${!adv.raid.claimed ? `<b class="raid-chip" title="${esc(adv.raid.monster.name)}" aria-hidden="true">${adv.raid.monster.icon}</b>` : ''}</button>` : ''}</div>
+      <div class="play-bar">${next ? `<button class="icon-btn skip-btn" aria-label="Skip this level (parent)">${ICONS.skip}</button>` : ''}<button class="btn play-next">${next ? `${ICONS.play} ${next.kind === 'skill' ? 'Play' : next.kind === 'boss' ? 'Fight the boss!' : 'Minion fight!'}` : 'All done!'}</button>${fix ? `<button class="icon-btn fix-btn" aria-label="Fix-it: ${fix} tricky ${fix === 1 ? 'one' : 'ones'} from before"><span aria-hidden="true">🔧</span><i aria-hidden="true">${fix}</i></button>` : ''}${focusButton(app, child)}${adv ? `<button class="icon-btn adv-btn${adv.ready ? ' ready' : ''}" aria-label="Quests and badges: ${adv.done} of 3 quests done today"><span aria-hidden="true">${adv.ready ? '🎁' : '📜'}</span><i aria-hidden="true">${adv.done}/3</i>${!adv.raid.claimed ? `<b class="raid-chip" title="${esc(adv.raid.monster.name)}" aria-hidden="true">${adv.raid.monster.icon}</b>` : ''}</button>` : ''}</div>
     </section>`);
     const jar = new JarBar(child);
     el.querySelector('.jar-slot')!.appendChild(jar.el);
@@ -172,15 +173,15 @@ export function mapScreen(child: Child) {
     };
 
     const school = child.school?.on ? child.school : null;
-    if (school) worlds.appendChild(html(`<div class="school-chip card"><span>📚</span><b>${esc(schoolLabel(school))}</b><small>${school.skills.length} skills chosen by a grown-up</small></div>`));
+    if (school) worlds.appendChild(html(`<div class="school-chip card"><span>📚</span><b>${esc(schoolLabel(school))}</b><small>${school.skills.length} skills chosen by a parent</small></div>`));
     // Clouds ahead: the child sees the next few swipes of the road; the rest waits under a
-    // cloud bank (grown-up testers see everything).
+    // cloud bank (parent testers see everything).
     const curAt = nodes.findIndex((n) => nodeState(n).isCurrent);
     const lastShown = child.tester || curAt < 0 ? nodes.length - 1 : Math.min(nodes.length - 1, curAt + CLOUD_AFTER);
     const hidden = nodes.length - 1 - lastShown;
     for (let s = 1; s <= stagesBuilt; s++) {
       const info = AREAS[0].stages[s - 1];
-      // A school path only shows the stages it uses.
+      // A school syllabus only shows the stages it uses.
       if (school && !nodes.some((n) => n.stage === s)) continue;
       if (!nodes.some((n, k) => n.stage === s && k <= lastShown)) continue;
       const sec = html(`<section class="world" style="${worldVars(s)}" data-stage="${s}">
@@ -253,7 +254,7 @@ export function mapScreen(child: Child) {
     };
 
     el.querySelector('.who')!.addEventListener('click', () => void app.show(whosPlayingScreen));
-    // ☰: the child's menu, like a game's (the grown-ups' area sits behind the grown-up check).
+    // ☰: the child's menu, like a game's (the parents' area sits behind the parent check).
     el.querySelector('.map-menu')!.addEventListener('click', () =>
       void openDrawer(app, {
         title: child.name,
@@ -265,13 +266,14 @@ export function mapScreen(child: Child) {
           { id: 'trophies', icon: '🏆', label: 'Trophy room', note: 'Rewards you’ve won', onPick: () => void app.show(trophyScreen(child)) },
           { id: 'tips', icon: '❓', label: 'How it works', note: 'Plus shows you around', onPick: () => void showMapTips(app, child, el) },
           { id: 'switch', icon: '👧', label: 'Switch child', onPick: () => void app.show(whosPlayingScreen) },
-          { heading: 'Grown-ups' },
+          { heading: 'Parents' },
           { id: 'parent', icon: '🔒', label: 'Parent area', note: 'Settings, reports and backups', onPick: async () => (await app.grownUp('Parent area')) && void app.show(parentScreen) },
         ],
       }),
     );
     el.querySelector('.adv-btn')?.addEventListener('click', () => void app.show(adventureScreen(child)));
     el.querySelector('.fix-btn')?.addEventListener('click', () => startFixit(app, child));
+    el.querySelector('.focus-btn')?.addEventListener('click', () => startFocus(app, child));
     el.querySelector('.play-next')!.addEventListener('click', () => {
       if (next) playLevel(app, child, next);
     });

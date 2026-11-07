@@ -36,7 +36,7 @@ const accentOf = (v: VoiceInfo): number => {
  * numbered when there are several alike): offline ones first, Indian English first.
  */
 export function voiceOptions(voices: VoiceInfo[]): VoiceOption[] {
-  const ranked = [...voices].sort((a, b) => Number(a.network) - Number(b.network) || accentOf(a) - accentOf(b) || (a.gender ?? 'z').localeCompare(b.gender ?? 'z'));
+  const ranked = [...voices].sort((a, b) => Number(a.network) - Number(b.network) || accentOf(a) - accentOf(b) || (a.gender === 'm' ? 0 : a.gender === 'f' ? 1 : 2) - (b.gender === 'm' ? 0 : b.gender === 'f' ? 1 : 2));
   const seen: Record<string, number> = {};
   const total: Record<string, number> = {};
   const kind = (v: VoiceInfo) => `${ACCENTS[accentOf(v)]?.[1] ?? 'English'}|${v.gender ?? ''}|${v.network ? 'n' : ''}`;
@@ -73,11 +73,11 @@ export function voiceChoiceScreen(child: Child, then: () => void) {
     let pick = -1;
     let options: VoiceOption[] = [];
     const el = html(`<section class="screen voicechoice" aria-label="Choose a voice">
-      <header class="vc-head">${avatarHtml(child.avatar, 64)}<div><h1 class="title">Who should read to you, ${esc(child.name)}?</h1><p class="vc-sub">Tap a voice to hear it. A grown-up can help you choose.</p></div></header>
+      <header class="vc-head">${avatarHtml(child.avatar, 64)}<div><h1 class="title">Who should read to you, ${esc(child.name)}?</h1><p class="vc-sub">Tap a voice to hear it. A parent can help you choose.</p></div></header>
       <div class="vc-list"><p class="fine">Finding voices…</p></div>
       <button class="btn mint vc-go" disabled>Choose a voice</button>
       <p class="fine vc-later">You can change it later in the parent area.</p>
-      <p class="card vc-together">🤝 <b>Grown-up:</b> please sit with ${esc(child.name)} for the first 3 levels. They’re practice rounds: after a slip Plus shows how and they try one like it. Only first tries earn coins.</p>
+      <p class="card vc-together">🤝 <b>Parent:</b> please sit with ${esc(child.name)} for the first 3 levels. They’re practice rounds: after a slip Plus shows how and they try one like it. Only first tries earn coins.</p>
     </section>`);
     const list = el.querySelector<HTMLElement>('.vc-list')!;
     const go = el.querySelector<HTMLButtonElement>('.vc-go')!;

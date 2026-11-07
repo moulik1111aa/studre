@@ -1,4 +1,4 @@
-// Talking to Google Play for MN Plus: the native plugin on a phone (Billing.java), or a
+// Talking to Google Play for MN Premium: the native plugin on a phone (Billing.java), or a
 // stand-in for test runs and the debug preview (purchases kept in this browser).
 
 import type { PlayProduct, PlayPurchase, PurchasesEvent, StudyHardPlugin } from './native.ts';
@@ -80,8 +80,8 @@ export class MockBilling implements Billing {
       ];
     });
     return [
-      { id: PLUS_SUB, type: 'subs', name: 'MN Plus', offers },
-      { id: PLUS_LIFETIME, type: 'inapp', name: 'MN Plus for life', price: '₹1,989', micros: 1_989_000_000, currency: 'INR' },
+      { id: PLUS_SUB, type: 'subs', name: 'MN Premium', offers },
+      { id: PLUS_LIFETIME, type: 'inapp', name: 'MN Premium for life', price: '₹1,989', micros: 1_989_000_000, currency: 'INR' },
     ];
   }
   async buy(product: string, offerToken?: string) {

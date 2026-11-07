@@ -1,6 +1,6 @@
 // The paper worksheet: a self-contained .html page that prints on A4, made from the child's
 // own place on the path (core/worksheet.ts). Page 1 has the questions, page 2 the answers
-// for the grown-up.
+// for the parent.
 
 import { esc, type App } from './app.ts';
 import type { Child } from '../storage/save.ts';
@@ -132,12 +132,12 @@ ol.qs{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repe
 <div class="fill"><label>Name<span></span></label><label>Time taken<span></span></label><label>Score<span style="border:none;font-size:18px">&nbsp;&nbsp;&nbsp;&nbsp;/ ${qs.length}</span></label></div>
 <p class="tip">${little ? 'Read each one together. Count, point and talk it through before writing.' : 'Show your working in the space. Check each answer once you are done.'}</p>
 <ol class="qs">${qs.map((x, k) => card(x, k + 1)).join('')}</ol>
-<section class="key"><h2>Answers (for grown-ups)</h2><p>Mark it together and praise the trying. Any wrong ones are good to practise in MN next time.</p><ol>${answers}</ol>
+<section class="key"><h2>Answers (for parents)</h2><p>Mark it together and praise the trying. Any wrong ones are good to practise in MN next time.</p><ol>${answers}</ol>
 <p class="topics"><b>On this sheet:</b> ${topics.map(esc).join(', ')}</p></section>
 </div></body></html>`;
 }
 
-/** Make a new sheet and save it as a file the grown-up can print. */
+/** Make a new sheet and save it as a file the parent can print. */
 export async function saveWorksheet(app: App, child: Child): Promise<void> {
   try {
     const qs = worksheetQuestions(app, child);

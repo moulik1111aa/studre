@@ -26,7 +26,7 @@ export interface PlayEntry {
   s: number;
   sec: number;
   c: number;
-  /** Played with a grown-up (practice together or assisted mode). */
+  /** Played play together (practice together or assisted mode). */
   g?: boolean;
   /** First-try answers per skill in this level. */
   a: Tally;

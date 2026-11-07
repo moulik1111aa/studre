@@ -5,12 +5,12 @@
 import type { App } from './app.ts';
 import type { Child } from '../storage/save.ts';
 import { FACTS } from '../core/facts/index.ts';
-import { DEFAULT_REMINDERS, planReminders, widgetFacts, widgetKid, type RemindChild, type WidgetAdventure, type WidgetData, type WidgetKid } from '../core/reminders.ts';
+import { remindersOf, planReminders, widgetFacts, widgetKid, type RemindChild, type WidgetAdventure, type WidgetData, type WidgetKid } from '../core/reminders.ts';
 import { streaks } from '../core/stats.ts';
 import { AVATARS } from './icons.ts';
 import { levelInfo, questBadge } from './adventure.ts';
 import { rankOf } from '../core/adventure.ts';
-import { parentScreen } from './parent.ts';
+import { openParentOn, parentScreen } from './parent.ts';
 import { quietly } from '../platform/native.ts';
 
 const remindChild = (c: Child): RemindChild => ({ id: c.id, name: c.name, avatar: AVATARS[c.avatar % AVATARS.length], wallet: c.wallet, stats: c.stats, backupAt: c.backupAt, backupDays: c.backupDays });
@@ -42,7 +42,7 @@ export function buildPlan(app: App, now = new Date()): { items: ReturnType<typeo
   const kids = d.children.map(remindChild);
   const items = planReminders({
     children: kids,
-    settings: d.settings.reminders ?? DEFAULT_REMINDERS,
+    settings: remindersOf(d.settings.reminders),
     holiday: d.settings.holiday,
     backupSnoozeUntil: d.settings.backupSnoozeUntil ?? 0,
     facts: FACTS,
@@ -78,12 +78,14 @@ async function push(app: App): Promise<void> {
   }
 }
 
-/** What to do when a reminder was tapped: the backup note opens the Parent area (after the grown-up check). */
+/** What to do when a reminder was tapped: the backup note opens the Parent area (after the parent check). */
 async function opened(app: App, open: string | undefined): Promise<void> {
   if (open !== 'backup' || !app.save.data.children.length) return;
   // Not over the lock screen or setup: those come first.
   if (app.screen?.el.matches('.lock, .welcome, .reel')) return;
-  if (await app.grownUp('Back up')) void app.show(parentScreen, 'fade');
+  if (!(await app.grownUp('Back up'))) return;
+  openParentOn('app');
+  void app.show(parentScreen, 'fade');
 }
 
 export function startReminders(app: App): void {
@@ -129,5 +131,28 @@ export async function askNotifications(app: App): Promise<boolean> {
     return !!r.enabled;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Ask once whether MN may send notifications (after setup, or on the first Parent area
+ * visit): a learning-time note each day and one when a reward is ready.
+ */
+export async function offerNotifications(app: App): Promise<void> {
+  if (!app.native?.askNotifications || app.save.data.settings.notifAsked) return;
+  const n = await notificationState(app);
+  app.save.update((d) => (d.settings.notifAsked = true));
+  if (!n || n.enabled || !n.canAsk) return;
+  const { result } = app.sheet(
+    `<h2>🔔 Turn on reminders?</h2><p>MN sends one note a day at learning time (5 pm, or a time you pick) and one when a reward is ready to hand over. Nothing at bedtime.</p>`,
+    [
+      { label: 'Turn on', value: true, kind: 'mint' },
+      { label: 'Not now', value: false, kind: 'ghost', back: true },
+    ],
+    'Reminders',
+  );
+  if (await result) {
+    const ok = await askNotifications(app);
+    app.toast(ok ? 'Reminders are on. Change the time in Parent area → App.' : 'No reminders for now. Turn them on any time in Parent area → App.', 5000);
   }
 }

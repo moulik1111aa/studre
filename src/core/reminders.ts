@@ -3,8 +3,9 @@
 // at its time, and draws the widgets. The plan is made again whenever the save changes, so a
 // level played at 5 pm turns that evening's "last call" into a "well done".
 //
-// - Melt watch: 2 or 3 friendly notes a day about the treat jars, each with a fun fact.
-// - Backup: for grown-ups, a note to save a report card when there is unsaved progress.
+// - Learning time: one note a day at the time the parent picks, naming who hasn't played.
+// - Reward ready: when a jar is full and the reward waits to be handed over.
+// - Backup: for parents, a note to save a backup file when there is unsaved progress.
 // - Widgets: treat jars (with melting worked out on the phone each hour), a fun fact, and the
 //   Adventure level card.
 
@@ -13,20 +14,27 @@ import { addDays, dayDiff, MELT, type Wallet } from './economy.ts';
 import { baseCostOf, costOf, rewardById } from './rewards.ts';
 
 export interface ReminderSettings {
-  /** Melt-watch notes (2 or 3 a day). */
-  melt: boolean;
-  perDay: 2 | 3;
-  /** The grown-ups' backup reminder. */
+  /** A daily "time for maths" note at a time the parent picks (HH:MM, local). */
+  daily: boolean;
+  dailyAt: string;
+  /** A note when a child's jar is full and the reward is waiting to be given. */
+  ready: boolean;
+  /** The parents' backup reminder. */
   backup: boolean;
+  /** Old jar notes (2 or 3 a day): no longer sent, kept so old saves read. */
+  melt?: boolean;
+  perDay?: 2 | 3;
 }
-export const DEFAULT_REMINDERS: ReminderSettings = { melt: true, perDay: 3, backup: true };
+export const DEFAULT_REMINDERS: ReminderSettings = { daily: true, dailyAt: '17:00', ready: true, backup: true };
+/** Settings from a save (older saves had only the jar notes and backup). */
+export const remindersOf = (r?: Partial<ReminderSettings>): ReminderSettings => ({ ...DEFAULT_REMINDERS, ...r, melt: false });
 
 export interface ReminderItem {
   /** Stable small number per slot (the native alarm and notification id). */
   id: number;
   /** When to show it (ms since epoch). */
   at: number;
-  kind: 'melt' | 'backup';
+  kind: 'daily' | 'ready' | 'backup';
   title: string;
   /** One line for the collapsed notification, and the full text. */
   short: string;
@@ -54,23 +62,11 @@ export interface PlanInput {
   /** "Now" as local time, and today's local day (YYYY-MM-DD). */
   now: Date;
   today: string;
-  /** Quiet hours: no melt-watch note at bedtime. */
+  /** Bedtime: no melt-watch note at bedtime. */
   quiet?: Partial<QuietSettings>;
 }
 
 const DAY_MS = 86_400_000;
-/** Times of the melt-watch notes: morning, after school, evening (hour, minute). */
-export const SLOTS: Record<2 | 3, [number, number][]> = {
-  2: [
-    [8, 0],
-    [18, 30],
-  ],
-  3: [
-    [8, 0],
-    [16, 30],
-    [19, 30],
-  ],
-};
 /** Days of notes planned ahead (the plan is renewed every time the app is used). */
 export const DAYS_AHEAD = 5;
 
@@ -129,105 +125,6 @@ export function jarOn(c: RemindChild, day: string, today: string): JarLook | nul
 }
 
 // ── the words ──────────────────────────────────────────────────────────────
-type Fill = (n: string, j: JarLook) => string;
-/** "the treat jar 🍫" and the reward itself ("15 extra minutes of cartoons"). */
-const tj = (j: JarLook) => `treat jar ${j.icon}`;
-const prize = (j: JarLook) => j.reward.charAt(0).toLowerCase() + j.reward.slice(1);
-
-const MORNING_MELTED: Fill[] = [
-  (n, j) => `🫠 Drip, drip! ${n}’s ${tj(j)} melted ${j.drop}% overnight and is ${j.pct}% full now. One level puts it back in the freezer!`,
-  (n, j) => `☀️ Rise and shine! ${n}’s ${tj(j)} got a little gooey last night (−${j.drop}%). A quick level freezes it again.`,
-  (n, j) => `🧊 Freezer alert! While everyone slept, ${n}’s ${tj(j)} slid down to ${j.pct}%. Plus has the ice ready!`,
-  (n, j) => `🌡️ A warm night! ${n}’s ${tj(j)} lost ${j.drop}% on the way to ${prize(j)}. Time for a cool maths level?`,
-];
-const MORNING_MANY: Fill[] = [
-  (n, j) => `🫠 Melt-down! ${n} hasn’t played for ${j.missed} days, so the ${tj(j)} is down to ${j.pct}%. Let’s rescue it today!`,
-  (n, j) => `🆘 S.O.S. from ${n}’s ${tj(j)}! It has been melting for ${j.missed} days (${j.pct}% left). One level stops the drip.`,
-];
-const MORNING_SAFE: Fill[] = [
-  (n, j) => `❄️ Good morning! ${n}’s ${tj(j)} is frozen solid at ${j.pct}%. Keep it cool with a level today!`,
-  (n, j) => `🌞 New day, new maths! ${n}’s ${tj(j)} is ${j.pct}% of the way to ${prize(j)}.`,
-  (n, j) => `🐧 Brrr, nice and frosty! ${n}’s ${tj(j)} stayed frozen overnight. Today’s level keeps it that way.`,
-];
-const AFTERNOON: Fill[] = [
-  (n, j) => `🌡️ It’s warming up! If ${n} doesn’t play today, the ${tj(j)} melts ${j.drop}% at midnight.`,
-  (n, j) => `⏰ Tick-tock! A 5-minute level keeps ${n}’s ${tj(j)} from melting tonight.`,
-  (n, j) => `🍦 The melt-o-meter is rising! ${n}’s ${tj(j)} needs one level today to stay frozen.`,
-  (n, j) => `🚒 Plus is on freezer duty! One quick level keeps ${n} on the way to ${prize(j)}.`,
-];
-const EVENING: Fill[] = [
-  (n, j) => `🌙 Last call before the midnight melt! ${n}’s ${tj(j)} is at ${j.pct}%. One level saves it.`,
-  (n, j) => `🦉 The night owl says: one level now and ${n}’s ${tj(j)} stays frozen till morning!`,
-  (n, j) => `⭐ Before bedtime: one quick level keeps ${n}’s ${tj(j)} safe from the midnight melt.`,
-];
-const PLAYED: Fill[] = [
-  (n, j) => `🎉 Freeze-tastic! ${n} played today, so the ${tj(j)} stays frozen at ${j.pct}%. See you tomorrow!`,
-  (n, j) => `⭐ Superstar! ${n} kept the ${tj(j)} nice and cold today. Nothing melts tonight.`,
-  (n, j) => `🧊 Cool as ice! ${n}’s ${tj(j)} is safe and sound at ${j.pct}%.`,
-];
-const EMPTY: Fill[] = [
-  (n, j) => `🫗 ${n}’s ${tj(j)} has melted right down. Good news: every level fills it up again!`,
-  (n, j) => `🌱 Fresh start! ${n}’s ${tj(j)} is empty, and one level gets it going again.`,
-];
-const WAITING: Fill[] = [(n, j) => `🎁 ${n}’s ${prize(j)} is ready! A grown-up can hand it over and tap “Given”.`];
-const HOLIDAY = ['🏖️ Holiday mode is on, so nothing melts. Here’s a fun fact for the road!', '🌴 No melting on holiday! Just a fun fact to share.'];
-const TITLES = ['Melt watch', 'Plus here!', 'Freezer report', 'Treat jar news'];
-
-/** Several children: one headline, then a short line each. */
-const MULTI = {
-  melted: ['🫠 Drip, drip! Some treat jars melted overnight.', '🧊 Freezer alert! A treat jar got gooey in the night.'],
-  safe: ['❄️ Good morning! The treat jars are frozen solid.', '🐧 Brrr, nice and frosty! The treat jars stayed cold overnight.'],
-  afternoon: ['🌡️ It’s warming up! Treat jars melt at midnight without a level today.', '⏰ Tick-tock! A 5-minute level each keeps the treat jars frozen tonight.'],
-  evening: ['🌙 Last call before the midnight melt!', '🦉 The night owl says: one level each keeps the jars frozen till morning!'],
-  played: ['🎉 Freeze-tastic! Everyone kept their treat jar frozen today.', '⭐ Superstars! Nothing melts tonight.'],
-};
-
-interface KidSlot {
-  c: RemindChild;
-  j: JarLook;
-}
-
-/** What to say about one child in a slot ('' = nothing worth saying). */
-function single(k: KidSlot, day: string, slot: number, slots: number): string {
-  const { c, j } = k;
-  const key = `${c.id}|${day}|${slot}`;
-  if (j.waiting) return slot === 0 ? pick(WAITING, key)(c.name, j) : '';
-  if (j.pct === 0) return slot === 0 ? pick(EMPTY, key)(c.name, j) : '';
-  const evening = slot === slots - 1;
-  if (j.played) return evening ? pick(PLAYED, key)(c.name, j) : '';
-  if (slot === 0) {
-    if (j.missed >= 2) return pick(MORNING_MANY, key)(c.name, j);
-    return pick(j.missed === 1 ? MORNING_MELTED : MORNING_SAFE, key)(c.name, j);
-  }
-  return pick(evening ? EVENING : AFTERNOON, key)(c.name, j);
-}
-
-/** A child's short line under a shared headline. */
-function status(k: KidSlot, slot: number): string {
-  const { c, j } = k;
-  const s = j.waiting ? 'ready to be given 🎁' : j.pct === 0 ? 'empty: a level fills it again' : j.played ? 'frozen today ✓' : slot === 0 && j.missed >= 1 ? `melted ${j.missed === 1 ? `${j.drop}% overnight` : `for ${j.missed} days`}` : slot === 0 ? 'frozen solid' : 'melts tonight without a level';
-  return `${c.avatar} ${c.name}: ${j.icon} ${j.pct}% · ${s}`;
-}
-
-/** The note's lines for one slot (empty: no note). */
-export function slotLines(kids: KidSlot[], day: string, slot: number, slots: number): string[] {
-  if (kids.length === 1) {
-    const line = single(kids[0], day, slot, slots);
-    return line ? [line] : [];
-  }
-  const evening = slot === slots - 1;
-  const key = `${day}|${slot}`;
-  const live = kids.filter((k) => !k.j.waiting && k.j.pct > 0);
-  // Mornings report on everyone; later notes only matter while someone still has to play.
-  if (slot > 0) {
-    const toPlay = live.filter((k) => !k.j.played);
-    if (!toPlay.length) return evening && live.length ? [pick(MULTI.played, key), ...kids.map((k) => status(k, slot))] : [];
-    return [pick(evening ? MULTI.evening : MULTI.afternoon, key), ...kids.map((k) => status(k, slot))];
-  }
-  const melted = live.some((k) => k.j.missed >= 1);
-  return [pick(melted ? MULTI.melted : MULTI.safe, key), ...kids.map((k) => status(k, slot))];
-}
-
 /** The fun fact for a slot: different for every slot over the days ahead. */
 export function factFor(facts: readonly string[], day: string, slot: number): string {
   const short = facts.filter((f) => f.length <= 160);
@@ -253,46 +150,61 @@ function backupWhen(c: RemindChild, now: number): number | null {
 }
 
 export const BACKUP_TEXT = (names: string) =>
-  `${names}’s stars, coins, jars and rewards are saved only on this phone. If it’s lost, reset or swapped, they’d start again from zero. Save a report card to Google Drive or email it to yourself: it takes 20 seconds, and it restores everything on any phone with MN.`;
+  `${names}’s stars, coins, jars and rewards are saved only on this phone. If it’s lost, reset or swapped, they’d start again from zero. Save a progress file to Google Drive or email it to yourself: it takes 20 seconds, and it restores everything on any phone with MN.`;
 
 const listNames = (names: string[]) => (names.length <= 1 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`);
+
+// ── daily learning time ────────────────────────────────────────────────────
+const DAILY_TITLES = ['🧮 Time for today’s maths', '⭐ MN time!', '🚀 Ready for today’s mission?', '🎯 A few minutes of maths'];
+const DAILY: ((names: string) => string)[] = [
+  (n) => `${n}: a few minutes of maths today keeps the streak going.`,
+  (n) => `${n}, Plus has a new level waiting on the map.`,
+  (n) => `Five minutes of MN for ${n} fills the treat jar a little more.`,
+  (n) => `${n}: one level today, and the jar keeps growing.`,
+];
 
 // ── the plan ───────────────────────────────────────────────────────────────
 export function planReminders(p: PlanInput): ReminderItem[] {
   const items: ReminderItem[] = [];
   const nowMs = p.now.getTime();
   const kids = p.children;
-  if (p.settings.melt && kids.length) {
-    const slots = SLOTS[p.settings.perDay];
+  const st = remindersOf(p.settings);
+  const asleep = (when: number) => !!p.quiet?.bed && quietAt({ bed: p.quiet.bed }, new Date(when));
+  // Daily learning time: one note for the family at the chosen time, naming who hasn't
+  // played yet that day. Not on pause-rewards days, not at bedtime.
+  if (st.daily && kids.length && !p.holiday) {
+    const [hh, mm] = st.dailyAt.split(':').map(Number);
     for (let d = 0; d < DAYS_AHEAD; d++) {
       const day = addDays(p.today, d);
-      slots.forEach(([hh, mm], s) => {
-        const when = at(day, hh, mm);
-        if (when < nowMs + 5 * 60_000) return;
-        if (p.quiet?.bed && quietAt({ bed: p.quiet.bed }, new Date(when))) return;
-        const id = 100 + d * 10 + s;
-        const fact = factFor(p.facts, day, s);
-        let lines: string[];
-        if (p.holiday) {
-          // On holiday: just one cheerful fact a day.
-          if (s !== 0) return;
-          lines = [pick(HOLIDAY, day)];
-        } else {
-          const looks = kids.map((c) => ({ c, j: jarOn(c, day, p.today) })).filter((k): k is KidSlot => !!k.j);
-          if (!looks.length) return;
-          lines = slotLines(looks, day, s, slots.length);
-          if (!lines.length) return;
-        }
-        const text = `${lines.join('\n')}${fact ? `\n\n🤓 Did you know? ${fact}` : ''}`;
-        items.push({ id, at: when, kind: 'melt', title: pick(TITLES, `${day}|${s}|t`), short: lines[0], text });
-      });
+      const when = at(day, hh || 17, mm || 0);
+      if (when < nowMs + 2 * 60_000 || asleep(when)) continue;
+      const toPlay = kids.filter((c) => !(c.stats.secondsByDay[day] > 0));
+      if (!toPlay.length) continue;
+      const names = listNames(toPlay.map((c) => c.name));
+      const short = pick(DAILY, `${day}|d`)(names);
+      const fact = factFor(p.facts, day, 0);
+      items.push({ id: 100 + d, at: when, kind: 'daily', title: pick(DAILY_TITLES, `${day}|t`), short, text: `${short}${fact ? `\n\n🤓 Did you know? ${fact}` : ''}` });
+    }
+  }
+  // Reward ready: a full jar waits for a parent to hand the reward over and tap Given.
+  if (st.ready) {
+    const ready = kids.flatMap((c) => (['treat', 'goal'] as const).filter((k) => c.wallet[k].waiting && c.wallet[k].rewardId).map((k) => ({ c, j: jarOn({ ...c, wallet: { ...c.wallet, treat: c.wallet[k] } }, p.today, p.today) })));
+    if (ready.length) {
+      // At a parent hour: 6 pm today if it's still ahead, else 10 am, for three days.
+      const first = nowMs < at(p.today, 17, 30) ? at(p.today, 18, 0) : at(addDays(p.today, 1), 10, 0);
+      const lines = ready.map(({ c, j }) => `🎁 ${c.name}’s ${j ? `${j.icon} ${j.reward}` : 'reward'} is ready!`);
+      for (let d = 0; d < 3; d++) {
+        const when = first + d * DAY_MS;
+        if (asleep(when)) continue;
+        items.push({ id: 80 + d, at: when, kind: 'ready', title: ready.length === 1 ? '🎁 A reward is ready to give' : '🎁 Rewards are ready to give', short: lines[0], text: `${lines.join('\n')}\nHand it over, then tap “Given” in MN so a new jar can start.` });
+      }
     }
   }
   if (p.settings.backup) {
     const due = kids.map((c) => ({ c, when: backupWhen(c, nowMs) })).filter((x): x is { c: RemindChild; when: number } => x.when !== null);
     if (due.length) {
       let when = Math.max(Math.min(...due.map((x) => x.when)), p.backupSnoozeUntil, nowMs + 30 * 60_000);
-      // Shown at a grown-up hour: 10 am, or 7 pm if 10 am has passed that day.
+      // Shown at a parent hour: 10 am, or 7 pm if 10 am has passed that day.
       const d = new Date(when);
       const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       const ten = at(day, 10, 0);
@@ -303,8 +215,8 @@ export function planReminders(p: PlanInput): ReminderItem[] {
         id: 90,
         at: when,
         kind: 'backup',
-        title: '🔒 For grown-ups: back up MN progress',
-        short: `Save ${names}’s report card so progress is never lost.`,
+        title: '🔒 For parents: back up MN progress',
+        short: `Save ${names}’s progress file so progress is never lost.`,
         text: BACKUP_TEXT(names),
       });
     }

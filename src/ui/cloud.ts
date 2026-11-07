@@ -1,4 +1,4 @@
-// Google sign-in on the phone: the grown-up signs in (behind the grown-up check, or on the
+// Google sign-in on the phone: the parent signs in (behind the parent check, or on the
 // lock screen), the owner approves the account, and then the app unlocks and keeps the
 // family's progress backed up and in sync. All the deciding is in core/cloud.ts and
 // core/gate.ts; the talking to Google is in platform/cloudapi.ts.
@@ -97,7 +97,7 @@ export async function checkAccess(app: App): Promise<AccessAnswer> {
   const b = backend(app);
   const s = b?.session;
   if (!b || !s) return 'signed-out';
-  // The Play Store build has no approvals: every signed-in grown-up may back up.
+  // The Play Store build has no approvals: every signed-in parent may back up.
   if (app.store) return 'approved';
   try {
     const e = await b.myAccess();
@@ -123,14 +123,14 @@ const appVersion = (): string => (globalThis as { MN_VERSION?: string }).MN_VERS
 
 // ── signing in ──────────────────────────────────────────────────────────────
 
-/** The grown-up agrees to what is kept in the cloud (shown before the first sign-in on a phone). */
+/** The parent agrees to what is kept in the cloud (shown before the first sign-in on a phone). */
 async function consent(app: App): Promise<boolean> {
   if (ls.get('studyhard.cloud.consent') === POLICY_VERSION) return true;
   const { result } = app.sheet(
     `<h2>Sign in with Google</h2>
-     <p>For grown-ups only. MN keeps a private copy of your family’s progress in your own space in Google’s cloud (Mumbai), so it is backed up and the same on every phone:</p>
-     <ul class="cl-list"><li>your Google email and name</li><li>each child’s first name, age and avatar</li><li>levels, stars, rewards and play times</li><li>your family’s settings, like time limits and quiet hours</li></ul>
-     <p>No photos, location or contacts, and no ads. You can delete the cloud copy any time in the Parent area.</p>
+     <p>For parents only. MN keeps a private copy of your family’s progress in your own space in Google’s cloud (Mumbai), so it is backed up and the same on every phone:</p>
+     <ul class="cl-list"><li>your Google email and name</li><li>each child’s first name, age and avatar</li><li>levels, stars, rewards and play times</li><li>your family’s settings, like time limits and bedtime</li></ul>
+     <p>No photos, location or contacts, and no ads. You can delete the online backup any time in the Parent area.</p>
      <p class="fine" style="overflow-wrap:anywhere">Privacy policy: mn-mission-next.web.app/privacy</p>`,
     [
       { label: 'I agree, sign in', value: true, kind: 'mint' },
@@ -145,7 +145,7 @@ async function consent(app: App): Promise<boolean> {
 
 /** The Google ID token from the phone's account sheet (a stand-in in test runs). */
 async function googleIdToken(app: App): Promise<{ token: string } | { cancelled: true } | { error: string }> {
-  if (!FIREBASE || mock(app)) return { token: (window as { __mockGoogle?: string }).__mockGoogle ?? 'parent@example.com|Grown-up' };
+  if (!FIREBASE || mock(app)) return { token: (window as { __mockGoogle?: string }).__mockGoogle ?? 'parent@example.com|Parent' };
   if (!app.native?.googleSignIn) return { error: 'Update MN to the newest version to sign in with Google.' };
   const r = await app.native.googleSignIn({ webClientId: FIREBASE.webClientId });
   if (r.idToken) return { token: r.idToken };
@@ -211,18 +211,31 @@ export async function deleteCloudCopy(app: App): Promise<boolean> {
   return true;
 }
 
+/** Delete the family's online backup and the MN sign-in account, then sign out. */
+export async function deleteCloudAccount(app: App): Promise<boolean> {
+  const b = backend(app);
+  if (!b?.session) return true;
+  try {
+    await b.deleteAccount();
+  } catch {
+    return false;
+  }
+  await signOut(app);
+  return true;
+}
+
 // ── syncing ─────────────────────────────────────────────────────────────────
 
 export type SyncOutcome = { ok: true; added: Child[]; dropped: string[]; sent: number; at: number } | { ok: false; why: 'signed-out' | 'not-approved' | 'offline' | 'busy' | 'error' | 'other-phone'; message: string };
 
 /**
- * Without MN Plus (Play Store build) the backup is a safe copy from one phone: the phone
+ * Without MN Premium (Play Store build) the backup is an online backup from one phone: the phone
  * that last backed up. Another phone signing in takes it over (bringing the family's
- * progress with it); the first phone then stops until a grown-up takes it back.
+ * progress with it); the first phone then stops until a parent takes it back.
  */
 export const onePhone = (app: App): boolean => app.store && !app.plus();
 const OTHER_KEY = 'studyhard.cloud.other';
-/** The other phone that keeps the safe copy now (one-phone backup), if any. */
+/** The other phone that keeps the online backup now (one-phone backup), if any. */
 export const otherPhone = (): string | null => ls.get(OTHER_KEY);
 
 let running: Promise<SyncOutcome> | null = null;
@@ -245,7 +258,7 @@ export function noteReplaced(id: string): void {
 
 export const lastSync = (): number => memo().lastSync;
 
-/** Back up and sync now. Only one at a time. `takeOver`: this phone keeps the safe copy from now on. */
+/** Back up and sync now. Only one at a time. `takeOver`: this phone keeps the online backup from now on. */
 export function syncNow(app: App, asking = false, takeOver = false): Promise<SyncOutcome> {
   running ??= doSync(app, asking, takeOver).finally(() => (running = null));
   return running;
@@ -268,15 +281,15 @@ async function doSync(app: App, asking: boolean, takeOver: boolean): Promise<Syn
       // Deleted on another phone after this one last synced: stop here.
       if (m.lastSync && m.lastSync < family.deletedAt) {
         await signOut(app);
-        return { ok: false, why: 'signed-out', message: 'The cloud copy was deleted on another phone, so this phone signed out.' };
+        return { ok: false, why: 'signed-out', message: 'The online backup was deleted on another phone, so this phone signed out.' };
       }
       family = null;
     }
-    // One-phone backup: another phone took over the safe copy since this one last backed up.
+    // One-phone backup: another phone took over the online backup since this one last backed up.
     if (onePhone(app) && family?.primary && family.primary !== d.id && m.lastSync && !takeOver) {
       const label = family.devices[family.primary]?.label ?? 'another phone';
       ls.set(OTHER_KEY, label);
-      return { ok: false, why: 'other-phone', message: `The safe copy now comes from ${label}.` };
+      return { ok: false, why: 'other-phone', message: `The online backup now comes from ${label}.` };
     }
     const r = await planSync({ local: app.save.data.children, rules: familyRules(app.save.data.settings), memo: m, family, fetchChild: (id) => b.getChild(id), device: d.id, label: d.label, now, combineWith: asking ? (here, there) => askCombine(app, here, there) : undefined });
     // Something was saved while we worked (a level finished): try again in a moment.
@@ -326,7 +339,7 @@ async function doSync(app: App, asking: boolean, takeOver: boolean): Promise<Syn
 }
 
 /**
- * Download the family's cloud copy as a backup file: the very same checked backups the cloud
+ * Download the family's online backup as a backup file: the very same checked backups the cloud
  * keeps, so the file restores on any phone just like the cloud does.
  */
 export async function downloadCloudCopy(app: App): Promise<'saved' | 'empty' | 'cancelled' | 'offline' | 'error'> {
@@ -375,7 +388,7 @@ export function startCloud(app: App): void {
     clearTimeout(timer);
     timer = window.setTimeout(() => {
       if (!account(app)) return;
-      // One-phone backup: a safe copy every few hours (and never from a phone that handed it on).
+      // One-phone backup: an online backup every few hours (and never from a phone that handed it on).
       if (onePhone(app) && (otherPhone() || !freeSyncDue(lastSync(), Date.now(), false))) return;
       void syncNow(app).then((r) => {
         if (!r.ok && r.why === 'busy') later(20_000);

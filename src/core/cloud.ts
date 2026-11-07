@@ -1,8 +1,8 @@
-// Google sign-in for grown-ups: backup, restore and sync (first version, decided 5 Nov).
+// Google sign-in for parents: backup, restore and sync (first version, decided 5 Nov).
 //
 // In the cloud (Firestore, asia-south1), each family has:
 //   families/{uid}                     consent, devices, when each child last changed, removed
-//                                      children, and the family's rules (limits, quiet hours…)
+//                                      children, and the family's rules (limits, bedtime…)
 //   families/{uid}/children/{childId}  one child: the checked report-card backup, gzipped
 // A phone and the cloud combine exactly like two phones do (mergeChild). Question history and
 // undo notes stay on the phone. Children never sign in.
@@ -13,7 +13,7 @@
 import { newChild, type Child, type Settings } from '../storage/save.ts';
 import { makeBackup, mergeChild, readBackup, type Backup } from './backup.ts';
 
-/** Which version of the privacy policy a grown-up agrees to when signing in. */
+/** Which version of the privacy policy a parent agrees to when signing in. */
 export const POLICY_VERSION = '2026-11-05';
 
 // ── a child in the cloud ────────────────────────────────────────────────────
@@ -66,7 +66,7 @@ export async function decodeChild(doc: CloudChild): Promise<Decoded> {
   try {
     text = await gunzip(fromB64(doc.data));
   } catch {
-    return { ok: false, reason: 'The cloud copy could not be read.' };
+    return { ok: false, reason: 'The online backup could not be read.' };
   }
   const r = await readBackup(text);
   if (!r.ok) return r;
@@ -74,7 +74,7 @@ export async function decodeChild(doc: CloudChild): Promise<Decoded> {
   return { ok: true, child: complete(r.backup.child), backup: r.backup };
 }
 
-/** Fill in anything an older copy didn't have (as a restored report card is). */
+/** Fill in anything an older copy didn't have (as a restored progress file is). */
 export function complete(c: Child): Child {
   const base = newChild(c.name, c.age ?? 6, c.avatar ?? 0, c.createdDay ?? '');
   return { ...base, ...c, id: c.id, progress: { ...base.progress, ...c.progress }, wallet: { ...base.wallet, ...c.wallet }, stats: { ...base.stats, ...c.stats }, undo: c.undo ?? [] };
@@ -113,19 +113,19 @@ export interface FamilyDoc {
   v: 1;
   consentAt: number;
   policy: string;
-  /** childId → when its cloud copy last changed (ms). */
+  /** childId → when its online backup last changed (ms). */
   kids: Record<string, number>;
-  /** childId → when a grown-up removed that child (it is removed on every phone). */
+  /** childId → when a parent removed that child (it is removed on every phone). */
   removed: Record<string, number>;
-  /** childId → when a phone replaced the cloud copy (undo, starting over): other phones take it as it is. */
+  /** childId → when a phone replaced the online backup (undo, starting over): other phones take it as it is. */
   resets: Record<string, number>;
   /** deviceId → its label and last sync (ms). */
   devices: Record<string, { label: string; at: number }>;
   rules: FamilyRules;
   rulesAt: number;
-  /** The phone that last synced. Without MN Plus (Play build) only this phone keeps the safe copy. */
+  /** The phone that last synced. Without MN Premium (Play build) only this phone keeps the online backup. */
   primary?: string;
-  /** A grown-up deleted the cloud copy then (only this is left; phones that synced before sign out). */
+  /** A parent deleted the online backup then (only this is left; phones that synced before sign out). */
   deletedAt?: number;
 }
 
@@ -155,7 +155,7 @@ export interface SyncInput {
   rules: FamilyRules;
   memo: SyncMemo;
   family: FamilyDoc | null;
-  /** Fetches a child's cloud copy (only called for children that changed in the cloud). */
+  /** Fetches a child's online backup (only called for children that changed in the cloud). */
   fetchChild: (id: string) => Promise<CloudChild | null>;
   device: string;
   label: string;
@@ -179,13 +179,13 @@ export interface SyncResult {
   /** What to send: child copies to write, child copies to delete, and the new family document. */
   put: CloudChild[];
   del: string[];
-  /** Children whose cloud copy this phone just replaced. */
+  /** Children whose online backup this phone just replaced. */
   resets: string[];
   family: FamilyDoc;
   /** Family rules to apply here (when another phone changed them later). */
   rules?: FamilyRules;
   memo: SyncMemo;
-  /** Children whose cloud copy couldn't be read (kept as they are on this phone). */
+  /** Children whose online backup couldn't be read (kept as they are on this phone). */
   skipped: string[];
   /** Children combined with a same-named child from the cloud: id here → the cloud's id (which they now use). */
   renamed: Record<string, string>;
@@ -255,7 +255,7 @@ export async function planSync(p: SyncInput): Promise<SyncResult> {
       fam.resets[here.id] = p.now;
       resets.push(here.id);
     } else if ((fam.resets[here.id] ?? 0) > (memo.resets[here.id] ?? 0)) {
-      // Another phone replaced the cloud copy: take it as it is (keeping this phone's history).
+      // Another phone replaced the online backup: take it as it is (keeping this phone's history).
       const doc = await p.fetchChild(here.id);
       const d = doc ? await decodeChild(doc) : null;
       if (!d?.ok) {
@@ -278,7 +278,7 @@ export async function planSync(p: SyncInput): Promise<SyncResult> {
         continue;
       }
     } else if (cloudAt !== undefined) {
-      // Same cloud copy as last time: send only if this phone has new play (or changes).
+      // Same online backup as last time: send only if this phone has new play (or changes).
       send = memo.hash[here.id] !== hashOf(here);
     }
     children.push(c);
@@ -343,10 +343,10 @@ export function hashOf(c: Child): number {
   return h >>> 0;
 }
 
-// ── gentle nudges (grown-ups only) ─────────────────────────────────────────
+// ── gentle nudges (parents only) ─────────────────────────────────────────
 
 export interface NudgeState {
-  /** Last time the grown-up was asked (ms), and "don't ask again". */
+  /** Last time the parent was asked (ms), and "don't ask again". */
   askedAt?: number;
   never?: boolean;
 }
@@ -355,7 +355,7 @@ const WEEK = 7 * 86_400_000;
 const stars = (c: Child) => Object.values(c.progress.levels).reduce((n, l) => n + l.stars, 0);
 
 /**
- * The grown-up's sign-in suggestion, or null. Only after something worth keeping (a reward
+ * The parent's sign-in suggestion, or null. Only after something worth keeping (a reward
  * reached, or a week of play days), at most once a week, never after "don't ask again".
  */
 export function nudgeFor(state: NudgeState | undefined, kids: Child[], signedIn: boolean, now: number): string | null {

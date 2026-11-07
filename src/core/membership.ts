@@ -1,4 +1,4 @@
-// MN Plus, the grown-ups' paid extras (Play Store build only). What the Play account owns
+// MN Premium, the parents' paid extras (Play Store build only). What the Play account owns
 // decides it; this file only does the deciding, with no Play or screen code, so it can be
 // tested. Plans: monthly and yearly subscriptions (with a free trial offer) and a one-time
 // lifetime purchase. Prices always come from Play (in the phone's own currency); the ones
@@ -12,7 +12,7 @@ export const PLUS_LIFETIME = 'mn_plus_lifetime';
 /** The subscription's base plans. */
 export const BASE_MONTHLY = 'monthly';
 export const BASE_YEARLY = 'yearly';
-/** The offer tag on the longer trial, for grown-ups signed in with Google. */
+/** The offer tag on the longer trial, for parents signed in with Google. */
 export const TAG_SIGNED_IN = 'signed-in';
 
 export type PlanId = 'monthly' | 'yearly' | 'lifetime';
@@ -28,17 +28,18 @@ export const FALLBACK: Record<PlanId, { price: string; per: string }> = {
 export const TRIAL_DAYS = 7;
 export const TRIAL_DAYS_SIGNED_IN = 14;
 
-/** What MN Plus adds, in the order the Plus page lists them. */
-export type PlusFeature = 'sync' | 'school' | 'report' | 'sheets' | 'icons';
+/** What MN Premium adds, in the order the Plus page lists them. */
+export type PlusFeature = 'focus' | 'sync' | 'school' | 'report' | 'sheets' | 'icons';
 export const FEATURES: { id: PlusFeature; icon: string; name: string; free: string; plus: string }[] = [
-  { id: 'sync', icon: '☁️', name: 'Backup and sync', free: 'A safe copy from one phone', plus: 'Every phone in step, all the time' },
-  { id: 'school', icon: '📚', name: 'School paths', free: 'The path for their age', plus: 'CBSE, ICSE or Common Core, by class, with the topics you pick' },
+  { id: 'focus', icon: '🎯', name: 'Focus plan', free: 'Fix-it brings back missed questions', plus: 'Each week, short rounds on the 3 skills your child finds hardest, with before-and-after scores' },
+  { id: 'sync', icon: '☁️', name: 'Backup and sync', free: 'An online backup from one phone', plus: 'Every phone in step, all the time' },
+  { id: 'school', icon: '📚', name: 'School syllabuses', free: 'The path for their age', plus: 'CBSE, ICSE or Common Core, by class, with the topics you pick' },
   { id: 'report', icon: '📊', name: 'Full report', free: 'Stars, time and this week', plus: 'Strengths, skills to practise, speed and best times' },
   { id: 'sheets', icon: '🖨️', name: 'Worksheets', free: '', plus: 'Printable sheets from where they are now, with answers' },
   { id: 'icons', icon: '🎨', name: 'App icons', free: 'The sky icon', plus: 'Pick the MN icon on your home screen: Sky, Night, Sunset, Space or Gold' },
 ];
 
-/** The phone's record of MN Plus (kept on the phone, not in backups). */
+/** The phone's record of MN Premium (kept on the phone, not in backups). */
 export interface PlusState {
   /** What gives Plus now; none when it isn't on. */
   via?: 'monthly' | 'yearly' | 'lifetime' | 'subscription' | 'owner' | 'pending';
@@ -161,10 +162,10 @@ export function planOffers(products: PlayProduct[], signedIn: boolean): PlanOffe
 }
 
 /**
- * Free backup is a safe copy from one phone, at most every few hours (Plus: a few seconds
+ * Free backup is an online backup from one phone, at most every few hours (Plus: a few seconds
  * after each change, on every phone).
  */
 export const FREE_SYNC_GAP = 6 * 3_600_000;
 
-/** Is a free (one-phone) backup due? `asked`: the grown-up tapped "Back up now". */
+/** Is a free (one-phone) backup due? `asked`: the parent tapped "Back up now". */
 export const freeSyncDue = (lastSync: number, now: number, asked: boolean): boolean => asked || !lastSync || now - lastSync >= FREE_SYNC_GAP;

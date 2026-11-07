@@ -1,13 +1,20 @@
-// Parent area (behind the grown-up check). It opens on the everyday settings: children
+// Parent area (behind the parent check). It opens on the everyday settings: children
 // (report, and their own settings), daily play time, sound, the look and backups. The rest
 // sits in groups (learning, notes, audio, device, security, help) in a ☰ side menu, like a
-// game's settings. Each child's own settings (age, difficulty, school path,
-// Adventure, with a grown-up) live on that child's page.
+// game's settings. Each child's own settings (age, difficulty, school syllabus,
+// Adventure, play together) live on that child's page.
 
 import { showParentAdventureTips, toggleAdventure } from './adventure.ts';
 import { backUpNow, dueKids, lastBackupText } from './backup.ts';
-import { askNotifications, notificationState } from './remindsync.ts';
-import { DEFAULT_REMINDERS, type ReminderSettings } from '../core/reminders.ts';
+import { askNotifications, notificationState, offerNotifications } from './remindsync.ts';
+import { remindersOf, type ReminderSettings } from '../core/reminders.ts';
+import { focusFor } from './focus.ts';
+import { FOCUS_GOAL } from '../core/focus.ts';
+import { skillById } from '../core/areas/index.ts';
+import { plusFaceSvg } from './plus.ts';
+import { eraseEverything } from './erase.ts';
+import { openLink, PRIVACY_URL } from './links.ts';
+import { FALLBACK } from '../core/membership.ts';
 import { schoolScreen, schoolLabel } from './school.ts';
 import { reportScreen } from './report.ts';
 import { restoreFromFile } from './restore.ts';
@@ -17,7 +24,7 @@ import { html, esc, type App, type Screen } from './app.ts';
 import { type Child, type Settings, type Theme } from '../storage/save.ts';
 import { CATEGORIES } from '../core/rewards.ts';
 import { ICONS, avatarHtml } from './icons.ts';
-import { reducedMotion, stagger } from '../render/motion.ts';
+import { stagger } from '../render/motion.ts';
 import { whosPlayingScreen } from './whos.ts';
 import { addChildScreen, limitsScreen } from './setup.ts';
 import { voiceScreen } from './voicepick.ts';
@@ -55,7 +62,7 @@ const TIMER_MIN = 5;
 const TIMER_OFF = 65;
 const TIMER_MARKS: [number, string][] = [[5, 'Hard'], [15, 'Normal'], [30, 'Easy'], [50, 'Relaxed'], [65, 'No timer']];
 function timerNote(secs: number): string {
-  if (!secs) return 'No timer on levels. Boss fights still need one, so they get a whole minute.';
+  if (!secs) return 'No timer on levels. Challenges still need one, so they get a whole minute.';
   if (secs <= 10) return 'Hard: quick recall, for children who know their facts well.';
   if (secs <= 20) return 'Normal: about right for most children.';
   if (secs <= 40) return 'Easy: plenty of time to work it out.';
@@ -73,19 +80,21 @@ const THEME_CHOICES: { id: Theme; name: string; note: string }[] = [
   { id: 'precision', name: 'Precision', note: 'White, one strong blue' },
 ];
 
-/** Advanced settings come in groups, like the tabs down the side of a game's settings. */
-type Group = 'learning' | 'security' | 'help';
-const GROUPS: { id: Group; icon: string; name: string; note: string }[] = [
-  { id: 'learning', icon: '🎓', name: 'Learning', note: 'Timers, lessons, rewards, notes' },
-  { id: 'security', icon: '🔒', name: 'Security', note: 'Grown-up lock, access key' },
-  { id: 'help', icon: '❓', name: 'Help', note: 'Video, tips, what Adventure is' },
+/** The Parent area's five tabs, down the right edge (thumb side). Each changes the page in place. */
+type Page = 'kids' | 'sound' | 'premium' | 'app' | 'help';
+const TABS: { id: Page; icon: string; label: string; title: string }[] = [
+  { id: 'kids', icon: '👧', label: 'Children', title: 'Children' },
+  { id: 'sound', icon: '🔊', label: 'Sound', title: 'Sound and voice' },
+  { id: 'premium', icon: '✨', label: 'Premium', title: 'MN Premium' },
+  { id: 'app', icon: '⚙️', label: 'App', title: 'App settings' },
+  { id: 'help', icon: '❓', label: 'Help', title: 'Help' },
 ];
+/** The page the parent is on (kept while they visit a sub-screen and come back). */
+let page: Page = 'kids';
+/** Open the Parent area on a given tab next time (e.g. from a notification or the Premium card). */
+export const openParentOn = (p: Page): void => void (page = p);
 
-/** The page the grown-up is on (kept while they visit a sub-screen and come back). */
-type Page = 'basic' | Group;
-let page: Page = 'basic';
-
-const kidLine = (c: Child): string => [`Age ${c.age}`, c.adventure?.on ? 'Adventure' : '', c.school?.on ? 'School path' : '', (c.challenge ?? 0) > 0 ? CHALLENGE[c.challenge ?? 0].name : ''].filter(Boolean).join(' · ');
+const kidLine = (c: Child): string => [`Age ${c.age}`, c.adventure?.on ? 'Adventure' : '', c.school?.on ? 'School syllabus' : '', (c.challenge ?? 0) > 0 ? CHALLENGE[c.challenge ?? 0].name : ''].filter(Boolean).join(' · ');
 
 /** Google backup and sync (when this build has it). */
 function cloudCard(app: App): string {
@@ -93,109 +102,186 @@ function cloudCard(app: App): string {
   const who = account(app);
   if (!who)
     return `<div class="card pa-cloud"><p><b>☁️ Back up with Google</b><small>Sign in to keep progress safe and the same on every phone. What’s on this phone now is kept and joins your account. ${esc(LOCAL_NOTE)} right now.</small></p>${googleButton('cl-in')}</div>`;
-  // Play Store build without MN Plus: a safe copy from one phone.
+  // Play Store build without MN Premium: an online backup from one phone.
   const other = onePhone(app) ? otherPhone() : null;
   const note = other
-    ? `<div class="cl-other" role="status"><p>📱 The safe copy now comes from <b>${esc(other)}</b>. Progress made on this phone isn’t backed up.</p><button class="btn ghost small cl-take">Keep the safe copy from this phone</button><p class="fine">With MN Plus, every phone stays in step. <button class="linkish mp-from-cloud">See MN Plus</button></p></div>`
+    ? `<div class="cl-other" role="status"><p>📱 The online backup now comes from <b>${esc(other)}</b>. Progress made on this phone isn’t backed up.</p><button class="btn ghost small cl-take">Keep the online backup from this phone</button><p class="fine">With MN Premium, every phone stays in step. <button class="linkish mp-from-cloud">See MN Premium</button></p></div>`
     : onePhone(app)
-      ? `<p class="fine cl-one">Safe copy from this phone, every few hours. With MN Plus, every phone stays in step all the time. <button class="linkish mp-from-cloud">See MN Plus</button></p>`
+      ? `<p class="fine cl-one">Online backup from this phone, every few hours. With MN Premium, every phone stays in step all the time. <button class="linkish mp-from-cloud">See MN Premium</button></p>`
       : '';
   return `<div class="card pa-cloud on"><p><b>☁️ ${esc(who.email)}</b><small class="cl-status">${esc(other ? 'Not backing up from this phone' : syncText(lastSync()))}</small></p>${note}
     <div class="cl-btns"><button class="btn small cl-sync">Back up now</button><button class="btn ghost small cl-out">Sign out</button></div>
-    <button class="linkish cl-dl">⤓ Download the cloud copy as a backup file</button>
-    <button class="linkish warn cl-del">Delete the cloud copy</button></div>`;
+    <button class="linkish cl-dl">⤓ Download the online backup as a backup file</button>
+    <button class="linkish warn cl-del">Delete the online backup</button></div>`;
 }
 
-function basicHtml(app: App): string {
+const sec = (title: string, body: string) => `<section class="pa-sec"><h2 class="pa-h">${title}</h2>${body}</section>`;
+
+/** Children: who plays, how long, and how lessons and rewards work. */
+function kidsHtml(app: App): string {
   const st = app.save.data.settings;
-  // Not signed in yet: a short invite at the top (the full card is under Backup).
-  const invite = cloudOn(app) && !account(app) ? `<div class="card pa-invite"><p><b>☁️ Keep progress safe with Google</b><small>Sign in once. Everything on this phone is kept and backed up.</small></p>${googleButton('cl-in')}</div>` : '';
-  // Play Store build: the MN Plus card (what it is, or that it's on).
-  const plus = storeBuild(app)
-    ? `<button class="card mp-card${hasPlus(app) ? ' on' : ''}"><span class="mp-card-i" aria-hidden="true">✨</span><span><b>${hasPlus(app) ? 'MN Plus is on' : 'MN Plus'}</b><small>${hasPlus(app) ? 'Backup on every phone, school paths, the full report and worksheets' : `School paths, the full report, worksheets and sync on every phone. Free for ${account(app) ? TRIAL_DAYS_SIGNED_IN : TRIAL_DAYS} days.`}</small></span><i aria-hidden="true">›</i></button>`
-    : '';
-  return `${invite}${plus}
-    <section class="pa-sec"><h2 class="pa-h">👧 Children</h2>
-      <div class="pa-kids">${app.save.data.children
+  return `${sec('Children', `<div class="pa-kids">${app.save.data.children
         .map((c) => `<div class="pa-kid card">${avatarHtml(c.avatar, 48)}<div class="pk-who"><b>${esc(c.name)}</b><small>${kidLine(c)}</small></div>
           <div class="pk-btns"><button class="btn ghost small report" data-id="${c.id}">${ICONS.chart} Report</button><button class="icon-btn kid-set" data-id="${c.id}" aria-label="Settings for ${esc(c.name)}">⚙️</button></div></div>`)
         .join('')}</div>
-      <button class="btn ghost small add-kid">+ Add a child</button></section>
-    <section class="pa-sec"><h2 class="pa-h">⏱️ Daily play</h2>
-      <button class="pa-row card limits"><b>${st.limitMinutes} minutes a day</b><small>${st.timeUpMode === 'stop' ? 'Stops when time is up' : 'Keeps playing without coins'} · treats ${paceText(st.treatPace, 'treat')}, big toy ${paceText(st.goalPace, 'goal')}</small></button>
-      <button class="pa-row card quiet-row"><b>🌙 Quiet hours</b><small>${esc(quietSummary(st.quiet))}</small></button>
-      <button class="pa-row card skills-row"><b>📚 Skills list</b><small>Every skill MN teaches, with an example and how it’s taught</small></button>
-      ${iconsAvailable(app) ? `<button class="pa-row card icon-row"><span class="ic-now" aria-hidden="true">${appIconSvg('sky', 'square', 40)}</span><span><b>🎨 App icon ${plusTag(app)}</b><small>Choose MN’s icon on the home screen</small></span></button>` : ''}
-      <div class="card pa-toggles">${toggleRows(st, [T('holiday', 'Holiday mode', 'Rewards don’t melt while you’re away or unwell.')])}</div></section>
-    <section class="pa-sec"><h2 class="pa-h">🔊 Sound</h2>
-      <div class="card pa-toggles">${toggleRows(st, [T('sound', 'Sound effects', 'Taps, cheers and coins.'), T('voice', 'Read questions aloud', 'Plus reads each question and tip.'), T('vibration', 'Vibration', 'Gentle buzzes on taps and answers.')])}</div>
-      <button class="pa-row card voice-row"><b>Reading voice</b><small>${st.voiceName ? 'Chosen voice' : 'Automatic (clearest)'} · ${st.voiceRate < 0.9 ? 'slow' : st.voiceRate > 1 ? 'quick' : 'normal speed'}</small></button></section>
-    <section class="pa-sec"><h2 class="pa-h">🎨 Look</h2>
-      <div class="themes" role="radiogroup" aria-label="Look of the app">${THEME_CHOICES.map((t) => `<button class="theme-tile th-${t.id}${st.theme === t.id ? ' on' : ''}" role="radio" aria-checked="${st.theme === t.id}" data-theme-id="${t.id}"><span class="th-swatch"><i></i><i></i><i></i></span><b>${t.name}</b><small>${t.note}</small></button>`).join('')}</div></section>
-    <section class="pa-sec"><h2 class="pa-h">💾 Backup</h2>
-      <div class="card pa-backup">
-        ${(() => {
-          const due = dueKids(app);
-          return due.length ? `<p class="pb-due" role="status">⚠️ <span>${esc(due.map((c) => c.name).join(' and '))} ${due.length === 1 ? 'has' : 'have'} new progress that isn’t backed up yet.${account(app) ? '' : cloudOn(app) ? ' Save a backup file now, or back up with Google below.' : ' Save a backup file now.'}</span></p>` : '';
-        })()}
-        <p class="pb-why"><small>${account(app) ? 'A backup file is a copy you can keep anywhere, like Google Drive or email.' : 'Progress is saved only on this phone. A backup file (kept in Google Drive or email) brings it back on any phone.'}</small></p>
-        <ul class="pb-kids">${app.save.data.children.map((c) => `<li>${avatarHtml(c.avatar, 28)}<span>${esc(c.name)}</span><small>${lastBackupText(c)}</small></li>`).join('')}</ul>
-        <button class="btn small bk-family">Save a backup file</button>
-        <p class="fine pb-same">One file for the whole family, the same as the Google cloud copy: either one restores on any phone.</p>
-        <button class="linkish bk-all">Save a report card for each child instead</button>
-        <button class="linkish restore-kid">⤓ Restore from a backup file or report card</button>
-      </div>
-      ${cloudCard(app)}</section>
-    <button class="pa-more card to-adv"><span>👉</span><span><b>More settings</b><small>Timers, lessons, notes, lock and help: tap a tab on the right</small></span><i aria-hidden="true">›</i></button>`;
-}
-
-function groupHtml(app: App, group: Group): string {
-  const st = app.save.data.settings;
-  const rs: ReminderSettings = { ...DEFAULT_REMINDERS, ...st.reminders };
-  const body: Record<Group, () => string> = {
-    learning: () => `
-      <div class="card pa-timer"><div class="pt-head"><b>Time per question</b><span class="pt-val"></span></div>
-        <small>For timed levels (Speed and Master) and boss fights.</small>
+      <button class="btn ghost small add-kid">+ Add a child</button>`)}
+    ${sec('Daily play', `<button class="pa-row card limits"><b>${st.limitMinutes} minutes a day</b><small>${st.timeUpMode === 'stop' ? 'Stops when time is up' : 'Keeps playing without coins'} · treats ${paceText(st.treatPace, 'treat')}, big reward ${paceText(st.goalPace, 'goal')}</small></button>
+      <button class="pa-row card quiet-row"><b>🌙 Bedtime</b><small>${esc(quietSummary(st.quiet))}</small></button>
+      <div class="card pa-toggles">${toggleRows(st, [T('holiday', 'Pause rewards', 'On holiday or unwell: jars don’t shrink and no daily reminder.')])}</div>`)}
+    ${sec('Learning', `<div class="card pa-timer"><div class="pt-head"><b>Time per question</b><span class="pt-val"></span></div>
+        <small>For timed levels (Speed and Master) and challenges.</small>
         <input type="range" class="slider pt-slider" min="${TIMER_MIN}" max="${TIMER_OFF}" step="5" value="${st.timerSeconds || TIMER_OFF}" aria-label="Seconds per question">
         <div class="pt-marks" aria-hidden="true">${TIMER_MARKS.map(([v, t]) => `<span style="--at:${(100 * (v - TIMER_MIN)) / (TIMER_OFF - TIMER_MIN)}%">${t}</span>`).join('')}</div>
         <p class="pt-note"></p></div>
-      <div class="card pa-toggles">${toggleRows(st, [T('confirmAnswers', 'Confirm answers', 'Tap an answer, then Check. Fewer slips from a stray tap.'), T('teach', 'Show how after a mistake', 'A short step-by-step lesson when an answer is wrong.')])}</div>
-      <div class="card pa-toggles">${toggleRows(st, [T('fx3d', '3D boss fights', 'Turn off if fights feel slow on this phone.')])}</div>
-      <h3 class="pa-sub">Reward categories</h3>
-      <div class="card pa-cats">${CATEGORIES.map((c) => `<label class="toggle-row"><span><b>${c.icon} ${esc(c.name)}</b></span><input type="checkbox" role="switch" data-c="${c.id}" ${st.hiddenCategories.includes(c.id) ? '' : 'checked'}></label>`).join('')}</div>
-      <h3 class="pa-sub">Notes on this phone</h3>
-      <div class="card pa-remind">
-        <label class="toggle-row"><span><b>🍫 Melt watch</b><small>Friendly notes when a treat jar is about to melt, each with a fun fact.</small></span><input type="checkbox" role="switch" data-r="melt" ${rs.melt ? 'checked' : ''}></label>
-        <div class="seg pr-per" role="radiogroup" aria-label="Notes a day"${rs.melt ? '' : ' hidden'}>${([2, 3] as const).map((n) => `<button class="seg-b${rs.perDay === n ? ' on' : ''}" role="radio" aria-checked="${rs.perDay === n}" data-per="${n}"><b>${n} a day</b><small>${n === 3 ? '8 am · 4:30 pm · 7:30 pm' : '8 am · 6:30 pm'}</small></button>`).join('')}</div>
-        <label class="toggle-row"><span><b>💾 Backup reminder</b><small>When there’s a week of progress not backed up: a note on this phone, and a reminder here in the Parent area.</small></span><input type="checkbox" role="switch" data-r="backup" ${rs.backup ? 'checked' : ''}></label>
-        <p class="pr-status" hidden></p>
-      </div>
-      <div class="card pa-widgets"><b>📱 Home-screen widgets</b><small>Treat jars, a fun fact and the Adventure card. Touch and hold an empty spot on your home screen, tap Widgets, then find MN.</small></div>`,
-    security: () => `
-      <button class="pa-row card lock-row"><b>Grown-up lock</b><small>${st.parentPin ? 'Parent PIN' : 'This phone’s screen lock'}</small></button>
-      ${storeBuild(app) ? '' : '<button class="pa-row card key-row"><b>Access key</b><small class="key-left">Checking…</small></button>'}`,
-    help: () => `
-      <button class="pa-row card story-row"><b>▶ Watch the one-minute video</b><small>What MN does and how it keeps children going</small></button>
-      <button class="pa-row card plus-row"><b>✨ What MN Plus adds</b><small>A short video for grown-ups: backup, school paths, the full report and worksheets</small></button>
-      <button class="pa-row card tips-row"><b>Show Plus’s map tips again</b><small>Each child sees the tips the next time they open the map</small></button>
-      <button class="pa-row card adv-what"><b>🎮 What is Adventure?</b><small>Quests, chests, badges, the wardrobe, the raid and the pet</small></button>
-      ${faceoffRows(app)}`,
-  };
-  return `<div class="pa-panel">${body[group]()}</div>`;
+      <div class="card pa-toggles">${toggleRows(st, [T('teach', 'Show how after a mistake', 'A short step-by-step lesson when an answer is wrong.'), T('confirmAnswers', 'Check before submitting', 'Tap an answer, then Check. Fewer slips from a stray tap.')])}</div>`)}`;
 }
 
-const pageName = (p: Page): string => (p === 'basic' ? 'Parent area' : GROUPS.find((g) => g.id === p)!.name);
+/** Sound and voice. */
+function soundHtml(app: App): string {
+  const st = app.save.data.settings;
+  const female = st.voiceGender === 'f';
+  return `${sec('Sound', `<div class="card pa-toggles">${toggleRows(st, [T('sound', 'Sound effects', 'Taps, cheers and coins.')])}</div>
+      <div class="card pa-vol"><div class="pt-head"><b>Volume</b><span class="vol-val">${Math.round((st.volume ?? 0.8) * 100)}%</span></div><input type="range" class="slider vol-slider" min="0.2" max="1" step="0.1" value="${st.volume ?? 0.8}" aria-label="Sound volume"></div>`)}
+    ${sec('Reading aloud', `<div class="card pa-toggles">${toggleRows(st, [T('voice', 'Read questions aloud', 'Plus reads each question and tip.')])}</div>
+      <div class="seg voice-g" role="radiogroup" aria-label="Reading voice"><button class="seg-b${female ? '' : ' on'}" role="radio" aria-checked="${!female}" data-g="m"><b>👨 Man’s voice</b><small>Default</small></button><button class="seg-b${female ? ' on' : ''}" role="radio" aria-checked="${female}" data-g="f"><b>👩 Woman’s voice</b><small>&nbsp;</small></button></div>
+      <button class="pa-row card voice-row"><b>Another voice or speed</b><small>${st.voiceName ? 'A chosen voice' : 'Automatic'} · ${st.voiceRate < 0.9 ? 'slow' : st.voiceRate > 1 ? 'quick' : 'normal speed'}</small></button>`)}`;
+}
 
-/** The four tabs down the right edge (thumb side): settings change in place. */
-function railTabs(app: App): { id: Page | 'skills' | 'plus'; icon: string; label: string }[] {
-  return [
-    { id: 'basic', icon: '⭐', label: 'Everyday' },
-    ...GROUPS.map((g) => ({ id: g.id, icon: g.icon, label: g.name })),
-  ];
+/** App settings: notifications, look, vibration, parent PIN, backup. */
+function appHtml(app: App): string {
+  const st = app.save.data.settings;
+  const rs = remindersOf(st.reminders);
+  const times = ['07:30', '16:00', '17:00', '18:00', '19:00'];
+  const nice = (t: string) => { const [h, m] = t.split(':').map(Number); return `${((h + 11) % 12) + 1}${m ? `:${String(m).padStart(2, '0')}` : ''} ${h < 12 ? 'am' : 'pm'}`; };
+  return `${sec('Notifications', `<p class="pr-status card" hidden></p>
+      <div class="card pa-remind">
+        <label class="toggle-row"><span><b>🧮 Daily learning time</b><small>One note a day, naming who hasn’t played yet.</small></span><input type="checkbox" role="switch" data-r="daily" ${rs.daily ? 'checked' : ''}></label>
+        <div class="seg pr-time" role="radiogroup" aria-label="Time of the daily note"${rs.daily ? '' : ' hidden'}>${times.map((t) => `<button class="seg-b${rs.dailyAt === t ? ' on' : ''}" role="radio" aria-checked="${rs.dailyAt === t}" data-at="${t}"><b>${nice(t)}</b></button>`).join('')}</div>
+        <label class="toggle-row"><span><b>🎁 Reward ready</b><small>When a jar is full and a reward is waiting to be given.</small></span><input type="checkbox" role="switch" data-r="ready" ${rs.ready ? 'checked' : ''}></label>
+        <label class="toggle-row"><span><b>💾 Backup reminder</b><small>When a week of progress isn’t backed up.</small></span><input type="checkbox" role="switch" data-r="backup" ${rs.backup ? 'checked' : ''}></label>
+      </div>`)}
+    ${sec('Look', `<div class="themes" role="radiogroup" aria-label="Look of the app">${THEME_CHOICES.map((t) => `<button class="theme-tile th-${t.id}${st.theme === t.id ? ' on' : ''}" role="radio" aria-checked="${st.theme === t.id}" data-theme-id="${t.id}"><span class="th-swatch"><i></i><i></i><i></i></span><b>${t.name}</b><small>${t.note}</small></button>`).join('')}</div>
+      ${iconsAvailable(app) ? `<button class="pa-row card icon-row"><span class="ic-now" aria-hidden="true">${appIconSvg('sky', 'square', 40)}</span><span><b>App icon ${plusTag(app)}</b><small>Choose MN’s icon on the home screen</small></span></button>` : ''}
+      <div class="card pa-toggles">${toggleRows(st, [T('vibration', 'Vibration', 'Gentle buzzes on taps and answers.'), T('fx3d', '3D challenges', 'Turn off if challenges feel slow on this phone.')])}</div>`)}
+    ${sec('Rewards', `<div class="card pa-cats"><p class="cat-why">Rewards children can pick from. Tap to show or hide a kind.</p><div class="cat-chips">${CATEGORIES.map((c) => `<button class="cat-chip${st.hiddenCategories.includes(c.id) ? '' : ' on'}" aria-pressed="${!st.hiddenCategories.includes(c.id)}" data-c="${c.id}"><span aria-hidden="true">${c.icon}</span>${esc(c.name)}</button>`).join('')}</div></div>`)}
+    ${sec('What MN teaches', `<button class="pa-row card skills-row"><b>📚 Skills list</b><small>Every skill, with an example and how it’s taught</small></button>`)}
+    ${sec('Parent PIN', `<button class="pa-row card lock-row"><b>🔒 How parents unlock settings</b><small>${st.parentPin ? 'Your own PIN' : 'This phone’s screen lock'}</small></button>
+      ${storeBuild(app) ? '' : '<button class="pa-row card key-row"><b>Access key</b><small class="key-left">Checking…</small></button>'}`)}
+    ${sec('Backup', `<div class="card pa-backup">
+        ${(() => {
+          const due = dueKids(app);
+          return due.length ? `<p class="pb-due" role="status">⚠️ <span>${esc(due.map((c) => c.name).join(' and '))} ${due.length === 1 ? 'has' : 'have'} new progress that isn’t backed up yet.</span></p>` : '';
+        })()}
+        <p class="pb-why"><small>${account(app) ? 'Progress is backed up online. A backup file is an extra copy you can keep anywhere.' : 'Progress is saved only on this phone. A backup file (in Google Drive or email) brings it back on any phone.'}</small></p>
+        <ul class="pb-kids">${app.save.data.children.map((c) => `<li>${avatarHtml(c.avatar, 28)}<span>${esc(c.name)}</span><small>${lastBackupText(c)}</small></li>`).join('')}</ul>
+        <button class="btn small bk-family">Save a backup file</button>
+        <button class="linkish restore-kid">Restore from a backup file</button>
+        <button class="linkish bk-all">Save one file per child instead</button>
+      </div>
+      ${cloudCard(app)}`)}
+    ${sec('Your data', `<button class="pa-row card privacy-row"><b>Privacy policy</b><small>What MN keeps, and where</small></button>
+      <button class="pa-row card erase-row"><b>Delete account and data</b><small>Progress on this phone${account(app) ? ', the online backup and your MN sign-in' : ''}</small></button>`)}
+    ${sec('Home-screen widgets', `<div class="card pa-widgets"><small>Treat jars, a fun fact and the Adventure card. Touch and hold an empty spot on your home screen, tap Widgets, then find MN.</small></div>`)}`;
+}
+
+/** Help: videos and answers to common questions. */
+const FAQ: [string, string][] = [
+  ['How much should my child play?', 'Ten to twenty minutes a day works best: little and often. Set the daily time in Children → Daily play.'],
+  ['How do rewards work?', 'Levels fill a treat jar with coins. When it’s full, MN asks you to hand over the treat and tap Given. You choose the treats and how fast jars fill (Children → Daily play).'],
+  ['Why does the jar shrink?', 'A missed day takes a little off the treat jar, so playing a few minutes every day pays off. Pause rewards stops this on holidays or sick days.'],
+  ['My child got an answer wrong. What happens?', 'MN shows a short step-by-step lesson with pictures, then a similar question to try. You can turn lessons off in Children → Learning.'],
+  ['What are steps 1–5?', 'Each skill has five steps on the map: Learn, Practice, Practise more, Speed and Master. Each step wins up to 3 stars; Speed and Master are timed (change the time in Children → Learning).'],
+  ['Can two children share one phone?', 'Yes. Add each child in Children; MN asks who’s playing when it opens.'],
+  ['How do I move to a new phone?', 'Sign in with Google in App → Backup on both phones, or save a backup file and open it on the new phone.'],
+  ['Is my child’s data private?', 'Yes. No ads, no tracking. Progress stays on the phone, or in your own private online backup if you sign in.'],
+];
+function helpHtml(app: App): string {
+  return `${sec('Videos', `<button class="pa-row card story-row"><b>▶ How MN works</b><small>One minute: levels, lessons and rewards</small></button>
+      <button class="pa-row card plus-row"><b>▶ What MN Premium adds</b><small>A short video about the extra features</small></button>`)}
+    ${sec('Questions', `<div class="card pa-faq">${FAQ.map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}</div>`)}
+    ${sec('More', `<button class="pa-row card tips-row"><b>Show the map tips again</b><small>Each child sees Plus’s tips the next time they open the map</small></button>
+      <button class="pa-row card adv-what"><b>🎮 What is Adventure mode?</b><small>Quests and badges: daily goals, chests, a pet and outfits</small></button>
+      ${faceoffRows(app)}`)}`;
+}
+
+/** The perks as cards: the front says what it is, the back how to get the most from it. */
+const PERKS: { id: string; icon: string; name: string; line: string; how: string[] }[] = [
+  { id: 'focus', icon: '🎯', name: 'Focus plan', line: 'Three short rounds a week on the skills that are hardest right now.', how: ['Each Monday MN picks the 3 hardest skills.', 'Your child taps 🎯 on the map: about 3 minutes a round.', 'Come back here to see before → after.'] },
+  { id: 'report', icon: '📊', name: 'Full report', line: 'Strengths, skills to practise, speed, and the time of day they learn best.', how: ['Open Report once a week.', 'Praise one strength by name.', 'Spend five minutes together on one skill to practise.'] },
+  { id: 'school', icon: '📚', name: 'School syllabus', line: 'CBSE, ICSE or Common Core, class by class, so home matches school.', how: ['Open a child’s ⚙️ → School syllabus.', 'Pick the board and class.', 'Tick this term’s topics.'] },
+  { id: 'sheets', icon: '🖨️', name: 'Worksheets', line: 'Printable practice from exactly where they are, with an answer key.', how: ['Open a child’s ⚙️ → Print a worksheet.', 'Use it for car rides and screen-free days.', 'The answers are on the last page.'] },
+  { id: 'sync', icon: '☁️', name: 'Every phone in step', line: 'A tablet at home and a phone on the go, with the same progress.', how: ['App → Backup → Sign in with Google.', 'Do the same on the other phone.', 'Progress follows the child.'] },
+  { id: 'icons', icon: '🎨', name: 'App icons', line: 'Sky, Night, Sunset, Space or Gold on the home screen.', how: ['App → Look → App icon.', 'Save it as a treat for a big reward.'] },
+];
+
+/** Free and Premium side by side: the free app is complete; Premium is the parent's view. */
+const COMPARE: [string, string, string][] = [
+  ['Every level, lesson and reward', '✓', '✓'],
+  ['Stars, time and this week', '✓', '✓'],
+  ['Which skills need practice', '', '✓'],
+  ['Focus rounds on the hardest skills', '', '✓'],
+  ['School syllabus, worksheets', '', '✓'],
+  ['Backup', 'One phone', 'Every phone'],
+];
+
+/** Each child's hardest skills this week, as bars: the parent sees their own child, not an advert. */
+function childLens(app: App, on: boolean): string {
+  const kids = app.save.data.children.slice(0, 3);
+  if (!kids.length) return '';
+  const rows = kids.map((c) => {
+    const p = focusFor(app, c);
+    if (!p.skills.length) return `<div class="pm-kid"><b>${esc(c.name)}</b><p class="pm-soon">After a few days of play, the skills ${esc(c.name)} finds hardest show here.</p></div>`;
+    return `<div class="pm-kid"><b>${esc(c.name)}</b><small>${on ? `${Math.min(p.rounds, FOCUS_GOAL)} of ${FOCUS_GOAL} Focus rounds this week` : 'Hardest skills right now'}</small>
+      <ul>${p.skills
+        .map((k) => {
+          const now = k.now ?? k.before;
+          return `<li><span class="pm-sk">${esc(skillById(k.id)?.name ?? k.id)}</span><span class="pm-bar" style="--v:${now}%"><i></i></span><b>${k.now !== null && k.now !== k.before ? `${k.before}→<em class="${k.now > k.before ? 'up' : ''}">${k.now}%</em>` : `${now}%`}</b></li>`;
+        })
+        .join('')}</ul></div>`;
+  });
+  return `<section class="pm-lens"><h3>${on ? 'This week’s Focus plan' : 'What Premium sees today'}</h3>${rows.join('')}
+    ${on ? '' : '<p class="pm-lens-note">With Premium, these become short Focus rounds on the map, and you watch the numbers rise.</p>'}</section>`;
+}
+
+/** MN Premium: designed as its own page (it leaves the theme on purpose). */
+function premiumHtml(app: App): string {
+  const on = hasPlus(app);
+  const store = storeBuild(app);
+  const kids = app.save.data.children;
+  const who = kids.length === 1 ? kids[0].name : kids.length ? 'your children' : 'your child';
+  const days = account(app) ? TRIAL_DAYS_SIGNED_IN : TRIAL_DAYS;
+  const head = on
+    ? `<h2 class="pm-h">You see the whole picture.</h2><p class="pm-sub">${store ? 'Thank you for choosing Premium. Turn a card over to see how to get the most from it.' : 'Everything in Premium is included in this version of MN. Turn a card over to see how to use it.'}</p>`
+    : `<h2 class="pm-h">See exactly where ${esc(who)} needs you.</h2><p class="pm-sub">MN is complete and free for every child, with no ads. Premium is the parent’s view: it finds the skills to work on and turns them into practice.</p>`;
+  const video = `<button class="pm-video" aria-label="Watch: what MN Premium adds">
+      <span class="pm-orbit" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span class="pm-face" aria-hidden="true">${plusFaceSvg({ cls: 'alive' })}</span>
+      <span class="pm-play" aria-hidden="true">▶</span>
+      <span class="pm-vt"><b>Watch what Premium adds</b><small>90 seconds</small></span>
+    </button>`;
+  const cards = `<section class="pm-perks-x"><h3>${on ? 'Your perks' : 'Six things you get'}</h3><div class="pm-deck" role="list">${PERKS.map(
+    (k) => `<button class="pm-perk" role="listitem" aria-label="${esc(k.name)}: tap to see how to use it"><span class="pm-in"><span class="pm-front"><span class="pm-ic" aria-hidden="true">${k.icon}</span><b>${esc(k.name)}</b><small>${esc(k.line)}</small><em>How to use it ↻</em></span><span class="pm-back"><b>${esc(k.name)}</b><ol>${k.how.map((h) => `<li>${esc(h)}</li>`).join('')}</ol></span></span></button>`,
+  ).join('')}</div></section>`;
+  const compare = on
+    ? ''
+    : `<section class="pm-vs"><div class="pm-vs-h"><span></span><b>Free</b><b class="pm-gold">Premium</b></div>${COMPARE.map(([t, f, p]) => `<div class="pm-vs-r"><span>${esc(t)}</span><span>${f === '✓' ? '<i class="ok">✓</i>' : f ? esc(f) : '<i class="no">–</i>'}</span><span>${p === '✓' ? '<i class="ok gold">✓</i>' : esc(p)}</span></div>`).join('')}</section>`;
+  const trust = `<ul class="pm-trust"><li>No ads, ever</li><li>Nothing is lost if you stop</li><li>Cancel any time in Google Play</li></ul>`;
+  const cta = !store
+    ? ''
+    : on
+      ? '<div class="pm-cta-bar"><button class="pm-buy ghost pm-plans">Your plan</button></div>'
+      : `<div class="pm-cta-bar"><button class="pm-buy pm-plans">Start ${days} days free</button><small>Then ${FALLBACK.yearly.price} a year or ${FALLBACK.monthly.price} a month, or ${FALLBACK.lifetime.price} once. Renews automatically; cancel before the free days end and you pay nothing.</small></div>`;
+  return `<div class="pm-page">${video}${head}${childLens(app, on)}${cards}${compare}${trust}</div>${cta}`;
+}
+
+function pageHtml(app: App, p: Page): string {
+  const invite = p === 'kids' && cloudOn(app) && !account(app) ? `<div class="card pa-invite"><p><b>☁️ Keep progress safe with Google</b><small>Sign in once. Everything on this phone is kept and backed up online.</small></p>${googleButton('cl-in')}</div>` : '';
+  const html = { kids: kidsHtml, sound: soundHtml, premium: premiumHtml, app: appHtml, help: helpHtml }[p](app);
+  return `${invite}${html}`;
 }
 
 export function parentScreen(app: App): Screen {
-  const tabs = railTabs(app);
+  const tabs = TABS;
   const el = html(`<section class="screen parent rail" aria-label="Parent area">
     <header class="topbar"><span class="t"></span></header>
     <div class="pa-wrap">
@@ -208,16 +294,18 @@ export function parentScreen(app: App): Screen {
   </section>`);
   const body = el.querySelector<HTMLElement>('.pa-body')!;
   const render = (animate: boolean) => {
-    el.querySelector('.topbar .t')!.textContent = pageName(page);
+    el.querySelector('.topbar .t')!.textContent = TABS.find((t) => t.id === page)!.title;
     el.querySelectorAll<HTMLElement>('.pa-tab[data-id]').forEach((b) => {
       const on = b.dataset.id === page;
       b.classList.toggle('on', on);
       b.setAttribute('aria-selected', String(on));
     });
-    body.innerHTML = page === 'basic' ? basicHtml(app) : groupHtml(app, page);
+    body.innerHTML = pageHtml(app, page);
+    body.dataset.page = page;
     body.scrollTop = 0;
+    void notificationState(app).then((n) => el.querySelector('.pa-tab[data-id="app"]')?.classList.toggle('warn', !!n && !n.enabled));
     bind(app, el, body, render);
-    if (animate) stagger(body.querySelectorAll(page === 'basic' ? '.pa-sec, .pa-more' : '.pa-panel > *'), { gap: 30 });
+    if (animate) stagger(body.querySelectorAll('.pa-sec, .pa-invite'), { gap: 30 });
   };
   const go = (p: Page) => {
     if (p === page) return;
@@ -226,36 +314,27 @@ export function parentScreen(app: App): Screen {
   };
   el.querySelectorAll<HTMLButtonElement>('.pa-tab[data-id]').forEach((b) =>
     b.addEventListener('click', () => {
-      const id = b.dataset.id!;
-      if (id === 'skills') return void app.show(skillsIndexScreen(parentScreen));
-      if (id === 'plus') return void app.show(plusScreen(parentScreen));
-      go(id as Page);
+      go(b.dataset.id as Page);
     }),
   );
-  // "More settings" on the everyday page: point at the tabs.
-  body.addEventListener('click', (e) => {
-    if (!(e.target as HTMLElement).closest('.to-adv')) return;
-    const rail = el.querySelector<HTMLElement>('.pa-tabs')!;
-    if (!reducedMotion()) rail.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-8px)' }, { transform: 'translateX(0)' }], { duration: 420, iterations: 2 });
-  });
   el.querySelector('.pa-close')!.addEventListener('click', () => void app.show(whosPlayingScreen));
   render(false);
   return {
     el,
-    // Android back: from a group, back to the everyday settings first.
+    // Android back: from another tab, back to Children first.
     back: () => {
-      if (page === 'basic') return false;
-      go('basic');
+      if (page === 'kids') return false;
+      go('kids');
       return true;
     },
     mounted: () => {
-      stagger(body.querySelectorAll(page === 'basic' ? '.pa-sec, .pa-more' : '.pa-panel > *'), { gap: 40 });
-      void firstAsk(app);
+      stagger(body.querySelectorAll('.pa-sec, .pa-invite'), { gap: 40 });
+      void offerNotifications(app);
     },
   };
 }
 
-/** Hook up whatever is showing (Basic or one Advanced group). */
+/** Hook up whatever tab is showing. */
 function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: boolean) => void): void {
   const on = <K extends keyof HTMLElementEventMap>(sel: string, ev: K, fn: (b: HTMLElement) => void) => body.querySelectorAll<HTMLElement>(sel).forEach((b) => b.addEventListener(ev, () => fn(b)));
   const kid = (b: HTMLElement) => app.save.data.children.find((k) => k.id === b.dataset.id)!;
@@ -265,7 +344,7 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
   on('.restore-kid', 'click', () => void restoreFromFile(app, () => void app.show(parentScreen)));
   on('.cl-in', 'click', async () => {
     const r = await signIn(app);
-    if (r === 'approved') app.toast(onePhone(app) ? 'Signed in. A safe copy of your family’s progress is kept with Google.' : 'Signed in. Progress is backed up and syncs on every phone.', 5000);
+    if (r === 'approved') app.toast(onePhone(app) ? 'Signed in. An online backup of your family’s progress is kept with Google.' : 'Signed in. Progress is backed up and syncs on every phone.', 5000);
     else if (r === 'waiting') app.toast('Signed in. Your account is waiting to be approved; backup starts once it is.', 6000);
     else if (r === 'offline') app.toast('No internet connection. Connect and try again.');
     render(false);
@@ -287,7 +366,7 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
   on('.cl-take', 'click', async (b) => {
     (b as HTMLButtonElement).disabled = true;
     const r = await syncNow(app, true, true);
-    app.toast(r.ok ? 'Backed up. The safe copy comes from this phone now.' : r.message, 5000);
+    app.toast(r.ok ? 'Backed up. The online backup comes from this phone now.' : r.message, 5000);
     render(false);
   });
   on('.mp-from-cloud', 'click', () => void app.show(plusScreen(parentScreen)));
@@ -303,12 +382,12 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
     render(false);
   });
   on('.cl-del', 'click', async () => {
-    const { result } = app.sheet(`<h2>Delete the cloud copy?</h2><p>Your family’s progress is deleted from the cloud, and this phone signs out. Progress on this phone stays. Other phones keep their own progress too, but stop syncing.</p>`, [
-      { label: 'Delete cloud copy', value: true, kind: 'danger' },
+    const { result } = app.sheet(`<h2>Delete the online backup?</h2><p>Your family’s progress is deleted from the cloud, and this phone signs out. Progress on this phone stays. Other phones keep their own progress too, but stop syncing.</p>`, [
+      { label: 'Delete online backup', value: true, kind: 'danger' },
       { label: 'Cancel', value: false, kind: 'ghost', back: true },
-    ], 'Delete cloud copy');
+    ], 'Delete online backup');
     if (!(await result)) return;
-    app.toast((await deleteCloudCopy(app)) ? 'The cloud copy is deleted.' : 'That didn’t work. Check the internet connection.');
+    app.toast((await deleteCloudCopy(app)) ? 'The online backup is deleted.' : 'That didn’t work. Check the internet connection.');
     render(false);
   });
   on('.limits', 'click', () => void app.show(limitsScreen(false)));
@@ -332,10 +411,10 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
     (b as HTMLButtonElement).disabled = true;
     const r = await downloadCloudCopy(app);
     (b as HTMLButtonElement).disabled = false;
-    if (r === 'saved') app.toast('The cloud copy is saved as a backup file.');
+    if (r === 'saved') app.toast('The online backup is saved as a backup file.');
     else if (r === 'empty') app.toast('There’s nothing in the cloud yet. Tap Back up now first.');
     else if (r === 'offline') app.toast('No internet connection.');
-    else if (r === 'error') app.toast('Couldn’t download the cloud copy just now.');
+    else if (r === 'error') app.toast('Couldn’t download the online backup just now.');
   });
   on('.bk-all', 'click', async () => {
     const kids = app.save.data.children;
@@ -361,17 +440,21 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
     if (k === 'vibration') app.haptics.enabled = i.checked;
     if (k === 'showFps') app.fps.set(i.checked);
   });
-  on('[data-c]', 'change', (b) => {
-    const i = b as HTMLInputElement;
+  on('.cat-chip', 'click', (b) => {
+    const show = !b.classList.contains('on');
+    // At least one kind stays, so children always have something to pick.
+    if (!show && body.querySelectorAll('.cat-chip.on').length <= 1) return app.toast('Keep at least one kind of reward.');
+    b.classList.toggle('on', show);
+    b.setAttribute('aria-pressed', String(show));
     app.save.update((d) => {
       const set = new Set(d.settings.hiddenCategories);
-      if (i.checked) set.delete(i.dataset.c!);
-      else set.add(i.dataset.c!);
+      if (show) set.delete(b.dataset.c!);
+      else set.add(b.dataset.c!);
       d.settings.hiddenCategories = [...set];
     });
   });
-  // Notes: switches, notes a day, and whether the phone lets MN send notes.
-  const setRemind = (patch: Partial<ReminderSettings>) => app.save.update((d) => (d.settings.reminders = { ...DEFAULT_REMINDERS, ...d.settings.reminders, ...patch }));
+  // Notifications: switches, the daily time, and whether the phone lets MN send them.
+  const setRemind = (patch: Partial<ReminderSettings>) => app.save.update((d) => (d.settings.reminders = { ...remindersOf(d.settings.reminders), ...patch }));
   const status = body.querySelector<HTMLElement>('.pr-status');
   const paintNotes = async (ask = false) => {
     if (!status) return;
@@ -380,25 +463,64 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
     if (!n.enabled && n.canAsk && ask) n = { enabled: await askNotifications(app), canAsk: false };
     status.hidden = n.enabled;
     if (n.enabled) return;
-    status.innerHTML = n.canAsk ? 'MN isn’t allowed to send notes yet. <button class="linkish pr-allow">Allow notes</button>' : 'Notes are switched off for MN on this phone. <button class="linkish pr-open">Open settings</button>';
+    status.innerHTML = n.canAsk
+      ? '<b>🔕 Notifications are off</b><small>MN can’t remind you about learning time or rewards yet.</small><button class="btn small pr-allow">Turn on</button>'
+      : '<b>🔕 Notifications are blocked</b><small>They’re switched off for MN in the phone’s settings.</small><button class="btn small pr-open">Open settings</button>';
     status.querySelector('.pr-allow')?.addEventListener('click', () => void paintNotes(true));
     status.querySelector('.pr-open')?.addEventListener('click', () => void app.native?.openNotificationSettings?.());
   };
   on('[data-r]', 'change', (b) => {
     const i = b as HTMLInputElement;
-    setRemind({ [i.dataset.r as 'melt' | 'backup']: i.checked });
-    if (i.dataset.r === 'melt') body.querySelector<HTMLElement>('.pr-per')!.hidden = !i.checked;
+    setRemind({ [i.dataset.r as 'daily' | 'ready' | 'backup']: i.checked });
+    if (i.dataset.r === 'daily') body.querySelector<HTMLElement>('.pr-time')!.hidden = !i.checked;
     if (i.checked) void paintNotes(true);
   });
-  on('.pr-per .seg-b', 'click', (b) => {
-    setRemind({ perDay: Number(b.dataset.per) as 2 | 3 });
-    body.querySelectorAll('.pr-per .seg-b').forEach((x) => {
+  on('.pr-time .seg-b', 'click', (b) => {
+    setRemind({ dailyAt: b.dataset.at! });
+    body.querySelectorAll('.pr-time .seg-b').forEach((x) => {
       x.classList.toggle('on', x === b);
       x.setAttribute('aria-checked', String(x === b));
     });
   });
   void paintNotes();
   on('.voice-row', 'click', () => void app.show(voiceScreen));
+  on('.voice-g .seg-b', 'click', (b) => {
+    const g = b.dataset.g as 'm' | 'f';
+    app.save.update((d) => {
+      d.settings.voiceGender = g;
+      d.settings.voiceName = '';
+    });
+    app.voice.name = '';
+    app.voice.setGender(g);
+    body.querySelectorAll('.voice-g .seg-b').forEach((x) => {
+      x.classList.toggle('on', x === b);
+      x.setAttribute('aria-checked', String(x === b));
+    });
+    const small = body.querySelector('.voice-row small');
+    if (small) small.textContent = small.textContent!.replace('A chosen voice', 'Automatic');
+    setTimeout(() => app.voice.say('Hi! I will read the questions for you.', undefined, true), 400);
+  });
+  const vol = body.querySelector<HTMLInputElement>('.vol-slider');
+  if (vol) {
+    const paintVol = () => {
+      body.querySelector('.vol-val')!.textContent = `${Math.round(Number(vol.value) * 100)}%`;
+      vol.style.setProperty('--p', `${(100 * (Number(vol.value) - 0.2)) / 0.8}%`);
+    };
+    paintVol();
+    vol.addEventListener('input', () => {
+      paintVol();
+      app.sfx.volume = Number(vol.value);
+    });
+    vol.addEventListener('change', () => {
+      app.save.update((d) => (d.settings.volume = Number(vol.value)));
+      app.sfx.correct(1);
+    });
+  }
+  on('.erase-row', 'click', () => void eraseEverything(app));
+  on('.privacy-row', 'click', () => openLink(app, PRIVACY_URL));
+  on('.pm-perk', 'click', (b) => b.classList.toggle('flip'));
+  on('.pm-video', 'click', () => void app.show(plusVideoScreen(() => void app.show(parentScreen)), 'liquid'));
+  on('.pm-plans', 'click', () => void app.show(plusScreen(parentScreen)));
   const ts = body.querySelector<HTMLInputElement>('.pt-slider');
   if (ts) {
     const paintTimer = () => {
@@ -435,7 +557,7 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
   on('.adv-what', 'click', () => void showParentAdventureTips(app, el));
 }
 
-/** One child's settings: report, age, difficulty, school path, Adventure, with a grown-up. */
+/** One child's settings: report, age, difficulty, school syllabus, Adventure, play together. */
 export function childSettingsScreen(c: Child) {
   return (app: App): Screen => {
     const here = childSettingsScreen(c);
@@ -448,15 +570,15 @@ export function childSettingsScreen(c: Child) {
         <h2 class="pa-h">Learning</h2>
         <button class="pa-row card age-btn"><b>🎂 Age</b><small>${c.age} · questions follow the age</small></button>
         <button class="pa-row card level-btn"><b>${CHALLENGE[c.challenge ?? 0].icon} Difficulty</b><small>${CHALLENGE[c.challenge ?? 0].name} · ${CHALLENGE[c.challenge ?? 0].note}</small></button>
-        <button class="pa-row card school-btn"><b>📚 School path ${plusTag(app)}</b><small>${c.school?.on ? (hasPlus(app) ? esc(schoolLabel(c.school)) : `${esc(schoolLabel(c.school))} · paused without MN Plus`) : 'Off · follow the school syllabus instead of the age path'}</small></button>
+        <button class="pa-row card school-btn"><b>📚 School syllabus ${plusTag(app)}</b><small>${c.school?.on ? (hasPlus(app) ? esc(schoolLabel(c.school)) : `${esc(schoolLabel(c.school))} · paused without MN Premium`) : 'Off · follow the school syllabus instead of the age path'}</small></button>
         <div class="card pa-toggles">
-          <label class="toggle-row"><span><b>👪 With a grown-up</b><small>No timers; after a slip they try one like it. On by default for ages 3–6.</small></span><input type="checkbox" role="switch" class="assist-btn" ${c.assisted ? 'checked' : ''}></label>
+          <label class="toggle-row"><span><b>👪 Play together</b><small>No timers; after a slip they try one like it. On by default for ages 3–6.</small></span><input type="checkbox" role="switch" class="assist-btn" ${c.assisted ? 'checked' : ''}></label>
         </div>
         <h2 class="pa-h">Fun</h2>
         <div class="card pa-toggles">
-          <label class="toggle-row"><span><b>🎮 Adventure</b><small>Quests, chests, badges, a wardrobe for Plus, a weekly raid and a pet.</small></span><input type="checkbox" role="switch" class="adv-toggle" ${c.adventure?.on ? 'checked' : ''}></label>
+          <label class="toggle-row"><span><b>🎮 Adventure mode</b><small>Quests and badges: daily goals, chests, a pet and outfits for Plus.</small></span><input type="checkbox" role="switch" class="adv-toggle" ${c.adventure?.on ? 'checked' : ''}></label>
         </div>
-        <button class="linkish adv-what">🎮 What is Adventure?</button>
+        <button class="linkish adv-what">🎮 What is Adventure mode?</button>
       </div>
     </section>`);
     const back = () => void app.show(parentScreen);
@@ -486,7 +608,7 @@ export function childSettingsScreen(c: Child) {
     });
     el.querySelector('.adv-toggle')!.addEventListener('change', async () => {
       const on = toggleAdventure(app, c);
-      // Turning it on: show the grown-up what their child will get.
+      // Turning it on: show the parent what their child will get.
       if (on) await showParentAdventureTips(app, el);
       app.toast(on ? `Adventure on for ${c.name}.` : `Adventure off for ${c.name}. Badges are kept for later.`);
     });
@@ -496,25 +618,6 @@ export function childSettingsScreen(c: Child) {
 }
 
 /** Once, on the phone: may MN send the melt-watch and backup notes? */
-async function firstAsk(app: App): Promise<void> {
-  if (!app.native?.askNotifications || app.save.data.settings.notifAsked) return;
-  const n = await notificationState(app);
-  app.save.update((d) => (d.settings.notifAsked = true));
-  if (!n || n.enabled || !n.canAsk) return;
-  const { result } = app.sheet(
-    `<h2>🔔 Can MN send friendly notes?</h2><p>Two or three a day about the treat jars melting, each with a fun fact, and a reminder for grown-ups to back up progress. You can change this here any time.</p>`,
-    [
-      { label: 'Allow notes', value: true, kind: 'mint' },
-      { label: 'Not now', value: false, kind: 'ghost', back: true },
-    ],
-    'Notes',
-  );
-  if (await result) {
-    const ok = await askNotifications(app);
-    app.toast(ok ? 'Notes are on. Change them any time in ☰ → Notes.' : 'No notes for now. You can turn them on in ☰ → Notes.');
-  }
-}
-
 function faceoffRows(app: App): string {
   const kids = app.save.data.children;
   const nameOf = (id: string) => (id === 'guest' ? 'Guest' : kids.find((k) => k.id === id)?.name ?? 'Someone');

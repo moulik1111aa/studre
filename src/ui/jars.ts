@@ -1,4 +1,4 @@
-// The treat bar and big goal jar, pinned to the top of every child screen (spec §4, §8).
+// The treat bar and big reward jar, pinned to the top of every child screen (spec §4, §8).
 
 import { html } from './app.ts';
 import type { Child } from '../storage/save.ts';
@@ -20,7 +20,7 @@ export class JarBar {
         <div class="tr-track"><div class="tr-fill"><span class="tr-glint"></span></div></div>
         <span class="tr-pct"></span>
       </div>
-      <div class="goal" role="progressbar" aria-valuemin="0" aria-valuemax="100" title="Big goal">
+      <div class="goal" role="progressbar" aria-valuemin="0" aria-valuemax="100" title="Big reward">
         <svg class="goal-jar" viewBox="0 0 40 48" aria-hidden="true">
           <defs><clipPath id="jarclip"><path d="M9 10 h22 v4 c4 3 6 7 6 12 v12 c0 5-4 8-9 8 H12 c-5 0-9-3-9-8 V26 c0-5 2-9 6-12 z"/></clipPath></defs>
           <g clip-path="url(#jarclip)">
@@ -63,7 +63,7 @@ export class JarBar {
     const gp = jarProgress(w.goal);
     g.querySelector('.goal-icon')!.textContent = gr?.icon ?? '🧸';
     g.setAttribute('aria-valuenow', String(Math.floor(gp * 100)));
-    g.setAttribute('aria-label', gr ? `Big goal ${gr.name}: ${Math.floor(gp * 100)} percent` : 'No big goal chosen');
+    g.setAttribute('aria-label', gr ? `Big reward ${gr.name}: ${Math.floor(gp * 100)} percent` : 'No big reward chosen');
     const liquid = g.querySelector<SVGRectElement>('.goal-liquid')!;
     const y = 46 - gp * 36;
     if (animate && !reducedMotion() && this.lastGoal >= 0) liquid.animate([{ transform: `translateY(${46 - this.lastGoal * 36 - 48}px)` }, { transform: `translateY(${y - 48}px)` }], { duration: 900, easing: EASE_OUT });

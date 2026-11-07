@@ -8,7 +8,7 @@ export interface BranchInfo {
   id: Branch;
   /** The child's name for it. */
   name: string;
-  /** The grown-up's name for it. */
+  /** The parent's name for it. */
   long: string;
   /** Colour on light themes, then on dark themes. */
   color: [string, string];

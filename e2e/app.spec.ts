@@ -6,7 +6,7 @@
 import { test, expect, type Page } from 'playwright/test';
 
 const PIN = '2468';
-/** The grown-up check: the parent PIN once set, else the times question. */
+/** The parent check: the parent PIN once set, else the times question. */
 async function grownUp(page: Page): Promise<void> {
   const t = (await page.locator('.grownup h2').textContent()) ?? '';
   const m = /(\d+) × (\d+)/.exec(t);
@@ -15,7 +15,7 @@ async function grownUp(page: Page): Promise<void> {
   await page.locator('.grownup .ok').click();
 }
 
-/** Setup's grown-up lock: make the parent PIN (this browser has no screen lock). */
+/** Setup's parent PIN: make the parent PIN (this browser has no screen lock). */
 async function makePin(page: Page): Promise<void> {
   await expect(page.locator('.gu-setup')).toBeVisible();
   await page.click('.gs-pin');
@@ -131,7 +131,7 @@ test('first run: setup, placement, rewards, first level', async ({ page }) => {
   await expect(page.locator('.stops .stop-now')).toContainText('Helper');
   await expect(page.locator('[data-h="0"]')).toHaveClass(/\bon\b/);
   await page.click('.ac-next');
-  // Classic or Adventure: Classic unless a grown-up picks Adventure.
+  // Classic or Adventure: Classic unless a parent picks Adventure.
   await expect(page.locator('.stops .stop-now')).toContainText('Adventure');
   await expect(page.locator('[data-adv="0"]')).toHaveClass(/\bon\b/);
   await page.click('.ac-next');
@@ -161,7 +161,7 @@ test('first run: setup, placement, rewards, first level', async ({ page }) => {
   await page.locator('.rw-cat-head').first().click();
   await page.locator('.rw-card').first().click();
   await page.click('.pick');
-  await expect(page.locator('.rewards')).toContainText('Pick a big goal', { timeout: 5000 });
+  await expect(page.locator('.rewards')).toContainText('Pick a big reward', { timeout: 5000 });
   await page.locator('.rw-cat-head').first().click();
   await page.locator('.rw-card').first().click();
   await page.click('.pick');
@@ -186,7 +186,7 @@ test('first run: setup, placement, rewards, first level', async ({ page }) => {
   // A parent PIN, not a times question, from now on.
   expect(save.settings.parentPin).toMatch(/:/);
 
-  // The first level is practice together: a word for the grown-up first.
+  // The first level is practice together: a word for the parent first.
   await page.click('.play-next');
   await expect(page.locator('.play')).toBeVisible();
   await expect(page.locator('.play-title b')).toContainText('Practice together');
@@ -243,7 +243,7 @@ test('missed days melt the treat a little', async ({ page }) => {
   await expect(page.locator('.map')).toBeVisible();
 });
 
-test('a full jar unlocks the reward; Given needs a grown-up', async ({ page }) => {
+test('a full jar unlocks the reward; Given needs a parent', async ({ page }) => {
   await seeded(page, '@0', `window.__app.save.update((d) => { const t = d.children[0].wallet.treat; t.coins = 360; t.waiting = true; })`);
   await expect(page.locator('.unlock')).toBeVisible();
   await expect(page.locator('.unlock .title')).toHaveText('Milk chocolate bar');
@@ -291,7 +291,7 @@ test('parent can skip a level, and undo the last hour', async ({ page }) => {
   await playThrough(page, '.result');
   await page.click('.res-actions .home');
   await expect(page.locator('.map')).toBeVisible();
-  // Skip the next level (grown-up).
+  // Skip the next level (parent).
   await page.click('.skip-btn');
   await grownUp(page);
   await page.getByRole('button', { name: 'Skip it' }).click();
@@ -522,7 +522,7 @@ test('fix-it: a missed question comes back the next day, and a right answer move
   expect(save.children[0].fixit[missedSkill].h.at(-1)[1]).toBe(1);
 });
 
-test('quiet hours: bedtime stops play, a grown-up can unlock it; set in the parent area', async ({ page }) => {
+test('bedtime: bedtime stops play, a parent can unlock it; set in the parent area', async ({ page }) => {
   await seeded(page, '@0', `window.__app.save.update((d) => { d.settings.quiet = { bed: { on: true, from: '00:00', to: '23:59' } }; })`);
   await expect(page.locator('.quiet-bed')).toBeVisible();
   await expect(page.locator('.quiet-bed .title')).toContainText('Time to sleep');
@@ -555,7 +555,7 @@ test('worksheet: a printable sheet from where the child is, answers on the last 
   expect(dl.suggestedFilename()).toMatch(/^MN-.+-worksheet-\d{4}-\d{2}-\d{2}\.html$/);
   const text = await (await dl.createReadStream()).toArray().then((b) => Buffer.concat(b).toString('utf8'));
   expect(text.match(/<li class="q/g)?.length).toBe(20);
-  expect(text).toContain('Answers (for grown-ups)');
+  expect(text).toContain('Answers (for parents)');
   expect(text).toContain('× 7');
 });
 
@@ -666,7 +666,7 @@ test('Plus says a word before a level, and cheers after a miss', async ({ page }
   expect(save.children[0].lastPlay.score).toBe(5);
 });
 
-test('school path: pick a board and class, edit the skills, and the map follows it', async ({ page }) => {
+test('school syllabus: pick a board and class, edit the skills, and the map follows it', async ({ page }) => {
   await page.goto('/?debug&demo=%4012&age=9');
   await expect(page.locator('.map')).toBeVisible();
   await page.evaluate(() => { const w = window as unknown as { __app: { show(m: unknown): void }; __screens: { parentScreen: unknown } }; w.__app.show(w.__screens.parentScreen); });
@@ -687,7 +687,7 @@ test('school path: pick a board and class, edit the skills, and the map follows 
   expect(save.children[0].school).toMatchObject({ board: 'cbse', grade: '4', on: true });
   expect(save.children[0].school.skills.length).toBe(ticked - 1);
   await expect(page.locator('.school-btn')).toContainText('CBSE / NCERT · Class 4');
-  // The map shows the school path only.
+  // The map shows the school syllabus only.
   await page.goto('/?debug&noloader');
   await page.locator('.kid').first().click();
   await expect(page.locator('.school-chip')).toContainText('Class 4');
@@ -706,7 +706,7 @@ test('parents choose how long timed questions last', async ({ page }) => {
   await page.goto('/?debug&demo=%4012');
   await expect(page.locator('.map')).toBeVisible();
   await page.evaluate(() => { const w = window as unknown as { __app: { show(m: unknown): void }; __screens: { parentScreen: unknown } }; w.__app.show(w.__screens.parentScreen); });
-  await page.click('.pa-tab[data-id=\"learning\"]');
+  await expect(page.locator('.pa-tab.on')).toHaveAttribute('data-id', 'kids');
   await expect(page.locator('.pt-val')).toHaveText('20 seconds');
   await page.locator('.pt-slider').fill('35');
   await page.locator('.pt-slider').dispatchEvent('change');
@@ -742,7 +742,7 @@ test('replaying an earlier level: continue here, or go back to my level', async 
   expect(id).toBeTruthy();
 });
 
-test('report: tabs with statistics, saved as a report card that restores on another phone', async ({ page, browser }) => {
+test('report: tabs with statistics, saved as a progress file that restores on another phone', async ({ page, browser }) => {
   // Play one level so the play log has something in it.
   await page.goto('/?debug&demo=s3.compare3%231&play');
   await playThrough(page, '.result');
@@ -756,11 +756,11 @@ test('report: tabs with statistics, saved as a report card that restores on anot
   await expect(page.locator('.rp-recent')).toContainText('Compare 3-digit numbers · Learn');
   await page.click('[data-tab="rewards"]');
   await expect(page.locator('.rp-jar').first()).toBeVisible();
-  // Save the report card.
+  // Save the progress file.
   await page.click('.rp-export');
   const file = await page.evaluate(() => (window as unknown as { __lastExport: { name: string; text: string } }).__lastExport);
   expect(file.name).toMatch(/^MN-.+-report-\d{4}-\d{2}-\d{2}\.html$/);
-  expect(file.text).toContain('report card');
+  expect(file.text).toContain('progress file');
   expect(file.text).toContain('id="mn-backup"');
   const childId = await page.evaluate(() => (window as unknown as { __app: { child: { id: string } } }).__app.child.id);
 
@@ -769,6 +769,7 @@ test('report: tabs with statistics, saved as a report card that restores on anot
   await other.goto('/?debug&demo=%4012');
   await expect(other.locator('.map')).toBeVisible();
   await other.evaluate(() => { const w = window as unknown as { __app: { show(m: unknown): void }; __screens: { parentScreen: unknown } }; w.__app.show(w.__screens.parentScreen); });
+  await other.click('.pa-tab[data-id="app"]');
   const restore = async () => {
     const chooser = other.waitForEvent('filechooser');
     await other.click('.restore-kid');
@@ -835,7 +836,7 @@ test('adventure: a parent turns it on, quests fill from play, the chest pays onc
   await page.click('.kid-set');
   await expect(page.locator('.adv-toggle')).not.toBeChecked();
   await page.click('.adv-toggle');
-  // The first time, the grown-up is shown what Adventure is (no skipping).
+  // The first time, the parent is shown what Adventure is (no skipping).
   await expect(page.locator('.tips-ov')).toBeVisible();
   await expect(page.locator('.tip-skip')).toHaveCount(0);
   await stepTips(page);
@@ -931,7 +932,7 @@ test('adventure XP: past play counts, a new level is celebrated once, and a comb
   await expect(page.locator('.combo')).toContainText('3 in a row');
 });
 
-test('backup: no screen when the app opens; the Parent area says who needs it, and saving a report card clears it', async ({ page }) => {
+test('backup: no screen when the app opens; the Parent area says who needs it, and saving a progress file clears it', async ({ page }) => {
   type W = { __app: { child: { stats: { secondsByDay: Record<string, number> } }; save: { update(f: () => void): void }; show(m: unknown): void }; __screens: { parentScreen: unknown } };
   await page.goto('/?debug&demo=%4012');
   await expect(page.locator('.map')).toBeVisible();
@@ -943,12 +944,14 @@ test('backup: no screen when the app opens; the Parent area says who needs it, a
       w.__app.child.stats.secondsByDay['2026-10-02'] = 600;
     });
   });
-  // Opening the app goes straight to Who's playing (no "Grown-ups first" screen).
+  // Opening the app goes straight to Who's playing (no "Parents first" screen).
   await page.goto('/?debug&noloader&backup');
   await expect(page.locator('.whos')).toBeVisible();
   await expect(page.locator('.bkgate')).toHaveCount(0);
-  // The Parent area shows the reminder, and saving clears it.
+  // The Parent area shows the reminder (App tab), and saving clears it.
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
+  await page.click('.pa-tab[data-id="app"]');
+  await expect(page.locator('.pa-tab[data-id="app"]')).toHaveClass(/on/);
   await expect(page.locator('.pb-due')).toContainText('isn’t backed up yet');
   await expect(page.locator('.pa-backup')).toContainText('Never backed up');
   await page.click('.bk-all');
@@ -958,12 +961,13 @@ test('backup: no screen when the app opens; the Parent area says who needs it, a
   expect(file.text).toContain('mn-backup');
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
   await expect(page.locator('.pb-due')).toHaveCount(0);
-  // Reminder settings are saved (Advanced → Notes).
-  await page.click('.pa-tab[data-id="learning"]');
-  await page.locator('[data-r="melt"]').uncheck();
-  await expect(page.locator('.pr-per')).toBeHidden();
-  const rs = await page.evaluate(() => (window as unknown as { __app: { save: { data: { settings: { reminders?: { melt: boolean } } } } } }).__app.save.data.settings.reminders);
-  expect(rs?.melt).toBe(false);
+  // Reminder settings are saved (App → Notifications): the daily time, and switching it off.
+  await page.click('.pr-time .seg-b[data-at="19:00"]');
+  await page.locator('[data-r="daily"]').uncheck();
+  await expect(page.locator('.pr-time')).toBeHidden();
+  await page.locator('[data-r="ready"]').uncheck();
+  const rs = await page.evaluate(() => (window as unknown as { __app: { save: { data: { settings: { reminders?: { daily: boolean; dailyAt: string; ready: boolean } } } } } }).__app.save.data.settings.reminders);
+  expect(rs).toMatchObject({ daily: false, dailyAt: '19:00', ready: false });
 });
 
 test('wardrobe: gems from levels buy a hat for Plus, and he wears it on the map', async ({ page }) => {
@@ -1059,12 +1063,12 @@ test('a quick tap on the chest key does not open it; holding does', async ({ pag
   await expect(page.locator('.cc-loot')).toBeVisible();
 });
 
-test('adventure tips: grown-ups first time without Skip, then with Skip; children only after 3 levels', async ({ page }) => {
+test('adventure tips: parents first time without Skip, then with Skip; children only after 3 levels', async ({ page }) => {
   type W = { __app: { child: { log?: unknown[]; adventure?: { toured?: boolean } }; today: string; save: { update(f: () => void): void }; show(m: unknown): void }; __screens: { parentScreen: unknown; mapScreen(c: unknown): unknown } };
   await page.goto('/?debug&demo=%4012');
   await expect(page.locator('.map')).toBeVisible();
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
-  // In Advanced → Help (it is also on each child's page).
+  // In Help (it is also on each child's page).
   await page.click('.pa-tab[data-id=\"help\"]');
   await page.click('.adv-what');
   await expect(page.locator('.tips-ov')).toBeVisible();
@@ -1188,31 +1192,37 @@ test('Adventure pet: the egg hatches, the child picks and names a pet, feeds it,
   expect(errors).toEqual([]);
 });
 
-test('parent area: everyday settings first, the rest in tabs on the right, and each child has a page', async ({ page }) => {
-  type W = { __app: { child: { challenge?: number }; show(m: unknown): void }; __screens: { parentScreen: unknown } };
+test('parent area: five tabs on the right (Children, Sound, Premium, App, Help), and each child has a page', async ({ page }) => {
+  type W = { __app: { child: { challenge?: number }; save: { data: { settings: { voiceGender?: string; volume?: number } } }; show(m: unknown): void }; __screens: { parentScreen: unknown } };
   await page.goto('/?debug&demo=%4012');
   await expect(page.locator('.map')).toBeVisible();
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
-  // Everyday: children, daily play, sound, look, backup; nothing else.
-  await expect(page.locator('.parent .topbar .t')).toHaveText('Parent area');
-  for (const sel of ['.pa-kid', '.limits', '[data-k="holiday"]', '[data-k="sound"]', '[data-k="voice"]', '.theme-tile', '.bk-all', '.to-adv']) await expect(page.locator(sel).first()).toBeAttached();
-  for (const sel of ['.pt-slider', '[data-r="melt"]', '.lock-row', '[data-k="showFps"]', '.adv-toggle']) await expect(page.locator(sel)).toHaveCount(0);
-  // The tabs down the right edge: each changes the settings in place.
-  await expect(page.locator('.pa-rail .pa-tab[data-id]')).toHaveCount(4);
-  await expect(page.locator('.pa-tab.on')).toContainText('Everyday');
-  await page.click('.pa-tab[data-id="learning"]');
-  await expect(page.locator('.parent .topbar .t')).toHaveText('Learning');
-  await expect(page.locator('.pa-tab.on')).toHaveAttribute('data-id', 'learning');
-  await expect(page.locator('.pt-slider')).toBeVisible();
-  await expect(page.locator('[data-k="fx3d"]')).toBeAttached();
-  await expect(page.locator('[data-r="melt"]')).toBeAttached();
-  await expect(page.locator('[data-k="showFps"]')).toHaveCount(0);
-  await page.click('.pa-tab[data-id="security"]');
-  await expect(page.locator('.lock-row')).toBeVisible();
-  await expect(page.locator('.pt-slider')).toHaveCount(0);
-  // Back to everyday; Android back from a tab returns there too.
-  await page.click('.pa-tab[data-id="basic"]');
-  await expect(page.locator('.to-adv')).toBeVisible();
+  // Children first: who plays, daily play, learning and rewards.
+  await expect(page.locator('.parent .topbar .t')).toHaveText('Children');
+  await expect(page.locator('.pa-rail .pa-tab[data-id]')).toHaveCount(5);
+  for (const sel of ['.pa-kid', '.limits', '.quiet-row', '[data-k="holiday"]', '.pt-slider', '[data-k="teach"]', '[data-k="confirmAnswers"]', '.skills-row']) await expect(page.locator(sel).first()).toBeAttached();
+  for (const sel of ['[data-k="sound"]', '.theme-tile', '.lock-row', '[data-k="showFps"]', '.adv-toggle']) await expect(page.locator(sel)).toHaveCount(0);
+  // Sound: a man's voice by default; a woman's voice and the volume are saved.
+  await page.click('.pa-tab[data-id="sound"]');
+  await expect(page.locator('.parent .topbar .t')).toHaveText('Sound and voice');
+  await expect(page.locator('.voice-g .seg-b.on')).toHaveAttribute('data-g', 'm');
+  await page.click('.voice-g .seg-b[data-g="f"]');
+  await page.locator('.vol-slider').fill('0.5');
+  await page.locator('.vol-slider').dispatchEvent('change');
+  const st = await page.evaluate(() => (window as unknown as W).__app.save.data.settings);
+  expect(st.voiceGender).toBe('f');
+  expect(st.volume).toBe(0.5);
+  // MN Premium: everything included in this version, with the perks and how to use them.
+  await page.click('.pa-tab[data-id="premium"]');
+  await expect(page.locator('.pm-hero')).toContainText('MN Premium is on');
+  await expect(page.locator('.pm-perks details')).toHaveCount(6);
+  // App: notifications, look, Parent PIN, backup, delete.
+  await page.click('.pa-tab[data-id="app"]');
+  for (const sel of ['[data-r="daily"]', '.theme-tile', '[data-k="vibration"]', '[data-k="fx3d"]', '.lock-row', '.bk-all', '.erase-row']) await expect(page.locator(sel).first()).toBeAttached();
+  // Help: videos and questions.
+  await page.click('.pa-tab[data-id="help"]');
+  await expect(page.locator('.pa-faq details').first()).toBeVisible();
+  await page.click('.pa-tab[data-id="kids"]');
   // A child's own page: difficulty is changed there.
   await page.click('.kid-set');
   await expect(page.locator('.kid-settings .adv-toggle')).toBeAttached();
@@ -1224,7 +1234,27 @@ test('parent area: everyday settings first, the rest in tabs on the right, and e
   await expect(page.locator('.pa-kid')).toContainText('Harder');
 });
 
-test('map ☰ menu: trophies, tips, switch child, and the parent area behind the grown-up check', async ({ page }) => {
+test('Focus plan: three hardest skills on the map, played as a Focus round, shown to parents', async ({ page }) => {
+  type W = { __app: { path: { kind: string; skillId?: string }[]; save: { data: { children: { tally?: Record<string, number[]> }[] }; update(f: () => void): void }; show(m: unknown): void }; __screens: { parentScreen: unknown; whosPlayingScreen: unknown } };
+  await page.goto('/?debug&demo=%4012');
+  await expect(page.locator('.map')).toBeVisible();
+  await page.evaluate(() => {
+    const a = (window as unknown as W).__app;
+    const ids = [...new Set(a.path.filter((l) => l.kind === 'skill').map((l) => l.skillId!))].slice(0, 5);
+    a.save.update(() => (a.save.data.children[0].tally = Object.fromEntries(ids.map((id, i) => [id, [10, 4 + i, 8000]]))));
+    a.show((window as unknown as W).__screens.whosPlayingScreen);
+  });
+  await page.click('.whos .kid');
+  await expect(page.locator('.focus-btn')).toContainText('0/3');
+  await page.click('.focus-btn');
+  await expect(page.locator('.focus-round')).toBeVisible();
+  await expect(page.locator('.play-title')).toContainText('Focus round');
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
+  await page.click('.pa-tab[data-id="premium"]');
+  await expect(page.locator('.fc-skills li')).toHaveCount(3);
+});
+
+test('map ☰ menu: trophies, tips, switch child, and the parent area behind the parent check', async ({ page }) => {
   await page.goto('/?debug&demo=%4012');
   await expect(page.locator('.map')).toBeVisible();
   await page.click('.map-menu');
@@ -1249,7 +1279,7 @@ test('google: a new account asks to get in, the owner approves it, then it unloc
   await expect(page.locator('.lock .lk-g')).toBeVisible();
   await asGoogle(page, 'asha@example.com|Asha');
   await page.click('.lk-g');
-  // The grown-up agrees to what is kept in the cloud, once.
+  // The parent agrees to what is kept in the cloud, once.
   await expect(page.locator('.sheet')).toContainText('first name, age and avatar');
   await page.click('.sheet .btn.mint');
   await expect(page.locator('.lk-gmsg')).toContainText('asked for your account to be approved');
@@ -1294,6 +1324,7 @@ test('google: back up from the parent area; a new phone signs in and gets the ch
   await expect(page.locator('.map')).toBeVisible();
   await asGoogle(page, 'moulik1111a@gmail.com|Moulik');
   await page.evaluate(() => { const w = window as unknown as CloudW; w.__app.show(w.__screens.parentScreen); });
+  await page.click('.pa-tab[data-id="app"]');
   await expect(page.locator('.pa-cloud')).toContainText('Saved on this phone only');
   await page.click('.cl-in');
   await page.click('.sheet .btn.mint');
@@ -1331,6 +1362,7 @@ test('google: a phone already in use signs in and combines its child with the sa
   await expect(page.locator('.map')).toBeVisible();
   await asGoogle(page, 'moulik1111a@gmail.com|Moulik');
   await page.evaluate(() => { const w = window as unknown as CloudW; w.__app.show(w.__screens.parentScreen); });
+  await page.click('.pa-tab[data-id="app"]');
   await page.locator('.cl-in').first().click();
   await page.click('.sheet .btn.mint');
   await expect(page.locator('.pa-cloud.on')).toBeVisible();
@@ -1356,20 +1388,21 @@ test('google: a phone already in use signs in and combines its child with the sa
   const combine = p2.locator('.sheet', { hasText: `Combine ${name}?` });
   await expect(combine).toBeVisible();
   await combine.locator('.btn.mint').click(); // yes, the same child
+  await p2.click('.pa-tab[data-id="app"]');
   await expect(p2.locator('.pa-cloud.on')).toBeVisible();
   await expect.poll(() => p2.evaluate(() => (window as unknown as CloudW).__app.save.data.children.length)).toBe(1);
   await expect(p2.locator('.pa-invite')).toHaveCount(0);
   await ctx.close();
 });
 
-test('MN Plus video: from the Parent area Help page, plays through its 8 stops to the end', async ({ page }) => {
+test('MN Premium video: from the Parent area Help page, plays through its 8 stops to the end', async ({ page }) => {
   type W = { __app: { show(m: unknown): void }; __screens: { parentScreen: unknown } };
   await page.goto('/?debug&demo=%400&fastreel');
   await expect(page.locator('.map')).toBeVisible();
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
   await page.click('.pa-tab[data-id=\"help\"]');
   await page.click('.plus-row');
-  await expect(page.locator('.reel[aria-label="What MN Plus adds"]')).toBeVisible();
+  await expect(page.locator('.reel[aria-label="What MN Premium adds"]')).toBeVisible();
   await expect(page.locator('.rl-count')).toHaveText(/of 8$/);
   await expect(page.locator('.rl-go')).toBeVisible({ timeout: 30_000 });
   await expect(page.locator('.rl-s-pv-school .pv-school.s5')).toHaveCount(1);
@@ -1377,20 +1410,20 @@ test('MN Plus video: from the Parent area Help page, plays through its 8 stops t
   await expect(page.locator('.screen.parent')).toBeVisible();
 });
 
-test('MN Plus (Play Store build): paid features say so, the trial and plans come from Play, buying turns Plus on', async ({ page }) => {
+test('MN Premium (Play Store build): paid features say so, the trial and plans come from Play, buying turns Plus on', async ({ page }) => {
   type W = { __app: { show(m: unknown): void; save: { data: { children: unknown[] } } }; __screens: { parentScreen: unknown; reportScreen(c: unknown, t: string): unknown } };
   await page.goto('/?debug&store&cloudmock&demo=%405');
   await expect(page.locator('.map')).toBeVisible();
   // The full report is blurred, with the way in.
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.reportScreen(w.__app.save.data.children[0], 'skills')); });
-  await expect(page.locator('.mp-lock-card')).toContainText('Part of MN Plus');
+  await expect(page.locator('.mp-lock-card')).toContainText('Part of MN Premium');
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
   // A worksheet asks for Plus.
   await page.locator('.kid-set').first().click();
   await expect(page.locator('.sheet-btn .mp-tag')).toHaveText('Plus');
   await page.click('.sheet-btn');
   await expect(page.locator('.mp-sheet h2')).toHaveText('Worksheets');
-  await page.click('.sheet .btn:has-text("See MN Plus")');
+  await page.click('.sheet .btn:has-text("See MN Premium")');
   // The Plus page: Play's prices, the yearly plan first, a 7-day trial (14 once signed in).
   await expect(page.locator('.mplus')).toBeVisible();
   await expect(page.locator('.mp-loading')).toHaveCount(0);
@@ -1407,7 +1440,7 @@ test('MN Plus (Play Store build): paid features say so, the trial and plans come
   await expect(page.locator('.mp-buy')).toHaveText('Buy for ₹1,989');
   await page.click('.mp-plan[data-plan="monthly"]');
   await page.click('.mp-buy');
-  await expect(page.locator('.mp-hero h2')).toHaveText('MN Plus is on');
+  await expect(page.locator('.mp-hero h2')).toHaveText('MN Premium is on');
   const bought = await page.evaluate(() => (window as unknown as { __mockBilling: { bought: { product: string; offer?: string }[] } }).__mockBilling.bought);
   expect(bought).toEqual([{ product: 'mn_plus', offer: 'monthly:trial14' }]);
   // Now the report is all there.
@@ -1438,10 +1471,11 @@ test('parent area: the skills list shows every skill with an example and how it 
   expect(errors).toEqual([]);
 });
 
-test('a backup file shared to MN (from WhatsApp) asks a grown-up, then restores the child', async ({ page, browser }) => {
+test('a backup file shared to MN (from WhatsApp) asks a parent, then restores the child', async ({ page, browser }) => {
   await page.goto('/?debug&demo=%4030&noloader');
   await expect(page.locator('.map')).toBeVisible();
   await page.evaluate(() => (window as unknown as { __app: { show: (s: unknown) => void }; __screens: Record<string, unknown> }).__app.show((window as unknown as { __screens: Record<string, unknown> }).__screens.parentScreen));
+  await page.click('.pa-tab[data-id="app"]');
   await page.click('.bk-family');
   const file = await page.evaluate(() => (window as unknown as { __lastExport: { name: string; text: string } }).__lastExport);
   expect(file.text).toContain('mn-family-backup');
@@ -1461,10 +1495,11 @@ test('a backup file shared to MN (from WhatsApp) asks a grown-up, then restores 
   await other.close();
 });
 
-test('MN Plus: the app icon can be chosen from the Parent area', async ({ page }) => {
+test('MN Premium: the app icon can be chosen from the Parent area', async ({ page }) => {
   await page.goto('/?debug&demo=%4010&noloader');
   await expect(page.locator('.map')).toBeVisible();
   await page.evaluate(() => (window as unknown as { __app: { show: (s: unknown) => void }; __screens: Record<string, unknown> }).__app.show((window as unknown as { __screens: Record<string, unknown> }).__screens.parentScreen));
+  await page.click('.pa-tab[data-id="app"]');
   await page.click('.icon-row');
   await expect(page.locator('.ic-opt')).toHaveCount(5);
   await page.locator('.ic-opt[data-icon="night"]').click();

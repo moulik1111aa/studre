@@ -635,7 +635,7 @@ export function showAdventureTips(app: App, child: Child, el: HTMLElement, where
   return runTips(app, el, tips, { label: 'Adventure tips', last: 'Got it!', outfit: outfitFor(child), onClose: () => app.save.update(() => child.adventure && (child.adventure.toured = true)) });
 }
 
-/** For grown-ups: what Adventure gives a child. No Skip the first time. */
+/** For parents: what Adventure gives a child. No Skip the first time. */
 export function showParentAdventureTips(app: App, el: HTMLElement): Promise<void> {
   const seen = !!app.save.data.settings.advTipsSeen;
   const tips: Tip[] = [

@@ -23,7 +23,7 @@ export interface ChildStats {
   secondsByDay: Record<string, number>;
 }
 
-/** A school path: a board and class (or "custom"), and the skills the parent kept. */
+/** A school syllabus: a board and class (or "custom"), and the skills the parent kept. */
 export interface SchoolPath {
   board: string;
   grade: string;
@@ -70,19 +70,19 @@ export interface Child {
   voicePitch?: number;
   /** Has picked a voice (asked once, before the first map). */
   voicePicked?: boolean;
-  /** Practice-together levels left (the first few levels, played with a grown-up). */
+  /** Practice-together levels left (the first few levels, played play together). */
   together?: number;
   /** Road version this child was caught up to (see core/catchup.ts). */
   roadV?: number;
   /** The owner's tester profile: every level open, no daily limit. */
   tester?: boolean;
   /**
-   * Assisted mode (on by default for ages 3–6): a grown-up plays alongside. Every level is
+   * Assisted mode (on by default for ages 3–6): a parent plays alongside. Every level is
    * like practice-together: no timers, a slip shows how and the child tries again, and each
-   * question carries a tip for the grown-up.
+   * question carries a tip for the parent.
    */
   assisted?: boolean;
-  /** A school path chosen by a parent; while `on`, the map shows only these skills. */
+  /** A school syllabus chosen by a parent; while `on`, the map shows only these skills. */
   school?: SchoolPath;
   /** Last report-card backup (ms) and how many play days it held (for the backup reminder). */
   backupAt?: number;
@@ -100,13 +100,13 @@ export interface Child {
   methods?: Record<string, string>;
 }
 
-/** The first levels a new child plays together with a grown-up. */
+/** The first levels a new child plays together play together. */
 export const TOGETHER_LEVELS = 3;
 
 export interface Settings {
   limitMinutes: number;
   timeUpMode: 'stop' | 'keep';
-  /** Price multipliers the parent picks: how often a treat / a big goal comes (1 = calibrated). */
+  /** Price multipliers the parent picks: how often a treat / a big reward comes (1 = calibrated). */
   treatPace: number;
   goalPace: number;
   holiday: boolean;
@@ -118,6 +118,10 @@ export interface Settings {
   /** Chosen reading voice ('' = the best one automatically) and its speed. */
   voiceName: string;
   voiceRate: number;
+  /** The automatic reading voice: a man's (default) or a woman's. */
+  voiceGender: 'm' | 'f';
+  /** Sound effects volume, 0.2–1. */
+  volume: number;
   /** Seconds per timed question (Speed and Master levels, boss fights); 0 = no timer. */
   timerSeconds: number;
   /** Build 37's timer choice (1, 1.5, 2 or 0); read once to set timerSeconds. */
@@ -134,19 +138,19 @@ export interface Settings {
   confirmAnswers: boolean;
   /** After a wrong answer, a short step-by-step lesson on how to work it out. */
   teach: boolean;
-  /** The grown-up has been through the quick tour once (it can't be skipped before that). */
+  /** The parent has been through the quick tour once (it can't be skipped before that). */
   tourSeen?: boolean;
-  /** Parent PIN for the grown-up check, as "salt:hash" (none: the phone's screen lock). */
+  /** Parent PIN for the parent check, as "salt:hash" (none: the phone's screen lock). */
   parentPin?: string;
   /** Phone reminders (melt watch, backup); the defaults when missing. */
   reminders?: ReminderSettings;
   /** Backup reminders are quiet until then (ms), after "Remind me in 3 days". */
   backupSnoozeUntil?: number;
-  /** The grown-up has been asked once whether MN may send notes. */
+  /** The parent has been asked once whether MN may send notes. */
   notifAsked?: boolean;
-  /** The grown-ups' "What is Adventure?" tips have been seen once (after that they can be skipped). */
+  /** The parents' "What is Adventure?" tips have been seen once (after that they can be skipped). */
   advTipsSeen?: boolean;
-  /** Bedtime and school time (core/quiet.ts), and a grown-up's unlock until then (ms). */
+  /** Bedtime and school time (core/quiet.ts), and a parent's unlock until then (ms). */
   quiet?: QuietSettings;
   quietUnlockUntil?: number;
 }
@@ -214,6 +218,8 @@ export const freshSettings = (): Settings => ({
   voice: true,
   voiceName: '',
   voiceRate: 0.95,
+  voiceGender: 'm',
+  volume: 0.8,
   timerSeconds: TIMER_DEFAULT,
   theme: 'playground',
   ownRewards: [],

@@ -49,7 +49,7 @@ export function skillsIndexScreen(back: (app: App) => Screen) {
       const lv = levelsOf(s.id);
       const passed = lv.filter((l) => isPassed(child.progress, l)).length;
       if (passed === lv.length && lv.length) return `<span class="si-st done">★ ${skillStars(child.progress, lv)}/7</span>`;
-      if (passed) return `<span class="si-st part">${passed}/5 levels</span>`;
+      if (passed) return `<span class="si-st part">${passed}/5 steps</span>`;
       if (child.progress.skipped[s.id]) return '<span class="si-st skip">skipped</span>';
       return '';
     };
@@ -122,7 +122,7 @@ function openSkillDetail(app: App, s: Skill, child: Child | undefined, levels: L
     .map((l) => {
       const stars = child ? (child.progress.levels[l.id]?.stars ?? 0) : 0;
       const tier = (l as Extract<Level, { kind: 'skill' }>).tier as Tier;
-      return `<div class="si-tier"><span>${tier}. ${TIER_NAMES[tier]}</span><span class="si-tstars">${[1, 2, 3].map((k) => `<i class="${k <= stars ? 'on' : ''}">${ICONS.star}</i>`).join('')}</span></div>`;
+      return `<div class="si-tier"><span>Step ${tier}: ${TIER_NAMES[tier]}</span><span class="si-tstars">${[1, 2, 3].map((k) => `<i class="${k <= stars ? 'on' : ''}">${ICONS.star}</i>`).join('')}</span></div>`;
     })
     .join('');
   const seven = child ? skillStars(child.progress, levels) : 0;

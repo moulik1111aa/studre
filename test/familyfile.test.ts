@@ -44,7 +44,7 @@ test('a file downloaded from the cloud reads the same way', async () => {
   assert.ok(r.ok && r.source === 'cloud' && r.backups.length === 2);
 });
 
-test('a single report card still restores, and an edited family file is refused', async () => {
+test('a single progress file still restores, and an edited family file is refused', async () => {
   const one = await makeBackup(kid('Asha'));
   const r1 = await readAnyBackup(`<script type="application/json" id="mn-backup">${JSON.stringify(one)}</script>`);
   assert.ok(r1.ok && !r1.family && r1.backups.length === 1);

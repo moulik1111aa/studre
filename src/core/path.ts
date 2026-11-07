@@ -40,7 +40,7 @@ export function buildPath(area: Area): Level[] {
 }
 
 /**
- * A school path: only the chosen skills, in the usual order, with their own minion fights
+ * A school syllabus: only the chosen skills, in the usual order, with their own minion fights
  * and bosses. Skill levels keep their ids, so progress is shared with the age path.
  * `key` names the bundle (e.g. "cbse-4") so its reviews and bosses are its own.
  */

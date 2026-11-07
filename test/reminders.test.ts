@@ -1,4 +1,4 @@
-// Phone reminders: melt-watch notes follow the jar and the day, backups come due, widget data.
+// Phone reminders: the daily learning-time note, reward ready, backups coming due, widget data.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { newChild } from '../src/storage/save.ts';
@@ -31,38 +31,43 @@ test('the jar on a day: melting only after a full day without play', () => {
   assert.equal(next.pct, Math.floor((100 * 60) / costOf(treat)));
 });
 
-test('three notes a day, from now on, each with a fact; played today turns the evening into a well done', () => {
-  const now = new Date(2026, 9, 26, 9, 0); // 9 am: the 8 am note has passed
-  const items = planReminders(input([kid('2026-10-25')], now, '2026-10-26'));
-  const today = items.filter((i) => new Date(i.at).getDate() === 26);
-  assert.equal(today.length, 2);
-  assert.ok(items.every((i) => i.text.includes('Did you know?')));
-  assert.ok(items.every((i) => i.at > now.getTime()));
-  // Played today: no afternoon nag, an evening cheer.
-  const played = planReminders(input([kid('2026-10-26')], now, '2026-10-26')).filter((i) => new Date(i.at).getDate() === 26);
-  assert.equal(played.length, 1);
-  assert.match(played[0].text, /frozen|cold|safe/i);
-  // Two a day.
-  const two = planReminders(input([kid('2026-10-25')], now, '2026-10-26', { settings: { ...DEFAULT_REMINDERS, perDay: 2 } }));
-  assert.ok(two.filter((i) => i.kind === 'melt').length <= 2 * 5);
+test('learning time: one note a day at the chosen time, naming who has not played, with a fact', () => {
+  const now = new Date(2026, 9, 26, 9, 0);
+  const items = planReminders(input([kid('2026-10-25')], now, '2026-10-26')).filter((i) => i.kind === 'daily');
+  assert.equal(items.length, 5);
+  assert.ok(items.every((i) => new Date(i.at).getHours() === 17 && i.text.includes('Riya') && i.text.includes('Did you know?')));
+  // Played today: no note today, the rest stay.
+  const played = planReminders(input([kid('2026-10-26')], now, '2026-10-26')).filter((i) => i.kind === 'daily');
+  assert.equal(played.length, 4);
+  assert.ok(played.every((i) => new Date(i.at).getDate() !== 26));
+  // Another time; and after today's time has passed, it starts tomorrow.
+  const at730 = planReminders(input([kid('2026-10-25')], now, '2026-10-26', { settings: { ...DEFAULT_REMINDERS, dailyAt: '07:30' } })).filter((i) => i.kind === 'daily');
+  assert.equal(new Date(at730[0].at).getDate(), 27);
+  assert.equal(new Date(at730[0].at).getMinutes(), 30);
 });
 
-test('a morning after a missed day says how much melted', () => {
-  const now = new Date(2026, 9, 26, 7, 0);
-  const items = planReminders(input([kid('2026-10-24')], now, '2026-10-26'));
-  const morning = items.find((i) => new Date(i.at).getHours() === 8 && new Date(i.at).getDate() === 26)!;
-  assert.match(morning.text, /melted|gooey|slid|lost/);
+test('reward ready: a full jar gets a note at a parent hour for three days', () => {
+  const now = new Date(2026, 9, 26, 9, 0);
+  const c = kid('2026-10-26', 400);
+  c.wallet.treat.waiting = true;
+  const ready = planReminders(input([c], now, '2026-10-26')).filter((i) => i.kind === 'ready');
+  assert.equal(ready.length, 3);
+  assert.equal(new Date(ready[0].at).getHours(), 18);
+  assert.match(ready[0].text, /Riya’s .* is ready/);
+  assert.match(ready[0].text, /Given/);
+  assert.equal(planReminders(input([kid('2026-10-26')], now, '2026-10-26')).filter((i) => i.kind === 'ready').length, 0);
 });
 
-test('holiday: one fact a day, no melting talk; switched off: no notes', () => {
+test('pause rewards: no learning-time notes; all switched off: no notes; old saves: no jar notes', () => {
   const now = new Date(2026, 9, 26, 7, 0);
-  const hol = planReminders(input([kid('2026-10-20')], now, '2026-10-26', { holiday: true }));
-  assert.ok(hol.length && hol.every((i) => /holiday/i.test(i.text)));
-  const off = planReminders(input([kid('2026-10-20')], now, '2026-10-26', { settings: { melt: false, perDay: 3, backup: false } }));
+  assert.equal(planReminders(input([kid('2026-10-20')], now, '2026-10-26', { holiday: true })).filter((i) => i.kind === 'daily').length, 0);
+  const off = planReminders(input([kid('2026-10-20')], now, '2026-10-26', { settings: { daily: false, dailyAt: '17:00', ready: false, backup: false } }));
   assert.equal(off.length, 0);
+  const old = planReminders(input([kid('2026-10-20')], now, '2026-10-26', { settings: { melt: true, perDay: 3, backup: false } as never }));
+  assert.ok(old.every((i) => i.kind === 'daily'));
 });
 
-test('backups: due after two new play days and a week; the note comes at a grown-up hour', () => {
+test('backups: due after two new play days and a week; the note comes at a parent hour', () => {
   const c = kid('2026-10-25');
   c.stats.secondsByDay['2026-10-20'] = 300;
   const now = new Date(2026, 9, 26, 12, 0).getTime();
@@ -89,14 +94,10 @@ test('widget data: the jar and a weekly handful of short facts', () => {
   assert.deepEqual(widgetFacts(FACTS, '2026-10-27', 2), f);
 });
 
-test('no melt-watch note at bedtime', () => {
+test('no note at bedtime', () => {
   const now = new Date(2026, 9, 26, 9, 0);
-  const all = planReminders(input([kid('2026-10-25')], now, '2026-10-26')).filter((i) => i.kind === 'melt');
+  const late = { ...DEFAULT_REMINDERS, dailyAt: '20:00' };
   const bed = { on: true, from: '19:00', to: '07:00' };
-  const quiet = planReminders(input([kid('2026-10-25')], now, '2026-10-26', { quiet: { bed } })).filter((i) => i.kind === 'melt');
-  assert.ok(all.some((i) => new Date(i.at).getHours() === 19));
-  assert.ok(quiet.length < all.length);
-  assert.ok(quiet.every((i) => new Date(i.at).getHours() < 19));
-  // Bedtime switched off: every note again.
-  assert.equal(planReminders(input([kid('2026-10-25')], now, '2026-10-26', { quiet: { bed: { ...bed, on: false } } })).filter((i) => i.kind === 'melt').length, all.length);
+  assert.equal(planReminders(input([kid('2026-10-25')], now, '2026-10-26', { settings: late })).filter((i) => i.kind === 'daily').length, 5);
+  assert.equal(planReminders(input([kid('2026-10-25')], now, '2026-10-26', { settings: late, quiet: { bed } })).filter((i) => i.kind === 'daily').length, 0);
 });

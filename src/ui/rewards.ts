@@ -1,5 +1,5 @@
-// Choosing rewards: a picture catalogue by category. Pick a treat, then a big goal; once
-// chosen it is locked in. A grown-up can attach a photo of what was agreed.
+// Choosing rewards: a picture catalogue by category. Pick a treat, then a big reward; once
+// chosen it is locked in. A parent can attach a photo of what was agreed.
 
 import { html, esc, type App, type Screen } from './app.ts';
 import type { Child } from '../storage/save.ts';
@@ -17,7 +17,7 @@ export function rewardsScreen(child: Child, jar: Jar) {
     // Categories as a list: tap one to open it and see what's inside (one open at a time).
     let active: string | undefined;
     const el = html(`<section class="screen rewards" aria-label="Choose a reward">
-      <header class="rw-head">${avatarHtml(child.avatar, 48)}<div><h1 class="title">${jar === 'treat' ? 'Pick your treat!' : 'Pick a big goal!'}</h1>
+      <header class="rw-head">${avatarHtml(child.avatar, 48)}<div><h1 class="title">${jar === 'treat' ? 'Pick your treat!' : 'Pick a big reward!'}</h1>
         <p class="subtitle">${jar === 'treat' ? 'Tap a group to see what’s inside.' : 'Something special to save up for. Tap a group to see what’s inside.'}</p></div></header>
       <div class="rw-list scroll"></div>
     </section>`);
@@ -28,7 +28,7 @@ export function rewardsScreen(child: Child, jar: Jar) {
         .map((c) => {
           const items = list.filter((r) => r.category === c.id);
           const open = c.id === active;
-          const cards = items.map((r) => `<button class="rw-card" data-r="${r.id}"><span class="rw-icon">${r.icon}</span><b>${esc(r.name)}</b><span class="rw-cost">${coinSvg}${costOf(r)}</span><small>${aboutOf(r)}</small></button>`).join('') + (c.id === 'own' ? `<button class="rw-card rw-add"><span class="rw-icon">＋</span><b>Add your own</b><small>A grown-up names it and picks its size</small></button>` : '');
+          const cards = items.map((r) => `<button class="rw-card" data-r="${r.id}"><span class="rw-icon">${r.icon}</span><b>${esc(r.name)}</b><span class="rw-cost">${coinSvg}${costOf(r)}</span><small>${aboutOf(r)}</small></button>`).join('') + (c.id === 'own' ? `<button class="rw-card rw-add"><span class="rw-icon">＋</span><b>Add your own</b><small>A parent names it and picks its size</small></button>` : '');
           const note = c.id === 'own' ? 'Something of your own' : `${items.length} to choose from · from ${quickest(items)}`;
           return `<section class="rw-cat${open ? ' open' : ''}" data-c="${c.id}">
             <button class="rw-cat-head" aria-expanded="${open}"><span class="rw-cat-ic">${c.icon}</span><span class="rw-cat-t"><b>${esc(c.name)}</b><small>${esc(note)}</small></span><i class="rw-chev">${open ? '−' : '+'}</i></button>
@@ -54,7 +54,7 @@ export function rewardsScreen(child: Child, jar: Jar) {
       sec?.scrollIntoView({ block: 'start', behavior: reducedMotion() ? 'auto' : 'smooth' });
     });
 
-    /** A grown-up adds a reward that is not in the list: name, picture and size. */
+    /** A parent adds a reward that is not in the list: name, picture and size. */
     const addOwn = () => {
       const sizes: [PriceTier, string][] = jar === 'treat'
         ? [['small', 'Small'], ['medium', 'Medium'], ['large', 'Large']]
@@ -106,7 +106,7 @@ export function rewardsScreen(child: Child, jar: Jar) {
         <div class="photo-slot"></div>
         <div class="actions">
           <button class="btn mint pick">Choose this!</button>
-          <button class="btn ghost small add-photo">${ICONS.camera} Add photo of what we agreed (grown-up)</button>
+          <button class="btn ghost small add-photo">${ICONS.camera} Add photo of what we agreed (parent)</button>
           <button class="btn ghost" data-back>Look at others</button>
         </div>
         <input type="file" accept="image/*" class="file" hidden>

@@ -1,6 +1,6 @@
-// Quiet hours: bedtime and school time, set by a grown-up. While one is on, MN shows a calm
-// "time to sleep" (or "school time") screen instead of levels. A grown-up can unlock it for a
-// while. School time is skipped in holiday mode.
+// Bedtime: bedtime and school time, set by a parent. While one is on, MN shows a calm
+// "time to sleep" (or "school time") screen instead of levels. A parent can unlock it for a
+// while. School time is skipped in pause rewards.
 
 export interface QuietRange {
   on: boolean;
@@ -20,7 +20,7 @@ export const DEFAULT_QUIET: QuietSettings = {
   school: { on: false, from: '08:00', to: '14:00', days: [1, 2, 3, 4, 5] },
 };
 
-/** Minutes a grown-up's unlock lasts. */
+/** Minutes a parent's unlock lasts. */
 export const UNLOCK_MINUTES = 30;
 
 export type QuietKind = 'bed' | 'school';
@@ -48,7 +48,7 @@ function inside(r: QuietRange, m: number): boolean {
   return a < b ? m >= a && m < b : m >= a || m < b;
 }
 
-/** Is it bedtime or school time at `now`? (Unlocked by a grown-up until `unlockedUntil` ms.) */
+/** Is it bedtime or school time at `now`? (Unlocked by a parent until `unlockedUntil` ms.) */
 export function quietAt(q: Partial<QuietSettings> | undefined, now: Date, holiday = false, unlockedUntil = 0): QuietNow | null {
   if (now.getTime() < unlockedUntil) return null;
   const s = quietOf(q);

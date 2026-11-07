@@ -13,7 +13,7 @@ import { plusFaceSvg, type Outfit } from './plus.ts';
 
 export function levelName(level: Level): string {
   if (level.kind === 'skill') return skillById(level.skillId)?.name ?? 'that level';
-  if (level.kind === 'review') return 'the review';
+  if (level.kind === 'review') return level.id.startsWith('focus:') ? 'the Focus round' : 'the review';
   return 'the boss';
 }
 

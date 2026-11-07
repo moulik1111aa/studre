@@ -1,4 +1,4 @@
-// The MN Plus video: about 90 seconds, for grown-ups, made in code like the opening video
+// The MN Premium video: about 90 seconds, for parents, made in code like the opening video
 // and played by the same player (reel.ts). Moulik recorded the voiceover
 // (assets/audio/plus.mp3); each stop plays one paragraph of it, with its own animation
 // timed to the words (beats).
@@ -29,7 +29,7 @@ function scenes(): ReelScene[] {
       enter: (el, app, speed) => beats(el.querySelector('.pv-one')!, [[1200, 's1'], [4600, 's2', () => app.sfx.tap()], [6200, 's3', () => app.sfx.wrong()]], speed),
     },
     {
-      // "MN Plus backs it all up with Google, automatically. New phone? Sign in… one tap. Your phone, your partner's phone, grandma's tablet…"
+      // "MN Premium backs it all up with Google, automatically. New phone? Sign in… one tap. Your phone, your partner's phone, grandma's tablet…"
       id: 'pv-cloud',
       bg: ['#0EA5E9', '#4F46E5'],
       caption: 'Backed up with Google',
@@ -48,7 +48,7 @@ function scenes(): ReelScene[] {
         beats(el.querySelector('.pv-cloud')!, [[900, 's1', () => app.sfx.whoosh()], [3200, 's2', () => app.sfx.correct(1)], [5200, 's3', () => app.sfx.tap()], [7600, 's4', () => app.sfx.coin(2)], [11000, 's5', () => app.sfx.correct(2)]], speed),
     },
     {
-      // "MN Plus also follows your child's school. Choose CBSE, ICSE or Common Core, pick the class, then tick only the topics…"
+      // "MN Premium also follows your child's school. Choose CBSE, ICSE or Common Core, pick the class, then tick only the topics…"
       id: 'pv-school',
       bg: ['#16A34A', '#0F766E'],
       caption: 'Follows their school',
@@ -101,18 +101,18 @@ function scenes(): ReelScene[] {
       enter: (el, app, speed) => beats(el.querySelector('.pv-sheet')!, [[700, 's1', () => app.sfx.whoosh()], [3800, 's2', () => app.sfx.tap()], [5800, 's3', () => app.sfx.coin(1)]], speed),
     },
     {
-      // "Parents with MN Plus know exactly where their child stands. Without it, you're only seeing part of the story."
+      // "Parents with MN Premium know exactly where their child stands. Without it, you're only seeing part of the story."
       id: 'pv-half',
       bg: ['#1E1B4B', '#4338CA'],
       caption: 'Don’t miss half the story',
       art: `<div class="pv-half">
-        <div class="pv-side without"><small>Without Plus</small><div class="pv-blur"><i></i><i></i><i></i><i></i></div></div>
-        <div class="pv-side with"><small>With MN Plus</small><div class="pv-clear"><i style="--w:92%"></i><i style="--w:64%"></i><i style="--w:81%"></i><i style="--w:45%"></i></div></div>
+        <div class="pv-side without"><small>Without Premium</small><div class="pv-blur"><i></i><i></i><i></i><i></i></div></div>
+        <div class="pv-side with"><small>With MN Premium</small><div class="pv-clear"><i style="--w:92%"></i><i style="--w:64%"></i><i style="--w:81%"></i><i style="--w:45%"></i></div></div>
       </div>`,
       enter: (el, app, speed) => beats(el.querySelector('.pv-half')!, [[500, 's1'], [2600, 's2', () => app.sfx.correct(1)]], speed),
     },
     {
-      // "Try everything free for seven days. If you love it, stay on monthly, or pay once and keep MN Plus for life."
+      // "Try everything free for seven days. If you love it, stay on monthly, or pay once and keep MN Premium for life."
       id: 'pv-price',
       bg: ['#0F766E', '#2563EB'],
       caption: 'Free for 7 days',
@@ -121,25 +121,25 @@ function scenes(): ReelScene[] {
         <span class="pv-free">7 days free</span>
         <div class="pv-cards">
           <div class="pv-card m"><small>Monthly</small><b>Pay monthly</b><span>Cancel any time</span></div>
-          <div class="pv-card l"><em>Best value</em><small>Lifetime</small><b>Pay once</b><span>Keep Plus forever</span></div>
+          <div class="pv-card l"><em>Best value</em><small>Lifetime</small><b>Pay once</b><span>Keep Premium forever</span></div>
         </div>
       </div>`,
       enter: (el, app, speed) => beats(el.querySelector('.pv-price')!, [[600, 's1', () => app.sfx.coin(2)], [2300, 's2', () => app.sfx.tap()], [3600, 's3', () => app.sfx.correct(2)]], speed),
     },
     {
-      // "Everything your child plays with stays free, always. MN Plus is for you… Start your free week today."
+      // "Everything your child plays with stays free, always. MN Premium is for you… Start your free week today."
       id: 'end',
       bg: ['#7C3AED', '#DB2777'],
       caption: 'Start your free week',
       sub: 'Everything your child plays with stays free, always.',
-      art: `<div class="rl-end pv-end"><div class="rl-logo">${plusSvg({ cls: 'spin', noShadow: true })}</div><div class="rl-mark"><span>M</span><span>N</span><b class="pv-plus">Plus</b></div></div>`,
+      art: `<div class="rl-end pv-end"><div class="rl-logo">${plusSvg({ cls: 'spin', noShadow: true })}</div><div class="rl-mark"><span>M</span><span>N</span><b class="pv-plus">Premium</b></div></div>`,
     },
   ];
 }
 
-const VIDEO: ReelVideo = { scenes, lines: LINES, audioId: 'plus-audio', name: 'What MN Plus adds' };
+const VIDEO: ReelVideo = { scenes, lines: LINES, audioId: 'plus-audio', name: 'What MN Premium adds' };
 
-/** The MN Plus video. `done` runs from the button at the end; Skip goes to `leave`. */
+/** The MN Premium video. `done` runs from the button at the end; Skip goes to `leave`. */
 export function plusVideoScreen(done: () => void, label = 'Done', leave = done) {
   return (app: App) => reelScreen({ first: false, label, done, leave, video: VIDEO })(app);
 }

@@ -6,6 +6,7 @@ import { addAnswer, logPlay, type Tally } from '../core/stats.ts';
 import { html, esc, type App, type Screen } from './app.ts';
 import type { Child } from '../storage/save.ts';
 import { noteMisses } from '../core/fixit.ts';
+import { isFocus } from '../core/focus.ts';
 import { type Level, makeRound, makeQuestion, replaceQuestion, recordResult, starsFor, noteAsked, forAge } from '../core/path.ts';
 import { skillById } from '../core/areas/index.ts';
 import { createRng } from '../core/rng.ts';
@@ -104,8 +105,10 @@ function settle(app: App, child: Child, level: FightLevel, asked: Question[], co
     child.stats.correct += correct;
     noteAsked(child.progress, asked, app.today);
     noteMisses(child, missed, Date.now(), app.today);
-    const wasPassed = (child.progress.levels[level.id]?.stars ?? 0) >= 1;
-    recordResult(child.progress, level.id, stars);
+    // A Focus round isn't a stop on the road: nothing to record, and full coins once a week.
+    const focus = isFocus(level.id);
+    const wasPassed = focus ? (child.log ?? []).some((e) => e.id === level.id && e.s > 0) : (child.progress.levels[level.id]?.stars ?? 0) >= 1;
+    if (!focus) recordResult(child.progress, level.id, stars);
     if (beaten && stars > 0 && !child.bossesBeaten.includes(beaten)) child.bossesBeaten.push(beaten);
     if (inside && stars > 0) {
       coins = coinsForLevel(level.kind, fraction, stars > 0, wasPassed, level.stage);
@@ -149,11 +152,12 @@ function minionScreen(app: App, child: Child, level: Extract<Level, { kind: 'rev
   const minion = minionFor(level.stage, level.n);
   // Reviews are asked as big choices so the fight keeps its pace.
   const questions = round.questions;
-  const el = html(`<section class="screen fight minion-fight" style="${worldVars(level.stage)}" aria-label="Minion battle">
+  const focus = isFocus(level.id);
+  const el = html(`<section class="screen fight minion-fight${focus ? ' focus-round' : ''}" style="${worldVars(level.stage)}" aria-label="${focus ? 'Focus round' : 'Minion battle'}">
     ${ambientHtml(level.stage, 6)}
     <header class="play-top">
       <button class="icon-btn quit" aria-label="Pause">${ICONS.pause}</button>
-      <div class="play-title"><b>Minion battle</b><span>Get all 10 right!</span></div>
+      <div class="play-title">${focus ? `<b>🎯 Focus round</b><span>Your ${level.skillIds.length === 1 ? 'skill' : `${level.skillIds.length} skills`} to get stronger at</span>` : '<b>Minion battle</b><span>Get all 10 right!</span>'}</div>
       <span style="width:50px"></span>
     </header>
     <div class="arena">
@@ -239,7 +243,7 @@ function minionScreen(app: App, child: Child, level: Extract<Level, { kind: 'rev
       if (!reducedMotion()) await body.animate([{ transform: 'none' }, { transform: 'translateX(-30px) rotate(-10deg)' }, { transform: 'translateX(400px)', opacity: 0 }], { duration: 900, easing: EASE_OUT, fill: 'forwards' }).finished;
     }
     const { coins, unlocked } = settle(app, child, level, questions, correct, stars, clock.seconds, correct / questions.length, tally, undefined, missed);
-    void app.show(resultScreen(child, level, { stars, score: correct, total: questions.length, coins, unlocked, timeUp: timeState(app, child) !== 'ok', title: stars ? 'Minion beaten!' : 'The minion ran away!' }));
+    void app.show(resultScreen(child, level, { stars, score: correct, total: questions.length, coins, unlocked, timeUp: timeState(app, child) !== 'ok', title: focus ? (stars ? 'Focus round done!' : 'Good practice!') : stars ? 'Minion beaten!' : 'The minion ran away!' }));
   };
 
   const pause = () => {

@@ -69,7 +69,7 @@ export const ITEMS: Item[] = [
   { id: 'stone', slot: 'colour', name: 'Stone', icon: '🪨', price: 0, level: 1, raid: 'rumble' },
   { id: 'jelly', slot: 'colour', name: 'Jelly pink', icon: '🪼', price: 0, level: 1, raid: 'wobbler' },
   { id: 'ghost-trail', slot: 'trail', name: 'Ghost trail', icon: '👻', price: 0, level: 1, raid: 'gus' },
-  // A thank-you from MN when a grown-up first signs in with Google (worn even without Adventure).
+  // A thank-you from MN when a parent first signs in with Google (worn even without Adventure).
   { id: 'cloud-cape', slot: 'neck', name: 'Cloud cape', icon: '☁️', price: 0, level: 1, gift: 'signin' },
 ];
 

@@ -55,7 +55,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
     const warm = level.tier === 1 && !child.stats.secondsByDay[app.today] ? dueForRevision(child.progress, AREAS[0].skills.flat(), app.today) : [];
     const boost = Math.min(2, (child.challenge ?? 0) + (harder ? 1 : 0));
     const round: Round = makeRound(level, skillById, child.progress, rng, earlier, warm, boost, child.age);
-    // The first few levels are played together with a grown-up: a wrong answer shows how,
+    // The first few levels are played together play together: a wrong answer shows how,
     // then the child tries a twin question (same kind, new numbers, so the answer can't just
     // be copied). No timer. Only first tries count towards the score and coins.
     const firstLevels = (child.together ?? 0) > 0;
@@ -70,7 +70,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
       ${ambientHtml(level.stage, 6)}
       <header class="play-top">
         <button class="icon-btn quit" aria-label="Pause">${ICONS.pause}</button>
-        <div class="play-title"><b>${firstLevels ? '🤝 Practice together' : child.assisted ? `👪 With a grown-up · ${TIER_NAMES[level.tier]}` : TIER_NAMES[level.tier]}${boost ? ` · ${boost === 2 ? '🔥🔥 Toughest' : '🔥 Harder'}` : ''}</b><span>${skill.name}</span></div>
+        <div class="play-title"><b>${firstLevels ? '🤝 Practice together' : child.assisted ? `👪 Play together · ${TIER_NAMES[level.tier]}` : TIER_NAMES[level.tier]}${boost ? ` · ${boost === 2 ? '🔥🔥 Toughest' : '🔥 Harder'}` : ''}</b><span>${skill.name}</span></div>
         <div class="dots" aria-hidden="true"></div>
       </header>
       <div class="prize" aria-live="polite"></div>
@@ -169,7 +169,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
           ${rules.hints && q.hint ? `<button class="icon-btn hint" aria-label="Hint">${ICONS.bulb}</button>` : ''}
         </div>
         <p class="hint-text" hidden>${q.hint ?? ''}</p>
-        ${child.assisted ? `<p class="coach-note"><b>👪 Grown-up:</b> ${esc(q.hint ?? 'Read it together, then let them choose. Praise the trying, not just the answer.')}</p>` : ''}
+        ${child.assisted ? `<p class="coach-note"><b>👪 Parent:</b> ${esc(q.hint ?? 'Read it together, then let them choose. Praise the trying, not just the answer.')}</p>` : ''}
       </article>`;
       const card = qwrap.firstElementChild as HTMLElement;
       if (app.debug) card.dataset.answer = q.answer;
@@ -382,7 +382,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
         activeSince = performance.now();
         paintPrize();
         if (firstLevels && child.together === TOGETHER_LEVELS) {
-          // The very first one: a word for the grown-up.
+          // The very first one: a word for the parent.
           const { result } = app.sheet(`<h2>🤝 Play this one together</h2><p>Sit with ${esc(child.name)} for the first ${TOGETHER_LEVELS} levels. If an answer is wrong, Plus shows how and ${esc(child.name)} tries one like it. Only first tries count for coins, so help them think, not answer.</p>`, [{ label: 'Let’s play', value: true, kind: 'mint', back: true }], 'Practice together');
           void result.then(() => show(questions[0]));
         } else {

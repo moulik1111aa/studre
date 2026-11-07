@@ -1,4 +1,4 @@
-// Placement: a few questions for the grown-up ("Can Riya easily do 17 + 34?"), or a short
+// Placement: a few questions for the parent ("Can Riya easily do 17 + 34?"), or a short
 // "Let them try" check the child plays. Then the path opens at the right place per strand.
 
 import { html, esc, type App, type Screen } from './app.ts';
@@ -28,7 +28,7 @@ export function placementScreen(child: Child) {
     const skills = AREAS[0].skills.flat();
     const pl = new Placement(child.age, skills);
     const el = html(`<section class="screen placement" aria-label="Placement">
-      <header class="pl-head">${avatarHtml(child.avatar, 56)}<div><p class="chip">For a grown-up</p><h1 class="title">Where should ${esc(child.name)} start?</h1></div></header>
+      <header class="pl-head">${avatarHtml(child.avatar, 56)}<div><p class="chip">For a parent</p><h1 class="title">Where should ${esc(child.name)} start?</h1></div></header>
       <div class="pl-body"></div>
     </section>`);
     const body = el.querySelector<HTMLElement>('.pl-body')!;

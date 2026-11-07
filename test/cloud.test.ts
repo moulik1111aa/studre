@@ -1,6 +1,6 @@
 // Google sign-in, first version: a child goes up gzipped without question history; two phones
 // and the cloud combine like two phones do; a removed child goes everywhere; family rules
-// follow whoever changed them; unchanged children aren't sent again; the grown-up's nudge.
+// follow whoever changed them; unchanged children aren't sent again; the parent's nudge.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { newChild, freshSettings, type Child } from '../src/storage/save.ts';
@@ -145,7 +145,7 @@ test('family rules: a joining phone takes the family\'s; then the side that chan
   b.rules.limitMinutes = 20;
   await sync(b, cl, 2000);
   assert.equal(b.rules.limitMinutes, 45);
-  // B changes quiet hours; A picks it up.
+  // B changes bedtime; A picks it up.
   b.rules.quiet = { bed: { on: true, from: '20:30', to: '07:00' }, school: { on: false, from: '08:00', to: '14:00', days: [1, 2, 3, 4, 5] } };
   await sync(b, cl, 3000);
   await sync(a, cl, 4000);
@@ -153,7 +153,7 @@ test('family rules: a joining phone takes the family\'s; then the side that chan
   assert.equal(a.rules.limitMinutes, 45);
 });
 
-test('a cloud copy that cannot be read is skipped, and the phone keeps its own', async () => {
+test('an online backup that cannot be read is skipped, and the phone keeps its own', async () => {
   const cl = cloud();
   const a = phone('A', [kid()]);
   await sync(a, cl, 1000);
@@ -190,7 +190,7 @@ test('after undo on this phone, its copy replaces the cloud\'s instead of mergin
   await sync(b, cl, 2500);
   play(b.children[0], 2600, 's1.count5#2', 3);
   await sync(b, cl, 2700); // the cloud now has #1 and #2
-  // A grown-up undoes #1 on phone A. The app syncs first (A gets #2), then undoes, then A's
+  // A parent undoes #1 on phone A. The app syncs first (A gets #2), then undoes, then A's
   // copy replaces the cloud's, and every phone takes it.
   await sync(a, cl, 2900);
   delete a.children[0].progress.levels['s1.count5#1'];

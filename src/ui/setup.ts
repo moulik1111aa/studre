@@ -1,5 +1,6 @@
-// First-run setup (grown-up): add children, set the daily limit and what happens at time-up.
+// First-run setup (parent): add children, set the daily limit and what happens at time-up.
 
+import { offerNotifications } from './remindsync.ts';
 import { showParentAdventureTips, toggleAdventure } from './adventure.ts';
 import { restoreFromFile } from './restore.ts';
 import { html, esc, type App, type Screen } from './app.ts';
@@ -19,7 +20,7 @@ const TREAT_PACES: [number, string, string][] = [[0.3, 'Every 3 days', 'Often'],
 const GOAL_PACES: [number, string, string][] = [[0.33, 'In 1 month', 'Fast'], [0.67, 'In 2 months', 'Faster'], [1, 'In 3 months', 'Normal'], [2, 'In 6 months', 'Rare']];
 const near = (a: number, b: number) => Math.abs(a - b) < 0.01;
 
-/** A grown-up check, then setup: the grown-up lock (first time), then the first child. */
+/** A parent check, then setup: the parent PIN (first time), then the first child. */
 export async function startSetup(app: App): Promise<void> {
   if (!(await app.grownUp('Setting up'))) return;
   void app.show(app.save.data.settings.parentPin ? addChildScreen(true) : lockSetupScreen(addChildScreen(true), true));
@@ -32,11 +33,11 @@ export function welcomeScreen(app: App): Screen {
     <div class="wl-hero">${logoMark()}<h1 class="wordmark"><span>M</span><span>N</span></h1><p class="wl-full">Mission Next</p>
     <p class="subtitle">Maths from age 3 to 16, one small step at a time.<br>Real rewards. Boss fights. Big smiles.</p></div>
     ${seen ? '<button class="btn start">Set up for my child</button><button class="btn ghost tour-btn">▶ Watch the video again</button>' : '<button class="btn tour-btn">▶ Start</button>'}
-    <p class="fine">${seen ? 'A grown-up sets things up, in about 2 minutes.' : 'First, a one-minute video on how MN works. Then a grown-up sets up, in about 2 minutes.'}</p>
-    ${seen ? '<button class="wl-restore">New phone? Restore from a report card</button>' : ''}
+    <p class="fine">${seen ? 'A parent sets things up, in about 2 minutes.' : 'First, a one-minute video on how MN works. Then a parent sets up, in about 2 minutes.'}</p>
+    ${seen ? '<button class="wl-restore">New phone? Restore from a progress file</button>' : ''}
   </section>`);
   el.querySelector('.start')?.addEventListener('click', () => void startSetup(app));
-  // Moving to a new phone: bring a child across from their saved report card.
+  // Moving to a new phone: bring a child across from their saved progress file.
   el.querySelector('.wl-restore')?.addEventListener('click', async () => {
     if (!(await app.grownUp('Restoring a child'))) return;
     await restoreFromFile(app, () => void app.show(app.save.data.settings.parentPin ? whosPlayingScreen : lockSetupScreen(whosPlayingScreen, true)));
@@ -57,7 +58,7 @@ export function welcomeScreen(app: App): Screen {
 
 /**
  * Add a child, one question at a time so nothing is missed: name, then age (no guess
- * filled in), then a buddy and whether a grown-up plays along.
+ * filled in), then a buddy and whether a parent plays along.
  */
 export function addChildScreen(firstRun: boolean) {
   return (app: App): Screen => {
@@ -117,7 +118,7 @@ export function addChildScreen(firstRun: boolean) {
             <button class="seg-b${on ? ' on' : ''}" data-h="1"><b>👪 We’ll play together</b><small>Questions read aloud, no timers, and a tip for you on every question. Best for ages 3 to 6.</small>${age <= 6 ? '<em>Suggested</em>' : ''}</button>
             <button class="seg-b${on ? '' : ' on'}" data-h="0"><b>🧒 ${who()} plays alone</b><small>For children who can read the questions.</small>${age > 6 ? '<em>Suggested</em>' : ''}</button>
           </div>
-          <p class="fine">You can change this later in the grown-up area.</p>`;
+          <p class="fine">You can change this later in the Parent area.</p>`;
         body.querySelectorAll<HTMLElement>('[data-h]').forEach((b) =>
           b.addEventListener('click', () => {
             assisted = b.dataset.h === '1';
@@ -138,7 +139,7 @@ export function addChildScreen(firstRun: boolean) {
           b.addEventListener('click', async () => {
             adventure = b.dataset.adv === '1';
             body.querySelectorAll('[data-adv]').forEach((x) => x.classList.toggle('on', x === b));
-            // First time a grown-up picks Adventure: show what it is.
+            // First time a parent picks Adventure: show what it is.
             if (adventure && !app.save.data.settings.advTipsSeen) await showParentAdventureTips(app, el);
           }),
         );
@@ -168,7 +169,7 @@ export function addChildScreen(firstRun: boolean) {
     };
     const save = async () => {
       // The owner code as the name makes a tester: every level and boss open, no time limit.
-      const tester = /^\d{7}$/.test(name) && (await isOwnerCode(name));
+      const tester = !app.storeBuild && /^\d{7}$/.test(name) && (await isOwnerCode(name));
       const c = newChild(tester ? 'Tester' : name, age, avatar, app.today);
       c.assisted = assisted ?? age <= 6;
       if (tester) Object.assign(c, { tester: true, placed: true, together: 0, assisted: false });
@@ -231,7 +232,7 @@ export function limitsScreen(firstRun: boolean) {
     let mode = st.timeUpMode;
     const pace = { treat: st.treatPace, goal: st.goalPace };
     let step = 0;
-    const LABELS = ['Play time', 'Time’s up', 'Treats', 'Big goals'];
+    const LABELS = ['Play time', 'Time’s up', 'Treats', 'Big rewards'];
     const el = html(`<section class="screen limits" aria-label="Daily play time">
       <header class="topbar"><button class="icon-btn back-btn" aria-label="Back">←</button><span class="t">Play time and rewards</span><span style="width:50px"></span></header>
       <div class="stops-slot"></div>
@@ -262,7 +263,7 @@ export function limitsScreen(firstRun: boolean) {
       } else {
         const which = step === 2 ? 'treat' : 'goal';
         const opts = which === 'treat' ? TREAT_PACES : GOAL_PACES;
-        body.innerHTML = `<div class="card lim-card lim-one"><h2 class="ac-q">${which === 'treat' ? 'How often can they earn a small treat?' : 'And a big goal, like a toy?'}</h2>
+        body.innerHTML = `<div class="card lim-card lim-one"><h2 class="ac-q">${which === 'treat' ? 'How often can they earn a small treat?' : 'And a big reward, like a toy?'}</h2>
           ${seg(opts.map(([v, t, n]) => `<button class="seg-b${near(pace[which], v) ? ' on' : ''}" data-v="${v}"><b>${t}</b><small>${n}</small></button>`).join(''), 'seg-grid')}
           <p class="fine">If they play every day. You can change this any time.</p></div>`;
         body.querySelectorAll<HTMLElement>('[data-v]').forEach((b) =>
@@ -285,7 +286,7 @@ export function limitsScreen(firstRun: boolean) {
         setPace(pace.treat, pace.goal);
         for (const c of d.children) recheckJars(c.wallet);
       });
-      void app.show(whosPlayingScreen);
+      void app.show(whosPlayingScreen).then(() => (firstRun ? offerNotifications(app) : undefined));
     };
     next.addEventListener('click', () => {
       if (step < LABELS.length - 1) {

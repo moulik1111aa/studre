@@ -1,4 +1,4 @@
-// The grown-up lock: the phone's own screen lock (PIN, pattern or fingerprint) or a parent
+// The parent PIN: the phone's own screen lock (PIN, pattern or fingerprint) or a parent
 // PIN set during setup. Children who can multiply can't get past it. Only when neither
 // exists does it fall back to a times question. The owner's 7-digit code, typed into the
 // pad, opens the hidden owner area instead (see core/access.ts).
@@ -58,7 +58,7 @@ function whenVisible(): Promise<void> {
 async function askPhone(app: App, reason: string): Promise<boolean> {
   let ok = false;
   try {
-    ok = !!(await app.native!.confirmDevice!({ title: 'Grown-ups only', text: reason })).ok;
+    ok = !!(await app.native!.confirmDevice!({ title: 'Parents only', text: reason })).ok;
   } catch {
     ok = false;
   }
@@ -69,7 +69,7 @@ async function askPhone(app: App, reason: string): Promise<boolean> {
 const padHtml = () => `<div class="pad gu-pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9, '', 0, '⌫'].map((k) => (k === '' ? '<span></span>' : `<button type="button" class="key" data-k="${k}">${k}</button>`)).join('')}</div>`;
 
 /**
- * The grown-up check. Screen-lock mode: one button for the phone's own lock, and a small
+ * The parent check. Screen-lock mode: one button for the phone's own lock, and a small
  * "Use a PIN" link that opens a number pad (that's also where the owner types their code).
  * PIN mode: the pad. Neither set up: a times question.
  */
@@ -84,11 +84,11 @@ export async function grownUpCheck(app: App, reason: string): Promise<boolean> {
   const b = 3 + Math.floor(Math.random() * 7);
   const maths = !pin && !phone;
   return new Promise((resolve) => {
-    const ov = html(`<div class="overlay" role="dialog" aria-modal="true" aria-label="Grown-up check"><div class="sheet grownup">
+    const ov = html(`<div class="overlay" role="dialog" aria-modal="true" aria-label="Parent check"><div class="sheet grownup">
       <p class="chip">🔒 ${reason}</p>
       ${
         phone
-          ? `<h2>Grown-ups only</h2><p class="gu-note">Unlock with this phone’s screen lock.</p>
+          ? `<h2>Parents only</h2><p class="gu-note">Unlock with this phone’s screen lock.</p>
              <button type="button" class="btn mint gu-phone">${ICONS.lock} Use screen lock</button>
              <div class="gu-pinpart" hidden><div class="gu-input dots" aria-live="polite">&nbsp;</div>${padHtml()}<button class="btn ok">Check PIN</button></div>
              <div class="actions"><button class="btn ghost small gu-usepin">Use a PIN instead</button><button class="btn ghost" data-back>Cancel</button></div>`
@@ -141,7 +141,7 @@ export async function grownUpCheck(app: App, reason: string): Promise<boolean> {
       // The owner code opens the hidden area instead (it never matches a PIN or an answer).
       if (typed.length === 7 && app.ownerHook && (await isOwnerCode(typed))) {
         misses = 0;
-        // The owner counts as a grown-up: back from the owner area, whatever was asked goes ahead.
+        // The owner counts as a parent: back from the owner area, whatever was asked goes ahead.
         ov.remove();
         open = false;
         app.ownerHook(() => resolve(true));
@@ -159,15 +159,15 @@ export async function grownUpCheck(app: App, reason: string): Promise<boolean> {
 }
 
 /**
- * Choose how grown-ups unlock the parent area: this phone's screen lock, or a parent PIN.
+ * Choose how parents unlock the parent area: this phone's screen lock, or a parent PIN.
  * Shown once during setup, and from the parent area to change it.
  */
 export function lockSetupScreen(next: ScreenMaker, firstRun = false) {
   return (app: App): Screen => {
-    const el = html(`<section class="screen gu-setup" aria-label="Grown-up lock">
-      <header class="topbar">${firstRun ? '<span style="width:50px"></span>' : `<button class="icon-btn back-btn" aria-label="Back">${ICONS.back}</button>`}<span class="t">Grown-up lock</span><span style="width:50px"></span></header>
+    const el = html(`<section class="screen gu-setup" aria-label="Parent PIN">
+      <header class="topbar">${firstRun ? '<span style="width:50px"></span>' : `<button class="icon-btn back-btn" aria-label="Back">${ICONS.back}</button>`}<span class="t">Parent PIN</span><span style="width:50px"></span></header>
       <div class="scroll gs-body">
-        <p class="gs-lead">The parent area, prizes and settings need a grown-up. Choose how a grown-up unlocks them, so children can’t.</p>
+        <p class="gs-lead">The parent area, prizes and settings need a parent. Choose how a parent unlocks them, so children can’t.</p>
         <div class="gs-options"></div>
       </div>
       <footer class="gs-foot"></footer>
@@ -187,7 +187,7 @@ export function lockSetupScreen(next: ScreenMaker, firstRun = false) {
       const hasPin = !!app.save.data.settings.parentPin;
       body.innerHTML = `
         ${phone ? `<button class="card gs-opt gs-phone"><b>${ICONS.lock} This phone’s screen lock</b><span>Use the PIN, pattern or fingerprint you already use for your phone. Nothing new to remember.</span></button>` : '<p class="fine">This phone has no screen lock, so make a parent PIN.</p>'}
-        <button class="card gs-opt gs-pin"><b>🔢 ${hasPin ? 'Change my custom PIN' : 'A custom PIN'}</b><span>4 to 6 digits that only grown-ups know.</span></button>
+        <button class="card gs-opt gs-pin"><b>🔢 ${hasPin ? 'Change my custom PIN' : 'A custom PIN'}</b><span>4 to 6 digits that only parents know.</span></button>
         ${hasPin && phone ? '<button class="btn ghost small gs-nopin">Remove the PIN (use the screen lock only)</button>' : ''}`;
       stagger(body.children, { gap: 70 });
       body.querySelector('.gs-phone')?.addEventListener('click', async () => {

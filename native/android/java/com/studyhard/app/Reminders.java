@@ -18,8 +18,8 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 /**
- * Phone reminders planned by the web app (src/core/reminders.ts): the melt-watch notes and the
- * grown-ups' backup reminder. The plan (a JSON list of notes with their times) is stored here,
+ * Phone reminders planned by the web app (src/core/reminders.ts): learning time, reward ready
+ * and the parents' backup reminder. The plan (a JSON list of notes with their times) is stored here,
  * each future note gets an alarm, and ReminderReceiver shows it when the alarm goes off.
  * Alarms are inexact (no special permission), and come back after a restart or an update.
  */
@@ -30,7 +30,8 @@ final class Reminders {
     static final String KEY_IDS = "ids";
     static final String KEY_SNOOZE = "backupSnoozeUntil";
     /** v2: with MN's own sound ("Chime Pop", res/raw/mn_chime). A channel's sound is fixed once made. */
-    static final String CH_MELT = "melt_watch_v2";
+    static final String CH_DAILY = "learning_time_v3";
+    static final String CH_READY = "reward_ready_v3";
     static final String CH_BACKUP = "backup_v2";
     static final String ACTION_FIRE = "com.studyhard.app.REMINDER";
     static final String ACTION_LATER = "com.studyhard.app.BACKUP_LATER";
@@ -104,20 +105,26 @@ final class Reminders {
         if (Build.VERSION.SDK_INT < 26) return;
         NotificationManager nm = ctx.getSystemService(NotificationManager.class);
         if (nm == null) return;
-        // The first channels had the phone's default sound.
+        // Older channels: the first had the phone's default sound; v2 had the jar notes.
         nm.deleteNotificationChannel("melt_watch");
         nm.deleteNotificationChannel("backup");
+        nm.deleteNotificationChannel("melt_watch_v2");
         AudioAttributes attrs = new AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_NOTIFICATION)
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
             .build();
-        NotificationChannel melt = new NotificationChannel(CH_MELT, "Melt watch", NotificationManager.IMPORTANCE_DEFAULT);
-        melt.setSound(chime(ctx), attrs);
-        melt.setDescription("Friendly notes when a treat jar is about to melt, each with a fun fact");
+        // Learning time and reward ready pop up on the screen (high importance), with MN's chime.
+        NotificationChannel daily = new NotificationChannel(CH_DAILY, "Learning time", NotificationManager.IMPORTANCE_HIGH);
+        daily.setSound(chime(ctx), attrs);
+        daily.setDescription("One note a day at the time you chose in MN");
+        NotificationChannel ready = new NotificationChannel(CH_READY, "Reward ready", NotificationManager.IMPORTANCE_HIGH);
+        ready.setSound(chime(ctx), attrs);
+        ready.setDescription("When a child's jar is full and the reward is waiting to be given");
         NotificationChannel backup = new NotificationChannel(CH_BACKUP, "Backup reminders", NotificationManager.IMPORTANCE_DEFAULT);
         backup.setSound(chime(ctx), attrs);
-        backup.setDescription("For grown-ups: save a report card so progress is never lost");
-        nm.createNotificationChannel(melt);
+        backup.setDescription("For parents: save a backup so progress is never lost");
+        nm.createNotificationChannel(daily);
+        nm.createNotificationChannel(ready);
         nm.createNotificationChannel(backup);
     }
 
@@ -143,11 +150,13 @@ final class Reminders {
     static void show(Context ctx, JSONObject it) {
         createChannels(ctx);
         if (!allowed(ctx)) return;
-        boolean backup = "backup".equals(it.optString("kind"));
+        String kind = it.optString("kind");
+        boolean backup = "backup".equals(kind);
+        boolean ready = "ready".equals(kind);
         int id = it.optInt("id");
         PendingIntent tap = openApp(ctx, backup ? "backup" : "play", 8000 + id);
         String text = it.optString("text");
-        NotificationCompat.Builder b = new NotificationCompat.Builder(ctx, backup ? CH_BACKUP : CH_MELT)
+        NotificationCompat.Builder b = new NotificationCompat.Builder(ctx, backup ? CH_BACKUP : ready ? CH_READY : CH_DAILY)
             .setSmallIcon(R.drawable.ic_stat_mn)
             .setContentTitle(it.optString("title"))
             .setContentText(it.optString("short", text))
@@ -155,7 +164,7 @@ final class Reminders {
             .setColor(0xFFFFB020)
             .setAutoCancel(true)
             .setContentIntent(tap)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setPriority(backup ? NotificationCompat.PRIORITY_DEFAULT : NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             // Android 7 and older have no channels: the sound goes on the note itself.
             .setSound(chime(ctx));
@@ -164,7 +173,7 @@ final class Reminders {
             Intent later = new Intent(ctx, ReminderReceiver.class).setAction(ACTION_LATER).putExtra("id", id);
             b.addAction(0, "In 3 days", PendingIntent.getBroadcast(ctx, 9000 + id, later, PendingIntent.FLAG_UPDATE_CURRENT | immutable()));
         } else {
-            b.addAction(0, "Play a level", tap);
+            b.addAction(0, ready ? "Open MN" : "Play now", tap);
         }
         try {
             NotificationManagerCompat.from(ctx).notify(id, b.build());

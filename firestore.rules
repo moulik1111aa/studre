@@ -31,7 +31,7 @@ service cloud.firestore {
 
     match /requests/{uid} {
       allow read, list, delete: if isOwner();
-      allow get: if mine(uid);
+      allow get, delete: if mine(uid);
       allow create, update: if mine(uid)
         && request.resource.data.keys().hasOnly(['email', 'name', 'phone', 'device', 'version', 'at'])
         && request.resource.data.email == email();
@@ -44,6 +44,7 @@ service cloud.firestore {
 
     match /checkins/{uid} {
       allow read, list, delete: if isOwner();
+      allow delete: if mine(uid);
       allow create, update: if mine(uid)
         && request.resource.data.keys().hasOnly(['email', 'name', 'devices'])
         && request.resource.data.email == email();

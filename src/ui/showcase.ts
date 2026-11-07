@@ -34,7 +34,7 @@ export function showcaseScreen(child: Child, stage: number, then: () => void) {
         <p class="sc-note">${Math.floor(w.treat.coins)} of ${costOf(treat)} coins · about <b>${toGo(treat, w.treat.coins, TREAT_SHARE)}</b> perfect levels to go</p>
       </div>` : ''}
       ${goal ? `<div class="card sc-card goal">
-        <div class="sc-head"><span class="sc-icon">${goal.icon}</span><div><small>Big goal</small><b>${esc(goal.name)}</b></div><span class="sc-pct" data-to="${Math.floor(gp * 100)}">0%</span></div>
+        <div class="sc-head"><span class="sc-icon">${goal.icon}</span><div><small>Big reward</small><b>${esc(goal.name)}</b></div><span class="sc-pct" data-to="${Math.floor(gp * 100)}">0%</span></div>
         <div class="sc-bar"><i style="--to:${Math.max(3, gp * 100)}%"></i></div>
         <p class="sc-note">Saving up slowly · about <b>${toGo(goal, w.goal.coins, 1 - TREAT_SHARE)}</b> perfect levels to go</p>
       </div>` : ''}

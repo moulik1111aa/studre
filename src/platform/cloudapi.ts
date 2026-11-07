@@ -103,6 +103,8 @@ export interface CloudBackend {
   putFamily(f: FamilyDoc, ch: FamilyChanges): Promise<void>;
   /** Delete everything this family has in the cloud. */
   deleteAll(): Promise<void>;
+  /** Delete everything, then the MN sign-in account itself. */
+  deleteAccount(): Promise<void>;
   session: Session | null;
 }
 
@@ -351,6 +353,26 @@ export class FirebaseRest implements CloudBackend {
     const r2 = await this.fs('PATCH', this.family, '', { fields: fields({ v: 1, deletedAt: Date.now() }) });
     if (!r2.ok) throw new CloudError('other', `Cloud error ${r2.status}`);
   }
+  /** Delete the account: every child, the family document, the approval request and phone
+   *  check-ins (no note left behind, since no phone can sign in to it again), then the sign-in. */
+  async deleteAccount(): Promise<void> {
+    const uid = this.me.uid;
+    const res = await this.fs('GET', `${this.family}/children`, '?pageSize=300&mask.fieldPaths=childId');
+    if (res.ok) {
+      const j = (await res.json()) as { documents?: { name: string }[] };
+      for (const d of j.documents ?? []) await this.deleteChild(d.name.split('/').pop()!);
+    } else if (res.status !== 404) throw new CloudError('other', `Cloud error ${res.status}`);
+    await this.remove(this.family);
+    for (const p of [`requests/${uid}`, `checkins/${uid}`]) await this.remove(p).catch(() => {});
+    const idToken = await this.token(true);
+    const r = await this.call(`https://identitytoolkit.googleapis.com/v1/accounts:delete?key=${this.cfg.apiKey}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ idToken }),
+    });
+    if (!r.ok) throw new CloudError('other', `Account error ${r.status}`);
+  }
+
 }
 
 // ── the stand-in (tests, debug builds) ──────────────────────────────────────
@@ -378,7 +400,7 @@ export class MemoryCloud implements CloudBackend {
   async signIn(googleIdToken: string): Promise<Session> {
     const [email, name] = googleIdToken.split('|');
     const e = (email || 'parent@example.com').toLowerCase();
-    const s: Session = { uid: `mock-${e}`, email: e, name: name || 'Grown-up', idToken: 'mock', refreshToken: 'mock', exp: Date.now() + 3_600_000 };
+    const s: Session = { uid: `mock-${e}`, email: e, name: name || 'Parent', idToken: 'mock', refreshToken: 'mock', exp: Date.now() + 3_600_000 };
     this.session = s;
     this.onSession(s);
     return s;
@@ -492,5 +514,8 @@ export class MemoryCloud implements CloudBackend {
   }
   async deleteAll() {
     this.write({ family: { deletedAt: Date.now() } as FamilyDoc, kids: {} });
+  }
+  async deleteAccount() {
+    await this.deleteAll();
   }
 }

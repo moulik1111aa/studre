@@ -1,5 +1,5 @@
 // Reward unlocked (drawn in, spotlight, confetti, "Show Mummy/Papa!", Given ✓ behind the
-// grown-up check) and the melted-chocolate "welcome back" after missed days.
+// parent check) and the melted-chocolate "welcome back" after missed days.
 
 import { html, esc, type App, type Screen } from './app.ts';
 import type { Child } from '../storage/save.ts';
@@ -18,13 +18,13 @@ export function unlockScreen(child: Child, jarName: 'treat' | 'goal') {
     const r = rewardById(jar.rewardId ?? '')!;
     const el = html(`<section class="screen unlock" aria-label="Reward unlocked">
       <div class="spotlight" aria-hidden="true"></div>
-      <p class="chip">${jarName === 'treat' ? 'Treat' : 'Big goal'} unlocked!</p>
+      <p class="chip">${jarName === 'treat' ? 'Treat' : 'Big reward'} unlocked!</p>
       <div class="ul-stage"><div class="ul-ring" aria-hidden="true"></div><div class="ul-icon">${r.icon}</div></div>
       <h1 class="title">${esc(r.name)}</h1>
       <p class="subtitle">You earned it, ${esc(child.name)}! <b>Show this to Mummy or Papa!</b></p>
       <div class="ul-photo"></div>
       <div class="ul-actions">
-        <button class="btn mint given">${ICONS.check} Given (grown-up)</button>
+        <button class="btn mint given">${ICONS.check} Given (parent)</button>
         <button class="btn ghost later">Keep playing</button>
       </div>
       <p class="ul-wait">Waiting to be given</p>

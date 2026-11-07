@@ -25,7 +25,7 @@ import { plusFaceSvg } from './plus.ts';
 /** A short name for a level: "× 7 · Speed", "Minion fight", or the boss. */
 function levelLabel(l: Level): string {
   if (l.kind === 'skill') return `${levelName(l)} · ${TIER_NAMES[l.tier]}`;
-  if (l.kind === 'review') return 'Minion fight';
+  if (l.kind === 'review') return l.id.startsWith('focus:') ? 'Focus round' : 'Minion fight';
   return `Boss: ${bossFor(l.stage, l.boss).name}`;
 }
 

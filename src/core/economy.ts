@@ -172,7 +172,7 @@ export function markGiven(w: Wallet, jarName: 'treat' | 'goal', today: string): 
 /**
  * Melting: for each full day without counted play (since the last play), the treat jar
  * loses 5% of its reward's cost and the goal jar 2% — never below zero, never while a
- * reward is waiting, never during holiday mode. Returns how much each jar lost.
+ * reward is waiting, never during pause rewards. Returns how much each jar lost.
  */
 export function applyMelt(w: Wallet, today: string, holiday: boolean): { treat: number; goal: number; days: number } {
   const lost = { treat: 0, goal: 0, days: 0 };

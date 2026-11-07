@@ -1,4 +1,4 @@
-// The exported report card: one .html file that opens in any browser (and prints neatly),
+// The exported progress file: one .html file that opens in any browser (and prints neatly),
 // with the child's backup inside so MN on another phone can import it.
 
 import { esc, type App } from './app.ts';
@@ -57,13 +57,13 @@ export function reportCardHtml(app: App, child: Child, backup: Backup): string {
   const jar = (w: 'treat' | 'goal') => {
     const j = child.wallet[w];
     const r = j.rewardId ? rewardById(j.rewardId) : undefined;
-    return r ? `<p>${r.icon} <b>${esc(r.name)}</b> (${w === 'treat' ? 'treat' : 'big goal'}): ${Math.floor(jarProgress(j) * 100)}%, ${Math.floor(j.coins)} of ${costOf(r)} coins</p>` : '';
+    return r ? `<p>${r.icon} <b>${esc(r.name)}</b> (${w === 'treat' ? 'treat' : 'big reward'}): ${Math.floor(jarProgress(j) * 100)}%, ${Math.floor(j.coins)} of ${costOf(r)} coins</p>` : '';
   };
   const recent = log.slice(-30).reverse();
 
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(child.name)}’s MN report card · ${esc(nice(today))}</title>
+<title>${esc(child.name)}’s MN progress file · ${esc(nice(today))}</title>
 <style>
 :root{--ink:#1A1446;--soft:#5B567A;--faint:#8C88A8;--line:#E4E0F2;--accent:#5B3DF5;--sun:#E09A00;--good:#1F9D5B;--bad:#D6455B;--bg:#F6F4FF}
 *{box-sizing:border-box}
@@ -105,7 +105,7 @@ footer{margin-top:18px;padding:14px 16px;border-radius:14px;background:#EEEAFE;c
 @media print{body{background:#fff}section{border-color:#ccc}footer{display:none}}
 </style></head>
 <body><main>
-<header>${plusFaceSvg()}<div><h1>${esc(child.name)}’s report card</h1><p>MN · Mission Next · ${esc(nice(today))}</p></div></header>
+<header>${plusFaceSvg()}<div><h1>${esc(child.name)}’s progress file</h1><p>MN · Mission Next · ${esc(nice(today))}</p></div></header>
 
 <section><div class="who"><span>Age <b>${child.age}</b></span><span>${child.school?.on ? `Path: <b>${esc(schoolLabel(child.school))}</b>` : `Stage <b>${front?.stage ?? 7}: ${esc(stage.name)}</b> (ages ${stage.ages})`}</span><span>Now on: <b>${esc(label(front))}</b></span>${child.createdDay ? `<span>Playing since <b>${esc(nice(child.createdDay))}</b></span>` : ''}</div></section>
 
@@ -150,7 +150,7 @@ ${recent.map((e) => `<tr><th>${esc(e.k === 'skill' ? `${name(e.id.split('#')[0])
 <p>Rewards given: ${child.wallet.earned.length ? child.wallet.earned.map((e) => `${rewardById(e.rewardId)?.icon ?? '🎁'} ${esc(rewardById(e.rewardId)?.name ?? 'Reward')} (${esc(nice(e.day))})`).join(', ') : 'none yet'}.</p>
 <p>Bosses beaten: ${child.bossesBeaten.length ? child.bossesBeaten.map((id) => esc(BOSSES.find((b) => b.id === id)?.name ?? id)).join(', ') : 'none yet'}.</p></section>
 
-<footer><b>This file is also a backup.</b> To move ${esc(child.name)} to another phone, or to bring the progress back, open MN there and go to Parent area → Restore from a report card, then pick this file. If ${esc(child.name)} is already on that phone, the two are combined.</footer>
+<footer><b>This file is also a backup.</b> To move ${esc(child.name)} to another phone, or to bring the progress back, open MN there and go to Parent area → Restore from a progress file, then pick this file. If ${esc(child.name)} is already on that phone, the two are combined.</footer>
 </main>
 <script type="application/json" id="mn-backup">${backupJson(backup)}</script>
 </body></html>`;

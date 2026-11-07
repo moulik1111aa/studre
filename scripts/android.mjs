@@ -18,6 +18,8 @@ const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
 const config = JSON.parse(readFileSync(join(root, 'capacitor.config.json'), 'utf8'));
 
 export const VERSION_OFFSET = 0;
+/** The Google Play app's id (the shared app stays com.studyhard.app, so both can be installed). */
+export const PLAY_ID = 'app.missionnext.mn';
 const versionCode = Number(
   process.env.STUDYHARD_VERSION_CODE ?? (process.env.GITHUB_RUN_NUMBER ? Number(process.env.GITHUB_RUN_NUMBER) + VERSION_OFFSET : 1),
 );
@@ -142,7 +144,9 @@ writeFileSync(
 android {
     defaultConfig {
         versionCode ${versionCode}
-        versionName "${versionName}"
+        versionName "${versionName}"${process.env.MN_STORE === 'play' ? `
+        // The Google Play app has its own id; the code keeps its package (namespace).
+        applicationId "${PLAY_ID}"` : ''}
     }
     signingConfigs {
         release {
@@ -178,7 +182,7 @@ dependencies {
 
 // 7. Copy the web assets and config into the native project.
 run('npx cap sync android');
-console.log(`android/ ready: ${config.appId} ${versionName}`);
+console.log(`android/ ready: ${process.env.MN_STORE === 'play' ? PLAY_ID : config.appId} ${versionName}`);
 
 function patch(text, anchor, replacement) {
   if (!text.includes(anchor)) throw new Error(`patch anchor not found: ${anchor}`);

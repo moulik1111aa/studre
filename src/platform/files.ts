@@ -1,4 +1,4 @@
-// Saving a file the parent can keep or send on (the report card). On the phone, Android's own
+// Saving a file the parent can keep or send on (the progress file). On the phone, Android's own
 // "save to" screen opens; in a browser, the file downloads.
 import type { App } from '../ui/app.ts';
 

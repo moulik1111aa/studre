@@ -1,5 +1,5 @@
-// Quiet hours: bedtime past midnight, school time on chosen days only, holiday mode skips
-// school, a grown-up's unlock wins, and the parent-area line reads well.
+// Bedtime: bedtime past midnight, school time on chosen days only, pause rewards skips
+// school, a parent's unlock wins, and the parent-area line reads well.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DEFAULT_QUIET, niceTime, quietAt, quietSummary } from '../src/core/quiet.ts';
@@ -24,7 +24,7 @@ test('bedtime runs past midnight', () => {
   assert.equal(quietAt({ bed: { on: true, from: '20:00', to: '20:00' } }, at('20:00')), null);
 });
 
-test('school time on school days only, and not in holiday mode', () => {
+test('school time on school days only, and not in pause rewards', () => {
   assert.deepEqual(quietAt(both, at('09:00')), { kind: 'school', until: '14:00' });
   assert.equal(quietAt(both, at('14:00')), null);
   assert.equal(quietAt(both, at('09:00', 7)), null); // Saturday
@@ -32,7 +32,7 @@ test('school time on school days only, and not in holiday mode', () => {
   assert.ok(quietAt({ school: { ...both.school, days: [6] } }, at('09:00', 7)));
 });
 
-test('a grown-up unlock wins until it runs out', () => {
+test('a parent unlock wins until it runs out', () => {
   const now = at('22:00');
   assert.equal(quietAt(both, now, false, now.getTime() + 60_000), null);
   assert.ok(quietAt(both, now, false, now.getTime() - 1));

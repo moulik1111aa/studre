@@ -1,5 +1,5 @@
-// Backing up, for grown-ups: which children have a week of unsaved progress (shown in the
-// Parent area, and as a phone note), and saving one report card per child.
+// Backing up, for parents: which children have a week of unsaved progress (shown in the
+// Parent area, and as a phone note), and saving one progress file per child.
 
 import type { App } from './app.ts';
 import type { Child } from '../storage/save.ts';
@@ -26,7 +26,7 @@ export function markBackedUp(app: App, c: Child): void {
   });
 }
 
-/** Save a report card for each child in turn. Returns how many were saved. */
+/** Save a progress file for each child in turn. Returns how many were saved. */
 export async function backUpNow(app: App, kids: Child[]): Promise<number> {
   let saved = 0;
   for (const c of kids) {

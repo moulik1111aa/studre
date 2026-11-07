@@ -81,14 +81,14 @@ function levelLabel(l: Level | undefined): string {
   if (!l) return 'Everything done!';
   if (l.kind === 'skill') return `${skillName(l.skillId)} · ${TIER_NAMES[l.tier]}`;
   if (l.kind === 'review') return 'Minion fight';
-  return `Boss: ${bossFor(l.stage, l.boss).name}`;
+  return `Challenge: ${bossFor(l.stage, l.boss).name}`;
 }
 function entryLabel(e: PlayEntry): string {
   if (e.k === 'skill') return `${skillName(e.id.split('#')[0])} · ${TIER_NAMES[(e.tier ?? 1) as Tier]}`;
   if (e.k === 'review') return 'Minion fight';
   if (e.k === 'quest') return 'Side quest';
   const slot = e.id.endsWith(':mid') ? 'mid' : 'final';
-  return `Boss: ${bossFor(e.st, slot).name}`;
+  return `Challenge: ${bossFor(e.st, slot).name}`;
 }
 /** ▲ 12% / ▼ 3 / = */
 function change(now: number, before: number, unit = ''): string {
@@ -169,7 +169,7 @@ export function reportScreen(child: Child, start: Tab = 'overview') {
       <div class="card rp-hero">${avatarHtml(child.avatar, 64)}<div><h2>${esc(child.name)}</h2>
         <p>Age ${child.age} · ${child.school?.on ? esc(schoolLabel(child.school)) : `Stage ${front?.stage ?? 7}: ${esc(stageInfo(front?.stage ?? 7).name)}`}</p>
         <p class="rp-now">Now on: <b>${esc(levelLabel(front))}</b></p>
-        <p class="rp-meta">${child.createdDay ? `Playing since ${esc(shortDate(child.createdDay))}` : ''}${lastDay ? ` · last played ${ago(lastDay, today)}` : ''}${child.assisted ? ' · 👪 plays with a grown-up' : ''}</p></div></div>
+        <p class="rp-meta">${child.createdDay ? `Playing since ${esc(shortDate(child.createdDay))}` : ''}${lastDay ? ` · last played ${ago(lastDay, today)}` : ''}${child.assisted ? ' · 👪 plays play together' : ''}</p></div></div>
       <div class="rp-kpis">
         ${kpi(hm(totalMin), 'time played', `${daysPlayed} day${daysPlayed === 1 ? '' : 's'}`)}
         ${kpi(String(child.stats.answered), 'questions answered')}
@@ -239,7 +239,7 @@ export function reportScreen(child: Child, start: Tab = 'overview') {
       <div class="rp-kpis three">
         ${kpi(avgSpeed ? `${avgSpeed.toFixed(1)} s` : '–', 'per answer')}
         ${kpi(`${prog.stars}`, 'stars won', `of ${prog.maxStars}`)}
-        ${kpi(`${child.bossesBeaten.length}`, 'bosses beaten')}
+        ${kpi(`${child.bossesBeaten.length}`, 'challenges won')}
       </div>
       <h3 class="pa-h">Levels passed by type</h3>
       <div class="card rp-tiers">${prog.tiers.map((n, i) => `<div><span>${TIER_NAMES[(i + 1) as Tier]}</span><div class="rep-bar"><i style="width:${(100 * n) / tierMax}%"></i></div><b>${n}</b></div>`).join('')}
@@ -285,9 +285,9 @@ export function reportScreen(child: Child, start: Tab = 'overview') {
     const jarCard = (which: 'treat' | 'goal') => {
       const jar = child.wallet[which];
       const r = jar.rewardId ? rewardById(jar.rewardId) : undefined;
-      if (!r) return `<div class="card rp-jar"><p class="fine">No ${which === 'treat' ? 'treat' : 'big goal'} chosen yet.</p></div>`;
+      if (!r) return `<div class="card rp-jar"><p class="fine">No ${which === 'treat' ? 'treat' : 'big reward'} chosen yet.</p></div>`;
       const p = Math.floor(jarProgress(jar) * 100);
-      return `<div class="card rp-jar"><span class="rp-jar-icon">${r.icon}</span><div><small>${which === 'treat' ? 'Treat' : 'Big goal'}</small><b>${esc(r.name)}</b><div class="rep-bar"><i style="width:${p}%"></i></div><em>${Math.floor(jar.coins)} of ${costOf(r)} coins · ${jar.waiting ? 'ready to hand over!' : `${p}%`}</em></div></div>`;
+      return `<div class="card rp-jar"><span class="rp-jar-icon">${r.icon}</span><div><small>${which === 'treat' ? 'Treat' : 'Big reward'}</small><b>${esc(r.name)}</b><div class="rep-bar"><i style="width:${p}%"></i></div><em>${Math.floor(jar.coins)} of ${costOf(r)} coins · ${jar.waiting ? 'ready to hand over!' : `${p}%`}</em></div></div>`;
     };
     const earned = child.wallet.earned;
     const gaps = earned.slice(1).map((e, i) => dayDiff(earned[i].day, e.day));
@@ -302,16 +302,16 @@ export function reportScreen(child: Child, start: Tab = 'overview') {
       </div>
       <h3 class="pa-h">Rewards given</h3>
       <ul class="card rp-list">${earned.length ? [...earned].reverse().map((e) => `<li>${rewardById(e.rewardId)?.icon ?? '🎁'} <b>${esc(rewardById(e.rewardId)?.name ?? 'Reward')}</b> <small>${esc(niceDate(e.day))}</small></li>`).join('') : '<li><small>None yet. The first treat is usually about 10 days in.</small></li>'}</ul>
-      <h3 class="pa-h">Bosses beaten</h3>
+      <h3 class="pa-h">Challenges won</h3>
       <ul class="card rp-list">${child.bossesBeaten.length ? child.bossesBeaten.map((id) => `<li>🏆 <b>${esc(BOSSES.find((b) => b.id === id)?.name ?? id)}</b></li>`).join('') : '<li><small>None yet.</small></li>'}</ul>`;
 
     // ── Manage ──────────────────────────────────────────────────────────────
     const hour = changesSince(child, Date.now() - 3_600_000);
     const day = changesSince(child, startOfToday());
     const manage = `
-      <h3 class="pa-h">Report card and backup</h3>
-      <div class="card undo-card"><p class="fine">Save ${esc(child.name)}’s report card as a file. It opens in any browser and prints neatly, and it is also a backup: on another phone, MN can restore ${esc(child.name)} from it (Parent area → Restore from a report card).</p>
-        <button class="btn ghost small rp-export2">Save report card</button></div>
+      <h3 class="pa-h">Progress file and backup</h3>
+      <div class="card undo-card"><p class="fine">Save ${esc(child.name)}’s progress file as a file. It opens in any browser and prints neatly, and it is also a backup: on another phone, MN can restore ${esc(child.name)} from it (Parent area → Restore from a progress file).</p>
+        <button class="btn ghost small rp-export2">Save progress file</button></div>
       <h3 class="pa-h">Undo recent play</h3>
       <div class="card undo-card"><p class="fine">Someone else played on ${esc(child.name)}’s profile? Remove it. Stars, coins, time and these statistics go back to how they were.</p>
         <button class="btn ghost small undo-hour"${hour ? '' : ' disabled'}>Remove the last hour (${hour})</button>
@@ -325,17 +325,17 @@ export function reportScreen(child: Child, start: Tab = 'overview') {
 
     const bodies: Record<Tab, string> = { overview, skills: skillsTab, activity, rewards, manage };
     const el = html(`<section class="screen report" aria-label="Progress report">
-      <header class="topbar"><button class="icon-btn back-btn" aria-label="Back">${ICONS.back}</button><span class="t">${esc(child.name)}’s report</span><button class="icon-btn rp-export" aria-label="Save the report card"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M5 19h14"/></svg></button></header>
+      <header class="topbar"><button class="icon-btn back-btn" aria-label="Back">${ICONS.back}</button><span class="t">${esc(child.name)}’s report</span><button class="icon-btn rp-export" aria-label="Save the progress file"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M5 19h14"/></svg></button></header>
       <nav class="rp-tabs fit" role="tablist">${TABS.map(([id, label, icon]) => `<button role="tab" class="rp-tab" data-tab="${id}" aria-selected="${id === start}"><span class="rt-i" aria-hidden="true">${icon}</span><span class="rt-l">${label}</span></button>`).join('')}</nav>
       <div class="scroll pa-body rp-body"></div>
     </section>`);
     const body = el.querySelector<HTMLElement>('.rp-body')!;
     const show = (tab: Tab) => {
-      // Play Store build without MN Plus: Skills, Activity and Rewards show blurred, with the way in.
+      // Play Store build without MN Premium: Skills, Activity and Rewards show blurred, with the way in.
       const locked = (tab === 'skills' || tab === 'activity' || tab === 'rewards') && !hasPlus(app);
       body.innerHTML = locked
         ? `<div class="mp-lock"><div class="mp-lock-peek" inert aria-hidden="true">${bodies[tab]}</div>
-            <div class="card mp-lock-card"><b>✨ ${esc(child.name)}’s full report</b><p>Strengths, the exact skills to practise, how quickly ${esc(child.name)} answers, and the days and times they learn best. Part of MN Plus.</p><button class="btn mint small mp-see">See MN Plus</button></div></div>`
+            <div class="card mp-lock-card"><b>✨ ${esc(child.name)}’s full report</b><p>Strengths, the exact skills to practise, how quickly ${esc(child.name)} answers, and the days and times they learn best. Part of MN Premium.</p><button class="btn mint small mp-see">See MN Premium</button></div></div>`
         : bodies[tab];
       body.querySelector('.mp-see')?.addEventListener('click', () => void app.show(plusScreen(reportScreen(child, tab))));
       body.scrollTop = 0;
@@ -358,7 +358,7 @@ export function reportScreen(child: Child, start: Tab = 'overview') {
         if (ok) markBackedUp(app, child);
         if (ok) app.toast(`Saved ${name}`);
       } catch {
-        app.toast('The report card couldn’t be saved. Please try again.');
+        app.toast('The progress file couldn’t be saved. Please try again.');
       } finally {
         saving = false;
       }

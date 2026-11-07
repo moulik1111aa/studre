@@ -32,7 +32,8 @@ import { startReminders } from './ui/remindsync.ts';
 import { startInbox } from './ui/inbox.ts';
 import { parentScreen } from './ui/parent.ts';
 import { showLesson } from './ui/lesson.ts';
-import { accessState, lockScreen, ownerScreen } from './ui/access.ts';
+import { accessState, lockScreen } from './ui/access.ts';
+import { ownerScreen } from './ui/owner.ts';
 import { startCloud } from './ui/cloud.ts';
 import { hasPlus, plusScreen, startPlus } from './ui/membership.ts';
 import { plusVideoScreen } from './ui/plusvideo.ts';
@@ -66,12 +67,12 @@ async function boot(): Promise<void> {
   const params = new URLSearchParams(location.search);
 
   // Once a child exists the app opens on "Who's playing?", even if setup was left half-way.
-  // When there is a week of unsaved progress, grown-ups see the backup screen first (browser
+  // When there is a week of unsaved progress, parents see the backup screen first (browser
   // test runs only when they ask for it with &backup).
   const home = () => (app.save.data.children.length ? whosPlayingScreen : welcomeScreen);
   // Access keys: the app opens only with a key for this phone (or on the owner's phone).
   // Browser test runs (?debug) skip it unless they ask for it with &lock.
-  // The Play Store build has no keys or approvals: anyone may use it (MN Plus is sold there).
+  // The Play Store build has no keys or approvals: anyone may use it (MN Premium is sold there).
   const gated = !app.storeBuild && (!!native || !app.debug || params.has('lock'));
   let locked = false;
   const gate = async (how: 'fade' | 'liquid' = 'liquid') => {
@@ -80,7 +81,8 @@ async function boot(): Promise<void> {
     if (st?.locked) void app.show(lockScreen(st, () => void gate()), how);
     else void app.show(home(), how);
   };
-  app.ownerHook = (passed) => {
+  // The owner area (not in the Play Store build: owner.ts is swapped for an empty stub there).
+  if (ownerScreen && !app.storeBuild) app.ownerHook = (passed) => {
     // Back from the owner area: carry on where the owner was (a check that opened it counts as
     // passed), or open the app if it was locked.
     const back = app.maker;
@@ -118,7 +120,7 @@ async function boot(): Promise<void> {
   } catch (e) {
     console.error('inbox', e);
   }
-  // MN Plus (Play Store build): what the Play account owns; school paths need it.
+  // MN Premium (Play Store build): what the Play account owns; school syllabuses need it.
   app.plus = () => hasPlus(app);
   try {
     startPlus(app);

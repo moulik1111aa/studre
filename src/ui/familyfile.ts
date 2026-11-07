@@ -1,5 +1,5 @@
 // The family backup file as a page that opens in any browser: who is in it and when it was
-// saved, with the backup itself inside (the same as the cloud copy; see core/familyfile.ts).
+// saved, with the backup itself inside (the same as the online backup; see core/familyfile.ts).
 import { esc, type App } from './app.ts';
 import { familyJson, makeFamilyFile, type FamilyFile } from '../core/familyfile.ts';
 import { familyRules } from '../core/cloud.ts';
@@ -23,9 +23,9 @@ export function familyFileHtml(f: FamilyFile): string {
 h1{font-size:24px;margin:0 0 4px}p{line-height:1.5}ul{list-style:none;padding:0}li{background:#fff;border-radius:14px;padding:12px 14px;margin:8px 0;box-shadow:inset 0 0 0 2px #1A1446}
 li span{display:block;font-size:14px;opacity:.8}.fine{font-size:13px;opacity:.75}</style></head><body>
 <h1>MN family backup</h1>
-<p>Saved ${esc(when.toLocaleString('en-IN'))}, ${f.source === 'cloud' ? 'from the Google cloud copy' : 'from a phone'}.</p>
+<p>Saved ${esc(when.toLocaleString('en-IN'))}, ${f.source === 'cloud' ? 'from the Google online backup' : 'from a phone'}.</p>
 <ul>${rows}</ul>
-<p>To bring everyone back, open MN → Parent area → Backup → <b>Restore from a backup file</b>, and pick this file. It works the same as the cloud copy: if you are signed in with Google, the restored progress backs up there too.</p>
+<p>To bring everyone back, open MN → Parent area → Backup → <b>Restore from a backup file</b>, and pick this file. It works the same as the online backup: if you are signed in with Google, the restored progress backs up there too.</p>
 <p class="fine">Please don’t edit this file: a changed file can’t be restored.</p>
 <script type="application/json" id="mn-family-backup">${familyJson(f)}</script>
 </body></html>`;

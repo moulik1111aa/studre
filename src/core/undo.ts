@@ -1,4 +1,4 @@
-// "Remove the last hour / all of today" for parents (e.g. a grown-up tested the app on a
+// "Remove the last hour / all of today" for parents (e.g. a parent tested the app on a
 // child's profile). Before every saved result we note what it is about to change; rolling
 // back replays those notes newest-first. History of asked questions is left alone.
 

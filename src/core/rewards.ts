@@ -1,5 +1,5 @@
 // The reward catalogue: picture-card rewards you buy or pay for, by category (spec §4).
-// Treats go in the treat jar; toys and dream goals in the big goal jar.
+// Treats go in the treat jar; toys and dream goals in the big reward jar.
 
 export type PriceTier = 'small' | 'medium' | 'large' | 'toyS' | 'toyM' | 'toyB' | 'dream';
 export type Jar = 'treat' | 'goal';
@@ -113,7 +113,7 @@ group('meals', 'large', [['Restaurant dinner', '🍽️']]);
 group('outings', 'large', [['Cinema with popcorn', '🎬'], ['Soft-play area at the mall', '🛝'], ['Swimming pool session', '🏊']]);
 group('books', 'large', [['Card game set', '🃏'], ['300-piece jigsaw', '🧩'], ['Small brick set', '🧱'], ['Magic kit', '🎩'], ['Science kit', '🔬'], ['Art set', '🎨']]);
 
-// Big goal jar: toys.
+// Big reward jar: toys.
 group('toys', 'toyS', [
   ['Action figure', '🦸'], ['Soft toy', '🧸'], ['Small remote-control car', '🚙'], ['Water blaster', '🔫'], ['Kite with charkhi', '🪁'], ['Badminton set', '🏸'],
   ['Cricket bat', '🏏'], ['Football', '⚽'], ['Board game', '🎲'], ['Walkie-talkies', '📻'],
@@ -127,7 +127,7 @@ group('toys', 'toyB', [
   ['Microscope', '🔬'], ['Kids’ headphones', '🎧'], ['New console game', '🎮'],
 ]);
 
-// Big goal jar: big days out (paid).
+// Big reward jar: big days out (paid).
 group('days', 'toyB', [
   ['Game zone day at the mall', '🕹️'], ['Trampoline park', '🤸'], ['Bowling and arcade', '🎳'], ['Laser tag', '🔫'], ['VR games', '🥽'], ['Go-karting', '🏎️'],
   ['Ice skating', '⛸️'], ['Snow park', '❄️'],

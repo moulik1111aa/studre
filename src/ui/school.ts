@@ -1,4 +1,4 @@
-// School path: a grown-up picks the child's board and class; the skills for that class come
+// School syllabus: a parent picks the child's board and class; the skills for that class come
 // ticked, and any can be added or removed. While it's on, the child's map shows only those
 // skills (with their own minion fights and bosses). Switching back to the age path keeps
 // all progress, because skill levels are shared.
@@ -16,6 +16,9 @@ const STRANDS: Record<string, string> = {
   muldiv: 'Times tables and division',
   fdp: 'Fractions, decimals and percent',
   algebra: 'Algebra and powers',
+  shape: 'Shapes and geometry',
+  measure: 'Measuring, time and money',
+  data: 'Graphs, data and chance',
   mental: 'Mental maths',
   word: 'Word problems and money',
 };
@@ -35,7 +38,7 @@ export function schoolScreen(child: Child, back: (app: App) => Screen) {
     let step = 0;
     const LABELS = ['School', 'Class', 'Skills'];
     const all = AREAS[0].skills.flat();
-    const el = html(`<section class="screen limits school" aria-label="School path">
+    const el = html(`<section class="screen limits school" aria-label="School syllabus">
       <header class="topbar"><button class="icon-btn back-btn" aria-label="Back">←</button><span class="t">${esc(child.name)}’s path</span><span style="width:50px"></span></header>
       <div class="stops-slot"></div>
       <div class="scroll lim-body"></div>
@@ -53,7 +56,7 @@ export function schoolScreen(child: Child, back: (app: App) => Screen) {
       if (step === 0) {
         body.innerHTML = `<div class="card lim-card lim-one"><h2 class="ac-q">Which school curriculum does ${esc(child.name)} follow?</h2>
           <div class="seg seg-col">${BOARDS.map((b) => `<button class="seg-b${board === b.id ? ' on' : ''}" data-b="${b.id}"><b>${esc(b.name)}</b><small>${esc(b.country)}: ${esc(b.note)}</small></button>`).join('')}
-          <button class="seg-b${board === '' ? ' on' : ''}" data-b=""><b>No school path</b><small>Follow the app’s path for their age (every skill)</small></button></div>
+          <button class="seg-b${board === '' ? ' on' : ''}" data-b=""><b>No school syllabus</b><small>Follow the app’s path for their age (every skill)</small></button></div>
           <p class="fine">Covers number work, fractions, percent and algebra. Shapes, measuring and data aren’t in the app yet.</p></div>`;
         body.querySelectorAll<HTMLElement>('[data-b]').forEach((b) =>
           b.addEventListener('click', () => {

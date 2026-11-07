@@ -1,4 +1,4 @@
-// School paths: every preset names real skills, each class has a sensible bundle, and the
+// School syllabuses: every preset names real skills, each class has a sensible bundle, and the
 // bundle path keeps skill level ids (shared progress) but has its own reviews and bosses.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

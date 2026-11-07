@@ -8,7 +8,7 @@
 // on its expiry date, and key ids listed in REVOKED stop in the next app update.
 
 const PUBLIC_KEY = 'BJ-JLA2WB9N-NXIJQ6pPejBUAozZQloQoJTn7gZk5Ztf0PlQb0VWlhY3BHgaegukg6nh-12Ifr84grPZ4iOaPLA';
-/** The owner code (typed into a grown-up check) is checked against this PBKDF2 hash. */
+/** The owner code (typed into a parent check) is checked against this PBKDF2 hash. */
 const OWNER = { salt: '_Yw8Tg2CuWS1ztVe75SHiA', hash: 'SmWJftC5XbPVHuQapwQC9gt1X35Sb04YSjvZq2gNsvw', iterations: 150000 };
 /** Key ids that stop working from this build on (ask for one to be added). */
 export const REVOKED: string[] = [];
@@ -148,7 +148,7 @@ export async function checkKey(key: string, phone: string, today: string): Promi
   return { ok: true, until, id };
 }
 
-/** Is this the owner's code? (Typed into a grown-up check.) */
+/** Is this the owner's code? (Typed into a parent check.) */
 export async function isOwnerCode(code: string): Promise<boolean> {
   if (!/^\d{7}$/.test(code)) return false;
   try {

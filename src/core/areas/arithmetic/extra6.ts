@@ -5,7 +5,7 @@
 import { extraSkills, made } from './extra.ts';
 import { PicLesson, withWays, pickN } from '../../teach/pics.ts';
 import { frac, nearNumbers, num } from '../../question.ts';
-import type { MathVisual, Pt } from '../../vis.ts';
+import type { GeoLabel, GeoSeg, MathVisual, Pt } from '../../vis.ts';
 import type { Rng } from '../../rng.ts';
 import type { Lesson } from '../../teach/types.ts';
 
@@ -122,6 +122,28 @@ add('s6.sqrt', 'circarea', 'measure', 'Area of circles', (r, d) => {
   });
 });
 
+/** A cuboid opened out flat: left, front, right and back in a row, top and bottom on the front. */
+function cuboidNet(l: number, b: number, h: number): MathVisual {
+  // Drawn to a tidy scale, so long boxes still fit.
+  const L = Math.max(2, Math.min(l, 6)), B = Math.max(1.5, Math.min(b, 3.5)), H = Math.max(1.5, Math.min(h, 3.5));
+  const x1 = B, x2 = B + L, x3 = 2 * B + L, x4 = 2 * B + 2 * L;
+  const y1 = B, y2 = B + H, y3 = 2 * B + H;
+  const outline: Pt[] = [[0, y1], [x1, y1], [x1, 0], [x2, 0], [x2, y1], [x4, y1], [x4, y2], [x2, y2], [x2, y3], [x1, y3], [x1, y2], [0, y2]];
+  const segs: GeoSeg[] = outline.map((p, i) => ({ a: p, b: outline[(i + 1) % outline.length] }));
+  for (const x of [x1, x2, x3]) segs.push({ a: [x, y1], b: [x, y2], style: 'dash' });
+  for (const y of [y1, y2]) segs.push({ a: [x1, y], b: [x2, y], style: 'dash' });
+  const mid = (a: number, z: number) => (a + z) / 2;
+  const labels: GeoLabel[] = [
+    { at: [mid(x1, x2), mid(y2, y3)], t: `${l}×${b}` },
+    { at: [mid(x1, x2), mid(y1, y2)], t: `${l}×${h}`, hl: true },
+    { at: [mid(x1, x2), mid(0, y1)], t: `${l}×${b}` },
+    { at: [mid(x3, x4), mid(y1, y2)], t: `${l}×${h}`, hl: true },
+    { at: [mid(0, x1), mid(y1, y2)], t: `${b}×${h}`, small: true },
+    { at: [mid(x2, x3), mid(y1, y2)], t: `${b}×${h}`, small: true },
+  ];
+  return { kind: 'geo', w: x4, h: y3, segs, labels, fill: outline };
+}
+
 add('s6.circarea', 'surfarea', 'measure', 'Surface area of cuboids', (r) => {
   const l = r.int(3, 12), b = r.int(2, 9), h = r.int(2, 9);
   const sa = 2 * (l * b + b * h + l * h);
@@ -132,8 +154,10 @@ add('s6.circarea', 'surfarea', 'measure', 'Surface area of cuboids', (r) => {
     teach: () => {
       const L = new PicLesson();
       L.show(v);
-      L.say('Unfold the box: it has 6 faces in 3 matching pairs.');
-      L.show({ kind: 'table', head: ['pair', 'one face', 'two faces'], rows: [['top & bottom', `${l} × ${b} = ${l * b}`, `${2 * l * b}`], ['front & back', `${l} × ${h} = ${l * h}`, `${2 * l * h}`], ['left & right', `${b} × ${h} = ${b * h}`, `${2 * b * h}`]] });
+      L.say('The surface area is all the cardboard the box is made of.');
+      L.show(cuboidNet(l, b, h));
+      L.say('Unfold the box: 6 faces, in 3 matching pairs (top and bottom, front and back, left and right).');
+      L.show({ kind: 'table', head: ['pair', 'one face', 'two faces'], rows: [['top & bottom', `${l} × ${b} = ${l * b}`, `${2 * l * b}`], ['front & back', `${l} × ${h} = ${l * h}`, `${2 * l * h}`], ['left & right', `${b} × ${h} = ${b * h}`, `${2 * b * h}`], ['all six', '', `${sa}`]], hl: [[3, 2]] });
       L.say('Add all six faces.', `${2 * l * b} + ${2 * l * h} + ${2 * b * h} = ${sa}`);
       return L.end(sa, `So the surface area is ${sa} cm².`);
     },

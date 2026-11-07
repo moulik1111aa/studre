@@ -1,4 +1,4 @@
-// MN Plus: choose the app's launcher icon (Android). The phone keeps the choice itself (one
+// MN Premium: choose the app's launcher icon (Android). The phone keeps the choice itself (one
 // launcher entry is on at a time), so there is nothing to save in the app.
 
 import { esc, type App } from './app.ts';

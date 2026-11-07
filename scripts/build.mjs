@@ -3,7 +3,7 @@
 // module registry and inlines everything (CSS, app bundle, worker bundle) into a
 // single self-contained dist/index.html.
 import { createRequire } from 'node:module';
-import { readFileSync, writeFileSync, mkdirSync, readdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync } from 'node:fs';
 import { dirname, resolve, relative, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -22,7 +22,10 @@ export function bundle(entryAbs) {
     const file = queue.pop();
     const id = relative(src, file).split('\\').join('/');
     if (modules.has(id)) continue;
-    const text = readFileSync(file, 'utf8');
+    // The Play Store build (MN_STORE=play) uses X.play.ts in place of X.ts where one exists:
+    // the owner area is left out of that app entirely.
+    const play = process.env.MN_STORE === 'play' && file.endsWith('.ts') && existsSync(file.replace(/\.ts$/, '.play.ts'));
+    const text = readFileSync(play ? file.replace(/\.ts$/, '.play.ts') : file, 'utf8');
     const deps = {};
     for (const imp of ts.preProcessFile(text, true, true).importedFiles) {
       const spec = imp.fileName;
