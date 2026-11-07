@@ -12,6 +12,7 @@ import { logPlay, type PlayEntry, type Tally } from './stats.ts';
 
 export const BACKUP_FORMAT = 'mn-child-backup';
 export const BACKUP_VERSION = 1;
+// Never change: older backups are sealed with it (the app was once called Mission Next).
 const SALT = 'MN Mission Next · child backup · v1';
 
 export interface Backup {

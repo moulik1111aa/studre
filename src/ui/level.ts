@@ -70,18 +70,35 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
       ${ambientHtml(level.stage, 6)}
       <header class="play-top">
         <button class="icon-btn quit" aria-label="Pause">${ICONS.pause}</button>
-        <div class="play-title"><b>${firstLevels ? '🤝 Practice together' : child.assisted ? `👪 Play together · ${TIER_NAMES[level.tier]}` : TIER_NAMES[level.tier]}${boost ? ` · ${boost === 2 ? '🔥🔥 Toughest' : '🔥 Harder'}` : ''}</b><span>${skill.name}</span></div>
+        <div class="play-title"><b>${firstLevels ? 'Practice together' : child.assisted ? `Play together · ${TIER_NAMES[level.tier]}` : TIER_NAMES[level.tier]}${boost ? ` · ${boost === 2 ? 'Toughest' : 'Harder'}` : ''}</b><span>${skill.name}</span></div>
         <div class="dots" aria-hidden="true"></div>
       </header>
       <div class="prize" aria-live="polite"></div>
       ${combo ? '<div class="combo" aria-live="polite" hidden></div>' : ''}
-      <div class="jar-slot"></div>
+      <div class="jar-slot"><div class="jar-fold"></div><button type="button" class="jar-line" aria-label="Show rewards"><i></i></button></div>
       <div class="timer" hidden><i></i></div>
       <main class="qwrap" aria-live="polite"></main>
       <footer class="answers"></footer>
     </section>`);
     const jar = new JarBar(child);
-    el.querySelector('.jar-slot')!.appendChild(jar.el);
+    el.querySelector('.jar-fold')!.appendChild(jar.el);
+    // While answering, the rewards fold into a thin line (more room for the question); a tap opens
+    // them for a moment, and they open again at the end of the level.
+    const jarLine = el.querySelector<HTMLElement>('.jar-line')!;
+    jarLine.style.setProperty('--jp', jar.el.querySelector<HTMLElement>('.tr-fill')?.style.width || '0%');
+    let foldTimer = 0;
+    const foldJar = (after: number) => {
+      clearTimeout(foldTimer);
+      foldTimer = window.setTimeout(() => el.classList.add('focus'), after);
+    };
+    const openJar = () => {
+      clearTimeout(foldTimer);
+      el.classList.remove('focus');
+    };
+    jarLine.addEventListener('click', () => {
+      openJar();
+      foldJar(2600);
+    });
     const qwrap = el.querySelector<HTMLElement>('.qwrap')!;
     const answers = el.querySelector<HTMLElement>('.answers')!;
     const dots = el.querySelector<HTMLElement>('.dots')!;
@@ -138,7 +155,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
       comboEl.hidden = false;
       const big = run >= 10 ? ' mega' : run >= 5 ? ' hot' : '';
       comboEl.className = `combo${big}`;
-      comboEl.innerHTML = `<span aria-hidden="true">${run >= 10 ? '🔥🔥' : '🔥'}</span><b>${run}</b> in a row!`;
+      comboEl.innerHTML = `<b>${run}</b> in a row!`;
       if (reducedMotion()) return;
       comboEl.animate([{ transform: 'scale(.6) rotate(-6deg)' }, { transform: 'scale(1.18) rotate(3deg)', offset: 0.6 }, { transform: 'scale(1)' }], { duration: 420, easing: EASE_OUT });
       if (run === 5 || run === 10 || run === 15 || run === 20) {
@@ -160,16 +177,16 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
       }
       if (!again) asked.push(q);
       const prompt = q.prompt;
-      qwrap.innerHTML = `<article class="qcard${q.visual ? ' has-vis' : ''}">
+      qwrap.innerHTML = `<article class="qcard${q.visual ? ' has-vis' : ''}" data-tone="${asked.length % 4}">
         ${q.visual ? visualHtml(q.visual, q.key) : ''}
-        ${again ? '<p class="again-note">🤝 Now try one like it</p>' : ''}
+        ${again ? '<p class="again-note">Now try one like it</p>' : ''}
         <h2 class="prompt${prompt.length > 34 ? ' long' : ''}${prompt.length > 70 ? ' xlong' : ''}">${escPrompt(prompt)}</h2>
         <div class="q-tools">
           <button class="icon-btn say" aria-label="Read it again">${ICONS.speaker}</button>
           ${rules.hints && q.hint ? `<button class="icon-btn hint" aria-label="Hint">${ICONS.bulb}</button>` : ''}
         </div>
         <p class="hint-text" hidden>${q.hint ?? ''}</p>
-        ${child.assisted ? `<p class="coach-note"><b>👪 Parent:</b> ${esc(q.hint ?? 'Read it together, then let them choose. Praise the trying, not just the answer.')}</p>` : ''}
+        ${child.assisted ? `<p class="coach-note"><b>Parent:</b> ${esc(q.hint ?? 'Read it together, then let them choose. Praise the trying, not just the answer.')}</p>` : ''}
       </article>`;
       const card = qwrap.firstElementChild as HTMLElement;
       if (app.debug) card.dataset.answer = q.answer;
@@ -294,6 +311,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
     };
 
     const finish = () => {
+      openJar();
       accrue();
       const seconds = Math.round(activeMs / 1000);
       const passMark = rules.streak ?? rules.passMark;
@@ -329,7 +347,7 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
       const toResult = () => void app.show(resultScreen(child, level, { stars, score, total: scoreTotal, coins, unlocked, timeUp: timeState(app, child) !== 'ok', perfect: fraction >= 1, perfectCoins: perfect }));
       // The Adventure pet pops in to cheer the end of the level.
       if (combo && child.adventure?.pet) {
-        petPeek(app, child, el, stars ? `${child.adventure.pet.name}: You did it! 🎉` : `${child.adventure.pet.name}: Nice try! Again?`);
+        petPeek(app, child, el, stars ? `${child.adventure.pet.name}: You did it!` : `${child.adventure.pet.name}: Nice try! Again?`);
         setTimeout(toResult, reducedMotion() ? 300 : 1100);
       } else toResult();
     };
@@ -379,11 +397,12 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
       keepAwake: true,
       mounted: () => {
         stagger([el.querySelector('.play-top')!, jar.el], { gap: 80 });
+        foldJar(1600);
         activeSince = performance.now();
         paintPrize();
         if (firstLevels && child.together === TOGETHER_LEVELS) {
           // The very first one: a word for the parent.
-          const { result } = app.sheet(`<h2>🤝 Play this one together</h2><p>Sit with ${esc(child.name)} for the first ${TOGETHER_LEVELS} levels. If an answer is wrong, Plus shows how and ${esc(child.name)} tries one like it. Only first tries count for coins, so help them think, not answer.</p>`, [{ label: 'Let’s play', value: true, kind: 'mint', back: true }], 'Practice together');
+          const { result } = app.sheet(`<h2>Play this one together</h2><p>Sit with ${esc(child.name)} for the first ${TOGETHER_LEVELS} levels. If an answer is wrong, Plus shows how and ${esc(child.name)} tries one like it. Only first tries count for coins, so help them think, not answer.</p>`, [{ label: 'Let’s play', value: true, kind: 'mint', back: true }], 'Practice together');
           void result.then(() => show(questions[0]));
         } else {
           // Plus says a word first: welcome back, last time, a retry, or a bit of chat.

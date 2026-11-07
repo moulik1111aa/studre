@@ -387,7 +387,6 @@ function build(svg: SVGSVGElement, defs: SVGDefsElement, onTap: (v: string) => v
     const ages: SVGRectElement[] = [];
     for (let i = 0; i < 14; i++) ages.push(S('rect', { x: 150 + i * 56, y: 0, width: 40, height: 0, rx: 6, fill: [SH.blue, SH.red, SH.yel, SH.grn, SH.pink][i % 5] }, root));
     say(root, { text: 'meet', at: 10.6, out: 12.9, y: 520, size: 150, style: 'shape' });
-    say(root, { text: 'Mission Next', at: 11.74, out: 12.9, y: 1240, size: 96, style: 'shape', hi: [1], hiColor: SH.red });
     say(root, { text: 'maths missions', at: 13.21, out: 17.35, y: 380, size: 150, style: 'shape' });
     say(root, { text: 'from age 3 to 16.', at: 15.21, out: 17.35, y: 540, size: 120, style: 'shape', hi: [2, 4], hiColor: SH.red });
     const w = circleWipe(root, 540, 1260, SH.red);
@@ -968,7 +967,7 @@ function build(svg: SVGSVGElement, defs: SVGDefsElement, onTap: (v: string) => v
     for (let i = 0; i < 7; i++) steps.push(S('rect', { x: 130 + i * 118, y: 0, width: 100, height: 0, fill: [SH.grn, SH.blue, SH.yel, SH.red, SH.pink, SH.blue, SH.red][i] }, root));
     say(root, { text: 'small steps.', at: 59.02, out: 61.0, y: 1180, size: 150, style: 'shape' });
     say(root, { text: 'real rewards.', at: 60.03, out: 61.0, y: 1360, size: 140, style: 'print', hi: [1] });
-    say(root, { text: 'mission next', at: 61.5, out: 99, y: 1280, size: 92, style: 'shape', hi: [1], hiColor: SH.red });
+    say(root, { text: 'maths for ages 3 to 16', at: 61.5, out: 99, y: 1280, size: 80, style: 'shape', hi: [3, 5], hiColor: SH.red });
     words[words.length - 1].g.classList.add('op-word');
     const w = circleWipe(root, 540, 760, SH.blue);
     scenes.push({

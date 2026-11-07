@@ -129,7 +129,7 @@ ol.qs{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repe
 .noprint{margin:0 0 12px;padding:10px 12px;border-radius:12px;background:#EEF0FF;font-size:13px}
 </style></head><body><div class="page">
 <p class="noprint">Print this page (Share → Print, or ⋮ → Print in Chrome), or copy the questions onto paper. Answers are on the last page.</p>
-<header>${plusFaceSvg({})}<div><h1>${esc(child.name)}’s maths sheet</h1><p>MN Mission Next · ${esc(nice(today))} · ${qs.length} questions · about ${little ? 10 : 15} minutes, no screen</p></div></header>
+<header>${plusFaceSvg({})}<div><h1>${esc(child.name)}’s maths sheet</h1><p>MN · ${esc(nice(today))} · ${qs.length} questions · about ${little ? 10 : 15} minutes, no screen</p></div></header>
 <div class="fill"><label>Name<span></span></label><label>Time taken<span></span></label><label>Score<span style="border:none;font-size:18px">&nbsp;&nbsp;&nbsp;&nbsp;/ ${qs.length}</span></label></div>
 <p class="tip">${little ? 'Read each one together. Count, point and talk it through before writing.' : 'Show your working in the space. Check each answer once you are done.'}</p>
 <ol class="qs">${qs.map((x, k) => card(x, k + 1)).join('')}</ol>

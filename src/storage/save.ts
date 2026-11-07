@@ -138,8 +138,10 @@ export interface Settings {
   timerSeconds: number;
   /** Build 37's timer choice (1, 1.5, 2 or 0); read once to set timerSeconds. */
   timerScale?: number;
-  /** Look of the app: 'playground' (default for new installs), 'glass', 'schoolbook' or 'precision'. */
+  /** Look of the app: 'studio' (Notebook, default for new installs), 'shapes', 'print', 'playground', 'glass', 'schoolbook' or 'precision'. */
   theme: Theme;
+  /** Set once Playground families were moved to Studio (build 75), so choosing Playground again sticks. */
+  studioMoved?: boolean;
   /** Rewards the family added themselves. */
   ownRewards: OwnReward[];
   /** 3D boss fights (off for slower phones). */
@@ -167,8 +169,13 @@ export interface Settings {
   quietUnlockUntil?: number;
 }
 
-export type Theme = 'playground' | 'glass' | 'schoolbook' | 'precision';
-export const THEMES: Theme[] = ['playground', 'glass', 'schoolbook', 'precision'];
+/** The saved look; Playground (the old default) moves to Studio once. */
+function lookFrom(s: Partial<Settings> | undefined): Theme {
+  const t = THEMES.includes(s?.theme as Theme) ? (s!.theme as Theme) : 'glass';
+  return t === 'playground' && !s?.studioMoved ? 'studio' : t;
+}
+export type Theme = 'studio' | 'shapes' | 'print' | 'playground' | 'glass' | 'schoolbook' | 'precision';
+export const THEMES: Theme[] = ['studio', 'shapes', 'print', 'playground', 'glass', 'schoolbook', 'precision'];
 
 /** A key the owner made (kept only on the owner's phone). */
 export interface IssuedKey {
@@ -233,7 +240,8 @@ export const freshSettings = (): Settings => ({
   voiceGender: 'm',
   volume: 0.8,
   timerSeconds: TIMER_DEFAULT,
-  theme: 'playground',
+  theme: 'studio',
+  studioMoved: true,
   ownRewards: [],
   fx3d: true,
   showFps: false,
@@ -292,7 +300,7 @@ function parse(raw: string | null): SaveData | null {
       ...base,
       ...d,
       version: SAVE_VERSION,
-      settings: { ...base.settings, ...d.settings, timerSeconds: timerFrom(d.settings), ownRewards: Array.isArray(d.settings?.ownRewards) ? d.settings!.ownRewards : [], theme: THEMES.includes(d.settings?.theme as Theme) ? (d.settings!.theme as Theme) : 'glass' },
+      settings: { ...base.settings, ...d.settings, timerSeconds: timerFrom(d.settings), ownRewards: Array.isArray(d.settings?.ownRewards) ? d.settings!.ownRewards : [], theme: lookFrom(d.settings), studioMoved: true },
       faceoff: d.faceoff ?? {},
       children: d.children.map((c) => ({
         ...newChild(c.name ?? 'Champ', c.age ?? 6, c.avatar ?? 0, c.createdDay ?? ''),

@@ -217,3 +217,26 @@ html[data-theme] .q-tools .icon-btn.hint.on{background:var(--accent);color:var(-
 .fd-list li.fx-fixed{background:color-mix(in srgb,var(--good,#2BB673) 18%,transparent)}
 .fd-coins{margin:0;font-size:22px;font-weight:900;display:flex;gap:6px;align-items:center;justify-content:center}
 .fd-coins svg{width:26px;height:26px}
+
+/* A card that scrolls: its bottom fades and a "More below" button sits over the fade. */
+.qwrap{position:relative}
+.qcard.scrolls:not(.at-end){-webkit-mask-image:linear-gradient(#000 calc(100% - 64px),transparent);mask-image:linear-gradient(#000 calc(100% - 64px),transparent)}
+.scroll-cue{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);z-index:3;appearance:none;border:0;cursor:pointer;display:flex;align-items:center;gap:6px;padding:8px 14px 8px 16px;border-radius:999px;font:600 15px/1 var(--font,system-ui);color:var(--cta-ink,#fff);background:var(--cta-bg,#1A1446);box-shadow:0 6px 16px -8px rgba(0,0,0,.5);animation:cueNudge 1.6s ease-in-out infinite}
+.scroll-cue svg{width:18px;height:18px}
+.scroll-cue[hidden]{display:none}
+@keyframes cueNudge{50%{transform:translate(-50%,4px)}}
+@media (prefers-reduced-motion:reduce){.scroll-cue{animation:none}}
+/* The question always keeps some room above the answers (it scrolls inside it if need be). */
+.play .qwrap{min-height:132px}
+
+/* The rewards fold into a thin line while answering (.play.focus), and open again at the end. */
+.play .jar-slot{display:grid;grid-template-rows:1fr 0fr;transition:grid-template-rows .5s cubic-bezier(.2,.8,.2,1)}
+.play.focus .jar-slot{grid-template-rows:0fr 1fr}
+.play .jar-fold{min-height:0;overflow:hidden;padding:0 7px 7px 0;margin:0 -7px -7px 0;transition:opacity .35s,transform .5s cubic-bezier(.2,.8,.2,1)}
+.play.focus .jar-fold{opacity:0;transform:translateY(-10px) scale(.97)}
+.jar-line{appearance:none;border:0;background:none;padding:0;min-height:0;overflow:hidden;cursor:pointer;opacity:0;transition:opacity .35s .15s}
+.play.focus .jar-line{opacity:1}
+.jar-line i{display:block;position:relative;height:6px;margin:8px 2px;border-radius:3px;background:var(--track,rgba(255,255,255,.18));overflow:hidden}
+.jar-line i::after{content:"";position:absolute;inset:0 auto 0 0;width:var(--jp,0%);border-radius:3px;background:var(--accent,#5B3DF5)}
+.play:not(.focus) .jar-line{pointer-events:none}
+@media (prefers-reduced-motion:reduce){.play .jar-slot,.play .jar-fold,.jar-line{transition:none}}

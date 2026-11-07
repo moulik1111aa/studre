@@ -51,6 +51,10 @@ export function mountAnswers(app: App, answers: HTMLElement, q: Question, isDone
   answers.innerHTML = q.choices
     .map((c) => `<button type="button" class="choice" data-v="${encodeURIComponent(c)}" aria-label="${c}">${optionHtml(c, q.optionObject, q.optionVisuals)}</button>`)
     .join('');
+  // Short answers (numbers like 7 or 56) are drawn as a row of round keys in some looks.
+  const short = !q.optionVisuals && !q.optionObject && q.choices.length <= 4 && q.choices.every((c) => [...c].length <= 4);
+  answers.classList.toggle('short', short);
+  answers.style.setProperty('--n', String(q.choices.length));
   const wired = wireChoices(app, answers, (v, b) => {
     if (!isDone()) submit(v, b);
   });

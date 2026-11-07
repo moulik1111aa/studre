@@ -210,4 +210,27 @@ export function fitCard(card: HTMLElement, room: HTMLElement, min = 16): void {
     prompt.style.fontSize = `${size}px`;
     if (vis && i % 3 === 2) vis.style.zoom = String(Math.max(0.6, Number(vis.style.zoom || 1) - 0.1));
   }
+  scrollCue(card, room);
+}
+
+/** When a card still doesn't fit, say so: the bottom fades out and a "More below" button
+ *  scrolls it; both go once the end is reached. */
+function scrollCue(card: HTMLElement, room: HTMLElement): void {
+  room.querySelector(':scope > .scroll-cue')?.remove();
+  const scrolls = card.scrollHeight > card.clientHeight + 2;
+  card.classList.toggle('scrolls', scrolls);
+  if (!scrolls) return;
+  const cue = document.createElement('button');
+  cue.type = 'button';
+  cue.className = 'scroll-cue';
+  cue.innerHTML = 'More below <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  room.appendChild(cue);
+  const end = () => {
+    const done = card.scrollTop + card.clientHeight >= card.scrollHeight - 6;
+    card.classList.toggle('at-end', done);
+    cue.hidden = done;
+  };
+  cue.addEventListener('click', () => card.scrollBy({ top: card.clientHeight * 0.7, behavior: 'smooth' }));
+  card.addEventListener('scroll', end, { passive: true });
+  end();
 }

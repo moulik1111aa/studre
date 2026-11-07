@@ -262,13 +262,13 @@ export function mapScreen(child: Child) {
         sub: adv ? undefined : `${Math.max(0, left)} min left today`,
         badge: avatarHtml(child.avatar, 44),
         items: [
-          { id: 'map', icon: '🗺️', label: 'Map', current: true, onPick: () => undefined },
-          ...(adv ? [{ id: 'adventure', icon: '🎮', label: 'Adventure', note: 'Quests, badges, wardrobe and your pet', onPick: () => void app.show(adventureScreen(child)) }] : []),
-          { id: 'trophies', icon: '🏆', label: 'Trophy room', note: 'Rewards you’ve won', onPick: () => void app.show(trophyScreen(child)) },
-          { id: 'tips', icon: '❓', label: 'How it works', note: 'Plus shows you around', onPick: () => void showMapTips(app, child, el) },
-          { id: 'switch', icon: '👧', label: 'Switch child', onPick: () => void app.show(whosPlayingScreen) },
+          { id: 'map', icon: ICONS.map, label: 'Map', current: true, onPick: () => undefined },
+          ...(adv ? [{ id: 'adventure', icon: ICONS.compass, label: 'Adventure', note: 'Quests, badges, wardrobe and your pet', onPick: () => void app.show(adventureScreen(child)) }] : []),
+          { id: 'trophies', icon: ICONS.trophy, label: 'Trophy room', note: 'Rewards you’ve won', onPick: () => void app.show(trophyScreen(child)) },
+          { id: 'tips', icon: ICONS.help, label: 'How it works', note: 'Plus shows you around', onPick: () => void showMapTips(app, child, el) },
+          { id: 'switch', icon: ICONS.users, label: 'Switch child', onPick: () => void app.show(whosPlayingScreen) },
           { heading: 'Parents' },
-          { id: 'parent', icon: '🔒', label: 'Parent area', note: 'Settings, reports and backups', onPick: async () => (await app.grownUp('Parent area')) && void app.show(parentScreen) },
+          { id: 'parent', icon: ICONS.lock, label: 'Parent area', note: 'Settings, reports and backups', onPick: async () => (await app.grownUp('Parent area')) && void app.show(parentScreen) },
         ],
       }),
     );
@@ -351,7 +351,7 @@ function openSkill(app: App, child: Child, n: Node, path: Level[]): void {
     <p class="chip">Stage ${n.stage}</p><h2>${esc(n.label)}</h2>
     <div class="sk-stars" aria-label="${skillStars(child.progress, n.levels)} of 7 stars">${Array.from({ length: 7 }, (_, i) => `<i class="${i < skillStars(child.progress, n.levels) ? 'on' : ''}">${ICONS.star}</i>`).join('')}<small>${skillStars(child.progress, n.levels)} of 7 stars</small></div>
     <p class="fine sk-stars-how">Pass all 5 levels for 5 stars. Get 3 stars on Learn, Practice and Practise more for one more, and on Speed and Master for the last one.</p>
-    <label class="toggle-row harder-row"><span><b>🔥 Play it harder</b><small>Same skill, tougher numbers, no hints</small></span><input type="checkbox" role="switch" class="harder"${(child.challenge ?? 0) >= 2 ? ' disabled checked' : ''}></label>
+    <label class="toggle-row harder-row"><span><b>Play it harder</b><small>Same skill, tougher numbers, no hints</small></span><input type="checkbox" role="switch" class="harder"${(child.challenge ?? 0) >= 2 ? ' disabled checked' : ''}></label>
     <div class="tiers">${rows}</div>
     <div class="actions"><button class="btn ghost" data-back>Close</button></div></div></div>`);
   ov.querySelectorAll<HTMLButtonElement>('.tier-row').forEach((b) =>

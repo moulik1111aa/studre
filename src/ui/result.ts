@@ -60,7 +60,7 @@ function momentHtml(m: Moment, r: ResultInfo): string {
     <div class="mo-bar"><i class="mo-was" style="width:${m.before * 100}%"></i><i class="mo-new" style="left:${m.before * 100}%;--to:${(m.after - m.before) * 100}%"></i>${ticks}</div>
     <div class="mo-sub"><span>was ${pct(m.before)}</span><span>${r.perfect ? 'Perfect score: the biggest step' : 'Perfect scores fill it fastest'}</span></div>
     <div class="mo-rows">${rows}</div>
-    <p class="mo-next"><span aria-hidden="true">🏁</span><span>${next}</span></p>
+    <p class="mo-next"><span>${next}</span></p>
   </div>`;
 }
 
@@ -88,7 +88,7 @@ export function resultScreen(child: Child, level: Level, r: ResultInfo) {
         <div class="res-stars" aria-label="${r.stars} of 3 stars">${[1, 2, 3].map((n) => `<span class="rstar${n <= r.stars ? ' on' : ''}${n === 2 ? ' mid' : ''}">${ICONS.star}</span>`).join('')}</div>
         <p class="res-score">${r.score} / ${r.total} right</p>
         ${r.coins ? `<p class="res-coins">${coinSvg}<b class="coin-count">+0</b></p>` : r.timeUp && passed ? `<p class="res-note">Time’s up for today, so no coins this time.</p>` : ''}
-        ${moment ? '' : r.perfect ? `<p class="res-perfect">💯 Perfect score — the biggest prize!</p>` : r.perfectCoins && !r.timeUp ? `<p class="res-aim">Aim for perfect: ${coinSvg} <b>+${r.perfectCoins}</b> for ${r.total}/${r.total}</p>` : ''}
+        ${moment ? '' : r.perfect ? `<p class="res-perfect">Perfect score — the biggest prize!</p>` : r.perfectCoins && !r.timeUp ? `<p class="res-aim">Aim for perfect: ${coinSvg} <b>+${r.perfectCoins}</b> for ${r.total}/${r.total}</p>` : ''}
         ${passed ? '' : `<p class="res-note">You need ${level.kind === 'skill' && level.tier === 5 ? '10 in a row' : 'a few more right'} to pass.</p><div class="res-plus"><span class="ps-plus">${plusFaceSvg({ cls: 'oops', outfit: outfitFor(child) })}</span><p>${lineAfterMiss(child, r.score, r.total)}</p></div>`}
       </div>
       ${news}

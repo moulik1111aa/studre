@@ -87,7 +87,7 @@ body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#1A1
 .seal svg{width:31mm;height:31mm}
 </style></head><body><div class="sheet"><div class="frame"><div class="inner">
 ${['tl', 'tr', 'bl', 'br'].map((k) => `<svg class="corner ${k}" viewBox="0 0 40 40" aria-hidden="true"><path d="M2 38 V14 Q2 2 14 2 H38" fill="none" stroke="${ink}" stroke-width="3" stroke-linecap="round"/><circle cx="12" cy="12" r="3.4" fill="${ink}"/></svg>`).join('')}
-<div class="brand">${plusSvg({ noShadow: true })}<span>MN · Mission Next</span></div>
+<div class="brand">${plusSvg({ noShadow: true })}<span>MN</span></div>
 <p class="kind">${c.kind === 'stage' ? 'Certificate of Achievement' : 'Challenge Certificate'}</p>
 <p class="sub">This certificate is proudly given to</p>
 <p class="name">${esc(child.name)}</p>

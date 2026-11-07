@@ -136,7 +136,7 @@ export function questScreen(child: Child, quest: SideQuest) {
       const ov = html(`<div class="quest-end overlay" role="dialog" aria-modal="true" aria-label="Side quest result"><div class="sheet">
         <p class="chip">${asked.length >= QUEST.questions ? 'All 100 done!' : ended ? 'Quest ended' : 'Time’s up!'}</p>
         <h2 class="qe-score"><b>0</b> right</h2>
-        <p>${record ? '🏆 New best score!' : `Best: ${best}`} · ${asked.length} answered in ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}</p>
+        <p>${record ? 'New best score!' : `Best: ${best}`} · ${asked.length} answered in ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}</p>
         <div class="res-stars small">${[1, 2, 3].map((n) => `<span class="rstar${n <= stars ? ' on' : ''}">${ICONS.star}</span>`).join('')}</div>
         ${coins ? `<p class="res-coins">${coinSvg}<b>+${coins}</b></p>` : stars ? '' : '<p>Reach 40 to earn stars and coins.</p>'}
         <div class="jar-slot"></div>

@@ -1,0 +1,133 @@
+/* ---------- Print ----------
+   The risograph scenes of the opening film: cream paper, riso blue and fluoro pink overprinted a
+   little out of register, sun yellow and teal, halftone dots, rounded geometric type and a grain. */
+html[data-theme="print"]{
+  --font:"Inter Display",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--font-num:"Adventor","TeX Gyre Adventor","Inter Display",sans-serif;
+  --font-title:"Adventor","TeX Gyre Adventor","Inter Display",sans-serif;
+  --bg-1:#F4EEE2;--bg-2:#EDE5D5;--bg-3:#FFFBF2;
+  --ink:#1C1A33;--ink-soft:rgba(28,26,51,.76);--ink-faint:rgba(28,26,51,.56);--line:rgba(28,26,51,.16);
+  --accent:#1F6FD0;--accent-ink:#FFFFFF;
+  --progress:radial-gradient(circle,rgba(255,255,255,.35) 1.4px,transparent 1.9px) 0 0/6px 6px,#1F6FD0;
+  --progress-2:radial-gradient(circle,rgba(255,255,255,.35) 1.4px,transparent 1.9px) 0 0/6px 6px,#FF4FA3;
+  --good:#00A6A0;--good-ink:#FFFFFF;--bad:#FF4FA3;--sun:#A87C00;--mint:#00A6A0;--danger:#E63A8A;--pink:#FF4FA3;--violet:#1F6FD0;--sky:#1F6FD0;--coral:#FF4FA3;
+  --surface:#FFFBF2;--surface-2:#F0E8D8;--stroke:#1F6FD0;--stroke-w:2.5px;--surface-shadow:6px 5px 0 rgba(255,79,163,.55);
+  --track:#E8DFCE;--r-card:22px;--r-btn:18px;--r-key:16px;
+  --cta-bg:#1F6FD0;--cta-ink:#FFFFFF;--cta-shadow:6px 5px 0 #FF4FA3;
+  --ghost-bg:#FFFBF2;--ghost-stroke:#1F6FD0;
+  --q-bg:transparent;--q-ink:#1F6FD0;--q-stroke:transparent;--q-weight:700;--q-soft:#F0E8D8;
+  --key-bg:#EAE3D5;--key-ink:#1C1A33;--key-stroke:transparent;--key-shadow:none;--key-weight:700;
+  --tray:transparent;--tray-stroke:transparent;
+  --entry-bg:transparent;--entry-ink:#1F6FD0;--entry-stroke:transparent;
+  --sheet-bg:#F4EEE2;--overlay:rgba(28,26,51,.45);--toast-bg:#1F6FD0;--toast-ink:#FFFFFF;
+  --node-bg:#FFFBF2;--node-ink:#1F6FD0;--node-stroke:#1F6FD0;--node-done:#00A6A0;--node-done-ink:#FFFFFF;
+  --node-now:#FF4FA3;--node-now-ink:#FFFFFF;--boss-bg:#FFD400;
+  --fx-colors:#1F6FD0 #FF4FA3 #FFD400 #00A6A0;
+  --hi-08:rgba(28,26,51,.05);--hi-10:rgba(28,26,51,.06);--hi-12:rgba(28,26,51,.08);--hi-14:rgba(28,26,51,.1);--hi-15:rgba(28,26,51,.1);
+  --hi-16:rgba(28,26,51,.12);--hi-18:rgba(28,26,51,.14);--hi-20:rgba(28,26,51,.16);--hi-22:rgba(28,26,51,.18);--hi-25:rgba(28,26,51,.2);
+  --lo-35:#E8DFCE;--lo-40:#E8DFCE;--lo-45:#E8DFCE;
+  color-scheme:light;
+}
+/* Cream paper with two halftone blots in the corners (pink top right, blue bottom left). */
+html[data-theme="print"] body{background:
+  radial-gradient(circle at calc(100% + 30px) -30px,transparent 0 150px,#F4EEE2 151px),
+  radial-gradient(circle,rgba(255,79,163,.5) 2.4px,transparent 2.9px) 0 0/11px 11px,
+  #F4EEE2 fixed}
+html[data-theme="print"] body::before{content:"";position:fixed;left:-60px;bottom:-60px;width:220px;height:220px;border-radius:50%;pointer-events:none;z-index:0;background:radial-gradient(circle,rgba(31,111,208,.5) 2.4px,transparent 2.9px) 0 0/11px 11px}
+
+/* Rounded geometric type; titles in lowercase, blue with a pink overprint. */
+html[data-theme="print"] :is(h1,h2,h3,.title,.res-title,.wordmark,.ac-q,.world-head h2){font-family:var(--font-title);font-weight:700;letter-spacing:-.01em;color:#1F6FD0}
+html[data-theme="print"] :is(h1,.title,.res-title,.world-head h2){text-transform:lowercase;text-shadow:3px 2px 0 rgba(255,79,163,.55)}
+html[data-theme="print"] .world-head h2{font-size:32px}
+html[data-theme="print"] .wordmark span:last-child{color:#FF4FA3}
+
+/* Buttons: flat inks with the second colour just out of register; they press into place. */
+html[data-theme="print"] .btn{font-family:var(--font-title);font-weight:700;font-size:20px;letter-spacing:0;text-transform:lowercase;transition:transform .08s,box-shadow .08s}
+html[data-theme="print"] .btn:active{transform:translate(4px,3px);opacity:1;box-shadow:2px 2px 0 #FF4FA3}
+html[data-theme="print"] .btn.ghost{background:#FFFBF2;color:#1F6FD0;box-shadow:inset 0 0 0 2.5px #1F6FD0,5px 4px 0 rgba(255,79,163,.55)}
+html[data-theme="print"] .btn.mint{background:#00A6A0;color:#fff;box-shadow:5px 4px 0 #1F6FD0}
+html[data-theme="print"] .btn.danger{background:#FF4FA3;color:#fff;box-shadow:5px 4px 0 #1F6FD0}
+html[data-theme="print"] .btn[disabled]{opacity:.42;box-shadow:none;transform:none}
+html[data-theme="print"] .icon-btn{background:#FFFBF2;color:#1F6FD0;box-shadow:inset 0 0 0 2.5px #1F6FD0,3px 3px 0 rgba(255,79,163,.55)}
+html[data-theme="print"] .icon-btn:active{transform:translate(2px,2px)}
+
+html[data-theme="print"] .tr-track,html[data-theme="print"] .sc-bar,html[data-theme="print"] .mo-bar{box-shadow:inset 0 0 0 2.5px #1F6FD0}
+html[data-theme="print"] .tr-track{height:14px}
+html[data-theme="print"] .timer i,html[data-theme="print"] .q-time{background:#FF4FA3}
+html[data-theme="print"] .dots i.on{background:#00A6A0;transform:none}
+html[data-theme="print"] .dots i.miss{background:#FF4FA3}
+
+html[data-theme="print"] .trail-bg{stroke:#FF4FA3;stroke-opacity:.6;stroke-width:6;stroke-dasharray:2 12;stroke-linecap:round}
+html[data-theme="print"] .trail-done{stroke:#1F6FD0;stroke-width:8;stroke-dasharray:none}
+html[data-theme="print"] .nd-face,html[data-theme="print"] .nd-face.minion,html[data-theme="print"] .nd-face.quest{font-weight:700;font-size:26px;box-shadow:inset 0 0 0 2.5px #1F6FD0,4px 3px 0 rgba(255,79,163,.55)}
+html[data-theme="print"] .node.done .nd-face:not(.boss),html[data-theme="print"] .node.current .nd-face:not(.boss){box-shadow:4px 3px 0 rgba(31,111,208,.55)}
+html[data-theme="print"] .nd-face.boss{box-shadow:inset 0 0 0 2.5px #1F6FD0,5px 4px 0 #FF4FA3}
+html[data-theme="print"] .node.current::before{border:3px solid #FF4FA3}
+html[data-theme="print"] .node.locked .nd-face{opacity:.55}
+html[data-theme="print"] .world + .world{border-top:3px dotted rgba(255,79,163,.6)}
+html[data-theme="print"] .play-bar{background:linear-gradient(180deg,transparent,rgba(244,238,226,.96) 42%)}
+
+html[data-theme="print"] .chip{background:#FFFBF2;color:#1F6FD0;box-shadow:inset 0 0 0 2px #1F6FD0}
+html[data-theme="print"] .seg-b{box-shadow:inset 0 0 0 2.5px #1F6FD0}
+html[data-theme="print"] .seg-b.on{background:#1F6FD0;color:#fff;box-shadow:4px 3px 0 #FF4FA3}
+html[data-theme="print"] .cat.on{box-shadow:4px 3px 0 #FF4FA3}
+html[data-theme="print"] .rstar.on{color:#FFD400;text-shadow:3px 2px 0 rgba(255,79,163,.6)}
+html[data-theme="print"] .toast{box-shadow:4px 3px 0 #FF4FA3}
+html[data-theme="print"] .sheet{box-shadow:inset 0 2.5px 0 #1F6FD0,0 -10px 30px -12px rgba(28,26,51,.3)}
+html[data-theme="print"] .field input{box-shadow:inset 0 0 0 2.5px #1F6FD0}
+html[data-theme="print"] .field input:focus{box-shadow:inset 0 0 0 2.5px #FF4FA3}
+html[data-theme="print"] .av.on{box-shadow:0 0 0 3px #F4EEE2,0 0 0 6px #FF4FA3}
+html[data-theme="print"] .treat.ready{box-shadow:inset 0 0 0 2.5px #1F6FD0,4px 3px 0 #FFD400}
+
+html[data-theme="print"] .mascot .px-fill{fill:var(--flat)}
+html[data-theme="print"] .mascot .px-gloss{display:none}
+html[data-theme="print"] .plus-says{background:#FFFBF2;color:#1C1A33;border-radius:22px;box-shadow:inset 0 0 0 2.5px #1F6FD0,7px 6px 0 rgba(255,79,163,.55)}
+html[data-theme="print"] .ps-plus{background:radial-gradient(circle,rgba(255,212,0,.9) 2.6px,transparent 3px) 0 0/8px 8px,#FFF3B0}
+html[data-theme="print"] .ps-ok{font-family:var(--font-title);font-weight:700;text-transform:lowercase;background:#1F6FD0;color:#fff;box-shadow:4px 3px 0 #FF4FA3}
+
+/* The question: on a halftone band, blue ink with a pink overprint; the picture on a yellow
+   halftone circle; answers are flat ink tickets; the pad is tinted, no outlines. */
+html[data-theme="print"] .qcard,html[data-theme="print"] .qcard.right,html[data-theme="print"] .qcard.quick{background:radial-gradient(circle,rgba(255,79,163,.22) 2.2px,transparent 2.7px) 0 0/11px 11px;box-shadow:none;border-radius:28px;padding:20px 12px;gap:14px}
+html[data-theme="print"] .qcard.right{background:radial-gradient(circle,rgba(0,166,160,.3) 2.2px,transparent 2.7px) 0 0/11px 11px}
+html[data-theme="print"] .qcard .prompt{font-family:var(--font-title);font-weight:700;font-size:44px;line-height:1.08;letter-spacing:-.01em;color:#1F6FD0;text-shadow:4px 3px 0 rgba(255,79,163,.55)}
+html[data-theme="print"] .qcard .prompt.long{font-size:33px}
+html[data-theme="print"] .qcard .prompt.xlong{font-size:25px;line-height:1.16}
+html[data-theme="print"] .qcard .group{background:none;box-shadow:none}
+html[data-theme="print"] .qcard.has-vis .vis{min-width:240px;min-height:236px;padding:22px 10px;background:radial-gradient(circle at 50% 50%,#FFE97A 0 108px,transparent 109px)}
+html[data-theme="print"] .q-tools .icon-btn{width:44px;height:44px;border-radius:50%}
+html[data-theme="print"] .q-tools .icon-btn.hint.on{background:#FFD400;color:#1C1A33}
+html[data-theme="print"] .hint-text{background:#FFF3B0;color:#1C1A33;border-radius:14px;box-shadow:4px 3px 0 rgba(255,79,163,.45);font-weight:600}
+html[data-theme="print"] .reveal{background:#FFFBF2;color:#1C1A33;border-radius:16px;box-shadow:inset 0 0 0 2.5px #1F6FD0,5px 4px 0 rgba(255,79,163,.55)}
+html[data-theme="print"] .reveal b{color:#E63A8A}
+html[data-theme="print"] .reveal.good{box-shadow:inset 0 0 0 2.5px #00A6A0,5px 4px 0 rgba(31,111,208,.45)}
+html[data-theme="print"] .reveal.good b{color:#00807B}
+html[data-theme="print"] .scroll-cue{background:#1F6FD0;color:#fff;box-shadow:4px 3px 0 #FF4FA3}
+html[data-theme="print"] .answers{gap:14px}
+html[data-theme="print"] .choice{border-radius:18px;font-family:var(--font-num);font-weight:700;font-size:32px;min-height:76px;color:#fff;background:#1F6FD0;box-shadow:6px 5px 0 #FF4FA3}
+html[data-theme="print"] .choice:nth-child(2){background:#00A6A0;box-shadow:6px 5px 0 #1F6FD0}
+html[data-theme="print"] .choice:nth-child(3){background:#FFD400;color:#1C1A33;box-shadow:6px 5px 0 #FF4FA3}
+html[data-theme="print"] .choice:nth-child(4){background:#FF4FA3;box-shadow:6px 5px 0 #1F6FD0}
+html[data-theme="print"] .answers.fmt-picture .choice{background:#FFFBF2;box-shadow:inset 0 0 0 2.5px #1F6FD0,5px 4px 0 rgba(255,79,163,.55)}
+html[data-theme="print"] .choice:active{transform:translate(4px,3px);box-shadow:2px 2px 0 #FF4FA3}
+html[data-theme="print"] .choice.right,html[data-theme="print"] .answers.fmt-picture .choice.right{background:#00A6A0;color:#fff;box-shadow:6px 5px 0 #1C1A33;animation:prPop .38s var(--ease-spring)}
+html[data-theme="print"] .choice.wrong,html[data-theme="print"] .answers.fmt-picture .choice.wrong{background:#E9E2D4;color:rgba(28,26,51,.4);box-shadow:none;animation:prNo .32s ease-out}
+@keyframes prPop{40%{transform:scale(1.08)}}
+@keyframes prNo{25%{transform:translateX(-6px)}50%{transform:translateX(6px)}75%{transform:translateX(-3px)}}
+html[data-theme="print"] .answers.short{display:grid;grid-template-columns:repeat(var(--n,3),minmax(0,86px));justify-content:center;gap:18px}
+html[data-theme="print"] .answers.short .choice{aspect-ratio:1;min-height:0;border-radius:50%;padding:0;font-size:36px}
+html[data-theme="print"] .answers.fmt-pad,html[data-theme="print"] .answers.fmt-pad-ext{background:none;box-shadow:none;padding:4px 2px}
+html[data-theme="print"] .entry{background:none;border-radius:0;box-shadow:inset 0 -3px 0 #1F6FD0;margin:0 34px;font-family:var(--font-num);font-size:46px;font-weight:700;color:#1F6FD0}
+html[data-theme="print"] .caret{background:#FF4FA3;width:3px}
+html[data-theme="print"] .answers .key,html[data-theme="print"] .answers .key.small,html[data-theme="print"] .answers .key[data-k="⌫"]{background:#EAE3D5;box-shadow:none;border-radius:14px;font-weight:700;font-size:26px;color:#1C1A33}
+html[data-theme="print"] .answers .key:active{transform:scale(.96);background:#FFD400}
+html[data-theme="print"] .answers .key[data-k="⌫"]{color:#E63A8A}
+html[data-theme="print"] .answers .pad-row .ok{background:#1F6FD0;color:#fff;box-shadow:5px 4px 0 #FF4FA3}
+@media (max-height:760px){
+  html[data-theme="print"] .answers .key{min-height:44px;font-size:23px}
+  html[data-theme="print"] .entry{font-size:36px;min-height:48px}
+}
+@media (prefers-reduced-motion:reduce){html[data-theme="print"] .choice.right,html[data-theme="print"] .choice.wrong{animation:none}}
+
+.th-print .th-swatch{background:radial-gradient(circle,rgba(255,79,163,.55) 1.8px,transparent 2.2px) 0 0/7px 7px,#F4EEE2;box-shadow:inset 0 0 0 2px #1F6FD0}
+.th-print .th-swatch i:nth-child(1){left:14px;right:34%;top:13px;height:18px;border-radius:9px;background:#1F6FD0;box-shadow:4px 3px 0 #FF4FA3}
+.th-print .th-swatch i:nth-child(2){left:14px;width:30%;bottom:10px;height:8px;border-radius:4px;background:#FFD400}
+.th-print .th-swatch i:nth-child(3){right:14px;bottom:8px;width:22px;height:22px;border-radius:50%;background:#00A6A0;box-shadow:3px 2px 0 #1F6FD0}

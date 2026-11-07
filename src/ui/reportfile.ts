@@ -105,7 +105,7 @@ footer{margin-top:18px;padding:14px 16px;border-radius:14px;background:#EEEAFE;c
 @media print{body{background:#fff}section{border-color:#ccc}footer{display:none}}
 </style></head>
 <body><main>
-<header>${plusFaceSvg()}<div><h1>${esc(child.name)}’s progress file</h1><p>MN · Mission Next · ${esc(nice(today))}</p></div></header>
+<header>${plusFaceSvg()}<div><h1>${esc(child.name)}’s progress file</h1><p>MN · ${esc(nice(today))}</p></div></header>
 
 <section><div class="who"><span>Age <b>${child.age}</b></span><span>${child.school?.on ? `Path: <b>${esc(schoolLabel(child.school))}</b>` : `Stage <b>${front?.stage ?? 7}: ${esc(stage.name)}</b> (ages ${stage.ages})`}</span><span>Now on: <b>${esc(label(front))}</b></span>${child.createdDay ? `<span>Playing since <b>${esc(nice(child.createdDay))}</b></span>` : ''}</div></section>
 

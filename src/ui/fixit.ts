@@ -56,7 +56,7 @@ function fixitScreen(child: Child, items: FixDue[]) {
       ${ambientHtml(firstStage, 5)}
       <header class="play-top">
         <button class="icon-btn quit" aria-label="Pause">${ICONS.pause}</button>
-        <div class="play-title"><b>🔧 Fix-it</b><span>Tricky ones from before</span></div>
+        <div class="play-title"><b>Fix-it</b><span>Tricky ones from before</span></div>
         <div class="dots" aria-hidden="true">${questions.map(() => '<i></i>').join('')}</div>
       </header>
       <main class="qwrap" aria-live="polite"></main>
@@ -80,7 +80,7 @@ function fixitScreen(child: Child, items: FixDue[]) {
     const show = (q: Question, again = false) => {
       qwrap.innerHTML = `<article class="qcard${q.visual ? ' has-vis' : ''}">
         ${q.visual ? visualHtml(q.visual, q.key) : ''}
-        ${again ? '<p class="again-note">🤝 Now try one like it</p>' : `<p class="fix-skill">${esc(skillById(q.skillId)!.name)}</p>`}
+        ${again ? '<p class="again-note">Now try one like it</p>' : `<p class="fix-skill">${esc(skillById(q.skillId)!.name)}</p>`}
         <h2 class="prompt${q.prompt.length > 34 ? ' long' : ''}${q.prompt.length > 70 ? ' xlong' : ''}">${escPrompt(q.prompt)}</h2>
         <div class="q-tools"><button class="icon-btn say" aria-label="Read it again">${ICONS.speaker}</button></div>
       </article>`;
@@ -177,7 +177,7 @@ function fixitScreen(child: Child, items: FixDue[]) {
         .map((it, k) => {
           const o = outcomes[k];
           const name = esc(skillById(it.skillId)!.name);
-          const when = o === 'fixed' ? 'Fixed for good! 🎉' : o === 'next' ? `Back in ${FIX_GAPS[it.step + 1]} days` : 'Back tomorrow';
+          const when = o === 'fixed' ? 'Fixed for good!' : o === 'next' ? `Back in ${FIX_GAPS[it.step + 1]} days` : 'Back tomorrow';
           return `<li class="fx-${o}"><span aria-hidden="true">${o === 'again' ? '🔁' : o === 'fixed' ? '🏅' : '✅'}</span><b>${name}</b><small>${when}</small></li>`;
         })
         .join('');

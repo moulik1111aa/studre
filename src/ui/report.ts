@@ -45,11 +45,11 @@ const STRANDS: [string, string][] = [
   ['data', 'Data & chance'],
 ];
 const TABS = [
-  ['overview', 'Stats', '📊'],
-  ['skills', 'Skills', '🧠'],
-  ['activity', 'Activity', '📅'],
-  ['rewards', 'Rewards', '🎁'],
-  ['manage', 'Manage', '⚙️'],
+  ['overview', 'Stats', ICONS.chart],
+  ['skills', 'Skills', ICONS.brain],
+  ['activity', 'Activity', ICONS.calendar],
+  ['rewards', 'Rewards', ICONS.gift],
+  ['manage', 'Manage', ICONS.gear],
 ] as const;
 type Tab = (typeof TABS)[number][0];
 
@@ -144,13 +144,13 @@ export function reportScreen(child: Child, start: Tab = 'overview') {
     const most = [...figs].sort((a, b) => b.answers - a.answers)[0];
     const bd = bestDay(secs);
     const highlights = [
-      bd ? `📅 Best day: <b>${esc(niceDate(bd.day))}</b>, ${bd.minutes} minutes` : '',
-      most ? `🔁 Most practised: <b>${esc(skillName(most.id))}</b> (${most.answers} questions)` : '',
-      fastest ? `⚡ Quickest: <b>${esc(skillName(fastest.id))}</b>, ${fastest.speed.toFixed(1)} s an answer` : '',
-      tracked && topTod.levels ? `🕒 Plays most in the <b>${topTod.label.toLowerCase()}</b>` : '',
-      week.answers && lastWeek.answers ? `🎯 Accuracy this week: <b>${pct(week.right, week.answers)}%</b> (last week ${pct(lastWeek.right, lastWeek.answers)}%)` : '',
+      bd ? `Best day: <b>${esc(niceDate(bd.day))}</b>, ${bd.minutes} minutes` : '',
+      most ? `Most practised: <b>${esc(skillName(most.id))}</b> (${most.answers} questions)` : '',
+      fastest ? `Quickest: <b>${esc(skillName(fastest.id))}</b>, ${fastest.speed.toFixed(1)} s an answer` : '',
+      tracked && topTod.levels ? `Plays most in the <b>${topTod.label.toLowerCase()}</b>` : '',
+      week.answers && lastWeek.answers ? `Accuracy this week: <b>${pct(week.right, week.answers)}%</b> (last week ${pct(lastWeek.right, lastWeek.answers)}%)` : '',
       daysPlayed ? `⏱️ On days played: <b>${Math.round(totalMin / daysPlayed)} min</b> on average` : '',
-      st.best > 1 ? `🔥 Longest streak: <b>${st.best} days</b> in a row` : '',
+      st.best > 1 ? `Longest streak: <b>${st.best} days</b> in a row` : '',
     ].filter(Boolean);
     const kpi = (v: string, label: string, sub = '') => `<div class="rp-kpi"><b>${v}</b><small>${label}</small>${sub ? `<em>${sub}</em>` : ''}</div>`;
     const weekRow = (label: string, now: number, before: number, unit = '') => `<tr><th>${label}</th><td>${now}${unit}</td><td>${before}${unit}</td><td>${change(now, before, unit)}</td></tr>`;
@@ -163,7 +163,7 @@ export function reportScreen(child: Child, start: Tab = 'overview') {
       .map(([id]) => esc(skillName(id)));
     const fixCard =
       fc.due + fc.waiting + fc.fixed
-        ? `<h3 class="pa-h">Fix-it</h3><div class="card rp-fix"><p>🔧 <b>${fc.fixed}</b> fixed for good · <b>${fc.due + fc.waiting}</b> still coming back${fc.due ? ` (<b>${fc.due}</b> ready today)` : ''}</p>${waitingSkills.length ? `<p class="fine">Working on: ${waitingSkills.join(', ')}</p>` : ''}<p class="fine">A question missed in a level comes back a day later, then after 3 days, then a week, with new numbers each time.</p></div>`
+        ? `<h3 class="pa-h">Fix-it</h3><div class="card rp-fix"><p><b>${fc.fixed}</b> fixed for good · <b>${fc.due + fc.waiting}</b> still coming back${fc.due ? ` (<b>${fc.due}</b> ready today)` : ''}</p>${waitingSkills.length ? `<p class="fine">Working on: ${waitingSkills.join(', ')}</p>` : ''}<p class="fine">A question missed in a level comes back a day later, then after 3 days, then a week, with new numbers each time.</p></div>`
         : '';
     const overview = `
       <div class="card rp-hero">${avatarHtml(child.avatar, 64)}<div><h2>${esc(child.name)}</h2>
@@ -231,8 +231,8 @@ export function reportScreen(child: Child, start: Tab = 'overview') {
       <h3 class="pa-h">By branch of maths</h3><div class="card rp-strands">${branchRows}<p class="fine">The same colours and badges mark each stop on ${esc(child.name)}’s map. Bar: skills mastered.</p></div>
       <h3 class="pa-h">Skills by strand</h3><div class="card rp-strands">${strandRows}<p class="fine">Bar: skills mastered (lighter part skipped at placement). Right: share of answers right.</p></div>
       <div class="rp-two">
-        <div class="card rp-good"><h3>💪 Strengths</h3>${best.length ? `<ul>${best.map(skillLine).join('')}</ul>` : '<p class="fine">Shows once a skill has 8 or more answers, with 80% or more right.</p>'}</div>
-        <div class="card rp-work"><h3>🎯 Worth practising</h3>${practise.length ? `<ul>${practise.map(skillLine).join('')}</ul>` : '<p class="fine">Nothing below 80% right so far. 🎉</p>'}</div>
+        <div class="card rp-good"><h3>Strengths</h3>${best.length ? `<ul>${best.map(skillLine).join('')}</ul>` : '<p class="fine">Shows once a skill has 8 or more answers, with 80% or more right.</p>'}</div>
+        <div class="card rp-work"><h3>Worth practising</h3>${practise.length ? `<ul>${practise.map(skillLine).join('')}</ul>` : '<p class="fine">Nothing below 80% right so far.</p>'}</div>
       </div>
       ${ways.length ? `<h3 class="pa-h">Ways that work for ${esc(child.name)}</h3><div class="card rp-ways"><ul>${ways.map(([f, m]) => `<li><span>${esc(familyName(f))}</span><b>${esc(m)}</b></li>`).join('')}</ul><p class="fine">When a “Show me how” lesson didn’t click, ${esc(child.name)} tried another way and finished with it. Those lessons now open with that way first.</p></div>` : ''}
       <h3 class="pa-h">Speed and stars</h3>
@@ -303,7 +303,7 @@ export function reportScreen(child: Child, start: Tab = 'overview') {
       <h3 class="pa-h">Rewards given</h3>
       <ul class="card rp-list">${earned.length ? [...earned].reverse().map((e) => `<li>${rewardById(e.rewardId)?.icon ?? '🎁'} <b>${esc(rewardById(e.rewardId)?.name ?? 'Reward')}</b> <small>${esc(niceDate(e.day))}</small></li>`).join('') : '<li><small>None yet. The first treat is usually about 10 days in.</small></li>'}</ul>
       <h3 class="pa-h">Challenges won</h3>
-      <ul class="card rp-list">${child.bossesBeaten.length ? child.bossesBeaten.map((id) => `<li>🏆 <b>${esc(BOSSES.find((b) => b.id === id)?.name ?? id)}</b></li>`).join('') : '<li><small>None yet.</small></li>'}</ul>`;
+      <ul class="card rp-list">${child.bossesBeaten.length ? child.bossesBeaten.map((id) => `<li>${ICONS.trophy} <b>${esc(BOSSES.find((b) => b.id === id)?.name ?? id)}</b></li>`).join('') : '<li><small>None yet.</small></li>'}</ul>`;
 
     // ── Manage ──────────────────────────────────────────────────────────────
     const hour = changesSince(child, Date.now() - 3_600_000);
@@ -335,7 +335,7 @@ export function reportScreen(child: Child, start: Tab = 'overview') {
       const locked = (tab === 'skills' || tab === 'activity' || tab === 'rewards') && !hasPlus(app);
       body.innerHTML = locked
         ? `<div class="mp-lock"><div class="mp-lock-peek" inert aria-hidden="true">${bodies[tab]}</div>
-            <div class="card mp-lock-card"><b>✨ ${esc(child.name)}’s full report</b><p>Strengths, skills to practise, how quickly ${esc(child.name)} answers, and the times of day they do best. Part of MN ×.</p><button class="btn mint small mp-see">See MN ×</button></div></div>`
+            <div class="card mp-lock-card"><b>${esc(child.name)}’s full report</b><p>Strengths, skills to practise, how quickly ${esc(child.name)} answers, and the times of day they do best. Part of MN ×.</p><button class="btn mint small mp-see">See MN ×</button></div></div>`
         : (tab === 'skills' || tab === 'activity' || tab === 'rewards' ? mnxIncluded(app) : '') + bodies[tab];
       body.querySelector('.mp-see')?.addEventListener('click', () => void app.show(plusScreen(reportScreen(child, tab))));
       body.scrollTop = 0;

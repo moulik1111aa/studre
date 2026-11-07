@@ -1,5 +1,5 @@
 /**
- * MN Mission Next: email notes for access requests (free, runs in your own Google account).
+ * MN: email notes for access requests (free, runs in your own Google account).
  *
  * Every 5 minutes this script looks at MN's cloud (Firestore, project mn-mission-next):
  *  - someone asked to use MN  → an email to them ("we've got your request"), with a hidden copy to you;
@@ -16,7 +16,7 @@ const NOTIFY_TO = 'mbatechindore@gmail.com';
 /** Welcome emails to approved people: on hold for now. Set to true to start them (only approvals from then on get one). */
 const SEND_WELCOME = false;
 /** What people see as the sender, and where their replies go. */
-const FROM_NAME = 'MN Mission Next';
+const FROM_NAME = 'MN';
 const REPLY_TO = 'moulikmishra11@gmail.com';
 const PRIVACY = 'https://mn-mission-next.web.app/privacy';
 
@@ -55,9 +55,9 @@ function check() {
     if (d.id in seenReq) return;
     seenReq[d.id] = at;
     if (!r.email) return;
-    send_(String(r.email), 'MN Mission Next: we’ve got your request',
+    send_(String(r.email), 'MN: we’ve got your request',
       '<p>Hi' + (r.name ? ' ' + esc_(String(r.name).split(' ')[0]) : '') + ',</p>' +
-      '<p>Thanks for signing in to MN Mission Next with <b>' + esc_(r.email) + '</b>. Your request to use MN is with us, and we’ll let you know once it’s approved.</p>' +
+      '<p>Thanks for signing in to MN with <b>' + esc_(r.email) + '</b>. Your request to use MN is with us, and we’ll let you know once it’s approved.</p>' +
       '<p>Phone code: <b>' + esc_(r.phone || '?') + '</b><br>Requested: ' + esc_(when_(at)) + '</p>' +
       '<p>Once you’re approved, open MN and tap <b>Check again</b>. If you have a phone-code key, you can keep using MN with it meanwhile.</p>' +
       '<p style="color:#5B5F7A;font-size:13px">Questions? Just reply to this email.</p>',
@@ -73,7 +73,7 @@ function check() {
     seenAcc[d.id] = added;
     if (!SEND_WELCOME) return; // on hold: noted as seen, so turning it on later doesn't email past approvals
     const until = Number(a.until || 0);
-    send_(d.id, 'You’re in: MN Mission Next is ready',
+    send_(d.id, 'You’re in: MN is ready',
       '<p>Hi' + (a.name ? ' ' + esc_(String(a.name).split(' ')[0]) : '') + ',</p>' +
       '<p>Your Google account <b>' + esc_(d.id) + '</b> can now use MN' + (until ? ', until ' + esc_(day_(until)) : '') + '.</p>' +
       '<p>Open MN on your phone and tap <b>Check again</b>, or just close MN and open it again. Your children’s progress is backed up from now on.</p>' +
@@ -122,7 +122,7 @@ function send_(to, subject, body, bcc) {
     subject: subject,
     name: FROM_NAME,
     replyTo: REPLY_TO,
-    htmlBody: '<div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-size:15px;line-height:1.5;color:#16182B;max-width:520px">' + body + '<p style="color:#5B5F7A;font-size:13px;margin-top:24px">MN Mission Next</p></div>',
+    htmlBody: '<div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-size:15px;line-height:1.5;color:#16182B;max-width:520px">' + body + '<p style="color:#5B5F7A;font-size:13px;margin-top:24px">MN</p></div>',
   });
 }
 

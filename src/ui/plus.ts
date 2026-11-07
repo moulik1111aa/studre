@@ -119,8 +119,8 @@ function body(o: PlusOptions, u: number): string {
     <g class="px-legs" stroke="${C.ink}" stroke-width="7" stroke-linecap="round"><path d="M88 166 L84 190"/><path d="M112 166 L116 190"/></g>
     <ellipse cx="79" cy="193" rx="12.5" ry="6.5" fill="${C.ink}"/><ellipse cx="121" cy="193" rx="12.5" ry="6.5" fill="${C.ink}"/>
     <g fill="${C.ink}" stroke="${C.ink}" stroke-width="12"><rect ${V}/><rect ${H}/></g>
-    <g fill="url(#pxFill${u})"><rect ${V}/><rect ${H}/></g>
-    <path d="M80 26 C81 19 86 16 93 16" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity=".7"/>
+    <g class="px-fill" fill="url(#pxFill${u})" style="--flat:${mid}"><rect ${V}/><rect ${H}/></g>
+    <path class="px-gloss" d="M80 26 C81 19 86 16 93 16" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity=".7"/>
     <g class="px-glove-l">${glove(16, 92)}</g>
     <g class="px-h">${glove(186, 66)}</g>
     <g class="px-face">

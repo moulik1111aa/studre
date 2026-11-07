@@ -145,7 +145,7 @@ export function build() {
   // The shared preview link is a playtest build: it also offers preview tools.
   const previewJs = scriptFor({ ...buildInfo, firebaseKey: '', store: '', preview: true });
   const artifact =
-    `<title>MN · Mission Next</title>\n<meta name="theme-color" content="#0F1530">\n<style>${fontCss}</style>\n<style>${css}</style>\n` +
+    `<title>MN</title>\n<meta name="theme-color" content="#0F1530">\n<style>${fontCss}</style>\n<style>${css}</style>\n` +
     `<div id="app" aria-live="polite"></div>\n${threeTag()}\n${audioTag()}\n<script>${scriptSafe(previewJs)}</script>\n`;
   writeFileSync(join(dist, 'artifact.html'), artifact);
   return { bytes: Buffer.byteLength(html) };

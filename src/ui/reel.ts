@@ -2,7 +2,7 @@
 // (assets/audio/opening.mp3, one file). It moves in stops: each stop plays its line of the
 // voiceover (or, for the worked word problem, plays for a set time) and moves on by itself;
 // Back replays the one before and stays there until Next. One moment
-// lets the child tap the answer. It says what MN (Mission Next) is for (screen time that builds
+// lets the child tap the answer. It says what MN is for (screen time that builds
 // something), how it keeps a child going (a treat they choose, a jar that fills with right
 // answers, lessons after mistakes, bosses) and who is in charge (the parent).
 // The first time it can't be skipped: Next unlocks once the line has played. Afterwards
@@ -131,8 +131,8 @@ function scenes(): ReelScene[] {
       id: 'meet',
       bg: ['#7C3AED', '#DB2777'],
       caption: 'Meet MN',
-      sub: 'Mission Next: maths missions from age 3 to 16.',
-      art: `<div class="rl-meet"><div class="rl-logo">${plusSvg({ cls: 'alive', noShadow: true })}</div><div class="rl-mark"><span>M</span><span>N</span><small>Mission Next</small></div></div>`,
+      sub: 'MN: maths missions from age 3 to 16.',
+      art: `<div class="rl-meet"><div class="rl-logo">${plusSvg({ cls: 'alive', noShadow: true })}</div><div class="rl-mark"><span>M</span><span>N</span></div></div>`,
     },
     {
       id: 'treat',
@@ -194,7 +194,7 @@ function scenes(): ReelScene[] {
       id: 'end',
       bg: ['#6D5DFC', '#DB2777'],
       caption: 'Small steps. Real rewards.',
-      art: `<div class="rl-end"><div class="rl-logo">${plusSvg({ cls: 'spin', noShadow: true })}</div><div class="rl-mark"><span>M</span><span>N</span><small>Mission Next</small></div></div>`,
+      art: `<div class="rl-end"><div class="rl-logo">${plusSvg({ cls: 'spin', noShadow: true })}</div><div class="rl-mark"><span>M</span><span>N</span></div></div>`,
     },
   ];
 }

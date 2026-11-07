@@ -104,7 +104,7 @@ export function examSetupScreen(child: Child, back: (app: App) => Screen) {
     el.querySelector('.back-btn')!.addEventListener('click', () => void app.show(back));
     start.addEventListener('click', async () => {
       const { result } = app.sheet(
-        `<h2>📝 Hand the phone to ${esc(child.name)}</h2><p>${size} questions${pace ? `, ${clock(size * pace)} minutes in all` : ', no time limit'}. Answer each one, or skip it and keep going. The score comes at the end.</p>`,
+        `<h2>Hand the phone to ${esc(child.name)}</h2><p>${size} questions${pace ? `, ${clock(size * pace)} minutes in all` : ', no time limit'}. Answer each one, or skip it and keep going. The score comes at the end.</p>`,
         [
           { label: 'Start', value: true, kind: 'mint' },
           { label: 'Not yet', value: false, kind: 'ghost', back: true },
@@ -134,7 +134,7 @@ export function examScreen(child: Child, skillIds: string[], n: number, pace: nu
     const el = html(`<section class="screen play exam" style="${worldVars(stage)}" aria-label="Exam practice">
       <header class="play-top">
         <button class="icon-btn quit" aria-label="Stop the exam">${ICONS.back}</button>
-        <div class="play-title"><b>📝 Exam practice</b><span class="ex-count"></span></div>
+        <div class="play-title"><b>Exam practice</b><span class="ex-count"></span></div>
         ${limit ? '<span class="ex-clock" role="timer" aria-live="off"></span>' : '<span style="width:50px"></span>'}
       </header>
       <div class="ex-bar" aria-hidden="true"><i></i></div>
@@ -244,7 +244,7 @@ export function examResultScreen(child: Child, rec: ExamRecord, qs: Question[], 
             ? `<h2 class="pa-h">To look at again</h2><div class="ex-wrong">${wrong
                 .map(({ q, k, g }) => `<div class="card ex-w"><p class="ex-q"><span class="ex-n">${k + 1}</span>${escPrompt(q.prompt)}</p><p class="ex-a">${g === null ? '<span class="ex-skipped">Skipped</span>' : `<span class="ex-yours">${prettyAnswer(g)}</span>`}<span class="ex-right">Answer: ${prettyAnswer(q.answer)}</span></p>${q.teach ? `<button class="btn ghost small ex-how" data-k="${k}">See how</button>` : ''}</div>`)
                 .join('')}</div>`
-            : '<p class="card ex-all-right">Every question right. 🎉</p>'
+            : '<p class="card ex-all-right">Every question right.</p>'
         }
       </div>
       <footer class="lim-foot ex-foot"><button class="btn ghost ex-share">Share as PDF</button><button class="btn mint ex-done">Done</button></footer>
@@ -298,7 +298,7 @@ tr.no td:last-child{color:#C2410C;font-weight:800}tr.ok td:last-child{color:#158
 .frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;font-size:.8em;line-height:1.05;margin:0 2px}.frac sup{border-bottom:1.5px solid currentColor;padding:0 2px}.frac sub,.frac sup{vertical-align:baseline;font-size:1em}
 footer{margin-top:16px;font-size:11.5px;color:#6b6790}
 </style></head><body>
-<header>${plusFaceSvg({})}<div><h1>${esc(child.name)}’s exam practice</h1><p>MN Mission Next · ${esc(niceDay(rec.d))}</p></div></header>
+<header>${plusFaceSvg({})}<div><h1>${esc(child.name)}’s exam practice</h1><p>MN · ${esc(niceDay(rec.d))}</p></div></header>
 <div class="sum"><div class="big">${rec.ok}<small> / ${rec.n}</small></div><p><b>${pct(rec.ok, rec.n)}% right.</b> ${esc(examVerdict(rec.ok, rec.n))}<br>Time: ${clock(rec.sec)} minutes${rec.limit ? ` (of ${clock(rec.limit)} allowed)` : ''}</p></div>
 <h2>By topic</h2><ul>${topics}</ul>
 <h2>Every question</h2>

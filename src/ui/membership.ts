@@ -133,7 +133,7 @@ const FEATURE_LINE: Record<PlusFeature, string> = {
   exam: 'Exam practice is part of MN\u00a0×: a timed test on the topics you pick, then a score sheet by topic to share.',
   certs: 'Certificates are part of MN\u00a0×: a printable one for every challenge beaten and every stage finished.',
   widgets: 'The Focus plan widget is part of MN\u00a0×: this week’s 3 skills and how each is going, on your home screen.',
-  icons: 'The Precision look and the app icons are part of MN\u00a0×. Playground, Glass and Schoolbook are free.',
+  icons: 'The Precision look and the app icons are part of MN\u00a0×. Notebook, Shapes, Print, Playground, Glass and Schoolbook are free.',
 };
 
 /**
@@ -308,7 +308,7 @@ export const previewOn = (): boolean => lsGet(PREVIEW) === '1';
 export function previewCard(app: App, repaint: () => void): HTMLElement {
   const on = previewOn();
   const el = html(`<div class="card ow-card mp-preview">
-    <h2>✨ Play Store preview</h2>
+    <h2>Play Store preview</h2>
     <p class="fine">See MN on this phone the way the Play Store version will be: no keys, MN × for sale, the free plan’s limits. Purchases here are only tests: no money changes hands, and they stay on this phone.</p>
     <label class="toggle-row"><span><b>Preview the Play Store version</b><small>${on ? 'On: the Parent area shows MN ×' : 'Off'}</small></span><input type="checkbox" role="switch" class="mp-prev" ${on ? 'checked' : ''}></label>
     ${on ? '<button class="btn ghost small warn mp-reset">Remove test purchases</button>' : ''}

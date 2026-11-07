@@ -100,7 +100,7 @@ function pages(app: App, c: Child | undefined): Record<DemoId, Page> {
     certs: {
       title: 'Certificates',
       line: 'Every challenge beaten on the map earns a certificate to print and put up at home.',
-      mock: `<div class="dp-cert"><div class="dp-cert-in">${n(1)}<small>MN · Mission Next</small><b class="dp-cert-k">Certificate of Achievement</b><small>This certificate is proudly given to</small><b class="dp-cert-name">${who}</b><span>for finishing Stage 2 and beating Captain Tenbeard.</span><div class="dp-cert-foot"><i></i><em>${n(2)}</em><i></i></div></div></div>`,
+      mock: `<div class="dp-cert"><div class="dp-cert-in">${n(1)}<small>MN</small><b class="dp-cert-k">Certificate of Achievement</b><small>This certificate is proudly given to</small><b class="dp-cert-name">${who}</b><span>for finishing Stage 2 and beating Captain Tenbeard.</span><div class="dp-cert-foot"><i></i><em>${n(2)}</em><i></i></div></div></div>`,
       notes: ['One for each challenge beaten, and a bigger one when a stage is finished, with the date it was won.', 'Shared as an A4 PDF: print it, or send it to grandparents on WhatsApp.'],
     },
     sync: {

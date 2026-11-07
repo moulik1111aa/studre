@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// MN (Mission Next) — who can do what in the cloud (see src/core/cloud.ts, src/platform/cloudapi.ts).
+// MN — who can do what in the cloud (see src/core/cloud.ts, src/platform/cloudapi.ts).
 //
 //   access/{email}            the owner's approved Google accounts (only the owner writes them)
 //   requests/{uid}            "please let me in": written by the person, read by the owner

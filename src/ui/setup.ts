@@ -31,7 +31,7 @@ export function welcomeScreen(app: App): Screen {
   // First time: the opening video comes first (it can't be skipped), then setup.
   const seen = !!app.save.data.settings.tourSeen;
   const el = html(`<section class="screen welcome" aria-label="Welcome">
-    <div class="wl-hero">${logoMark()}<h1 class="wordmark"><span>M</span><span>N</span></h1><p class="wl-full">Mission Next</p>
+    <div class="wl-hero">${logoMark()}<h1 class="wordmark"><span>M</span><span>N</span></h1>
     <p class="subtitle">Maths from age 3 to 16, one small step at a time.<br>Real rewards. Boss fights. Big smiles.</p></div>
     ${seen ? '<button class="btn start">Set up for my child</button><button class="btn ghost tour-btn">▶ Watch the video again</button>' : '<button class="btn tour-btn">▶ Start</button>'}
     <p class="fine">${seen ? 'A parent sets things up, in about 2 minutes.' : 'First, a one-minute video on how MN works. Then a parent sets up, in about 2 minutes.'}</p>
@@ -116,8 +116,8 @@ export function addChildScreen(firstRun: boolean) {
         const on = assisted ?? age <= 6;
         body.innerHTML = `<h1 class="ac-q">Who will hold the phone?</h1>
           <div class="seg seg-col ac-help">
-            <button class="seg-b${on ? ' on' : ''}" data-h="1"><b>👪 We’ll play together</b><small>Questions read aloud, no timers, and a tip for you on every question. Best for ages 3 to 6.</small>${age <= 6 ? '<em>Suggested</em>' : ''}</button>
-            <button class="seg-b${on ? '' : ' on'}" data-h="0"><b>🧒 ${who()} plays alone</b><small>For children who can read the questions.</small>${age > 6 ? '<em>Suggested</em>' : ''}</button>
+            <button class="seg-b${on ? ' on' : ''}" data-h="1"><b>We’ll play together</b><small>Questions read aloud, no timers, and a tip for you on every question. Best for ages 3 to 6.</small>${age <= 6 ? '<em>Suggested</em>' : ''}</button>
+            <button class="seg-b${on ? '' : ' on'}" data-h="0"><b>${who()} plays alone</b><small>For children who can read the questions.</small>${age > 6 ? '<em>Suggested</em>' : ''}</button>
           </div>
           <p class="fine">You can change this later in the Parent area.</p>`;
         body.querySelectorAll<HTMLElement>('[data-h]').forEach((b) =>
@@ -131,8 +131,8 @@ export function addChildScreen(firstRun: boolean) {
       } else if (step === 3) {
         body.innerHTML = `<h1 class="ac-q">Classic or Adventure?</h1>
           <div class="seg seg-col ac-adv">
-            <button class="seg-b${adventure ? '' : ' on'}" data-adv="0"><b>📘 Classic</b><small>The maths path, coins and the rewards you choose. Calm and simple.</small></button>
-            <button class="seg-b${adventure ? ' on' : ''}" data-adv="1"><b>🎮 Adventure</b><small>The same maths, plus levels, daily quests, chests, badges, Plus’s wardrobe and a weekly raid.</small></button>
+            <button class="seg-b${adventure ? '' : ' on'}" data-adv="0"><b>Classic</b><small>The maths path, coins and the rewards you choose. Calm and simple.</small></button>
+            <button class="seg-b${adventure ? ' on' : ''}" data-adv="1"><b>Adventure</b><small>The same maths, plus levels, daily quests, chests, badges, Plus’s wardrobe and a weekly raid.</small></button>
           </div>
           <button class="linkish ac-adv-what">What is Adventure?</button>
           <p class="fine">You can switch this any time in the Parent area.</p>`;
@@ -270,7 +270,7 @@ export function limitsScreen(firstRun: boolean) {
           <div class="vl-list"></div>
           ${speedSeg(rate)}
           <p class="fine">You can change it any time in the Parent area.</p></div>
-          <p class="card vc-together">🤝 <b>Next:</b> please sit with your child for their first 3 levels. They’re practice rounds: after a slip, Plus shows how and they try one like it.</p>`;
+          <p class="card vc-together"><b>Next:</b> please sit with your child for their first 3 levels. They’re practice rounds: after a slip, Plus shows how and they try one like it.</p>`;
         void mountVoiceList(app, body.querySelector<HTMLElement>('.vl-list')!, voice, () => rate, (o) => (voice = { name: o.name, pitch: o.pitch }));
         body.querySelectorAll<HTMLElement>('[data-rate]').forEach((b) =>
           b.addEventListener('click', () => {

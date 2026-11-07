@@ -80,6 +80,9 @@ const T = (key: keyof Settings, label: string, note: string): Toggle => ({ key, 
 const toggleRows = (st: Settings, list: Toggle[]) => list.map((t) => `<label class="toggle-row"><span><b>${t.label}</b><small>${t.note}</small></span><input type="checkbox" role="switch" data-k="${t.key}" ${st[t.key] ? 'checked' : ''}></label>`).join('');
 
 const THEME_CHOICES: { id: Theme; name: string; note: string }[] = [
+  { id: 'studio', name: 'Notebook', note: 'Graph paper, ink and highlighters' },
+  { id: 'shapes', name: 'Shapes', note: 'Flat colour shapes, bold type' },
+  { id: 'print', name: 'Print', note: 'Halftone dots and bright inks' },
   { id: 'playground', name: 'Playground', note: 'Bright sky, buttons that click like toys' },
   { id: 'glass', name: 'Glass', note: 'Deep colour, frosted panels' },
   { id: 'schoolbook', name: 'Schoolbook', note: 'Graph paper and ink' },
@@ -89,11 +92,11 @@ const THEME_CHOICES: { id: Theme; name: string; note: string }[] = [
 /** The Parent area's five tabs, down the right edge (thumb side). Each changes the page in place. */
 type Page = 'kids' | 'sound' | 'premium' | 'app' | 'help';
 const TABS: { id: Page; icon: string; label: string; title: string }[] = [
-  { id: 'kids', icon: '👧', label: 'Children', title: 'Children' },
-  { id: 'sound', icon: '🔊', label: 'Sound', title: 'Sound and voice' },
+  { id: 'kids', icon: ICONS.users, label: 'Children', title: 'Children' },
+  { id: 'sound', icon: ICONS.speaker, label: 'Sound', title: 'Sound and voice' },
   { id: 'premium', icon: timesMarkSvg('tab'), label: 'MN ×', title: 'MN ×' },
-  { id: 'app', icon: '⚙️', label: 'App', title: 'App settings' },
-  { id: 'help', icon: '❓', label: 'Help', title: 'Help' },
+  { id: 'app', icon: ICONS.gear, label: 'App', title: 'App settings' },
+  { id: 'help', icon: ICONS.help, label: 'Help', title: 'Help' },
 ];
 /** The page the parent is on (kept while they visit a sub-screen and come back). */
 let page: Page = 'kids';
@@ -107,15 +110,15 @@ function cloudCard(app: App): string {
   if (!cloudOn(app)) return '';
   const who = account(app);
   if (!who)
-    return `<div class="card pa-cloud"><p><b>☁️ Back up with Google</b><small>Sign in to keep progress safe and the same on every phone. What’s on this phone now is kept and joins your account. ${esc(LOCAL_NOTE)} right now.</small></p>${googleButton('cl-in')}</div>`;
+    return `<div class="card pa-cloud"><p><b>Back up with Google</b><small>Sign in to keep progress safe and the same on every phone. What’s on this phone now is kept and joins your account. ${esc(LOCAL_NOTE)} right now.</small></p>${googleButton('cl-in')}</div>`;
   // Play Store build without MN ×: an online backup from one phone.
   const other = onePhone(app) ? otherPhone() : null;
   const note = other
-    ? `<div class="cl-other" role="status"><p>📱 The online backup now comes from <b>${esc(other)}</b>. Progress made on this phone isn’t backed up.</p><button class="btn ghost small cl-take">Keep the online backup from this phone</button><p class="fine">With MN ×, every phone stays in step. <button class="linkish mp-from-cloud">See MN ×</button></p></div>`
+    ? `<div class="cl-other" role="status"><p>The online backup now comes from <b>${esc(other)}</b>. Progress made on this phone isn’t backed up.</p><button class="btn ghost small cl-take">Keep the online backup from this phone</button><p class="fine">With MN ×, every phone stays in step. <button class="linkish mp-from-cloud">See MN ×</button></p></div>`
     : onePhone(app)
       ? `<p class="fine cl-one">Online backup from this phone, every few hours. With MN ×, every phone stays in step all the time. <button class="linkish mp-from-cloud">See MN ×</button></p>`
       : '';
-  return `<div class="card pa-cloud on"><p><b>☁️ ${esc(who.email)}</b><small class="cl-status">${esc(other ? 'Not backing up from this phone' : syncText(lastSync()))}</small></p>${note}
+  return `<div class="card pa-cloud on"><p><b>${esc(who.email)}</b><small class="cl-status">${esc(other ? 'Not backing up from this phone' : syncText(lastSync()))}</small></p>${note}
     <div class="cl-btns"><button class="btn small cl-sync">Back up now</button><button class="btn ghost small cl-out">Sign out</button></div>
     <button class="linkish cl-dl">⤓ Download the online backup as a backup file</button>
     <button class="linkish warn cl-del">Delete the online backup</button></div>`;
@@ -132,7 +135,7 @@ function kidsHtml(app: App): string {
         .join('')}</div>
       <button class="btn ghost small add-kid">+ Add a child</button>`)}
     ${sec('Daily play', `<button class="pa-row card limits"><b>${st.limitMinutes} minutes a day</b><small>${st.timeUpMode === 'stop' ? 'Stops when time is up' : 'Keeps playing without coins'} · treats ${paceText(st.treatPace, 'treat')}, big reward ${paceText(st.goalPace, 'goal')}</small></button>
-      <button class="pa-row card quiet-row"><b>🌙 Bedtime</b><small>${esc(quietSummary(st.quiet))}</small></button>
+      <button class="pa-row card quiet-row"><b>Bedtime</b><small>${esc(quietSummary(st.quiet))}</small></button>
       <div class="card pa-toggles">${toggleRows(st, [T('holiday', 'Pause rewards', 'On holiday or unwell: jars don’t shrink and no daily reminder.')])}</div>`)}
     ${sec('Learning', `<div class="card pa-timer"><div class="pt-head"><b>Time per question</b><span class="pt-val"></span></div>
         <small>For timed levels (Speed and Master) and challenges.</small>
@@ -148,7 +151,7 @@ function soundHtml(app: App): string {
   return `${sec('Sound', `<div class="card pa-toggles">${toggleRows(st, [T('sound', 'Sound effects', 'Taps, cheers and coins.')])}</div>
       <div class="card pa-vol"><div class="pt-head"><b>Volume</b><span class="vol-val">${Math.round((st.volume ?? 0.8) * 100)}%</span></div><input type="range" class="slider vol-slider" min="0.2" max="1" step="0.1" value="${st.volume ?? 0.8}" aria-label="Sound volume"></div>`)}
     ${sec('Reading aloud', `<div class="card pa-toggles">${toggleRows(st, [T('voice', 'Read questions aloud', 'Plus reads each question and tip.')])}</div>
-      <button class="pa-row card voice-row"><b>🗣️ Reading voice</b><small>${st.voiceName ? ((st.voicePitch ?? 1) < 1 ? 'A deeper voice' : 'Your chosen voice') : 'Automatic'} · ${st.voiceRate < 0.9 ? 'slow' : st.voiceRate > 1 ? 'quick' : 'normal speed'} · tap to hear every voice</small></button>`)}`;
+      <button class="pa-row card voice-row"><b>Reading voice</b><small>${st.voiceName ? ((st.voicePitch ?? 1) < 1 ? 'A deeper voice' : 'Your chosen voice') : 'Automatic'} · ${st.voiceRate < 0.9 ? 'slow' : st.voiceRate > 1 ? 'quick' : 'normal speed'} · tap to hear every voice</small></button>`)}`;
 }
 
 /** App settings: notifications, look, vibration, parent PIN, backup. */
@@ -159,22 +162,22 @@ function appHtml(app: App): string {
   const nice = (t: string) => { const [h, m] = t.split(':').map(Number); return `${((h + 11) % 12) + 1}${m ? `:${String(m).padStart(2, '0')}` : ''} ${h < 12 ? 'am' : 'pm'}`; };
   return `${sec('Notifications', `<p class="pr-status card" hidden></p>
       <div class="card pa-remind">
-        <label class="toggle-row"><span><b>🧮 Daily learning time</b><small>One note a day, naming who hasn’t played yet.</small></span><input type="checkbox" role="switch" data-r="daily" ${rs.daily ? 'checked' : ''}></label>
+        <label class="toggle-row"><span><b>Daily learning time</b><small>One note a day, naming who hasn’t played yet.</small></span><input type="checkbox" role="switch" data-r="daily" ${rs.daily ? 'checked' : ''}></label>
         <div class="seg pr-time" role="radiogroup" aria-label="Time of the daily note"${rs.daily ? '' : ' hidden'}>${times.map((t) => `<button class="seg-b${rs.dailyAt === t ? ' on' : ''}" role="radio" aria-checked="${rs.dailyAt === t}" data-at="${t}"><b>${nice(t)}</b></button>`).join('')}</div>
-        <label class="toggle-row"><span><b>🎁 Reward ready</b><small>When a jar is full and a reward is waiting to be given.</small></span><input type="checkbox" role="switch" data-r="ready" ${rs.ready ? 'checked' : ''}></label>
-        <label class="toggle-row"><span><b>💾 Backup reminder</b><small>When a week of progress isn’t backed up.</small></span><input type="checkbox" role="switch" data-r="backup" ${rs.backup ? 'checked' : ''}></label>
+        <label class="toggle-row"><span><b>Reward ready</b><small>When a jar is full and a reward is waiting to be given.</small></span><input type="checkbox" role="switch" data-r="ready" ${rs.ready ? 'checked' : ''}></label>
+        <label class="toggle-row"><span><b>Backup reminder</b><small>When a week of progress isn’t backed up.</small></span><input type="checkbox" role="switch" data-r="backup" ${rs.backup ? 'checked' : ''}></label>
       </div>`)}
     ${sec('Look', `<div class="themes" role="radiogroup" aria-label="Look of the app">${THEME_CHOICES.map((t) => `<button class="theme-tile th-${t.id}${st.theme === t.id ? ' on' : ''}" role="radio" aria-checked="${st.theme === t.id}" data-theme-id="${t.id}"><span class="th-swatch"><i></i><i></i><i></i></span><b>${t.name}${t.id === 'precision' ? ` ${plusTag(app)}` : ''}</b><small>${t.note}</small></button>`).join('')}</div>
       ${iconsAvailable(app) ? `<button class="pa-row card icon-row"><span class="ic-now" aria-hidden="true">${appIconSvg('sky', 'square', 40)}</span><span><b>App icon ${plusTag(app)}</b><small>Choose MN’s icon on the home screen</small></span></button>` : ''}
       <div class="card pa-toggles">${toggleRows(st, [T('vibration', 'Vibration', 'Gentle buzzes on taps and answers.'), T('fx3d', '3D challenges', 'Turn off if challenges feel slow on this phone.')])}</div>`)}
     ${sec('Rewards', `<div class="card pa-cats"><p class="cat-why">Rewards children can pick from. Tap to show or hide a kind.</p><div class="cat-chips">${CATEGORIES.map((c) => `<button class="cat-chip${st.hiddenCategories.includes(c.id) ? '' : ' on'}" aria-pressed="${!st.hiddenCategories.includes(c.id)}" data-c="${c.id}"><span aria-hidden="true">${c.icon}</span>${esc(c.name)}</button>`).join('')}</div></div>`)}
-    ${sec('What MN teaches', `<button class="pa-row card skills-row"><b>📚 Skills list</b><small>Every skill, with an example and how it’s taught</small></button>`)}
-    ${sec('Parent PIN', `<button class="pa-row card lock-row"><b>🔒 How parents unlock settings</b><small>${st.parentPin ? 'Your own PIN' : 'This phone’s screen lock'}</small></button>
+    ${sec('What MN teaches', `<button class="pa-row card skills-row"><b>Skills list</b><small>Every skill, with an example and how it’s taught</small></button>`)}
+    ${sec('Parent PIN', `<button class="pa-row card lock-row"><b>How parents unlock settings</b><small>${st.parentPin ? 'Your own PIN' : 'This phone’s screen lock'}</small></button>
       ${storeBuild(app) ? '' : '<button class="pa-row card key-row"><b>Access key</b><small class="key-left">Checking…</small></button>'}`)}
     ${sec('Backup', `<div class="card pa-backup">
         ${(() => {
           const due = dueKids(app);
-          return due.length ? `<p class="pb-due" role="status">⚠️ <span>${esc(due.map((c) => c.name).join(' and '))} ${due.length === 1 ? 'has' : 'have'} new progress that isn’t backed up yet.</span></p>` : '';
+          return due.length ? `<p class="pb-due" role="status"><span>${esc(due.map((c) => c.name).join(' and '))} ${due.length === 1 ? 'has' : 'have'} new progress that isn’t backed up yet.</span></p>` : '';
         })()}
         <p class="pb-why"><small>${account(app) ? 'Progress is backed up online. A backup file is an extra copy you can keep anywhere.' : 'Progress is saved only on this phone. A backup file (in Google Drive or email) brings it back on any phone.'}</small></p>
         <ul class="pb-kids">${app.save.data.children.map((c) => `<li>${avatarHtml(c.avatar, 28)}<span>${esc(c.name)}</span><small>${lastBackupText(c)}</small></li>`).join('')}</ul>
@@ -204,7 +207,7 @@ function helpHtml(app: App): string {
       <button class="pa-row card plus-row"><b>▶ What MN × adds</b><small>A short video about the extra features</small></button>`)}
     ${sec('Questions', `<div class="card pa-faq">${FAQ.map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}</div>`)}
     ${sec('More', `<button class="pa-row card tips-row"><b>Show the map tips again</b><small>Each child sees Plus’s tips the next time they open the map</small></button>
-      <button class="pa-row card adv-what"><b>🎮 What is Adventure mode?</b><small>Quests and badges: daily goals, chests, a pet and outfits</small></button>
+      <button class="pa-row card adv-what"><b>What is Adventure mode?</b><small>Quests and badges: daily goals, chests, a pet and outfits</small></button>
       ${faceoffRows(app)}`)}`;
 }
 
@@ -260,7 +263,7 @@ function premiumHtml(app: App): string {
   const hero = `<div class="pm-hero">
       <div class="pm-mascot" aria-hidden="true">${plusSvg({ cls: 'alive', noShadow: true })}</div>
       <p class="pm-brand" aria-label="MN Times">MN ${timesMarkSvg()}</p>
-      ${on ? `<p class="pm-on">✓ ${store ? 'MN × is on for your family' : 'MN × is included in this version'}</p><h2 class="pm-h">Everything below is yours.</h2>` : '<h2 class="pm-h">See where to help, at a glance.</h2>'}
+      ${on ? `<p class="pm-on">${store ? 'MN × is on for your family' : 'MN × is included in this version'}</p><h2 class="pm-h">Everything below is yours.</h2>` : '<h2 class="pm-h">See where to help, at a glance.</h2>'}
       <button class="pm-video"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.5v9l7.5-4.5z" fill="currentColor"/></svg>Watch the 1-minute video</button>
     </div>`;
   const peek = kid ? `<section class="pm-proof"><p class="pm-cap">${on ? 'Your full report' : 'Here’s what MN × shows you'}</p>${reportPeek(app, kid, on)}</section>` : '';
@@ -276,7 +279,7 @@ function premiumHtml(app: App): string {
 }
 
 function pageHtml(app: App, p: Page): string {
-  const invite = p === 'kids' && cloudOn(app) && !account(app) ? `<div class="card pa-invite"><p><b>☁️ Keep progress safe with Google</b><small>Sign in once. Everything on this phone is kept and backed up online.</small></p>${googleButton('cl-in')}</div>` : '';
+  const invite = p === 'kids' && cloudOn(app) && !account(app) ? `<div class="card pa-invite"><p><b>Keep progress safe with Google</b><small>Sign in once. Everything on this phone is kept and backed up online.</small></p>${googleButton('cl-in')}</div>` : '';
   const html = { kids: kidsHtml, sound: soundHtml, premium: premiumHtml, app: appHtml, help: helpHtml }[p](app);
   return `${invite}${p === 'kids' && !invite ? trialNudge(app) : ''}${html}`;
 }
@@ -486,8 +489,8 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
     status.hidden = n.enabled;
     if (n.enabled) return;
     status.innerHTML = n.canAsk
-      ? '<b>🔕 Notifications are off</b><small>MN can’t remind you about learning time or rewards yet.</small><button class="btn small pr-allow">Turn on</button>'
-      : '<b>🔕 Notifications are blocked</b><small>They’re switched off for MN in the phone’s settings.</small><button class="btn small pr-open">Open settings</button>';
+      ? '<b>Notifications are off</b><small>MN can’t remind you about learning time or rewards yet.</small><button class="btn small pr-allow">Turn on</button>'
+      : '<b>Notifications are blocked</b><small>They’re switched off for MN in the phone’s settings.</small><button class="btn small pr-open">Open settings</button>';
     status.querySelector('.pr-allow')?.addEventListener('click', () => void paintNotes(true));
     status.querySelector('.pr-open')?.addEventListener('click', () => void app.native?.openNotificationSettings?.());
   };
@@ -584,25 +587,25 @@ export function childSettingsScreen(c: Child) {
       <div class="scroll pa-body">
         <div class="ks-hero">${avatarHtml(c.avatar, 64)}<b>${esc(c.name)}</b><small>Age ${c.age}</small></div>
         <button class="pa-row card report" data-id="${c.id}"><b>${ICONS.chart} Report</b><small>What ${esc(c.name)} has learned, and where they need help</small></button>
-        <button class="pa-row card sheet-btn"><b>🖨️ Print a worksheet ${plusTag(app)}</b><small>${c.age <= 6 ? 12 : 20} questions mixed from the last skills ${esc(c.name)} played, as an A4 PDF. Answers on a separate page.</small></button>
+        <button class="pa-row card sheet-btn"><b>Print a worksheet ${plusTag(app)}</b><small>${c.age <= 6 ? 12 : 20} questions mixed from the last skills ${esc(c.name)} played, as an A4 PDF. Answers on a separate page.</small></button>
         <button class="linkish sheet-html">Save it as a web page instead</button>
-        <button class="pa-row card exam-btn"><b>📝 Exam practice ${plusTag(app)}</b><small>A timed test on topics you pick, with a score sheet to share</small></button>
-        <button class="pa-row card certs-btn"><b>🏅 Certificates ${plusTag(app)}</b><small>${(() => {
+        <button class="pa-row card exam-btn"><b>Exam practice ${plusTag(app)}</b><small>A timed test on topics you pick, with a score sheet to share</small></button>
+        <button class="pa-row card certs-btn"><b>Certificates ${plusTag(app)}</b><small>${(() => {
           const n = certificatesFor(app.pathFor(c), c.progress, c.log).length;
           return n ? `${n} earned · print one for the fridge` : 'One for each challenge beaten on the map';
         })()}</small></button>
         <h2 class="pa-h">Learning</h2>
-        <button class="pa-row card age-btn"><b>🎂 Age</b><small>${c.age} · questions follow the age</small></button>
-        <button class="pa-row card level-btn"><b>${CHALLENGE[c.challenge ?? 0].icon} Difficulty</b><small>${CHALLENGE[c.challenge ?? 0].name} · ${CHALLENGE[c.challenge ?? 0].note}</small></button>
-        <button class="pa-row card school-btn"><b>📚 School syllabus ${plusTag(app)}</b><small>${c.school?.on ? (hasPlus(app) ? esc(schoolLabel(c.school)) : `${esc(schoolLabel(c.school))} · paused without MN ×`) : 'Off · follow the school syllabus instead of the age path'}</small></button>
+        <button class="pa-row card age-btn"><b>Age</b><small>${c.age} · questions follow the age</small></button>
+        <button class="pa-row card level-btn"><b>Difficulty</b><small>${CHALLENGE[c.challenge ?? 0].name} · ${CHALLENGE[c.challenge ?? 0].note}</small></button>
+        <button class="pa-row card school-btn"><b>School syllabus ${plusTag(app)}</b><small>${c.school?.on ? (hasPlus(app) ? esc(schoolLabel(c.school)) : `${esc(schoolLabel(c.school))} · paused without MN ×`) : 'Off · follow the school syllabus instead of the age path'}</small></button>
         <div class="card pa-toggles">
-          <label class="toggle-row"><span><b>👪 Play together</b><small>No timers; after a slip they try one like it. On by default for ages 3–6.</small></span><input type="checkbox" role="switch" class="assist-btn" ${c.assisted ? 'checked' : ''}></label>
+          <label class="toggle-row"><span><b>Play together</b><small>No timers; after a slip they try one like it. On by default for ages 3–6.</small></span><input type="checkbox" role="switch" class="assist-btn" ${c.assisted ? 'checked' : ''}></label>
         </div>
         <h2 class="pa-h">Fun</h2>
         <div class="card pa-toggles">
-          <label class="toggle-row"><span><b>🎮 Adventure mode</b><small>Quests and badges: daily goals, chests, a pet and outfits for Plus.</small></span><input type="checkbox" role="switch" class="adv-toggle" ${c.adventure?.on ? 'checked' : ''}></label>
+          <label class="toggle-row"><span><b>Adventure mode</b><small>Quests and badges: daily goals, chests, a pet and outfits for Plus.</small></span><input type="checkbox" role="switch" class="adv-toggle" ${c.adventure?.on ? 'checked' : ''}></label>
         </div>
-        <button class="linkish adv-what">🎮 What is Adventure mode?</button>
+        <button class="linkish adv-what">What is Adventure mode?</button>
       </div>
     </section>`);
     const back = () => void app.show(parentScreen);
@@ -626,7 +629,7 @@ export function childSettingsScreen(c: Child) {
     });
     el.querySelector('.level-btn')!.addEventListener('click', async () => {
       const actions: { label: string; value: number; kind: 'mint' | 'ghost'; back?: boolean }[] = [
-        ...CHALLENGE.map((x, i) => ({ label: `${x.icon} ${x.name} — ${x.note}`, value: i, kind: i === (c.challenge ?? 0) ? ('mint' as const) : ('ghost' as const) })),
+        ...CHALLENGE.map((x, i) => ({ label: `${x.name} — ${x.note}`, value: i, kind: i === (c.challenge ?? 0) ? ('mint' as const) : ('ghost' as const) })),
         { label: 'Cancel', value: -1, kind: 'ghost', back: true },
       ];
       const { result } = app.sheet(`<h2>How hard for ${esc(c.name)}?</h2><p>The skills stay the same; the numbers get tougher.</p>`, actions, 'Difficulty');
