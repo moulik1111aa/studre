@@ -1,7 +1,23 @@
 /* MN Plus (ui/membership.ts): the Plus page, the Parent area card, Plus tags, the blurred
    report tabs, the one-phone backup note, and the children's thank-you present. */
 
-.mp-tag{display:inline-block;vertical-align:2px;margin-left:6px;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:900;letter-spacing:.02em;color:#2A1650;background:linear-gradient(180deg,#FFE48A,var(--sun));box-shadow:inset 0 -2px 0 rgba(0,0,0,.12)}
+/* The MN × mark on a feature: a round badge in the card's top-right corner. The card keeps
+   room for it, so long names and small screens never collide with it. */
+.mp-tag{position:absolute;top:10px;right:10px;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#fff;box-shadow:0 0 0 1.5px rgba(108,71,255,.35),0 3px 8px -3px rgba(40,20,110,.45);margin:0;padding:0;line-height:0}
+.mp-tag .mp-x{width:18px;height:18px}
+.mp-tag .mp-x .mnx-turn{transform:rotate(45deg);transform-origin:50px 50px}
+.mp-dot{position:absolute;right:-4px;bottom:-4px;width:15px;height:15px;border-radius:50%;display:grid;place-items:center;color:#fff;background:#8A80B5;box-shadow:0 0 0 2px #fff}
+.mp-dot svg{width:11px;height:11px}
+.mp-tag.own{background:linear-gradient(160deg,#8E6BFF,#6C47FF);box-shadow:0 3px 8px -3px rgba(40,20,110,.55)}
+.mp-tag.own .mp-dot{background:#1E9E5A}
+.pa-row:has(.mp-tag),.theme-tile:has(.mp-tag),.screen .pa-row.pa-row:has(.mp-tag){position:relative;padding-right:54px}
+.theme-tile.theme-tile:has(.mp-tag){padding-right:10px}
+.theme-tile .mp-tag{top:8px;right:8px;width:26px;height:26px}
+.theme-tile .mp-tag .mp-x{width:15px;height:15px}
+.wg-item .mp-tag{position:relative;top:auto;right:auto;display:inline-grid;width:22px;height:22px;vertical-align:-5px;margin-left:6px}
+.wg-item .mp-tag .mp-x{width:13px;height:13px}
+.wg-item .mp-dot{width:12px;height:12px;right:-4px;bottom:-4px}
+.wg-item .mp-dot svg{width:9px;height:9px}
 
 /* Parent area card */
 .mp-card{appearance:none;border:0;cursor:pointer;color:var(--ink);display:flex;align-items:center;gap:12px;padding:14px 16px;text-align:left;margin-bottom:4px;position:relative;overflow:hidden;

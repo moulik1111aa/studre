@@ -574,7 +574,7 @@ test('exam practice: topics, a paper with no marking until the end, a score shee
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
   await page.click('.kid-set');
   // With MN × on, its features carry a violet ✓ MN × tag, and their screens say it's included.
-  await expect(page.locator('.exam-btn .mp-tag.own')).toContainText('MN');
+  await expect(page.locator('.exam-btn .mp-tag.own')).toHaveAttribute('aria-label', 'Included with MN Times');
   await page.click('.exam-btn');
   await expect(page.locator('.exam-setup')).toBeVisible();
   await expect(page.locator('.exam-setup .mnx-incl')).toContainText('Included with MN');
@@ -1492,7 +1492,7 @@ test('MN × (Play Store build): paid features say so, the trial and plans come 
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
   // A worksheet asks for Plus.
   await page.locator('.kid-set').first().click();
-  await expect(page.locator('.sheet-btn .mp-tag')).toHaveText('MN ×');
+  await expect(page.locator('.sheet-btn .mp-tag')).toHaveAttribute('aria-label', 'Part of MN Times');
   await page.click('.sheet-btn');
   await expect(page.locator('.mp-sheet h2')).toHaveText('Worksheets');
   await page.click('.sheet .btn:has-text("See MN ×")');

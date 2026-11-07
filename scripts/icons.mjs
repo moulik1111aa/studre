@@ -60,10 +60,16 @@ for (const [name, scale] of Object.entries(DENSITIES)) {
   await png(background(), layer, layer, `mipmap-${name}/ic_launcher_background.png`);
   await png(monochrome(), layer, layer, `mipmap-${name}/ic_launcher_monochrome.png`);
 }
-// The other launcher icons (MN Plus members pick one; see src/ui/appicons.ts): the same Plus in
-// front, a different sky behind. Each gets its own background layer, legacy icons and
-// adaptive-icon files; the foreground and themed (monochrome) layers are shared.
+// The MN × launcher icons (see src/ui/appicons.ts): Plus turned into the × in front, a different
+// sky behind. Each gets its own background layer, legacy icons and adaptive-icon files; the
+// turned foreground and themed (monochrome) layers are shared between them.
 const { APP_ICONS, iconFieldSvg, appIconSvg } = await import('../src/ui/appicons.ts');
+const turned = (inner) => `<g transform="rotate(45 54 54)">${inner}</g>`;
+for (const [name, scale] of Object.entries(DENSITIES)) {
+  const layer = Math.round(108 * scale);
+  await png(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108">${turned(placed(54, 54, 62))}</svg>`, layer, layer, `mipmap-${name}/ic_launcher_foreground_x.png`);
+  await png(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108"><defs><mask id="m"><g transform="rotate(45 54 54) translate(54 54) scale(${62 / 200}) translate(-100 -102)">${MONO}</g></mask></defs><rect width="108" height="108" fill="#000" mask="url(#m)"/></svg>`, layer, layer, `mipmap-${name}/ic_launcher_monochrome_x.png`);
+}
 for (const { id } of APP_ICONS.filter((i) => i.id !== 'sky')) {
   const bg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108">${iconFieldSvg(id)}</svg>`;
   for (const [name, scale] of Object.entries(DENSITIES)) {
@@ -76,8 +82,8 @@ for (const { id } of APP_ICONS.filter((i) => i.id !== 'sky')) {
   const adaptive = `<?xml version="1.0" encoding="utf-8"?>
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@mipmap/ic_launcher_${id}_background"/>
-    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
-    <monochrome android:drawable="@mipmap/ic_launcher_monochrome"/>
+    <foreground android:drawable="@mipmap/ic_launcher_foreground_x"/>
+    <monochrome android:drawable="@mipmap/ic_launcher_monochrome_x"/>
 </adaptive-icon>
 `;
   writeFileSync(join(res, `mipmap-anydpi-v26/ic_launcher_${id}.xml`), adaptive);

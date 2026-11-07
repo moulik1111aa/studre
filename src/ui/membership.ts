@@ -4,6 +4,7 @@
 // of this: it lives behind the parent check.
 
 import { html, esc, type App, type Screen } from './app.ts';
+import { timesMarkSvg } from './mnx.ts';
 import { MockBilling, NativeBilling, type Billing } from '../platform/billing.ts';
 import { FEATURES, freshPlus, fromPurchases, planOffers, plusOn, PLUS_LIFETIME, TRIAL_DAYS, TRIAL_DAYS_SIGNED_IN, type PlanId, type PlanOffer, type PlusFeature, type PlusState } from '../core/membership.ts';
 import type { PlayPurchase, PurchasesEvent } from '../platform/native.ts';
@@ -58,11 +59,14 @@ export function hasPlus(app: App): boolean {
 }
 
 /**
- * The tag beside every MN × feature: without MN ×, a gold "MN ×" (it's a paid extra); with it,
- * a violet "✓ MN ×", so parents can see what came with MN ×.
+ * The mark on every MN × feature: a small round × badge pinned to the card's top-right corner
+ * (so it never pushes or wraps the text). With MN × on it's violet with a check: "came with
+ * MN ×". Without it, white with a small lock: "a paid extra".
  */
-export const plusTag = (app: App): string =>
-  hasPlus(app) ? '<span class="mp-tag own" title="Included with MN ×"><span aria-hidden="true">✓ </span>MN&nbsp;×<span class="sr-only"> included</span></span>' : '<span class="mp-tag">MN&nbsp;×</span>';
+export const plusTag = (app: App): string => {
+  const own = hasPlus(app);
+  return `<span class="mp-tag${own ? ' own' : ''}" role="img" aria-label="${own ? 'Included with MN Times' : 'Part of MN Times'}">${timesMarkSvg('mp-x')}<i class="mp-dot" aria-hidden="true">${own ? '<svg viewBox="0 0 12 12"><path d="M2.6 6.2 5 8.5l4.4-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '<svg viewBox="0 0 12 12"><rect x="2.5" y="5.4" width="7" height="5" rx="1.3" fill="currentColor"/><path d="M4.2 5.6V4.2a1.8 1.8 0 0 1 3.6 0v1.4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>'}</i></span>`;
+};
 
 /** A line at the top of an MN × screen, when it's on: "✓ Included with MN ×". */
 export const mnxIncluded = (app: App): string => (hasPlus(app) ? '<p class="mnx-incl"><span class="mnx-incl-x" aria-hidden="true">✓</span>Included with MN&nbsp;×</p>' : '');

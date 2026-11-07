@@ -48,9 +48,15 @@ export function iconFieldSvg(id: AppIconId): string {
 /** Plus's own markup (200 × 204, middle 100 102), without its <svg> wrapper. */
 export const plusMark = (): string => plusFaceSvg().replace(/^[\s\S]*?<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '');
 
+/** MN × icons show Plus turned 45° into the ×; Sky shows Plus upright. */
+export const isTimesIcon = (id: AppIconId): boolean => id !== 'sky';
+/** Plus at `w` wide centred on (cx, cy), turned into × for the MN × icons. */
+export const placedMark = (id: AppIconId, cx: number, cy: number, w: number): string =>
+  `<g transform="translate(${cx} ${cy})${isTimesIcon(id) ? ' rotate(45)' : ''} scale(${w / 200}) translate(-100 -102)">${plusMark()}</g>`;
+
 /** A whole icon as the launcher shows it (Plus on the field), square with round corners or round. */
 export function appIconSvg(id: AppIconId, shape: 'square' | 'round' = 'square', size?: number): string {
   const clip = shape === 'round' ? `<clipPath id="c-${id}"><circle cx="54" cy="54" r="54"/></clipPath>` : `<clipPath id="c-${id}"><rect width="108" height="108" rx="24"/></clipPath>`;
   const dim = size ? ` width="${size}" height="${size}"` : '';
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108"${dim}><defs>${clip}</defs><g clip-path="url(#c-${id})">${iconFieldSvg(id)}<g transform="translate(54 53) scale(${84 / 200}) translate(-100 -102)">${plusMark()}</g></g></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108"${dim}><defs>${clip}</defs><g clip-path="url(#c-${id})">${iconFieldSvg(id)}${placedMark(id, 54, 54, isTimesIcon(id) ? 80 : 84)}</g></svg>`;
 }
