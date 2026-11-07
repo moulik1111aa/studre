@@ -72,3 +72,26 @@ export function focusPlan(c: { tally?: Tally; log?: PlayEntry[] }, day: string, 
   const rounds = thisWeek.filter((e) => e.id === focusId(week)).length;
   return { week, skills, rounds };
 }
+
+/** A skill's accuracy over the last 7 days and the 7 before (from the play log), to colour the change. */
+export function weekChange(log: PlayEntry[] | undefined, day: string, id: string): { now: number; before: number } | null {
+  const end = new Date(`${day}T12:00:00`).getTime();
+  const span = (from: number, to: number): [number, number] => {
+    let n = 0, ok = 0;
+    for (const e of log ?? []) {
+      const t = new Date(`${e.d}T12:00:00`).getTime();
+      if (t > end - from * 86_400_000 && t <= end - to * 86_400_000) {
+        const a = e.a?.[id];
+        if (a) { n += a[0]; ok += a[1]; }
+      }
+    }
+    return [n, ok];
+  };
+  const [n1, ok1] = span(7, 0);
+  const [n0, ok0] = span(14, 7);
+  if (n1 < 3 || n0 < 3) return null;
+  return { now: pct(ok1, n1), before: pct(ok0, n0) };
+}
+
+/** Up, down or steady: 5 points either way counts as a change. */
+export const trend = (c: { now: number; before: number } | null): 'up' | 'down' | 'same' | null => (!c ? null : c.now - c.before >= 5 ? 'up' : c.before - c.now >= 5 ? 'down' : 'same');

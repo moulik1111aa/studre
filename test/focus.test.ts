@@ -28,3 +28,14 @@ test('the plan uses answers from before this week, and shows this week beside th
 test('a new child has no plan yet', () => {
   assert.deepEqual(focusPlan({}, '2026-11-04').skills, []);
 });
+
+test('week change: last 7 days against the 7 before, coloured up, down or steady', async () => {
+  const { weekChange, trend } = await import('../src/core/focus.ts');
+  const log = [entry('2026-10-25', 'x', { a: [10, 5, 0] }), entry('2026-11-03', 'y', { a: [10, 8, 0] })];
+  const c = weekChange(log, '2026-11-04', 'a');
+  assert.deepEqual(c, { now: 80, before: 50 });
+  assert.equal(trend(c), 'up');
+  assert.equal(trend({ now: 60, before: 62 }), 'same');
+  assert.equal(trend({ now: 40, before: 60 }), 'down');
+  assert.equal(weekChange(log, '2026-11-04', 'b'), null);
+});

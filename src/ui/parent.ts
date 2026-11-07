@@ -9,7 +9,8 @@ import { backUpNow, dueKids, lastBackupText } from './backup.ts';
 import { askNotifications, notificationState, offerNotifications } from './remindsync.ts';
 import { remindersOf, type ReminderSettings } from '../core/reminders.ts';
 import { focusFor } from './focus.ts';
-import { FOCUS_GOAL } from '../core/focus.ts';
+import { FOCUS_GOAL, trend, weekChange } from '../core/focus.ts';
+import { demoHtml, type DemoId } from './mnxdemo.ts';
 import { strengths, timeOfDay } from '../core/stats.ts';
 import { skillById } from '../core/areas/index.ts';
 import { plusSvg } from './plus.ts';
@@ -207,11 +208,12 @@ function helpHtml(app: App): string {
 }
 
 /** What MN × adds, in a few words each (the page keeps it short, Duolingo-style). */
-const GAINS: { name: string; line: string }[] = [
-  { name: 'A Focus plan every week', line: 'Short rounds on the 3 skills that are hardest right now.' },
-  { name: 'The full report', line: 'Strengths, skills to practise, speed and their best time to learn.' },
-  { name: 'Your school’s syllabus', line: 'CBSE, ICSE or Common Core, class by class.' },
-  { name: 'Worksheets and every phone in step', line: 'Print practice; play on any phone with the same progress.' },
+const GAINS: { id: DemoId; name: string; line: string }[] = [
+  { id: 'focus', name: 'A Focus plan every week', line: 'Short rounds on the 3 skills that are hardest right now.' },
+  { id: 'report', name: 'The full report', line: 'Strengths, skills to practise, and how each one is changing.' },
+  { id: 'school', name: 'Your school’s syllabus', line: 'CBSE, ICSE or Common Core, class by class.' },
+  { id: 'sheets', name: 'Worksheets to print', line: 'From exactly where they are, with answers.' },
+  { id: 'sync', name: 'Every phone in step', line: 'Same progress on a phone and a tablet.' },
 ];
 const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#fff"/><path d="M7 12.5l3.2 3.2L17 8.8" fill="none" stroke="#6C47FF" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const LOCK = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7.5" rx="2" fill="currentColor"/><path d="M5.5 7V5.2a2.5 2.5 0 0 1 5 0V7" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>';
@@ -223,9 +225,17 @@ function reportPeek(app: App, c: Child, on: boolean): string {
   const p = focusFor(app, c);
   const tod = timeOfDay(c.log ?? []).sort((x, y) => y.levels - x.levels)[0];
   const name = (id: string) => esc(skillById(id)?.name ?? id);
+  // How each skill is changing, coloured: green up, orange down, grey steady.
+  const chip = (id: string) => {
+    const w = weekChange(c.log, app.today, id);
+    const t = trend(w);
+    if (!w || !t) return '';
+    const d = w.now - w.before;
+    return ` <i class="pm-chg ${t}">${t === 'up' ? '▲' : t === 'down' ? '▼' : '•'} ${t === 'same' ? 'steady' : `${d > 0 ? '+' : '−'}${Math.abs(d)}`}</i>`;
+  };
   const rows: [string, string][] = [
-    ['Strongest', best.length ? `${name(best[0].id)} · ${best[0].accuracy}%` : 'Shows after a few days of play'],
-    ['Needs help with', practise.length ? practise.map((x) => `${name(x.id)} (${x.accuracy}%)`).join(', ') : p.skills.length ? p.skills.map((x) => name(x.id)).join(', ') : 'Shows after a few days of play'],
+    ['Strongest', best.length ? `${name(best[0].id)} · ${best[0].accuracy}%${chip(best[0].id)}` : 'Shows after a few days of play'],
+    ['Needs help with', practise.length ? practise.map((x) => `${name(x.id)} (${x.accuracy}%)${chip(x.id)}`).join(', ') : p.skills.length ? p.skills.map((x) => name(x.id)).join(', ') : 'Shows after a few days of play'],
     ['This week’s Focus plan', p.skills.length ? `${p.skills.length} skills · ${Math.min(p.rounds, FOCUS_GOAL)} of ${FOCUS_GOAL} rounds done` : 'Ready after a few days of play'],
     ['Learns best in the', tod && tod.levels ? tod.label.toLowerCase() : 'Shows after a few days of play'],
   ];
@@ -250,7 +260,7 @@ function premiumHtml(app: App): string {
       <button class="pm-video"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.5v9l7.5-4.5z" fill="currentColor"/></svg>Watch the 90-second video</button>
     </div>`;
   const peek = kid ? `<section class="pm-proof"><p class="pm-cap">${on ? 'Your full report' : 'Here’s what MN × shows you'}</p>${reportPeek(app, kid, on)}</section>` : '';
-  const gains = `<ul class="pm-gains">${GAINS.map((g) => `<li>${CHECK}<span><b>${esc(g.name)}</b><small>${esc(g.line)}</small></span></li>`).join('')}</ul>`;
+  const gains = `<ul class="pm-gains">${GAINS.map((g) => `<li>${CHECK}<span><b>${esc(g.name)}</b><small>${esc(g.line)}</small></span><button class="pm-q" data-demo="${g.id}" aria-label="See what ${esc(g.name)} looks like">?</button></li>`).join('')}</ul>`;
   const free = on ? '' : '<p class="pm-free-note">Every level, lesson and reward stays free for every child, with no ads.</p>';
   const plans = !store || on ? '' : `<p class="pm-price">Then ${FALLBACK.yearly.price} a year, ${FALLBACK.monthly.price} a month, or ${FALLBACK.lifetime.price} once.</p>`;
   const cta = !store
@@ -505,6 +515,14 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
   }
   on('.erase-row', 'click', () => void eraseEverything(app));
   on('.privacy-row', 'click', () => openLink(app, PRIVACY_URL));
+  on('.pm-q', 'click', async (b) => {
+    const kids = app.save.data.children;
+    const kid = kids.find((c) => c.id === app.save.data.activeChildId) ?? kids[0];
+    const store = storeBuild(app) && !hasPlus(app);
+    const { el: sh, result } = app.sheet(demoHtml(b.dataset.demo as DemoId, kid?.name ?? 'Your child'), store ? [{ label: 'Try it free', value: true, kind: 'mint' }, { label: 'Close', value: false, kind: 'ghost', back: true }] : [{ label: 'Close', value: false, kind: 'ghost', back: true }], 'Preview');
+    sh.classList.add('mnx-sheet');
+    if (await result) void app.show(plusScreen(parentScreen));
+  });
   on('.pm-video', 'click', () => void app.show(plusVideoScreen(() => void app.show(parentScreen)), 'liquid'));
   on('.pm-plans', 'click', () => void app.show(plusScreen(parentScreen)));
   const ts = body.querySelector<HTMLInputElement>('.pt-slider');
