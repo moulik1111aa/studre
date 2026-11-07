@@ -132,3 +132,7 @@ html[data-theme="shapes"] .answers .pad-row .ok{background:#141414;color:#fff;bo
 .th-shapes .th-swatch i:nth-child(1){left:26%;right:26%;top:13px;height:18px;border-radius:9px;background:#141414;box-shadow:3px 3px 0 #FF4B2B}
 .th-shapes .th-swatch i:nth-child(2){left:32%;width:36%;bottom:10px;height:7px;border-radius:4px;background:#2140FF;box-shadow:0 0 0 1.5px #141414}
 .th-shapes .th-swatch i:nth-child(3){right:30%;bottom:22px;width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:12px solid #FF9EC4}
+@media (max-height:680px){
+  html[data-theme="shapes"] .answers .pad .key,html[data-theme="shapes"] .answers .key{min-height:40px}
+  html[data-theme="shapes"] .entry{font-size:34px;min-height:44px;margin-bottom:0}
+}

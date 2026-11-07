@@ -131,3 +131,7 @@ html[data-theme="print"] .answers .pad-row .ok{background:#1F6FD0;color:#fff;box
 .th-print .th-swatch i:nth-child(1){left:14px;right:34%;top:13px;height:18px;border-radius:9px;background:#1F6FD0;box-shadow:4px 3px 0 #FF4FA3}
 .th-print .th-swatch i:nth-child(2){left:14px;width:30%;bottom:10px;height:8px;border-radius:4px;background:#FFD400}
 .th-print .th-swatch i:nth-child(3){right:14px;bottom:8px;width:22px;height:22px;border-radius:50%;background:#00A6A0;box-shadow:3px 2px 0 #1F6FD0}
+@media (max-height:680px){
+  html[data-theme="print"] .answers .pad .key,html[data-theme="print"] .answers .key{min-height:40px}
+  html[data-theme="print"] .entry{font-size:34px;min-height:44px;margin-bottom:0}
+}

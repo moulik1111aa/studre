@@ -156,3 +156,7 @@ html[data-theme="studio"] .answers .pad-row .ok{border-radius:14px;background:#1
   html[data-theme="studio"] .entry{font-size:38px;min-height:48px}
   html[data-theme="studio"] .answers .pad-row .ok{min-height:48px}
 }
+@media (max-height:680px){
+  html[data-theme="studio"] .answers .pad .key,html[data-theme="studio"] .answers .key{min-height:40px}
+  html[data-theme="studio"] .entry{font-size:34px;min-height:44px;margin-bottom:0}
+}

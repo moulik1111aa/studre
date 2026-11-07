@@ -197,7 +197,7 @@ export function countUp(el: HTMLElement, from: number, to: number, ms = 700, for
  * long expressions). Pictures shrink a little too. Never below `min` px; if it still
  * overflows, the card scrolls.
  */
-export function fitCard(card: HTMLElement, room: HTMLElement, min = 16): void {
+export function fitCard(card: HTMLElement, room: HTMLElement, min = 21): void {
   const prompt = card.querySelector<HTMLElement>('.prompt');
   if (!prompt) return;
   prompt.style.fontSize = '';
@@ -208,7 +208,7 @@ export function fitCard(card: HTMLElement, room: HTMLElement, min = 16): void {
   for (let i = 0; i < 30 && over() && size > min; i++) {
     size -= 2;
     prompt.style.fontSize = `${size}px`;
-    if (vis && i % 3 === 2) vis.style.zoom = String(Math.max(0.6, Number(vis.style.zoom || 1) - 0.1));
+    if (vis && i % 3 === 2) vis.style.zoom = String(Math.max(0.7, Number(vis.style.zoom || 1) - 0.1));
   }
   scrollCue(card, room);
 }
@@ -230,7 +230,7 @@ function scrollCue(card: HTMLElement, room: HTMLElement): void {
     card.classList.toggle('at-end', done);
     cue.hidden = done;
   };
-  cue.addEventListener('click', () => card.scrollBy({ top: card.clientHeight * 0.7, behavior: 'smooth' }));
+  cue.addEventListener('click', () => card.scrollBy({ top: Math.max(80, card.clientHeight * 0.85), behavior: 'smooth' }));
   card.addEventListener('scroll', end, { passive: true });
   end();
 }

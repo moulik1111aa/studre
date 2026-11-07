@@ -220,9 +220,9 @@ html[data-theme] .q-tools .icon-btn.hint.on{background:var(--accent);color:var(-
 
 /* A card that scrolls: its bottom fades and a "More below" button sits over the fade. */
 .qwrap{position:relative}
-.qcard.scrolls:not(.at-end){-webkit-mask-image:linear-gradient(#000 calc(100% - 64px),transparent);mask-image:linear-gradient(#000 calc(100% - 64px),transparent)}
-.scroll-cue{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);z-index:3;appearance:none;border:0;cursor:pointer;display:flex;align-items:center;gap:6px;padding:8px 14px 8px 16px;border-radius:999px;font:600 15px/1 var(--font,system-ui);color:var(--cta-ink,#fff);background:var(--cta-bg,#1A1446);box-shadow:0 6px 16px -8px rgba(0,0,0,.5);animation:cueNudge 1.6s ease-in-out infinite}
-.scroll-cue svg{width:18px;height:18px}
+.qcard.scrolls:not(.at-end){-webkit-mask-image:linear-gradient(#000 calc(100% - 44px),transparent);mask-image:linear-gradient(#000 calc(100% - 44px),transparent);padding-bottom:30px}
+.scroll-cue{position:absolute;left:50%;bottom:-2px;transform:translateX(-50%);z-index:3;appearance:none;border:0;cursor:pointer;display:flex;align-items:center;gap:4px;padding:6px 10px 6px 12px;border-radius:999px;font:600 13px/1 var(--font,system-ui);color:var(--cta-ink,#fff);background:var(--cta-bg,#1A1446);box-shadow:0 6px 16px -8px rgba(0,0,0,.5);animation:cueNudge 1.6s ease-in-out infinite}
+.scroll-cue svg{width:15px;height:15px}
 .scroll-cue[hidden]{display:none}
 @keyframes cueNudge{50%{transform:translate(-50%,4px)}}
 @media (prefers-reduced-motion:reduce){.scroll-cue{animation:none}}

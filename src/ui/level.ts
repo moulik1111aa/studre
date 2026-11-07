@@ -87,13 +87,24 @@ export function levelScreen(child: Child, level: Extract<Level, { kind: 'skill' 
     const jarLine = el.querySelector<HTMLElement>('.jar-line')!;
     jarLine.style.setProperty('--jp', jar.el.querySelector<HTMLElement>('.tr-fill')?.style.width || '0%');
     let foldTimer = 0;
+    // The question is fitted again once the rewards have folded or opened (the room changed).
+    const refit = () =>
+      window.setTimeout(() => {
+        const c = qwrap.firstElementChild as HTMLElement | null;
+        if (c?.classList.contains('qcard')) fitCard(c, qwrap);
+      }, 560);
     const foldJar = (after: number) => {
       clearTimeout(foldTimer);
-      foldTimer = window.setTimeout(() => el.classList.add('focus'), after);
+      foldTimer = window.setTimeout(() => {
+        el.classList.add('focus');
+        refit();
+      }, after);
     };
     const openJar = () => {
       clearTimeout(foldTimer);
+      if (!el.classList.contains('focus')) return;
       el.classList.remove('focus');
+      refit();
     };
     jarLine.addEventListener('click', () => {
       openJar();
