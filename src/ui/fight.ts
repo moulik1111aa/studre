@@ -13,7 +13,8 @@ import { createRng } from '../core/rng.ts';
 import { isCorrect, spoken, type Question } from '../core/question.ts';
 import { addCoins, addPlayTime, coinsForLevel, bossFraction } from '../core/economy.ts';
 import { Fight, FIGHT, bossFor, fightSeconds, type FightEvent } from '../core/boss.ts';
-import { BossView, minionFor, projectile } from './bosses.ts';
+import { BossView, projectile } from './bosses.ts';
+import { fixMuddle, muddleSvg, starShot } from './muddles.ts';
 import { Boss3DView } from './boss3d.ts';
 import { visualHtml, optionHtml, prettyAnswer } from './visuals.ts';
 import { ICONS } from './icons.ts';
@@ -149,7 +150,7 @@ function minionScreen(app: App, child: Child, level: Extract<Level, { kind: 'rev
   const round = makeRound(level, skillById, child.progress, rng, [], [], child.challenge ?? 0, child.age);
   const first = skillById(level.skillIds[0])!;
   const little = first.stage <= 2;
-  const minion = minionFor(level.stage, level.n);
+  const minion = muddleSvg(level.stage, level.n);
   // Reviews are asked as big choices so the fight keeps its pace.
   const questions = round.questions;
   const focus = isFocus(level.id);
@@ -157,7 +158,7 @@ function minionScreen(app: App, child: Child, level: Extract<Level, { kind: 'rev
     ${ambientHtml(level.stage, 6)}
     <header class="play-top">
       <button class="icon-btn quit" aria-label="Pause">${ICONS.pause}</button>
-      <div class="play-title">${focus ? `<b>🎯 Focus round</b><span>Your ${level.skillIds.length === 1 ? 'skill' : `${level.skillIds.length} skills`} to get stronger at</span>` : '<b>Minion battle</b><span>Get all 10 right!</span>'}</div>
+      <div class="play-title">${focus ? `<b>🎯 Focus round</b><span>Your ${level.skillIds.length === 1 ? 'skill' : `${level.skillIds.length} skills`} to get stronger at</span>` : '<b>Muddle fight</b><span>Fix its sum: get them right!</span>'}</div>
       <span style="width:50px"></span>
     </header>
     <div class="arena">
@@ -205,7 +206,7 @@ function minionScreen(app: App, child: Child, level: Extract<Level, { kind: 'rev
       app.haptics.match(correct);
       const from = (btn ?? qwrap).getBoundingClientRect();
       const to = body.getBoundingClientRect();
-      await projectile('⭐', { x: from.x + from.width / 2, y: from.y }, { x: to.x + to.width / 2, y: to.y + to.height / 2 }, 'arc', 420);
+      await projectile(starShot(), { x: from.x + from.width / 2, y: from.y }, { x: to.x + to.width / 2, y: to.y + to.height / 2 }, 'arc', 420);
       app.sfx.hit(false);
       app.fx.burst(to.x + to.width / 2, to.y + to.height / 2, '#FFD25A', 16);
       pips[i]?.classList.add('gone');
@@ -235,6 +236,9 @@ function minionScreen(app: App, child: Child, level: Extract<Level, { kind: 'rev
     const stars = starsFor(correct, questions.length, round.rules.passMark);
     if (stars > 0) {
       app.sfx.fanfare();
+      // The sum is put right, then the Muddle spins away.
+      fixMuddle(body, level.stage, level.n);
+      await wait(reducedMotion() ? 600 : 1100);
       if (!reducedMotion()) await body.animate([{ transform: 'none' }, { transform: 'rotate(720deg) scale(0)', opacity: 0 }], { duration: 900, easing: EASE_OUT, fill: 'forwards' }).finished;
       const r = body.getBoundingClientRect();
       app.fx.confetti(r.x + r.width / 2, r.y + r.height / 2, 60);

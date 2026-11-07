@@ -34,13 +34,13 @@ export interface StudyHardPlugin {
   launchAction?(): Promise<{ open?: string }>;
   /** A file shared to MN or opened with it (taken once): its text and name. Newer apps only. */
   sharedFile?(): Promise<{ text?: string; name?: string }>;
-  /** The launcher icon (MN Premium members can pick one). Newer apps only. */
+  /** The launcher icon (MN × members can pick one). Newer apps only. */
   setAppIcon?(o: { name: string }): Promise<{ ok: boolean }>;
   appIcon?(): Promise<{ name?: string }>;
   /** Sign in with Google (Credential Manager); newer apps only. */
   googleSignIn?(o: { webClientId: string }): Promise<{ idToken?: string; email?: string; name?: string; cancelled?: boolean; error?: string }>;
   googleSignOut?(): Promise<void>;
-  /** MN Premium purchases through Google Play (newer apps only; see platform/billing.ts). */
+  /** MN × purchases through Google Play (newer apps only; see platform/billing.ts). */
   billingProducts?(o: { subs: string[]; inapp: string[] }): Promise<{ ok: boolean; products?: PlayProduct[]; code?: number; message?: string }>;
   billingBuy?(o: { product: string; offer?: string }): Promise<{ ok: boolean; code?: number; message?: string }>;
   billingOwned?(): Promise<{ ok: boolean; purchases?: PlayPurchase[] }>;

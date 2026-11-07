@@ -331,11 +331,11 @@ export function reportScreen(child: Child, start: Tab = 'overview') {
     </section>`);
     const body = el.querySelector<HTMLElement>('.rp-body')!;
     const show = (tab: Tab) => {
-      // Play Store build without MN Premium: Skills, Activity and Rewards show blurred, with the way in.
+      // Play Store build without MN ×: Skills, Activity and Rewards show blurred, with the way in.
       const locked = (tab === 'skills' || tab === 'activity' || tab === 'rewards') && !hasPlus(app);
       body.innerHTML = locked
         ? `<div class="mp-lock"><div class="mp-lock-peek" inert aria-hidden="true">${bodies[tab]}</div>
-            <div class="card mp-lock-card"><b>✨ ${esc(child.name)}’s full report</b><p>Strengths, the exact skills to practise, how quickly ${esc(child.name)} answers, and the days and times they learn best. Part of MN Premium.</p><button class="btn mint small mp-see">See MN Premium</button></div></div>`
+            <div class="card mp-lock-card"><b>✨ ${esc(child.name)}’s full report</b><p>Strengths, the exact skills to practise, how quickly ${esc(child.name)} answers, and the days and times they learn best. Part of MN ×.</p><button class="btn mint small mp-see">See MN ×</button></div></div>`
         : bodies[tab];
       body.querySelector('.mp-see')?.addEventListener('click', () => void app.show(plusScreen(reportScreen(child, tab))));
       body.scrollTop = 0;

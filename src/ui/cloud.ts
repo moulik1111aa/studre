@@ -229,7 +229,7 @@ export async function deleteCloudAccount(app: App): Promise<boolean> {
 export type SyncOutcome = { ok: true; added: Child[]; dropped: string[]; sent: number; at: number } | { ok: false; why: 'signed-out' | 'not-approved' | 'offline' | 'busy' | 'error' | 'other-phone'; message: string };
 
 /**
- * Without MN Premium (Play Store build) the backup is an online backup from one phone: the phone
+ * Without MN × (Play Store build) the backup is an online backup from one phone: the phone
  * that last backed up. Another phone signing in takes it over (bringing the family's
  * progress with it); the first phone then stops until a parent takes it back.
  */

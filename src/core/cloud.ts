@@ -123,7 +123,7 @@ export interface FamilyDoc {
   devices: Record<string, { label: string; at: number }>;
   rules: FamilyRules;
   rulesAt: number;
-  /** The phone that last synced. Without MN Premium (Play build) only this phone keeps the online backup. */
+  /** The phone that last synced. Without MN × (Play build) only this phone keeps the online backup. */
   primary?: string;
   /** A parent deleted the online backup then (only this is left; phones that synced before sign out). */
   deletedAt?: number;

@@ -1,4 +1,4 @@
-// MN Premium, the parents' paid extras (Play Store build only). What the Play account owns
+// MN ×, the parents' paid extras (Play Store build only). What the Play account owns
 // decides it; this file only does the deciding, with no Play or screen code, so it can be
 // tested. Plans: monthly and yearly subscriptions (with a free trial offer) and a one-time
 // lifetime purchase. Prices always come from Play (in the phone's own currency); the ones
@@ -28,7 +28,7 @@ export const FALLBACK: Record<PlanId, { price: string; per: string }> = {
 export const TRIAL_DAYS = 7;
 export const TRIAL_DAYS_SIGNED_IN = 14;
 
-/** What MN Premium adds, in the order the Plus page lists them. */
+/** What MN × adds, in the order the Plus page lists them. */
 export type PlusFeature = 'focus' | 'sync' | 'school' | 'report' | 'sheets' | 'icons';
 export const FEATURES: { id: PlusFeature; icon: string; name: string; free: string; plus: string }[] = [
   { id: 'focus', icon: '🎯', name: 'Focus plan', free: 'Fix-it brings back missed questions', plus: 'Each week, short rounds on the 3 skills your child finds hardest, with before-and-after scores' },
@@ -39,7 +39,7 @@ export const FEATURES: { id: PlusFeature; icon: string; name: string; free: stri
   { id: 'icons', icon: '🎨', name: 'App icons', free: 'The sky icon', plus: 'Pick the MN icon on your home screen: Sky, Night, Sunset, Space or Gold' },
 ];
 
-/** The phone's record of MN Premium (kept on the phone, not in backups). */
+/** The phone's record of MN × (kept on the phone, not in backups). */
 export interface PlusState {
   /** What gives Plus now; none when it isn't on. */
   via?: 'monthly' | 'yearly' | 'lifetime' | 'subscription' | 'owner' | 'pending';

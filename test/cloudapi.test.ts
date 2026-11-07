@@ -70,7 +70,7 @@ test('the family document: only the changed children, devices and removals are w
   const mask = new URL(c.url).searchParams.getAll('updateMask.fieldPaths');
   assert.deepEqual(mask.sort(), ['consentAt', 'deletedAt', 'devices.dA', 'kids.c1', 'kids.c3', 'policy', 'primary', 'removed.c3', 'rules', 'rulesAt', 'v'].sort());
   const body = JSON.parse(c.body!).fields;
-  // The phone writing is the backup phone (one-phone backup without MN Premium).
+  // The phone writing is the backup phone (one-phone backup without MN ×).
   assert.equal(fromFs(body.primary), 'dA');
   assert.deepEqual(fromFs(body.kids), { c1: 10 });
   assert.equal(fromFs(body.rules), JSON.stringify({ limitMinutes: 30 }));

@@ -10,8 +10,10 @@ import { askNotifications, notificationState, offerNotifications } from './remin
 import { remindersOf, type ReminderSettings } from '../core/reminders.ts';
 import { focusFor } from './focus.ts';
 import { FOCUS_GOAL } from '../core/focus.ts';
+import { strengths, timeOfDay } from '../core/stats.ts';
 import { skillById } from '../core/areas/index.ts';
-import { plusFaceSvg } from './plus.ts';
+import { plusSvg } from './plus.ts';
+import { timesMarkSvg } from './mnx.ts';
 import { eraseEverything } from './erase.ts';
 import { openLink, PRIVACY_URL } from './links.ts';
 import { FALLBACK } from '../core/membership.ts';
@@ -85,7 +87,7 @@ type Page = 'kids' | 'sound' | 'premium' | 'app' | 'help';
 const TABS: { id: Page; icon: string; label: string; title: string }[] = [
   { id: 'kids', icon: '👧', label: 'Children', title: 'Children' },
   { id: 'sound', icon: '🔊', label: 'Sound', title: 'Sound and voice' },
-  { id: 'premium', icon: '✨', label: 'Premium', title: 'MN Premium' },
+  { id: 'premium', icon: timesMarkSvg('tab'), label: 'MN ×', title: 'MN ×' },
   { id: 'app', icon: '⚙️', label: 'App', title: 'App settings' },
   { id: 'help', icon: '❓', label: 'Help', title: 'Help' },
 ];
@@ -102,12 +104,12 @@ function cloudCard(app: App): string {
   const who = account(app);
   if (!who)
     return `<div class="card pa-cloud"><p><b>☁️ Back up with Google</b><small>Sign in to keep progress safe and the same on every phone. What’s on this phone now is kept and joins your account. ${esc(LOCAL_NOTE)} right now.</small></p>${googleButton('cl-in')}</div>`;
-  // Play Store build without MN Premium: an online backup from one phone.
+  // Play Store build without MN ×: an online backup from one phone.
   const other = onePhone(app) ? otherPhone() : null;
   const note = other
-    ? `<div class="cl-other" role="status"><p>📱 The online backup now comes from <b>${esc(other)}</b>. Progress made on this phone isn’t backed up.</p><button class="btn ghost small cl-take">Keep the online backup from this phone</button><p class="fine">With MN Premium, every phone stays in step. <button class="linkish mp-from-cloud">See MN Premium</button></p></div>`
+    ? `<div class="cl-other" role="status"><p>📱 The online backup now comes from <b>${esc(other)}</b>. Progress made on this phone isn’t backed up.</p><button class="btn ghost small cl-take">Keep the online backup from this phone</button><p class="fine">With MN ×, every phone stays in step. <button class="linkish mp-from-cloud">See MN ×</button></p></div>`
     : onePhone(app)
-      ? `<p class="fine cl-one">Online backup from this phone, every few hours. With MN Premium, every phone stays in step all the time. <button class="linkish mp-from-cloud">See MN Premium</button></p>`
+      ? `<p class="fine cl-one">Online backup from this phone, every few hours. With MN ×, every phone stays in step all the time. <button class="linkish mp-from-cloud">See MN ×</button></p>`
       : '';
   return `<div class="card pa-cloud on"><p><b>☁️ ${esc(who.email)}</b><small class="cl-status">${esc(other ? 'Not backing up from this phone' : syncText(lastSync()))}</small></p>${note}
     <div class="cl-btns"><button class="btn small cl-sync">Back up now</button><button class="btn ghost small cl-out">Sign out</button></div>
@@ -197,81 +199,66 @@ const FAQ: [string, string][] = [
 ];
 function helpHtml(app: App): string {
   return `${sec('Videos', `<button class="pa-row card story-row"><b>▶ How MN works</b><small>One minute: levels, lessons and rewards</small></button>
-      <button class="pa-row card plus-row"><b>▶ What MN Premium adds</b><small>A short video about the extra features</small></button>`)}
+      <button class="pa-row card plus-row"><b>▶ What MN × adds</b><small>A short video about the extra features</small></button>`)}
     ${sec('Questions', `<div class="card pa-faq">${FAQ.map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}</div>`)}
     ${sec('More', `<button class="pa-row card tips-row"><b>Show the map tips again</b><small>Each child sees Plus’s tips the next time they open the map</small></button>
       <button class="pa-row card adv-what"><b>🎮 What is Adventure mode?</b><small>Quests and badges: daily goals, chests, a pet and outfits</small></button>
       ${faceoffRows(app)}`)}`;
 }
 
-/** The perks as cards: the front says what it is, the back how to get the most from it. */
-const PERKS: { id: string; icon: string; name: string; line: string; how: string[] }[] = [
-  { id: 'focus', icon: '🎯', name: 'Focus plan', line: 'Three short rounds a week on the skills that are hardest right now.', how: ['Each Monday MN picks the 3 hardest skills.', 'Your child taps 🎯 on the map: about 3 minutes a round.', 'Come back here to see before → after.'] },
-  { id: 'report', icon: '📊', name: 'Full report', line: 'Strengths, skills to practise, speed, and the time of day they learn best.', how: ['Open Report once a week.', 'Praise one strength by name.', 'Spend five minutes together on one skill to practise.'] },
-  { id: 'school', icon: '📚', name: 'School syllabus', line: 'CBSE, ICSE or Common Core, class by class, so home matches school.', how: ['Open a child’s ⚙️ → School syllabus.', 'Pick the board and class.', 'Tick this term’s topics.'] },
-  { id: 'sheets', icon: '🖨️', name: 'Worksheets', line: 'Printable practice from exactly where they are, with an answer key.', how: ['Open a child’s ⚙️ → Print a worksheet.', 'Use it for car rides and screen-free days.', 'The answers are on the last page.'] },
-  { id: 'sync', icon: '☁️', name: 'Every phone in step', line: 'A tablet at home and a phone on the go, with the same progress.', how: ['App → Backup → Sign in with Google.', 'Do the same on the other phone.', 'Progress follows the child.'] },
-  { id: 'icons', icon: '🎨', name: 'App icons', line: 'Sky, Night, Sunset, Space or Gold on the home screen.', how: ['App → Look → App icon.', 'Save it as a treat for a big reward.'] },
+/** What MN × adds, in a few words each (the page keeps it short, Duolingo-style). */
+const GAINS: { name: string; line: string }[] = [
+  { name: 'A Focus plan every week', line: 'Short rounds on the 3 skills that are hardest right now.' },
+  { name: 'The full report', line: 'Strengths, skills to practise, speed and their best time to learn.' },
+  { name: 'Your school’s syllabus', line: 'CBSE, ICSE or Common Core, class by class.' },
+  { name: 'Worksheets and every phone in step', line: 'Print practice; play on any phone with the same progress.' },
 ];
+const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#fff"/><path d="M7 12.5l3.2 3.2L17 8.8" fill="none" stroke="#6C47FF" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const LOCK = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7.5" rx="2" fill="currentColor"/><path d="M5.5 7V5.2a2.5 2.5 0 0 1 5 0V7" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>';
 
-/** Free and Premium side by side: the free app is complete; Premium is the parent's view. */
-const COMPARE: [string, string, string][] = [
-  ['Every level, lesson and reward', '✓', '✓'],
-  ['Stars, time and this week', '✓', '✓'],
-  ['Which skills need practice', '', '✓'],
-  ['Focus rounds on the hardest skills', '', '✓'],
-  ['School syllabus, worksheets', '', '✓'],
-  ['Backup', 'One phone', 'Every phone'],
-];
-
-/** Each child's hardest skills this week, as bars: the parent sees their own child, not an advert. */
-function childLens(app: App, on: boolean): string {
-  const kids = app.save.data.children.slice(0, 3);
-  if (!kids.length) return '';
-  const rows = kids.map((c) => {
-    const p = focusFor(app, c);
-    if (!p.skills.length) return `<div class="pm-kid"><b>${esc(c.name)}</b><p class="pm-soon">After a few days of play, the skills ${esc(c.name)} finds hardest show here.</p></div>`;
-    return `<div class="pm-kid"><b>${esc(c.name)}</b><small>${on ? `${Math.min(p.rounds, FOCUS_GOAL)} of ${FOCUS_GOAL} Focus rounds this week` : 'Hardest skills right now'}</small>
-      <ul>${p.skills
-        .map((k) => {
-          const now = k.now ?? k.before;
-          return `<li><span class="pm-sk">${esc(skillById(k.id)?.name ?? k.id)}</span><span class="pm-bar" style="--v:${now}%"><i></i></span><b>${k.now !== null && k.now !== k.before ? `${k.before}→<em class="${k.now > k.before ? 'up' : ''}">${k.now}%</em>` : `${now}%`}</b></li>`;
-        })
-        .join('')}</ul></div>`;
-  });
-  return `<section class="pm-lens"><h3>${on ? 'This week’s Focus plan' : 'What Premium sees today'}</h3>${rows.join('')}
-    ${on ? '' : '<p class="pm-lens-note">With Premium, these become short Focus rounds on the map, and you watch the numbers rise.</p>'}</section>`;
+/** One child's report as MN × shows it: real numbers; without MN ×, all but the first row is blurred. */
+function reportPeek(app: App, c: Child, on: boolean): string {
+  const t = c.tally ?? {};
+  const { best, practise } = strengths(t, 6);
+  const p = focusFor(app, c);
+  const tod = timeOfDay(c.log ?? []).sort((x, y) => y.levels - x.levels)[0];
+  const name = (id: string) => esc(skillById(id)?.name ?? id);
+  const rows: [string, string][] = [
+    ['Strongest', best.length ? `${name(best[0].id)} · ${best[0].accuracy}%` : 'Shows after a few days of play'],
+    ['Needs help with', practise.length ? practise.map((x) => `${name(x.id)} (${x.accuracy}%)`).join(', ') : p.skills.length ? p.skills.map((x) => name(x.id)).join(', ') : 'Shows after a few days of play'],
+    ['This week’s Focus plan', p.skills.length ? `${p.skills.length} skills · ${Math.min(p.rounds, FOCUS_GOAL)} of ${FOCUS_GOAL} rounds done` : 'Ready after a few days of play'],
+    ['Learns best in the', tod && tod.levels ? tod.label.toLowerCase() : 'Shows after a few days of play'],
+  ];
+  return `<div class="pm-peek${on ? ' open' : ''}">
+    <div class="pm-peek-h">${avatarHtml(c.avatar, 34)}<b>${esc(c.name)}</b><small>this week</small></div>
+    ${rows.map(([k, v], i) => `<div class="pm-row${!on && i > 0 ? ' locked' : ''}"><small>${k}</small><b>${v}</b>${!on && i > 0 ? `<span class="pm-lock">${LOCK}</span>` : ''}</div>`).join('')}
+  </div>`;
 }
 
-/** MN Premium: designed as its own page (it leaves the theme on purpose). */
+/** MN ×: its own page, in the spirit of Duolingo's: one bold colour, the mascot, a few lines and
+ *  one button, and the parent's own child's report as the proof. */
 function premiumHtml(app: App): string {
   const on = hasPlus(app);
   const store = storeBuild(app);
   const kids = app.save.data.children;
-  const who = kids.length === 1 ? kids[0].name : kids.length ? 'your children' : 'your child';
   const days = account(app) ? TRIAL_DAYS_SIGNED_IN : TRIAL_DAYS;
-  const head = on
-    ? `<h2 class="pm-h">You see the whole picture.</h2><p class="pm-sub">${store ? 'Thank you for choosing Premium. Turn a card over to see how to get the most from it.' : 'Everything in Premium is included in this version of MN. Turn a card over to see how to use it.'}</p>`
-    : `<h2 class="pm-h">See exactly where ${esc(who)} needs you.</h2><p class="pm-sub">MN is complete and free for every child, with no ads. Premium is the parent’s view: it finds the skills to work on and turns them into practice.</p>`;
-  const video = `<button class="pm-video" aria-label="Watch: what MN Premium adds">
-      <span class="pm-orbit" aria-hidden="true"><i></i><i></i><i></i></span>
-      <span class="pm-face" aria-hidden="true">${plusFaceSvg({ cls: 'alive' })}</span>
-      <span class="pm-play" aria-hidden="true">▶</span>
-      <span class="pm-vt"><b>Watch what Premium adds</b><small>90 seconds</small></span>
-    </button>`;
-  const cards = `<section class="pm-perks-x"><h3>${on ? 'Your perks' : 'Six things you get'}</h3><div class="pm-deck" role="list">${PERKS.map(
-    (k) => `<button class="pm-perk" role="listitem" aria-label="${esc(k.name)}: tap to see how to use it"><span class="pm-in"><span class="pm-front"><span class="pm-ic" aria-hidden="true">${k.icon}</span><b>${esc(k.name)}</b><small>${esc(k.line)}</small><em>How to use it ↻</em></span><span class="pm-back"><b>${esc(k.name)}</b><ol>${k.how.map((h) => `<li>${esc(h)}</li>`).join('')}</ol></span></span></button>`,
-  ).join('')}</div></section>`;
-  const compare = on
-    ? ''
-    : `<section class="pm-vs"><div class="pm-vs-h"><span></span><b>Free</b><b class="pm-gold">Premium</b></div>${COMPARE.map(([t, f, p]) => `<div class="pm-vs-r"><span>${esc(t)}</span><span>${f === '✓' ? '<i class="ok">✓</i>' : f ? esc(f) : '<i class="no">–</i>'}</span><span>${p === '✓' ? '<i class="ok gold">✓</i>' : esc(p)}</span></div>`).join('')}</section>`;
-  const trust = `<ul class="pm-trust"><li>No ads, ever</li><li>Nothing is lost if you stop</li><li>Cancel any time in Google Play</li></ul>`;
+  const kid = kids.find((c) => c.id === app.save.data.activeChildId) ?? kids[0];
+  const hero = `<div class="pm-hero">
+      <div class="pm-mascot" aria-hidden="true">${plusSvg({ cls: 'alive', noShadow: true })}</div>
+      <p class="pm-brand">MN <span>×</span></p>
+      <h2 class="pm-h">${on ? 'You know exactly where to help.' : 'Know exactly where to help.'}</h2>
+      <button class="pm-video"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.5v9l7.5-4.5z" fill="currentColor"/></svg>Watch the 90-second video</button>
+    </div>`;
+  const peek = kid ? `<section class="pm-proof"><p class="pm-cap">${on ? 'Your full report' : 'Here’s what MN × shows you'}</p>${reportPeek(app, kid, on)}</section>` : '';
+  const gains = `<ul class="pm-gains">${GAINS.map((g) => `<li>${CHECK}<span><b>${esc(g.name)}</b><small>${esc(g.line)}</small></span></li>`).join('')}</ul>`;
+  const free = on ? '' : '<p class="pm-free-note">Every level, lesson and reward stays free for every child, with no ads.</p>';
+  const plans = !store || on ? '' : `<p class="pm-price">Then ${FALLBACK.yearly.price} a year, ${FALLBACK.monthly.price} a month, or ${FALLBACK.lifetime.price} once.</p>`;
   const cta = !store
-    ? ''
+    ? '<div class="pm-cta-bar"><p class="pm-incl">Everything in MN × is included in this version of MN.</p></div>'
     : on
-      ? '<div class="pm-cta-bar"><button class="pm-buy ghost pm-plans">Your plan</button></div>'
-      : `<div class="pm-cta-bar"><button class="pm-buy pm-plans">Start ${days} days free</button><small>Then ${FALLBACK.yearly.price} a year or ${FALLBACK.monthly.price} a month, or ${FALLBACK.lifetime.price} once. Renews automatically; cancel before the free days end and you pay nothing.</small></div>`;
-  return `<div class="pm-page">${video}${head}${childLens(app, on)}${cards}${compare}${trust}</div>${cta}`;
+      ? '<div class="pm-cta-bar"><button class="pm-buy ghost pm-plans">Manage your plan</button></div>'
+      : `<div class="pm-cta-bar"><button class="pm-buy pm-plans">Try ${days} days free</button><small>Cancel any time in Google Play. No charge if you cancel during the free days.</small></div>`;
+  return `<div class="pm-page">${hero}${peek}${gains}${free}${plans}</div>${cta}`;
 }
 
 function pageHtml(app: App, p: Page): string {
@@ -518,7 +505,6 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
   }
   on('.erase-row', 'click', () => void eraseEverything(app));
   on('.privacy-row', 'click', () => openLink(app, PRIVACY_URL));
-  on('.pm-perk', 'click', (b) => b.classList.toggle('flip'));
   on('.pm-video', 'click', () => void app.show(plusVideoScreen(() => void app.show(parentScreen)), 'liquid'));
   on('.pm-plans', 'click', () => void app.show(plusScreen(parentScreen)));
   const ts = body.querySelector<HTMLInputElement>('.pt-slider');
@@ -570,7 +556,7 @@ export function childSettingsScreen(c: Child) {
         <h2 class="pa-h">Learning</h2>
         <button class="pa-row card age-btn"><b>🎂 Age</b><small>${c.age} · questions follow the age</small></button>
         <button class="pa-row card level-btn"><b>${CHALLENGE[c.challenge ?? 0].icon} Difficulty</b><small>${CHALLENGE[c.challenge ?? 0].name} · ${CHALLENGE[c.challenge ?? 0].note}</small></button>
-        <button class="pa-row card school-btn"><b>📚 School syllabus ${plusTag(app)}</b><small>${c.school?.on ? (hasPlus(app) ? esc(schoolLabel(c.school)) : `${esc(schoolLabel(c.school))} · paused without MN Premium`) : 'Off · follow the school syllabus instead of the age path'}</small></button>
+        <button class="pa-row card school-btn"><b>📚 School syllabus ${plusTag(app)}</b><small>${c.school?.on ? (hasPlus(app) ? esc(schoolLabel(c.school)) : `${esc(schoolLabel(c.school))} · paused without MN ×`) : 'Off · follow the school syllabus instead of the age path'}</small></button>
         <div class="card pa-toggles">
           <label class="toggle-row"><span><b>👪 Play together</b><small>No timers; after a slip they try one like it. On by default for ages 3–6.</small></span><input type="checkbox" role="switch" class="assist-btn" ${c.assisted ? 'checked' : ''}></label>
         </div>

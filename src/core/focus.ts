@@ -1,4 +1,4 @@
-// Focus plan (MN Premium): each Monday MN picks the three skills a child finds hardest, from
+// Focus plan (MN ×): each Monday MN picks the three skills a child finds hardest, from
 // everything answered before that week (answered at least a few times, under 90% right,
 // lowest first, then slowest). The child plays them as short Focus rounds on the map, and the
 // parent sees each skill's accuracy before the week and during it.

@@ -16,12 +16,12 @@ export interface BossDef {
 }
 
 export const BOSSES: BossDef[] = [
-  { id: 'bubbles', stage: 1, slot: 'mid', name: 'Mr Bubbles', intro: 'Pop! Pop! Can you count my bubbles?', outro: 'Pfffft… *pop*' },
+  { id: 'bubbles', stage: 1, slot: 'mid', name: 'Big Muddle', intro: 'I mixed up ALL the numbers! Can you count them right?', outro: 'Oh! One, two, three, four… you fixed it!' },
   { id: 'gobble', stage: 1, slot: 'final', name: 'Gobble the Sock Monster', intro: 'I took ALL the socks! Count them if you can!', outro: 'Achoo! Take your socks back…' },
   { id: 'hoot', stage: 2, slot: 'mid', name: 'Professor Hoot', intro: 'Hoo-hoo! Let us test those number facts.', outro: 'Zzz… hoo… zzz…' },
   { id: 'tenbeard', stage: 2, slot: 'final', name: 'Captain Tenbeard', intro: 'Arr! Make ten or walk the plank!', outro: 'Abandon ship! Paddle, paddle!' },
   { id: 'gloop', stage: 3, slot: 'mid', name: 'Gloop the Slime King', intro: 'Bow before the Slime King… and his sums!', outro: 'I’m… melting… my crown!' },
-  { id: 'blaze', stage: 3, slot: 'final', name: 'Blaze the Carry Dragon', intro: 'My fireballs carry the ten! Can you?', outro: 'I’m just a little lizard now…' },
+  { id: 'blaze', stage: 3, slot: 'final', name: 'Blaze the Carry Dragon', intro: 'My fireballs carry the ten! Can you?', outro: 'My fire… went out… *puff*' },
   { id: 'crab', stage: 4, slot: 'mid', name: 'Clockwork Crab', intro: 'Tick-tock-SNAP! Times tables, quick!', outro: 'Sproing! Clank… clank…' },
   { id: 'multiplex', stage: 4, slot: 'final', name: 'Robo-Multiplex', intro: 'TWELVE PLATES OF ARMOUR. COMPUTE.', outro: 'ERROR 404: ROBOT NOT FOUND' },
   { id: 'fractio', stage: 5, slot: 'mid', name: 'Chef Fractio', intro: 'Ze pie is sliced! But into how many pieces?', outro: 'Into ze soup I go…' },

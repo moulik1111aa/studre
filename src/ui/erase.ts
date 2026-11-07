@@ -12,7 +12,7 @@ export async function eraseEverything(app: App): Promise<void> {
     `<h2>Delete account and data?</h2>
     <p>This deletes, for good:</p>
     <ul class="er-list"><li>every child’s progress, rewards and settings on this phone</li>${signedIn ? '<li>your family’s online backup</li><li>your MN sign-in (your Google account itself is not touched)</li>' : ''}</ul>
-    <p class="fine">Backup files you saved yourself (in Google Drive or email) stay where you put them. An MN Premium subscription is not cancelled by this: cancel it in Google Play → Payments &amp; subscriptions.</p>`,
+    <p class="fine">Backup files you saved yourself (in Google Drive or email) stay where you put them. An MN × subscription is not cancelled by this: cancel it in Google Play → Payments &amp; subscriptions.</p>`,
     [
       { label: 'Delete everything', value: true, kind: 'danger' },
       { label: 'Cancel', value: false, kind: 'ghost', back: true },

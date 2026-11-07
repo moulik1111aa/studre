@@ -10,7 +10,7 @@
 
 import { html, esc, type App, type Screen } from './app.ts';
 import { plusSvg, plusFaceSvg } from './plus.ts';
-import { BOSS_EMOJI } from './bosses.ts';
+import { bossFaceSvg } from './bosses.ts';
 import { reducedMotion } from '../render/motion.ts';
 
 /** Coins fly in an arc from one element to another. */
@@ -182,7 +182,7 @@ function scenes(): ReelScene[] {
       id: 'boss',
       bg: ['#9333EA', '#C026D3'],
       caption: 'Beat bosses. Win trophies.',
-      art: `<div class="rl-boss"><span class="rl-monster">${BOSS_EMOJI.bubbles}</span><span class="rl-hit">POW!</span><span class="rl-trophy">🏆</span></div>`,
+      art: `<div class="rl-boss"><span class="rl-monster">${bossFaceSvg('gloop')}</span><span class="rl-hit">POW!</span><span class="rl-trophy">🏆</span></div>`,
     },
     {
       id: 'charge',
@@ -219,7 +219,7 @@ function voiceover(id = 'reel-audio'): HTMLAudioElement | null {
   return a;
 }
 
-/** Another video played the same way (the MN Premium video): its stops, its voiceover and where each line is. */
+/** Another video played the same way (the MN × video): its stops, its voiceover and where each line is. */
 export interface ReelVideo {
   scenes: () => ReelScene[];
   lines: [number, number][];

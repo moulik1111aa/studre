@@ -21,7 +21,8 @@ import { questScreen } from './quest.ts';
 import { timesUpScreen } from './timesup.ts';
 import { whosPlayingScreen } from './whos.ts';
 import { trophyScreen } from './trophy.ts';
-import { BOSS_EMOJI } from './bosses.ts';
+import { bossFaceSvg } from './bosses.ts';
+import { muddleSvg } from './muddles.ts';
 import { remember } from '../core/undo.ts';
 import { showMapTips } from './tour.ts';
 import { adventureOn, adventureScreen, outfitFor, questBadge, showAdventureTips, whoLine } from './adventure.ts';
@@ -198,9 +199,9 @@ export function mapScreen(child: Child) {
         const x = 50 + Math.sin(k * 0.9) * 30;
         const face =
           n.kind === 'boss'
-            ? `<span class="nd-face boss">${BOSS_EMOJI[bossFor(s, (n.levels[0] as Extract<Level, { kind: 'boss' }>).boss).id] ?? '👾'}</span>`
+            ? `<span class="nd-face boss">${bossFaceSvg(bossFor(s, (n.levels[0] as Extract<Level, { kind: 'boss' }>).boss).id) || '👾'}</span>`
             : n.kind === 'review'
-              ? `<span class="nd-face minion">⚔️</span>`
+              ? `<span class="nd-face minion">${muddleSvg(s, (n.levels[0] as Extract<Level, { kind: 'review' }>).n)}</span>`
               : n.kind === 'quest'
               ? `<span class="nd-face quest">🧭</span>`
               : `<span class="nd-face">${skillNo}${branchBadge(n)}</span>`;

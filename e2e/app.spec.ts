@@ -197,10 +197,10 @@ test('first run: setup, placement, rewards, first level', async ({ page }) => {
   await expect(page.locator('.coin-count')).toHaveText(/\+\d+/, { timeout: 5000 });
 });
 
-test('boss fight: win against Mr Bubbles', async ({ page }) => {
+test('boss fight: win against Big Muddle', async ({ page }) => {
   await page.goto('/?debug&no3d&demo=boss%3Aarithmetic%3A1%3Amid&play');
   await expect(page.locator('.boss-fight')).toBeVisible();
-  await expect(page.locator('.speech')).toContainText('bubbles');
+  await expect(page.locator('.speech')).toContainText('mixed up');
   const n = await playThrough(page, '.result');
   expect(n).toBeGreaterThanOrEqual(10);
   await expect(page.locator('.res-title')).toContainText('defeated');
@@ -1212,10 +1212,11 @@ test('parent area: five tabs on the right (Children, Sound, Premium, App, Help),
   const st = await page.evaluate(() => (window as unknown as W).__app.save.data.settings);
   expect(st.voiceGender).toBe('f');
   expect(st.volume).toBe(0.5);
-  // MN Premium: everything included in this version, with the perks and how to use them.
+  // MN ×: everything included in this version, with the perks and how to use them.
   await page.click('.pa-tab[data-id="premium"]');
-  await expect(page.locator('.pm-hero')).toContainText('MN Premium is on');
-  await expect(page.locator('.pm-perks details')).toHaveCount(6);
+  await expect(page.locator('.pm-h')).toContainText('where to help');
+  await expect(page.locator('.pm-gains li')).toHaveCount(4);
+  await expect(page.locator('.pm-row.locked')).toHaveCount(0);
   // App: notifications, look, Parent PIN, backup, delete.
   await page.click('.pa-tab[data-id="app"]');
   for (const sel of ['[data-r="daily"]', '.theme-tile', '[data-k="vibration"]', '[data-k="fx3d"]', '.lock-row', '.bk-all', '.erase-row']) await expect(page.locator(sel).first()).toBeAttached();
@@ -1251,7 +1252,7 @@ test('Focus plan: three hardest skills on the map, played as a Focus round, show
   await expect(page.locator('.play-title')).toContainText('Focus round');
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
   await page.click('.pa-tab[data-id="premium"]');
-  await expect(page.locator('.fc-skills li')).toHaveCount(3);
+  await expect(page.locator('.pm-peek')).toContainText('3 skills');
 });
 
 test('map ☰ menu: trophies, tips, switch child, and the parent area behind the parent check', async ({ page }) => {
@@ -1395,14 +1396,14 @@ test('google: a phone already in use signs in and combines its child with the sa
   await ctx.close();
 });
 
-test('MN Premium video: from the Parent area Help page, plays through its 8 stops to the end', async ({ page }) => {
+test('MN × video: from the Parent area Help page, plays through its 8 stops to the end', async ({ page }) => {
   type W = { __app: { show(m: unknown): void }; __screens: { parentScreen: unknown } };
   await page.goto('/?debug&demo=%400&fastreel');
   await expect(page.locator('.map')).toBeVisible();
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
   await page.click('.pa-tab[data-id=\"help\"]');
   await page.click('.plus-row');
-  await expect(page.locator('.reel[aria-label="What MN Premium adds"]')).toBeVisible();
+  await expect(page.locator('.reel[aria-label="What MN × adds"]')).toBeVisible();
   await expect(page.locator('.rl-count')).toHaveText(/of 8$/);
   await expect(page.locator('.rl-go')).toBeVisible({ timeout: 30_000 });
   await expect(page.locator('.rl-s-pv-school .pv-school.s5')).toHaveCount(1);
@@ -1410,20 +1411,20 @@ test('MN Premium video: from the Parent area Help page, plays through its 8 stop
   await expect(page.locator('.screen.parent')).toBeVisible();
 });
 
-test('MN Premium (Play Store build): paid features say so, the trial and plans come from Play, buying turns Plus on', async ({ page }) => {
+test('MN × (Play Store build): paid features say so, the trial and plans come from Play, buying turns Plus on', async ({ page }) => {
   type W = { __app: { show(m: unknown): void; save: { data: { children: unknown[] } } }; __screens: { parentScreen: unknown; reportScreen(c: unknown, t: string): unknown } };
   await page.goto('/?debug&store&cloudmock&demo=%405');
   await expect(page.locator('.map')).toBeVisible();
   // The full report is blurred, with the way in.
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.reportScreen(w.__app.save.data.children[0], 'skills')); });
-  await expect(page.locator('.mp-lock-card')).toContainText('Part of MN Premium');
+  await expect(page.locator('.mp-lock-card')).toContainText('Part of MN ×');
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
   // A worksheet asks for Plus.
   await page.locator('.kid-set').first().click();
   await expect(page.locator('.sheet-btn .mp-tag')).toHaveText('Plus');
   await page.click('.sheet-btn');
   await expect(page.locator('.mp-sheet h2')).toHaveText('Worksheets');
-  await page.click('.sheet .btn:has-text("See MN Premium")');
+  await page.click('.sheet .btn:has-text("See MN ×")');
   // The Plus page: Play's prices, the yearly plan first, a 7-day trial (14 once signed in).
   await expect(page.locator('.mplus')).toBeVisible();
   await expect(page.locator('.mp-loading')).toHaveCount(0);
@@ -1440,7 +1441,7 @@ test('MN Premium (Play Store build): paid features say so, the trial and plans c
   await expect(page.locator('.mp-buy')).toHaveText('Buy for ₹1,989');
   await page.click('.mp-plan[data-plan="monthly"]');
   await page.click('.mp-buy');
-  await expect(page.locator('.mp-hero h2')).toHaveText('MN Premium is on');
+  await expect(page.locator('.mp-hero h2')).toHaveText('MN × is on');
   const bought = await page.evaluate(() => (window as unknown as { __mockBilling: { bought: { product: string; offer?: string }[] } }).__mockBilling.bought);
   expect(bought).toEqual([{ product: 'mn_plus', offer: 'monthly:trial14' }]);
   // Now the report is all there.
@@ -1495,7 +1496,7 @@ test('a backup file shared to MN (from WhatsApp) asks a parent, then restores th
   await other.close();
 });
 
-test('MN Premium: the app icon can be chosen from the Parent area', async ({ page }) => {
+test('MN ×: the app icon can be chosen from the Parent area', async ({ page }) => {
   await page.goto('/?debug&demo=%4010&noloader');
   await expect(page.locator('.map')).toBeVisible();
   await page.evaluate(() => (window as unknown as { __app: { show: (s: unknown) => void }; __screens: Record<string, unknown> }).__app.show((window as unknown as { __screens: Record<string, unknown> }).__screens.parentScreen));

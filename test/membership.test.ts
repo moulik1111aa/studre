@@ -1,4 +1,4 @@
-// MN Premium: what Play's answers mean (core/membership.ts).
+// MN ×: what Play's answers mean (core/membership.ts).
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -33,7 +33,7 @@ const products = (trials: boolean): PlayProduct[] => [
   {
     id: PLUS_SUB,
     type: 'subs',
-    name: 'MN Premium',
+    name: 'MN ×',
     offers: ['monthly', 'yearly'].flatMap((base) => {
       const paid = base === 'monthly' ? phase('₹150', 150e6, 'P1M') : phase('₹960', 960e6, 'P1Y');
       return [
@@ -47,7 +47,7 @@ const products = (trials: boolean): PlayProduct[] => [
       ];
     }),
   },
-  { id: PLUS_LIFETIME, type: 'inapp', name: 'MN Premium for life', price: '₹1,989', micros: 1989e6, currency: 'INR' },
+  { id: PLUS_LIFETIME, type: 'inapp', name: 'MN × for life', price: '₹1,989', micros: 1989e6, currency: 'INR' },
 ];
 
 test('plans: Play prices, the signed-in trial when signed in, and no trial once it was used', () => {

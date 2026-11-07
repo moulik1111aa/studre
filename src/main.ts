@@ -72,7 +72,7 @@ async function boot(): Promise<void> {
   const home = () => (app.save.data.children.length ? whosPlayingScreen : welcomeScreen);
   // Access keys: the app opens only with a key for this phone (or on the owner's phone).
   // Browser test runs (?debug) skip it unless they ask for it with &lock.
-  // The Play Store build has no keys or approvals: anyone may use it (MN Premium is sold there).
+  // The Play Store build has no keys or approvals: anyone may use it (MN × is sold there).
   const gated = !app.storeBuild && (!!native || !app.debug || params.has('lock'));
   let locked = false;
   const gate = async (how: 'fade' | 'liquid' = 'liquid') => {
@@ -120,7 +120,7 @@ async function boot(): Promise<void> {
   } catch (e) {
     console.error('inbox', e);
   }
-  // MN Premium (Play Store build): what the Play account owns; school syllabuses need it.
+  // MN × (Play Store build): what the Play account owns; school syllabuses need it.
   app.plus = () => hasPlus(app);
   try {
     startPlus(app);

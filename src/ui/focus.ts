@@ -1,4 +1,4 @@
-// Focus plan on screen: the map's 🎯 button (MN Premium). Parents see the plan in the Premium tab.
+// Focus plan on screen: the map's 🎯 button (MN ×). Parents see the plan in the Premium tab.
 
 import type { App } from './app.ts';
 import type { Child } from '../storage/save.ts';
@@ -10,7 +10,7 @@ import { hasPlus } from './membership.ts';
 
 export const focusFor = (app: App, child: Child): FocusPlan => focusPlan(child, app.today, fixKnown);
 
-/** The map button: only with MN Premium, once there is a plan. */
+/** The map button: only with MN ×, once there is a plan. */
 export function focusButton(app: App, child: Child): string {
   if (!hasPlus(app)) return '';
   const p = focusFor(app, child);

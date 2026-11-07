@@ -1,19 +1,19 @@
 // A boss fight in 3D: the boss stands on a small floating arena island. Four bosses are
-// built as 3D models (Mr Bubbles, Gobble, Blaze the dragon, Robo-Multiplex); the others
+// built as 3D models (Gobble, Blaze the dragon, Robo-Multiplex); the others
 // stand in the 3D arena as 2D cut-outs of their usual art. Attacks are 3D: the player's
-// gold star flies in with a light trail; bosses answer with bubbles, fireballs, lasers or
+// gold star flies in with a light trail; bosses answer with fireballs, lasers or
 // their own thrown objects. Same methods as BossView (bosses.ts), which it falls back to
 // when 3D is not available. Everything is disposed when the fight screen closes.
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { BossView, ART } from './bosses.ts';
 import type { Fx } from '../render/fx.ts';
-import { loadThree, makeRenderer, softEnv, cutoutTex, svgCutoutTex, glowTex, disposeAll, RenderLoop, type Three } from '../render/three.ts';
+import { loadThree, makeRenderer, softEnv, svgCutoutTex, glowTex, disposeAll, RenderLoop, type Three } from '../render/three.ts';
 import { reducedMotion, screenShake, wait, EASE_OUT } from '../render/motion.ts';
 
 type Attack = 'bubbles' | 'fire' | 'laser' | 'emoji';
 const MODEL: Record<string, { attack: Attack }> = {
-  bubbles: { attack: 'bubbles' },
+  bubbles: { attack: 'emoji' },
   gobble: { attack: 'emoji' },
   blaze: { attack: 'fire' },
   multiplex: { attack: 'laser' },
@@ -149,30 +149,7 @@ export class Boss3DView {
         parent.add(brow);
       }
     };
-    const smile = (parent: any, y: number, z: number, w: number) => {
-      const m = new T.Mesh(new T.TorusGeometry(w, 0.05, 8, 20, Math.PI), std(INK));
-      m.rotation.z = Math.PI;
-      m.position.set(0, y, z);
-      parent.add(m);
-    };
     switch (this.id) {
-      case 'bubbles': {
-        const body = new T.Mesh(new T.SphereGeometry(1.25, 48, 24), glossy('#8EE3FF', { transparent: true, opacity: 0.93, iridescence: 1, iridescenceIOR: 1.3, envMapIntensity: 1.6 }));
-        g.add(body);
-        const hl = new T.Mesh(new T.SphereGeometry(0.28, 16, 8), new T.MeshBasicMaterial({ color: '#fff', transparent: true, opacity: 0.8 }));
-        hl.scale.set(1.4, 0.7, 0.3);
-        hl.position.set(-0.55, 0.7, 0.98);
-        hl.rotation.z = 0.6;
-        g.add(hl);
-        eyes(g, { z: 1.08 });
-        smile(g, -0.38, 1.12, 0.3);
-        const minis = Array.from({ length: 4 }, (_, i) => {
-          const b = new T.Mesh(new T.SphereGeometry(0.18 + (i % 3) * 0.07, 20, 10), glossy('#BDEFFF', { transparent: true, opacity: 0.75 }));
-          g.add(b);
-          return b;
-        });
-        return { g, tick: (t) => { body.scale.set(1 + Math.sin(t * 3) * 0.03, 1 - Math.sin(t * 3) * 0.03, 1); minis.forEach((b, i) => { const a = t * 0.9 + i * 1.57; b.position.set(Math.cos(a) * 1.75, 0.3 + Math.sin(t * 1.4 + i) * 0.5, Math.sin(a) * 1.1); }); } };
-      }
       case 'gobble': {
         const body = new T.Mesh(new T.SphereGeometry(1.2, 40, 24), glossy('#8B5CF6'));
         body.scale.set(1.15, 1, 0.95);
@@ -576,12 +553,13 @@ export class Boss3DView {
         });
       });
     } else {
-      const e = ART[this.id]?.shot ?? '💥';
-      const tex = cutoutTex(T, e, 160, 10);
+      // A glowing orb in the boss's colour (no emoji).
+      const col = new T.Color(ART[this.id]?.color ?? '#FF6B6B');
       const mk = () => {
-        const s = new T.Sprite(new T.SpriteMaterial({ map: tex, transparent: true, toneMapped: false }));
-        s.scale.setScalar(0.9);
-        return s;
+        const m = new T.Mesh(new T.SphereGeometry(0.32, 20, 14), new T.MeshBasicMaterial({ color: col, toneMapped: false }));
+        const halo = new T.Mesh(new T.SphereGeometry(0.5, 20, 14), new T.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.35, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false }));
+        m.add(halo);
+        return m;
       };
       await Promise.all([-0.7, 0.7].map((x, i) => wait(i * 120).then(() => this.fly(mk(), arc(x, 0.8), 650, '255,255,255', 6, 1.4))));
     }
