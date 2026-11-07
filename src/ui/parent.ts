@@ -2,10 +2,9 @@
 // (report, and their own settings), daily play time, sound, the look and backups. The rest
 // sits in groups (learning, notes, audio, device, security, help) in a ☰ side menu, like a
 // game's settings. Each child's own settings (age, difficulty, school path,
-// Adventure, dragon map, with a grown-up) live on that child's page.
+// Adventure, with a grown-up) live on that child's page.
 
 import { showParentAdventureTips, toggleAdventure } from './adventure.ts';
-import { DRAGON_MAP } from './foldmap.ts';
 import { backUpNow, dueKids, lastBackupText } from './backup.ts';
 import { askNotifications, notificationState } from './remindsync.ts';
 import { DEFAULT_REMINDERS, type ReminderSettings } from '../core/reminders.ts';
@@ -75,12 +74,9 @@ const THEME_CHOICES: { id: Theme; name: string; note: string }[] = [
 ];
 
 /** Advanced settings come in groups, like the tabs down the side of a game's settings. */
-type Group = 'learning' | 'notes' | 'audio' | 'device' | 'security' | 'help';
+type Group = 'learning' | 'security' | 'help';
 const GROUPS: { id: Group; icon: string; name: string; note: string }[] = [
-  { id: 'learning', icon: '🎓', name: 'Learning', note: 'Timers, checking answers, lessons, rewards' },
-  { id: 'notes', icon: '🔔', name: 'Notes', note: 'Melt watch, backup reminders, widgets' },
-  { id: 'audio', icon: '🔊', name: 'Audio', note: 'Reading voice, sound, vibration' },
-  { id: 'device', icon: '📱', name: 'Device', note: '3D fights, frame rate' },
+  { id: 'learning', icon: '🎓', name: 'Learning', note: 'Timers, lessons, rewards, notes' },
   { id: 'security', icon: '🔒', name: 'Security', note: 'Grown-up lock, access key' },
   { id: 'help', icon: '❓', name: 'Help', note: 'Video, tips, what Adventure is' },
 ];
@@ -132,7 +128,8 @@ function basicHtml(app: App): string {
       ${iconsAvailable(app) ? `<button class="pa-row card icon-row"><span class="ic-now" aria-hidden="true">${appIconSvg('sky', 'square', 40)}</span><span><b>🎨 App icon ${plusTag(app)}</b><small>Choose MN’s icon on the home screen</small></span></button>` : ''}
       <div class="card pa-toggles">${toggleRows(st, [T('holiday', 'Holiday mode', 'Rewards don’t melt while you’re away or unwell.')])}</div></section>
     <section class="pa-sec"><h2 class="pa-h">🔊 Sound</h2>
-      <div class="card pa-toggles">${toggleRows(st, [T('sound', 'Sound effects', 'Taps, cheers and coins.'), T('voice', 'Read questions aloud', 'Plus reads each question and tip.')])}</div></section>
+      <div class="card pa-toggles">${toggleRows(st, [T('sound', 'Sound effects', 'Taps, cheers and coins.'), T('voice', 'Read questions aloud', 'Plus reads each question and tip.'), T('vibration', 'Vibration', 'Gentle buzzes on taps and answers.')])}</div>
+      <button class="pa-row card voice-row"><b>Reading voice</b><small>${st.voiceName ? 'Chosen voice' : 'Automatic (clearest)'} · ${st.voiceRate < 0.9 ? 'slow' : st.voiceRate > 1 ? 'quick' : 'normal speed'}</small></button></section>
     <section class="pa-sec"><h2 class="pa-h">🎨 Look</h2>
       <div class="themes" role="radiogroup" aria-label="Look of the app">${THEME_CHOICES.map((t) => `<button class="theme-tile th-${t.id}${st.theme === t.id ? ' on' : ''}" role="radio" aria-checked="${st.theme === t.id}" data-theme-id="${t.id}"><span class="th-swatch"><i></i><i></i><i></i></span><b>${t.name}</b><small>${t.note}</small></button>`).join('')}</div></section>
     <section class="pa-sec"><h2 class="pa-h">💾 Backup</h2>
@@ -149,7 +146,7 @@ function basicHtml(app: App): string {
         <button class="linkish restore-kid">⤓ Restore from a backup file or report card</button>
       </div>
       ${cloudCard(app)}</section>
-    <button class="pa-more card to-adv"><span>👉</span><span><b>More settings</b><small>Timers, notes, voice, lock and help: tap a tab on the right</small></span><i aria-hidden="true">›</i></button>`;
+    <button class="pa-more card to-adv"><span>👉</span><span><b>More settings</b><small>Timers, lessons, notes, lock and help: tap a tab on the right</small></span><i aria-hidden="true">›</i></button>`;
 }
 
 function groupHtml(app: App, group: Group): string {
@@ -163,9 +160,10 @@ function groupHtml(app: App, group: Group): string {
         <div class="pt-marks" aria-hidden="true">${TIMER_MARKS.map(([v, t]) => `<span style="--at:${(100 * (v - TIMER_MIN)) / (TIMER_OFF - TIMER_MIN)}%">${t}</span>`).join('')}</div>
         <p class="pt-note"></p></div>
       <div class="card pa-toggles">${toggleRows(st, [T('confirmAnswers', 'Confirm answers', 'Tap an answer, then Check. Fewer slips from a stray tap.'), T('teach', 'Show how after a mistake', 'A short step-by-step lesson when an answer is wrong.')])}</div>
+      <div class="card pa-toggles">${toggleRows(st, [T('fx3d', '3D boss fights', 'Turn off if fights feel slow on this phone.')])}</div>
       <h3 class="pa-sub">Reward categories</h3>
-      <div class="card pa-cats">${CATEGORIES.map((c) => `<label class="toggle-row"><span><b>${c.icon} ${esc(c.name)}</b></span><input type="checkbox" role="switch" data-c="${c.id}" ${st.hiddenCategories.includes(c.id) ? '' : 'checked'}></label>`).join('')}</div>`,
-    notes: () => `
+      <div class="card pa-cats">${CATEGORIES.map((c) => `<label class="toggle-row"><span><b>${c.icon} ${esc(c.name)}</b></span><input type="checkbox" role="switch" data-c="${c.id}" ${st.hiddenCategories.includes(c.id) ? '' : 'checked'}></label>`).join('')}</div>
+      <h3 class="pa-sub">Notes on this phone</h3>
       <div class="card pa-remind">
         <label class="toggle-row"><span><b>🍫 Melt watch</b><small>Friendly notes when a treat jar is about to melt, each with a fun fact.</small></span><input type="checkbox" role="switch" data-r="melt" ${rs.melt ? 'checked' : ''}></label>
         <div class="seg pr-per" role="radiogroup" aria-label="Notes a day"${rs.melt ? '' : ' hidden'}>${([2, 3] as const).map((n) => `<button class="seg-b${rs.perDay === n ? ' on' : ''}" role="radio" aria-checked="${rs.perDay === n}" data-per="${n}"><b>${n} a day</b><small>${n === 3 ? '8 am · 4:30 pm · 7:30 pm' : '8 am · 6:30 pm'}</small></button>`).join('')}</div>
@@ -173,10 +171,6 @@ function groupHtml(app: App, group: Group): string {
         <p class="pr-status" hidden></p>
       </div>
       <div class="card pa-widgets"><b>📱 Home-screen widgets</b><small>Treat jars, a fun fact and the Adventure card. Touch and hold an empty spot on your home screen, tap Widgets, then find MN.</small></div>`,
-    audio: () => `
-      <button class="pa-row card voice-row"><b>Reading voice</b><small>${st.voiceName ? 'Chosen voice' : 'Automatic (clearest)'} · ${st.voiceRate < 0.9 ? 'slow' : st.voiceRate > 1 ? 'quick' : 'normal speed'}</small></button>
-      <div class="card pa-toggles">${toggleRows(st, [T('sound', 'Sound effects', 'Taps, cheers and coins.'), T('voice', 'Read questions aloud', 'Plus reads each question and tip.'), T('vibration', 'Vibration', 'Gentle buzzes on taps and answers.')])}</div>`,
-    device: () => `<div class="card pa-toggles">${toggleRows(st, [T('fx3d', '3D boss fights', 'Turn off if fights feel slow on this phone.'), T('showFps', 'Show frame rate', 'For testing: how smoothly the app runs.')])}</div>`,
     security: () => `
       <button class="pa-row card lock-row"><b>Grown-up lock</b><small>${st.parentPin ? 'Parent PIN' : 'This phone’s screen lock'}</small></button>
       ${storeBuild(app) ? '' : '<button class="pa-row card key-row"><b>Access key</b><small class="key-left">Checking…</small></button>'}`,
@@ -192,13 +186,11 @@ function groupHtml(app: App, group: Group): string {
 
 const pageName = (p: Page): string => (p === 'basic' ? 'Parent area' : GROUPS.find((g) => g.id === p)!.name);
 
-/** The tabs down the right edge (thumb side): settings change in place; Skills and Plus open their pages. */
+/** The four tabs down the right edge (thumb side): settings change in place. */
 function railTabs(app: App): { id: Page | 'skills' | 'plus'; icon: string; label: string }[] {
   return [
     { id: 'basic', icon: '⭐', label: 'Everyday' },
     ...GROUPS.map((g) => ({ id: g.id, icon: g.icon, label: g.name })),
-    { id: 'skills', icon: '📚', label: 'Skills' },
-    ...(storeBuild(app) ? [{ id: 'plus' as const, icon: '✨', label: 'Plus' }] : []),
   ];
 }
 
@@ -443,7 +435,7 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
   on('.adv-what', 'click', () => void showParentAdventureTips(app, el));
 }
 
-/** One child's settings: report, age, difficulty, school path, Adventure, the dragon map, with a grown-up. */
+/** One child's settings: report, age, difficulty, school path, Adventure, with a grown-up. */
 export function childSettingsScreen(c: Child) {
   return (app: App): Screen => {
     const here = childSettingsScreen(c);
@@ -463,7 +455,6 @@ export function childSettingsScreen(c: Child) {
         <h2 class="pa-h">Fun</h2>
         <div class="card pa-toggles">
           <label class="toggle-row"><span><b>🎮 Adventure</b><small>Quests, chests, badges, a wardrobe for Plus, a weekly raid and a pet.</small></span><input type="checkbox" role="switch" class="adv-toggle" ${c.adventure?.on ? 'checked' : ''}></label>
-          ${DRAGON_MAP ? `<label class="toggle-row"><span><b>🐉 Dragon map</b><small>The same levels, along a dragon curve that unfolds chapter by chapter.</small></span><input type="checkbox" role="switch" class="dragon-toggle" ${c.dragonMap ? 'checked' : ''}></label>` : ''}
         </div>
         <button class="linkish adv-what">🎮 What is Adventure?</button>
       </div>
@@ -498,10 +489,6 @@ export function childSettingsScreen(c: Child) {
       // Turning it on: show the grown-up what their child will get.
       if (on) await showParentAdventureTips(app, el);
       app.toast(on ? `Adventure on for ${c.name}.` : `Adventure off for ${c.name}. Badges are kept for later.`);
-    });
-    el.querySelector('.dragon-toggle')?.addEventListener('change', () => {
-      app.save.update(() => (c.dragonMap = !c.dragonMap));
-      app.toast(c.dragonMap ? `Dragon map on for ${c.name}.` : `Dragon map off for ${c.name}. Progress stays the same.`);
     });
     el.querySelector('.adv-what')!.addEventListener('click', () => void showParentAdventureTips(app, el));
     return { el, back: () => (back(), true), mounted: () => stagger(el.querySelectorAll('.pa-body > *'), { gap: 35 }) };

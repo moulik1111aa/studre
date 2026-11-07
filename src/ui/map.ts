@@ -27,7 +27,6 @@ import { showMapTips } from './tour.ts';
 import { adventureOn, adventureScreen, outfitFor, questBadge, showAdventureTips, whoLine } from './adventure.ts';
 import { advTipsDue } from '../core/adventure.ts';
 import { plusFaceSvg } from './plus.ts';
-import { dragonMapOn, foldStage, type FoldNode } from './foldmap.ts';
 import { mapPetHtml } from './pets.ts';
 import { MENU_ICON, openDrawer } from './drawer.ts';
 import { parentScreen } from './parent.ts';
@@ -172,53 +171,14 @@ export function mapScreen(child: Child) {
       openSkill(app, child, n, path);
     };
 
-    // Dragon map (a per-child option): the same stops, laid along a dragon curve (foldmap.ts)
-    // instead of the stage worlds.
-    let fold: ReturnType<typeof foldStage> | null = null;
-    if (dragonMapOn(app, child)) {
-      const segStage = [0, ...path.map((l) => l.stage)];
-      const segDone = [false, ...path.map((l) => isDone(p, l))];
-      let bossSeg = 0;
-      const skillNo: Record<number, number> = {};
-      const fnodes: FoldNode[] = nodes.map((n) => {
-        const st = nodeState(n);
-        const first = n.levels.length ? n.levels[0].index + 1 : bossSeg;
-        const last = n.levels.length ? n.levels[n.levels.length - 1].index + 1 : bossSeg;
-        if (n.kind === 'boss') bossSeg = first;
-        const face =
-          n.kind === 'boss'
-            ? (BOSS_EMOJI[bossFor(n.stage, (n.levels[0] as Extract<Level, { kind: 'boss' }>).boss).id] ?? '👾')
-            : n.kind === 'review'
-              ? '⚔️'
-              : n.kind === 'quest'
-                ? '🧭'
-                : String((skillNo[n.stage] = (skillNo[n.stage] ?? 0) + 1));
-        return { kind: n.kind, stage: n.stage, first, last, face, label: n.label, done: st.done, playable: st.playable, skipped: st.skipped, current: st.isCurrent, tiers: n.kind === 'skill' ? n.levels.map((l) => isPassed(p, l)) : undefined };
-      });
-      fold = foldStage(app, {
-        nodes: fnodes,
-        segStage,
-        segDone,
-        total: path.length,
-        done: front,
-        seen: child.foldSeen,
-        markSeen: (end) => app.save.update(() => (child.foldSeen = end)),
-        onTap: (k) => tapNode(nodes[k], null),
-        buddy: adv ? plusFaceSvg({ cls: 'alive', outfit }) : undefined,
-        trail: outfit.trail,
-      });
-      worlds.replaceWith(fold.el);
-      el.classList.add('fold-map');
-    }
-
     const school = child.school?.on ? child.school : null;
-    if (!fold && school) worlds.appendChild(html(`<div class="school-chip card"><span>📚</span><b>${esc(schoolLabel(school))}</b><small>${school.skills.length} skills chosen by a grown-up</small></div>`));
+    if (school) worlds.appendChild(html(`<div class="school-chip card"><span>📚</span><b>${esc(schoolLabel(school))}</b><small>${school.skills.length} skills chosen by a grown-up</small></div>`));
     // Clouds ahead: the child sees the next few swipes of the road; the rest waits under a
     // cloud bank (grown-up testers see everything).
     const curAt = nodes.findIndex((n) => nodeState(n).isCurrent);
     const lastShown = child.tester || curAt < 0 ? nodes.length - 1 : Math.min(nodes.length - 1, curAt + CLOUD_AFTER);
     const hidden = nodes.length - 1 - lastShown;
-    for (let s = 1; !fold && s <= stagesBuilt; s++) {
+    for (let s = 1; s <= stagesBuilt; s++) {
       const info = AREAS[0].stages[s - 1];
       // A school path only shows the stages it uses.
       if (school && !nodes.some((n) => n.stage === s)) continue;
@@ -259,10 +219,10 @@ export function mapScreen(child: Child) {
       });
       worlds.appendChild(sec);
     }
-    if (!fold && hidden > 0) {
+    if (hidden > 0) {
       worlds.appendChild(html(`<section class="cloudbank" style="height:${CLOUD_DEPTH}px" aria-label="More stops are hidden in the clouds">${cloudSvg(CLOUD_DEPTH)}</section>`));
     }
-    if (!fold && hidden <= 0 && stagesBuilt < 7 && !school) worlds.appendChild(html(`<section class="world soon" style="${worldVars(stagesBuilt + 1)}"><div class="world-head"><span class="chip">Stage ${stagesBuilt + 1}</span><h2>${AREAS[0].stages[stagesBuilt].name}</h2><p>Coming soon</p></div></section>`));
+    if (hidden <= 0 && stagesBuilt < 7 && !school) worlds.appendChild(html(`<section class="world soon" style="${worldVars(stagesBuilt + 1)}"><div class="world-head"><span class="chip">Stage ${stagesBuilt + 1}</span><h2>${AREAS[0].stages[stagesBuilt].name}</h2><p>Coming soon</p></div></section>`));
 
     const layoutTrails = () => {
       worlds.querySelectorAll<HTMLElement>('.world .track').forEach((track) => {
@@ -337,18 +297,6 @@ export function mapScreen(child: Child) {
       if (!child.toured) void showMapTips(app, child, el);
       else if (advTipsDue(child)) void showAdventureTips(app, child, el, 'map');
     };
-    if (fold) {
-      const f = fold;
-      return {
-        el,
-        destroy: () => f.destroy(),
-        mounted: () => {
-          stagger([el.querySelector('.map-top')!, jar.el, el.querySelector('.play-bar')!], { gap: 90 });
-          void f.mounted().then(() => setTimeout(showTips, reducedMotion() ? 100 : 500));
-        },
-      };
-    }
-
     return {
       el,
       mounted: () => {

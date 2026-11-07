@@ -116,7 +116,7 @@ export class App {
     addEventListener('resize', () => this.fx.resize());
     const forced = this.debug ? (new URLSearchParams(location.search).get('theme') as Theme | null) : null;
     this.applyTheme(forced ?? st.theme);
-    this.fps.set(st.showFps);
+    this.fps.set(false);
     if (native) {
       try {
         native.addListener('back', () => this.back());

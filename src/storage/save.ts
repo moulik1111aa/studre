@@ -94,10 +94,6 @@ export interface Child {
   tally?: Tally;
   /** The last finished level (Plus mentions it next time). */
   lastPlay?: LastPlay;
-  /** The dragon map instead of the usual path (a grown-up switches it in the Parent area). */
-  dragonMap?: boolean;
-  /** Dragon map: the end of the last chapter this child has seen unfold (core/dragon.ts). */
-  foldSeen?: number;
   /** Fix-it: skills missed lately, coming back after 1, 3 and 7 days (core/fixit.ts). */
   fixit?: FixBank;
   /** The way of working that helped, per method family ("add" → "Make ten"), from lessons. */
