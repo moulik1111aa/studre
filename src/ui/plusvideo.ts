@@ -131,7 +131,7 @@ function scenes(): ReelScene[] {
       id: 'end',
       bg: ['#7C3AED', '#DB2777'],
       caption: 'Start your free week',
-      sub: 'Everything your child plays with stays free, always.',
+      sub: 'Everything your child plays with is free.',
       art: `<div class="rl-end pv-end"><div class="rl-logo">${plusSvg({ cls: 'spin', noShadow: true })}</div><div class="rl-mark"><span>M</span><span>N</span><b class="pv-plus">Premium</b></div></div>`,
     },
   ];

@@ -10,7 +10,7 @@ import { askNotifications, notificationState, offerNotifications } from './remin
 import { remindersOf, type ReminderSettings } from '../core/reminders.ts';
 import { focusFor } from './focus.ts';
 import { FOCUS_GOAL, trend, weekChange } from '../core/focus.ts';
-import { demoHtml, type DemoId } from './mnxdemo.ts';
+import { mnxPreviewScreen, type DemoId } from './mnxdemo.ts';
 import { strengths, timeOfDay } from '../core/stats.ts';
 import { skillById } from '../core/areas/index.ts';
 import { plusSvg } from './plus.ts';
@@ -189,14 +189,14 @@ function appHtml(app: App): string {
 
 /** Help: videos and answers to common questions. */
 const FAQ: [string, string][] = [
-  ['How much should my child play?', 'Ten to twenty minutes a day works best: little and often. Set the daily time in Children → Daily play.'],
+  ['How much should my child play?', 'Little and often is a good habit: 10 to 20 minutes a day is a sensible start. Set the daily time in Children → Daily play.'],
   ['How do rewards work?', 'Levels fill a treat jar with coins. When it’s full, MN asks you to hand over the treat and tap Given. You choose the treats and how fast jars fill (Children → Daily play).'],
   ['Why does the jar shrink?', 'A missed day takes a little off the treat jar, so playing a few minutes every day pays off. Pause rewards stops this on holidays or sick days.'],
   ['My child got an answer wrong. What happens?', 'MN shows a short step-by-step lesson with pictures, then a similar question to try. You can turn lessons off in Children → Learning.'],
   ['What are steps 1–5?', 'Each skill has five steps on the map: Learn, Practice, Practise more, Speed and Master. Each step wins up to 3 stars; Speed and Master are timed (change the time in Children → Learning).'],
   ['Can two children share one phone?', 'Yes. Add each child in Children; MN asks who’s playing when it opens.'],
   ['How do I move to a new phone?', 'Sign in with Google in App → Backup on both phones, or save a backup file and open it on the new phone.'],
-  ['Is my child’s data private?', 'Yes. No ads, no tracking. Progress stays on the phone, or in your own private online backup if you sign in.'],
+  ['Is my child’s data private?', 'MN has no ads and no tracking. Progress stays on the phone, or in your own online backup if you sign in. The privacy policy (App → Your data) has the details.'],
 ];
 function helpHtml(app: App): string {
   return `${sec('Videos', `<button class="pa-row card story-row"><b>▶ How MN works</b><small>One minute: levels, lessons and rewards</small></button>
@@ -212,7 +212,7 @@ const GAINS: { id: DemoId; name: string; line: string }[] = [
   { id: 'focus', name: 'A Focus plan every week', line: 'Short rounds on the 3 skills that are hardest right now.' },
   { id: 'report', name: 'The full report', line: 'Strengths, skills to practise, and how each one is changing.' },
   { id: 'school', name: 'Your school’s syllabus', line: 'CBSE, ICSE or Common Core, class by class.' },
-  { id: 'sheets', name: 'Worksheets to print', line: 'From exactly where they are, with answers.' },
+  { id: 'sheets', name: 'Worksheets to print', line: 'From the skills they’re on now, with answers.' },
   { id: 'sync', name: 'Every phone in step', line: 'Same progress on a phone and a tablet.' },
 ];
 const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#fff"/><path d="M7 12.5l3.2 3.2L17 8.8" fill="none" stroke="#6C47FF" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -256,12 +256,12 @@ function premiumHtml(app: App): string {
   const hero = `<div class="pm-hero">
       <div class="pm-mascot" aria-hidden="true">${plusSvg({ cls: 'alive', noShadow: true })}</div>
       <p class="pm-brand">MN <span>×</span></p>
-      <h2 class="pm-h">${on ? 'You know exactly where to help.' : 'Know exactly where to help.'}</h2>
+      <h2 class="pm-h">See where to help, at a glance.</h2>
       <button class="pm-video"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.5v9l7.5-4.5z" fill="currentColor"/></svg>Watch the 90-second video</button>
     </div>`;
   const peek = kid ? `<section class="pm-proof"><p class="pm-cap">${on ? 'Your full report' : 'Here’s what MN × shows you'}</p>${reportPeek(app, kid, on)}</section>` : '';
   const gains = `<ul class="pm-gains">${GAINS.map((g) => `<li>${CHECK}<span><b>${esc(g.name)}</b><small>${esc(g.line)}</small></span><button class="pm-q" data-demo="${g.id}" aria-label="See what ${esc(g.name)} looks like">?</button></li>`).join('')}</ul>`;
-  const free = on ? '' : '<p class="pm-free-note">Every level, lesson and reward stays free for every child, with no ads.</p>';
+  const free = on ? '' : '<p class="pm-free-note">Every level, lesson and reward is free for every child, with no ads.</p>';
   const plans = !store || on ? '' : `<p class="pm-price">Then ${FALLBACK.yearly.price} a year, ${FALLBACK.monthly.price} a month, or ${FALLBACK.lifetime.price} once.</p>`;
   const cta = !store
     ? '<div class="pm-cta-bar"><p class="pm-incl">Everything in MN × is included in this version of MN.</p></div>'
@@ -515,13 +515,10 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
   }
   on('.erase-row', 'click', () => void eraseEverything(app));
   on('.privacy-row', 'click', () => openLink(app, PRIVACY_URL));
-  on('.pm-q', 'click', async (b) => {
-    const kids = app.save.data.children;
-    const kid = kids.find((c) => c.id === app.save.data.activeChildId) ?? kids[0];
-    const store = storeBuild(app) && !hasPlus(app);
-    const { el: sh, result } = app.sheet(demoHtml(b.dataset.demo as DemoId, kid?.name ?? 'Your child'), store ? [{ label: 'Try it free', value: true, kind: 'mint' }, { label: 'Close', value: false, kind: 'ghost', back: true }] : [{ label: 'Close', value: false, kind: 'ghost', back: true }], 'Preview');
-    sh.classList.add('mnx-sheet');
-    if (await result) void app.show(plusScreen(parentScreen));
+  on('.pm-q', 'click', (b) => {
+    const sell = storeBuild(app) && !hasPlus(app);
+    const trial = sell ? (account(app) ? TRIAL_DAYS_SIGNED_IN : TRIAL_DAYS) : null;
+    void app.show(mnxPreviewScreen(b.dataset.demo as DemoId, parentScreen, trial, () => void app.show(plusScreen(parentScreen))));
   });
   on('.pm-video', 'click', () => void app.show(plusVideoScreen(() => void app.show(parentScreen)), 'liquid'));
   on('.pm-plans', 'click', () => void app.show(plusScreen(parentScreen)));

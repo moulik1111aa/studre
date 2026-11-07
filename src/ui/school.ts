@@ -57,7 +57,7 @@ export function schoolScreen(child: Child, back: (app: App) => Screen) {
         body.innerHTML = `<div class="card lim-card lim-one"><h2 class="ac-q">Which school curriculum does ${esc(child.name)} follow?</h2>
           <div class="seg seg-col">${BOARDS.map((b) => `<button class="seg-b${board === b.id ? ' on' : ''}" data-b="${b.id}"><b>${esc(b.name)}</b><small>${esc(b.country)}: ${esc(b.note)}</small></button>`).join('')}
           <button class="seg-b${board === '' ? ' on' : ''}" data-b=""><b>No school syllabus</b><small>Follow the app’s path for their age (every skill)</small></button></div>
-          <p class="fine">Covers number work, fractions, percent and algebra. Shapes, measuring and data aren’t in the app yet.</p></div>`;
+          <p class="fine">Topic lists follow each board’s usual order. Check them against your school’s plan and add or remove topics. MN isn’t linked to or approved by CBSE, CISCE or Common Core.</p></div>`;
         body.querySelectorAll<HTMLElement>('[data-b]').forEach((b) =>
           b.addEventListener('click', () => {
             if (board !== b.dataset.b) grade = '';

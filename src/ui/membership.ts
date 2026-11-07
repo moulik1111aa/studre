@@ -117,7 +117,7 @@ const FEATURE_LINE: Record<PlusFeature, string> = {
   focus: 'The Focus plan is part of MN ×: each week, short rounds on the 3 skills your child finds hardest, and the scores before and after.',
   sync: 'Keeping every phone in step is part of MN ×. Without it, one phone keeps the online backup.',
   school: 'School syllabuses are part of MN ×: CBSE, ICSE or Common Core, by class, with only the topics you choose.',
-  report: 'The full report is part of MN ×: strengths, the exact skills to practise, speed, and the days and times they learn best.',
+  report: 'The full report is part of MN ×: strengths, skills to practise, speed, and the times of day they do best.',
   sheets: 'Printable worksheets are part of MN ×: made from where your child is now, with an answer key for you.',
   icons: 'Choosing the app icon is part of MN ×: Sky, Night, Sunset, Space or Gold on your home screen.',
 };
@@ -193,7 +193,7 @@ export function plusScreen(back: (app: App) => Screen) {
           ${p.monthly ? `<i>${esc(p.monthly)}</i>` : p.trialDays ? `<i>${p.trialDays} days free</i>` : p.plan === 'lifetime' ? '<i>No renewals</i>' : ''}</button>`;
       const pending = read().via === 'pending';
       body.innerHTML = `
-        <div class="mp-hero"><div class="mp-logo">${plusSvg({ noShadow: true })}</div><h2>See the whole picture</h2><p>Everything your child plays with stays free, always. MN × is for you.</p></div>
+        <div class="mp-hero"><div class="mp-logo">${plusSvg({ noShadow: true })}</div><h2>See the whole picture</h2><p>Everything your child plays with is free. MN × is for you.</p></div>
         <ul class="card mp-list">${featureRows()}</ul>
         <button class="pa-row card mp-video"><b>▶ What MN × adds</b><small>The 90-second video</small></button>
         ${pending ? '<p class="card mp-note" role="status">⏳ A payment is on its way. MN × turns on as soon as Google Play confirms it.</p>' : ''}

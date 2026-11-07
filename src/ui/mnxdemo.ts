@@ -1,73 +1,139 @@
-// MN × demos: tap ? beside a perk and a small mock screen shows what it looks like, with the
-// parent's own child's name. Drawn in HTML (no pictures to ship), in the colours of the app.
+// MN × previews: tap ? beside a perk and a full-screen preview opens on that feature. Each page
+// is one large, detailed mock of the real screen, with numbered notes saying what each part
+// does. Swipe for the next feature. The parent's own child's name is used throughout, and their
+// real hardest and strongest skills when MN already knows them.
 
-import { esc } from './app.ts';
+import { esc, html, type App, type Screen } from './app.ts';
+import type { Child } from '../storage/save.ts';
 import { muddleSvg } from './muddles.ts';
+import { skillById } from '../core/areas/index.ts';
+import { strengths } from '../core/stats.ts';
+import { focusFor } from './focus.ts';
 
 export type DemoId = 'focus' | 'report' | 'school' | 'sheets' | 'sync';
+const ORDER: DemoId[] = ['focus', 'report', 'school', 'sheets', 'sync'];
 
-const phone = (inner: string, cls = '') => `<div class="dm-phone ${cls}"><div class="dm-notch"></div><div class="dm-screen">${inner}</div></div>`;
-/** A change chip: green up, orange down, grey steady. */
+/** Skill names for the mocks: the child's own when known, else typical ones for their age. */
+function names(app: App, c: Child | undefined): { hard: string[]; strong: string[] } {
+  const young = (c?.age ?? 8) <= 7;
+  const fallback = young
+    ? { hard: ['Take away within 20', 'Count on from a number', 'Missing number sums'], strong: ['Add within 10', 'Doubles to 10', 'Count to 100'] }
+    : { hard: ['7 and 8 times tables', 'Subtract with borrowing', 'Fractions of amounts'], strong: ['Add 3-digit numbers', '2, 5 and 10 times tables', 'Place value'] };
+  if (!c) return fallback;
+  const nm = (id: string) => skillById(id)?.name ?? id;
+  const plan = focusFor(app, c).skills.map((s) => nm(s.id));
+  const { best } = strengths(c.tally ?? {}, 6);
+  return { hard: [...plan, ...fallback.hard].slice(0, 3), strong: [...best.map((b) => nm(b.id)), ...fallback.strong].slice(0, 3) };
+}
+
 const chg = (t: 'up' | 'down' | 'same', txt: string) => `<i class="dm-chg ${t}">${t === 'up' ? '▲' : t === 'down' ? '▼' : '•'} ${txt}</i>`;
+const n = (k: number) => `<span class="dm-n">${k}</span>`;
+const phone = (inner: string) => `<div class="dp-phone"><div class="dp-notch"></div><div class="dp-screen">${inner}</div></div>`;
 
-const DEMOS: Record<DemoId, { title: string; line: string; art: (name: string) => string }> = {
-  focus: {
-    title: 'Focus plan',
-    line: 'Each Monday, three short rounds on the skills that are hardest right now. You see the scores rise.',
-    art: (n) =>
-      phone(`<div class="dm-top"><b>Focus round</b><small>${esc(n)}’s 3 skills</small></div>
-        <div class="dm-mud">${muddleSvg(4, 0)}</div>
-        <div class="dm-q"><b>7 × 8 = ?</b></div>
-        <div class="dm-keys"><span>54</span><span class="ok">56</span><span>48</span></div>`) +
-      `<div class="dm-side"><b>This week</b>
-        <p><span>7 × 8 facts</span>${chg('up', '42% → 81%')}</p>
-        <p><span>Carry the ten</span>${chg('up', '55% → 70%')}</p>
-        <p><span>Halves and quarters</span>${chg('same', '64%')}</p></div>`,
-  },
-  report: {
-    title: 'Full report',
-    line: 'What they’re great at, what to practise, and how each skill is changing, coloured so you can see it at a glance.',
-    art: (n) =>
-      phone(`<div class="dm-top"><b>${esc(n)}</b><small>this week</small></div>
-        <div class="dm-sec">Strongest</div>
-        <div class="dm-bar"><span>Add within 20</span><i style="--v:96%"></i>${chg('up', '+6')}</div>
-        <div class="dm-bar"><span>Doubles</span><i style="--v:92%"></i>${chg('same', '0')}</div>
-        <div class="dm-sec">Needs help</div>
-        <div class="dm-bar low"><span>Take away with a borrow</span><i style="--v:58%"></i>${chg('down', '−9')}</div>
-        <div class="dm-bar low"><span>Missing numbers</span><i style="--v:64%"></i>${chg('up', '+12')}</div>
-        <div class="dm-sec">Learns best in the</div>
-        <div class="dm-tod"><span style="--h:30%"></span><span style="--h:55%"></span><span class="on" style="--h:100%"></span><span style="--h:12%"></span></div>
-        <div class="dm-todl"><small>Morning</small><small>Afternoon</small><small><b>Evening</b></small><small>Night</small></div>`),
-  },
-  school: {
-    title: 'School syllabus',
-    line: 'Pick the board and class, tick this term’s topics, and the map follows school.',
-    art: () =>
-      phone(`<div class="dm-top"><b>School syllabus</b></div>
-        <div class="dm-chips"><span class="on">CBSE</span><span>ICSE</span><span>Common Core</span></div>
-        <div class="dm-sel">Class 4 <small>▾</small></div>
-        <div class="dm-sec">This term</div>
-        <p class="dm-tick on">Multiply 2-digit numbers</p><p class="dm-tick on">Fractions of a shape</p><p class="dm-tick on">Perimeter</p><p class="dm-tick">Money: bills and budgets</p><p class="dm-tick">Time: 24-hour clock</p>`),
-  },
-  sheets: {
-    title: 'Worksheets',
-    line: 'A printable sheet from exactly where they are, with an answer key for you on the last page.',
-    art: (n) =>
-      `<div class="dm-paper"><div class="dm-ph"><b>MN worksheet</b><small>${esc(n)} · Class 4</small></div>
-        <ol><li>36 × 4 = ____</li><li>¾ of 20 = ____</li><li>Perimeter of a 6 cm square = ____</li><li>₹250 − ₹87 = ____</li><li>Round 4,567 to the nearest 100 = ____</li><li>9 × 7 = ____</li></ol>
-        <div class="dm-ans">Answers on the last page</div></div>`,
-  },
-  sync: {
-    title: 'Every phone in step',
-    line: 'Play on a tablet at home and a phone on the go. Progress follows your child, automatically.',
-    art: (n) =>
-      `<div class="dm-two">${phone(`<div class="dm-top"><b>${esc(n)}</b></div><div class="dm-big">★ 248</div><small class="dm-dev">Your phone</small>`, 'sm')}
-        <div class="dm-sync"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14-4.5L4 9M4 4v5h5M4 13a8 8 0 0 0 14 4.5l2-2.5M20 20v-5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        ${phone(`<div class="dm-top"><b>${esc(n)}</b></div><div class="dm-big">★ 248</div><small class="dm-dev">Tablet</small>`, 'sm')}</div>`,
-  },
-};
+interface Page {
+  title: string;
+  line: string;
+  mock: string;
+  notes: string[];
+}
 
-export function demoHtml(id: DemoId, childName: string): string {
-  const d = DEMOS[id];
-  return `<div class="mnx-demo"><div class="dm-art">${d.art(childName)}</div><h2>${esc(d.title)}</h2><p>${esc(d.line)}</p><small class="dm-note">A preview. Your own child’s numbers show here with MN ×.</small></div>`;
+function pages(app: App, c: Child | undefined): Record<DemoId, Page> {
+  const who = esc(c?.name ?? 'Your child');
+  const { hard, strong } = names(app, c);
+  const h = hard.map(esc);
+  const s = strong.map(esc);
+  return {
+    focus: {
+      title: 'A Focus plan every week',
+      line: 'Practice aimed at the skills your child is finding hardest, in short rounds.',
+      mock: phone(`<div class="dp-bar"><b>${who}’s Focus plan</b><small>Week of Monday</small></div>
+        <div class="dp-card">${n(1)}<p class="dp-cap">This week’s 3 skills</p>
+          ${h.map((x, i) => `<div class="dp-sk"><span>${x}</span><b>${[42, 55, 61][i]}% → ${[81, 70, 61][i]}%</b>${chg(i < 2 ? 'up' : 'same', i < 2 ? `+${[39, 15][i]}` : 'steady')}</div>`).join('')}
+        </div>
+        <div class="dp-card dp-row">${n(2)}<div><p class="dp-cap">Rounds this week</p><div class="dp-dots"><i class="on"></i><i class="on"></i><i></i></div></div><div class="dp-round"><div class="dp-mud">${muddleSvg(4, 0)}</div><small>About 3 minutes</small></div></div>
+        <div class="dp-card">${n(3)}<p class="dp-cap">Before → after</p><div class="dp-chart">${[42, 48, 57, 66, 74, 81].map((v) => `<span style="--h:${v}%"><i>${v}</i></span>`).join('')}</div><div class="dp-axis"><small>Mon</small><small>Sun</small></div></div>`),
+      notes: [`Each Monday MN picks the 3 skills ${who} finds hardest, from everything they’ve answered.`, 'Your child taps the target on the map for a short round on just those skills. Three a week is the goal.', 'You see each skill’s score before the week and how it changes.'],
+    },
+    report: {
+      title: 'The full report',
+      line: 'A quick weekly look: what’s going well, what to help with, and when they play best.',
+      mock: phone(`<div class="dp-bar"><b>${who}</b><small>Report · this week</small></div>
+        <div class="dp-tiles"><div><b>2 h 10 m</b><small>played</small></div><div><b>86%</b><small>right first time</small></div><div><b>5 days</b><small>in a row</small></div></div>
+        <div class="dp-card">${n(1)}<p class="dp-cap">Strengths</p>${s.map((x, i) => `<div class="dp-meter"><span>${x}</span><i style="--v:${[97, 94, 91][i]}%"></i><b>${[97, 94, 91][i]}%</b>${chg(i === 0 ? 'up' : 'same', i === 0 ? '+4' : 'steady')}</div>`).join('')}</div>
+        <div class="dp-card">${n(2)}<p class="dp-cap">Practise next</p>${h.map((x, i) => `<div class="dp-meter low"><span>${x}</span><i style="--v:${[58, 63, 69][i]}%"></i><b>${[58, 63, 69][i]}%</b>${chg(i === 0 ? 'down' : 'up', i === 0 ? '−7' : `+${[9, 5][i - 1]}`)}</div>`).join('')}</div>
+        <div class="dp-card dp-row">${n(3)}<div class="dp-tod">${[30, 55, 100, 12].map((v, i) => `<span class="${i === 2 ? 'on' : ''}" style="--h:${v}%"></span>`).join('')}</div><div class="dp-todt"><b>Evenings</b><small>Best time of day · 4.1 s per answer</small></div></div>`),
+      notes: ['Strengths, so you can praise something specific, with how each one is changing (green up, orange down).', 'The skills to practise next, with their scores.', 'The time of day they do best, and how quickly they answer.'],
+    },
+    school: {
+      title: 'Your school’s syllabus',
+      line: 'Choose the topics your child’s class is doing, and the map follows them.',
+      mock: phone(`<div class="dp-bar"><b>School syllabus</b><small>${who}</small></div>
+        <div class="dp-card">${n(1)}<p class="dp-cap">Board</p><div class="dp-chips"><span class="on">CBSE / NCERT</span><span>ICSE</span><span>Common Core</span></div>
+          <p class="dp-cap">Class</p><div class="dp-chips"><span>Class 3</span><span class="on">Class 4</span><span>Class 5</span></div></div>
+        <div class="dp-card">${n(2)}<p class="dp-cap">This term’s topics</p>
+          ${['Multiply 2-digit by 1-digit', 'Fractions of a shape', 'Perimeter of rectangles', 'Bills and budgets with paise', '24-hour clock', 'Read a protractor'].map((x, i) => `<p class="dp-tick${i < 4 ? ' on' : ''}">${x}</p>`).join('')}
+        </div>
+        <div class="dp-card dp-row">${n(3)}<div class="dp-map"><i class="done"></i><i class="done"></i><i class="now"></i><i></i><i></i></div><small class="dp-mapt">The map now follows Class 4</small></div>`),
+      notes: ['Topic lists for CBSE, ICSE (Classes 1 to 10) and Common Core, in their usual order. MN isn’t linked to or approved by these boards.', 'Tick what the class is doing this term, and add or remove topics any time.', `${who}’s map shows just those topics.`],
+    },
+    sheets: {
+      title: 'Worksheets to print',
+      line: 'Screen-free practice from the skills your child is on now, for car rides and quiet evenings.',
+      mock: `<div class="dp-paper"><div class="dp-ph"><b>MN worksheet</b><small>${who} · ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</small></div>
+          ${n(1)}<ol>${['36 × 4 = ______', '¾ of 20 = ______', 'Perimeter of a 6 cm square = ______ cm', '₹250 − ₹87 = ₹______', 'Round 4,567 to the nearest 100: ______', '9 × 7 = ______', '1,204 + 389 = ______', 'Which is bigger: ⅔ or ¾? ______', '84 ÷ 7 = ______', 'Half past 3 in 24-hour time: ______', '5 × 8 × 2 = ______', '600 − 245 = ______'].map((x) => `<li>${x}</li>`).join('')}</ol>
+          <div class="dp-pf">${n(2)}<span>12 questions · about 15 minutes</span></div></div>
+        <div class="dp-paper back"><div class="dp-ph"><b>Answers</b><small>for the parent</small></div>${n(3)}<ol>${['144', '15', '24', '163', '4,600', '63', '1,593', '¾', '12', '15:30', '80', '355'].map((x) => `<li>${x}</li>`).join('')}</ol></div>`,
+      notes: ['Questions from the skills your child is on now, with fresh numbers each time.', 'Short enough to finish in one sitting.', 'An answer page for you, so checking takes a minute.'],
+    },
+    sync: {
+      title: 'Every phone in step',
+      line: 'A tablet at home, a phone in the car, grandma’s phone at the weekend: the same progress everywhere.',
+      mock: `<div class="dp-two">${phone(`<div class="dp-bar"><b>${who}</b><small>Your phone</small></div><div class="dp-big">★ 248</div><div class="dp-jar"><i style="--v:72%"></i></div><small class="dp-jt">Treat jar 72%</small>`)}
+        <div class="dp-sync">${n(1)}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14-4.5L4 9M4 4v5h5M4 13a8 8 0 0 0 14 4.5l2-2.5M20 20v-5h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        ${phone(`<div class="dp-bar"><b>${who}</b><small>Tablet</small></div><div class="dp-big">★ 248</div><div class="dp-jar"><i style="--v:72%"></i></div><small class="dp-jt">Treat jar 72%</small>`)}</div>
+        <div class="dp-strip">${n(2)}<span>Backed up with your Google account when there’s an internet connection</span></div>
+        <div class="dp-strip">${n(3)}<span>New phone? Sign in to bring progress back</span></div>`,
+      notes: ['Stars, jars, rewards and the report stay the same on every phone.', 'Saved to your own family space with your Google account.', 'On a new phone, sign in to bring progress back.'],
+    },
+  };
+}
+
+/** The full-screen preview, opened on one feature; swipe for the others. */
+export function mnxPreviewScreen(start: DemoId, back: (app: App) => Screen, trial: number | null, buy: () => void) {
+  return (app: App): Screen => {
+    const kids = app.save.data.children;
+    const kid = kids.find((c) => c.id === app.save.data.activeChildId) ?? kids[0];
+    const P = pages(app, kid);
+    const el = html(`<section class="screen mnx-prev" aria-label="MN × preview">
+      <header class="dp-top"><button class="dp-x" aria-label="Close the preview">✕</button><b>Preview</b><span class="dp-count"></span></header>
+      <div class="dp-pages">${ORDER.map((id) => {
+        const p = P[id];
+        return `<article class="dp-page" data-id="${id}"><h2>${esc(p.title)}</h2><p class="dp-line">${esc(p.line)}</p><div class="dp-mock">${p.mock}</div>
+          <ol class="dp-notes">${p.notes.map((t, i) => `<li>${n(i + 1)}<span>${t}</span></li>`).join('')}</ol><small class="dp-sample">A preview with sample numbers. Results vary from child to child.</small></article>`;
+      }).join('')}</div>
+      <div class="dp-dots-nav">${ORDER.map((id) => `<button data-go="${id}" aria-label="${esc(P[id].title)}"></button>`).join('')}</div>
+      <footer class="dp-foot">${trial ? `<button class="dp-buy">Try ${trial} days free</button>` : '<button class="dp-buy ghost">Done</button>'}</footer>
+    </section>`);
+    const strip = el.querySelector<HTMLElement>('.dp-pages')!;
+    const count = el.querySelector<HTMLElement>('.dp-count')!;
+    const dots = [...el.querySelectorAll<HTMLElement>('[data-go]')];
+    const paint = () => {
+      const i = Math.round(strip.scrollLeft / Math.max(1, strip.clientWidth));
+      count.textContent = `${i + 1} of ${ORDER.length}`;
+      dots.forEach((d, k) => d.classList.toggle('on', k === i));
+    };
+    strip.addEventListener('scroll', paint, { passive: true });
+    dots.forEach((d) => d.addEventListener('click', () => strip.scrollTo({ left: ORDER.indexOf(d.dataset.go as DemoId) * strip.clientWidth, behavior: 'smooth' })));
+    const close = () => void app.show(back);
+    el.querySelector('.dp-x')!.addEventListener('click', close);
+    el.querySelector('.dp-buy')!.addEventListener('click', () => (trial ? buy() : close()));
+    return {
+      el,
+      back: () => (close(), true),
+      mounted: () => {
+        strip.scrollLeft = ORDER.indexOf(start) * strip.clientWidth;
+        paint();
+      },
+    };
+  };
 }

@@ -1200,7 +1200,7 @@ test('parent area: five tabs on the right (Children, Sound, Premium, App, Help),
   // Children first: who plays, daily play, learning and rewards.
   await expect(page.locator('.parent .topbar .t')).toHaveText('Children');
   await expect(page.locator('.pa-rail .pa-tab[data-id]')).toHaveCount(5);
-  for (const sel of ['.pa-kid', '.limits', '.quiet-row', '[data-k="holiday"]', '.pt-slider', '[data-k="teach"]', '[data-k="confirmAnswers"]', '.skills-row']) await expect(page.locator(sel).first()).toBeAttached();
+  for (const sel of ['.pa-kid', '.limits', '.quiet-row', '[data-k="holiday"]', '.pt-slider', '[data-k="teach"]', '[data-k="confirmAnswers"]']) await expect(page.locator(sel).first()).toBeAttached();
   for (const sel of ['[data-k="sound"]', '.theme-tile', '.lock-row', '[data-k="showFps"]', '.adv-toggle']) await expect(page.locator(sel)).toHaveCount(0);
   // Sound: a man's voice by default; a woman's voice and the volume are saved.
   await page.click('.pa-tab[data-id="sound"]');
@@ -1215,11 +1215,15 @@ test('parent area: five tabs on the right (Children, Sound, Premium, App, Help),
   // MN ×: everything included in this version, with the perks and how to use them.
   await page.click('.pa-tab[data-id="premium"]');
   await expect(page.locator('.pm-h')).toContainText('where to help');
-  await expect(page.locator('.pm-gains li')).toHaveCount(4);
+  await expect(page.locator('.pm-gains li')).toHaveCount(5);
+  // ? opens a full-screen preview of that feature.
+  await page.click('.pm-q[data-demo="report"]');
+  await expect(page.locator('.mnx-prev .dp-count')).toHaveText('2 of 5');
+  await page.click('.dp-x');
   await expect(page.locator('.pm-row.locked')).toHaveCount(0);
   // App: notifications, look, Parent PIN, backup, delete.
   await page.click('.pa-tab[data-id="app"]');
-  for (const sel of ['[data-r="daily"]', '.theme-tile', '[data-k="vibration"]', '[data-k="fx3d"]', '.lock-row', '.bk-all', '.erase-row']) await expect(page.locator(sel).first()).toBeAttached();
+  for (const sel of ['[data-r="daily"]', '.theme-tile', '[data-k="vibration"]', '[data-k="fx3d"]', '.lock-row', '.bk-all', '.erase-row', '.skills-row', '.cat-chip']) await expect(page.locator(sel).first()).toBeAttached();
   // Help: videos and questions.
   await page.click('.pa-tab[data-id="help"]');
   await expect(page.locator('.pa-faq details').first()).toBeVisible();
@@ -1421,7 +1425,7 @@ test('MN × (Play Store build): paid features say so, the trial and plans come 
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
   // A worksheet asks for Plus.
   await page.locator('.kid-set').first().click();
-  await expect(page.locator('.sheet-btn .mp-tag')).toHaveText('Plus');
+  await expect(page.locator('.sheet-btn .mp-tag')).toHaveText('MN ×');
   await page.click('.sheet-btn');
   await expect(page.locator('.mp-sheet h2')).toHaveText('Worksheets');
   await page.click('.sheet .btn:has-text("See MN ×")');
@@ -1459,6 +1463,7 @@ test('parent area: the skills list shows every skill with an example and how it 
   await page.goto('/?debug&demo=%4060&noloader&fast');
   await expect(page.locator('.map')).toBeVisible();
   await page.evaluate(() => (window as unknown as { __app: { show: (s: unknown) => void }; __screens: Record<string, unknown> }).__app.show((window as unknown as { __screens: Record<string, unknown> }).__screens.parentScreen));
+  await page.click('.pa-tab[data-id="app"]');
   await page.click('.skills-row');
   await expect(page.locator('.skill-index')).toBeVisible();
   expect(await page.locator('.si-skill').count()).toBeGreaterThan(400);
