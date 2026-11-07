@@ -55,7 +55,7 @@
 @media (prefers-reduced-motion:reduce){.pm-mascot{animation:none;transform:rotate(45deg)}}
 .mp-tag{white-space:nowrap}
 .screen.parent .pa-tab .mnx-mark.tab{width:24px;height:24px;margin:0 auto}
-.mnx-mark{display:block;overflow:visible}.mnx-turn{transform-origin:100px 100px;transform:rotate(45deg)}
+.mnx-mark{display:block;overflow:visible}.mnx-turn{transform-origin:50px 50px;transform:rotate(45deg)}
 
 /* The ? beside each perk. */
 .pm-gains li{position:relative;padding-right:40px}
@@ -167,3 +167,6 @@
 .dp-buy{appearance:none;border:0;cursor:pointer;font:inherit;width:100%;min-height:52px;border-radius:16px;font-size:18px;font-weight:900;color:var(--pm-a);background:#fff;box-shadow:0 5px 0 rgba(26,20,70,.28)}
 .dp-buy.ghost{color:#fff;background:transparent;box-shadow:inset 0 0 0 2px #fff}
 html .screen.mnx-prev,html[data-theme] .screen.mnx-prev{background:linear-gradient(180deg,#6C47FF,#8E6BFF);color:#fff;z-index:5}
+
+.pm-brand{display:inline-flex;align-items:center;gap:8px}
+.pm-brand .mnx-mark{width:38px;height:38px}

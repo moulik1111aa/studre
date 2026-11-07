@@ -1,26 +1,19 @@
-// MN × ("MN Times"), the paid extras: its mark is Plus's own sign turned a quarter of the way
-// round, so the plus becomes a times sign, in Plus's own yellow. "Learning, multiplied."
-
-let uid = 0;
+// MN × ("MN Times"), the paid extras: its mark is Plus's own sign turned an eighth of the way
+// round, so the plus becomes a times sign, in two colours that mix where they cross.
+// "Learning, multiplied."
 
 export const MNX = 'MN ×';
 export const MNX_SPOKEN = 'MN Times';
 export const MNX_TAGLINE = 'Learning, multiplied.';
 
-/** The × mark: Plus's two rounded bars with the same ink outline, tilted 45°, in gold. */
+/** The × mark: Plus's sign turned to a times sign, as two bars, pink and sky blue, that mix
+ *  to lilac where they cross ("multiplied"). */
 export function timesMarkSvg(cls = ''): string {
-  const u = ++uid;
-  const V = 'x="70" y="14" width="60" height="172" rx="14"';
-  const H = 'x="14" y="70" width="172" height="60" rx="14"';
-  return `<svg class="mnx-mark ${cls}" viewBox="0 0 200 200" aria-hidden="true">
-    <defs>
-      <linearGradient id="mxG${u}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFE27A"/><stop offset=".5" stop-color="#FFC531"/><stop offset="1" stop-color="#FFAE1A"/></linearGradient>
-      <linearGradient id="mxS${u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".6"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
-    </defs>
+  return `<svg class="mnx-mark ${cls}" viewBox="0 0 100 100" aria-hidden="true">
     <g class="mnx-turn">
-      <g fill="#1A1446" stroke="#1A1446" stroke-width="12" stroke-linejoin="round"><rect ${V}/><rect ${H}/></g>
-      <g fill="url(#mxG${u})"><rect ${V}/><rect ${H}/></g>
-      <rect x="80" y="24" width="14" height="60" rx="7" fill="url(#mxS${u})"/>
+      <rect x="38" y="4" width="24" height="92" rx="12" fill="#FF7A9A"/>
+      <rect x="4" y="38" width="92" height="24" rx="12" fill="#5CC8FF"/>
+      <rect x="38" y="38" width="24" height="24" fill="#B7A2FF"/>
     </g>
   </svg>`;
 }

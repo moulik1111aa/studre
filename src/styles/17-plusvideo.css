@@ -198,6 +198,6 @@
 .pv-endx > b{font-size:56px;font-weight:900;color:#fff;letter-spacing:-.02em;line-height:1}
 .pv-endx > b em{font-style:normal;color:#FFC531}
 .pv-endx > small{font-size:18px;font-weight:800;color:#fff;opacity:.92}
-.pv-endx .mnx-turn{transform-origin:100px 100px;transform:rotate(45deg)}
+.pv-endx .mnx-turn{transform-origin:50px 50px;transform:rotate(45deg)}
 .pv-endx .turn-in .mnx-turn{animation:mnx-turn 1s .3s cubic-bezier(.5,-0.3,.25,1.35) both}
 @keyframes mnx-turn{from{transform:rotate(0) scale(.86)}to{transform:rotate(45deg) scale(1)}}

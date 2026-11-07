@@ -255,7 +255,7 @@ function premiumHtml(app: App): string {
   const kid = kids.find((c) => c.id === app.save.data.activeChildId) ?? kids[0];
   const hero = `<div class="pm-hero">
       <div class="pm-mascot" aria-hidden="true">${plusSvg({ cls: 'alive', noShadow: true })}</div>
-      <p class="pm-brand">MN <span>×</span></p>
+      <p class="pm-brand" aria-label="MN Times">MN ${timesMarkSvg()}</p>
       <h2 class="pm-h">See where to help, at a glance.</h2>
       <button class="pm-video"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.5v9l7.5-4.5z" fill="currentColor"/></svg>Watch the 1-minute video</button>
     </div>`;
