@@ -119,7 +119,7 @@ jobs:
           cp "$APK" StudyHard.apk
           ls -l StudyHard.apk
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: apk
           path: StudyHard.apk
@@ -189,7 +189,7 @@ jobs:
           cp app/build/outputs/bundle/release/app-release.aab ../StudyHard-play.aab
           ls -l ../StudyHard-play.aab
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: play-aab
           path: StudyHard-play.aab
@@ -214,7 +214,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v6
         with:
           name: apk
 
@@ -247,7 +247,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v6
         with:
           name: apk
 
