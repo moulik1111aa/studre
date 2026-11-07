@@ -373,10 +373,32 @@ i.lv4{background:var(--accent)}
 .si-tstars svg{width:100%;height:100%}
 
 /* App icon (MN Plus) */
-.icon-row{display:flex;align-items:center;gap:12px;text-align:left}
+.pa-row.icon-row{display:flex;flex-direction:row;align-items:center;gap:12px;text-align:left}
+.pa-row.icon-row > span:last-child{display:flex;flex-direction:column;gap:2px;flex:1}
 .icon-row .ic-now svg{display:block;border-radius:10px}
 .ic-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:10px;margin:12px 0 4px}
 .ic-opt{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 4px;border-radius:16px;border:2px solid transparent;background:var(--hi-10,rgba(0,0,0,.04));font-weight:800;color:inherit}
 .ic-opt svg{display:block;filter:drop-shadow(0 3px 6px rgba(0,0,0,.18))}
 .ic-opt.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent)}
 .ic-opt:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+/* Parent area: tabs down the right edge, in reach of a right thumb. Tapping one changes the
+   settings in place. */
+.screen.parent.rail{padding-right:0}
+.parent.rail .topbar{padding-right:18px}
+.parent.rail .topbar .t{text-align:left}
+.pa-wrap{flex:1;min-height:0;display:flex;gap:10px}
+.parent.rail .pa-body{flex:1;min-width:0;overflow-y:auto;padding-bottom:calc(var(--safe-bottom) + 30px)}
+.pa-rail{flex:none;width:76px;display:flex;flex-direction:column;justify-content:flex-end;gap:8px;padding:10px 6px calc(var(--safe-bottom) + 4px);border-radius:24px 0 0 24px;background:var(--hi-08);box-shadow:inset 2px 0 0 var(--hi-12)}
+.pa-tabs{display:flex;flex-direction:column;gap:4px;overflow-y:auto;scrollbar-width:none;min-height:0}
+.pa-tabs::-webkit-scrollbar{display:none}
+.pa-tab{appearance:none;border:0;cursor:pointer;color:var(--ink);background:none;flex:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 2px;border-radius:16px;min-height:54px;font:inherit}
+.pa-tab span{font-size:22px;line-height:1}
+.pa-tab small{font-size:11px;font-weight:800;line-height:1.1;color:var(--ink-soft);text-align:center}
+.pa-tab.on{background:var(--accent);box-shadow:0 6px 14px -6px color-mix(in srgb,var(--accent) 70%,transparent)}
+.pa-tab.on small{color:var(--on-accent,#fff)}
+.pa-tab:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+.pa-tab:active{transform:scale(.94)}
+.pa-close{background:var(--surface);box-shadow:inset 0 0 0 var(--stroke-w,2px) var(--stroke,var(--hi-12))}
+.pa-close span{font-size:18px;font-weight:900}
+@media (max-height:640px){.pa-tab{min-height:46px;padding:5px 2px}.pa-tab span{font-size:19px}}

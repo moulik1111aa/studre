@@ -18,7 +18,7 @@ import { html, esc, type App, type Screen } from './app.ts';
 import { type Child, type Settings, type Theme } from '../storage/save.ts';
 import { CATEGORIES } from '../core/rewards.ts';
 import { ICONS, avatarHtml } from './icons.ts';
-import { stagger } from '../render/motion.ts';
+import { reducedMotion, stagger } from '../render/motion.ts';
 import { whosPlayingScreen } from './whos.ts';
 import { addChildScreen, limitsScreen } from './setup.ts';
 import { voiceScreen } from './voicepick.ts';
@@ -29,7 +29,6 @@ import { accessState, lockScreen, niceDay } from './access.ts';
 import { hasPlus, needPlus, plusScreen, plusTag, storeBuild } from './membership.ts';
 import { TRIAL_DAYS, TRIAL_DAYS_SIGNED_IN } from '../core/membership.ts';
 import { freshProgress } from '../core/path.ts';
-import { MENU_ICON, openDrawer } from './drawer.ts';
 import { quietSettingsScreen } from './quiet.ts';
 import { quietSummary } from '../core/quiet.ts';
 import { saveWorksheet } from './worksheet.ts';
@@ -150,7 +149,7 @@ function basicHtml(app: App): string {
         <button class="linkish restore-kid">⤓ Restore from a backup file or report card</button>
       </div>
       ${cloudCard(app)}</section>
-    <button class="pa-more card to-adv"><span>☰</span><span><b>More settings</b><small>Timers, notes, voice, lock and help are in the menu</small></span><i aria-hidden="true">›</i></button>`;
+    <button class="pa-more card to-adv"><span>👉</span><span><b>More settings</b><small>Timers, notes, voice, lock and help: tap a tab on the right</small></span><i aria-hidden="true">›</i></button>`;
 }
 
 function groupHtml(app: App, group: Group): string {
@@ -193,45 +192,61 @@ function groupHtml(app: App, group: Group): string {
 
 const pageName = (p: Page): string => (p === 'basic' ? 'Parent area' : GROUPS.find((g) => g.id === p)!.name);
 
-/** The ☰ menu: everyday settings first, then the groups of more settings. */
-function parentMenu(app: App, go: (p: Page) => void): Promise<void> {
-  return openDrawer(app, {
-    title: 'Parent area',
-    sub: 'Settings for grown-ups',
-    items: [
-      { id: 'basic', icon: '⭐', label: 'Everyday settings', note: 'Children, play time, sound, look, backup', current: page === 'basic', onPick: () => go('basic') },
-      ...(storeBuild(app) ? [{ id: 'plus', icon: '✨', label: 'MN Plus', note: hasPlus(app) ? 'On · thank you!' : 'Plans and free trial', current: false, onPick: () => void app.show(plusScreen(parentScreen)) }] : []),
-      { id: 'skills', icon: '📚', label: 'Skills list', note: 'Every skill, with an example and how it’s taught', current: false, onPick: () => void app.show(skillsIndexScreen(parentScreen)) },
-      { heading: 'More settings' },
-      ...GROUPS.map((g) => ({ id: g.id, icon: g.icon, label: g.name, note: g.note, current: page === g.id, onPick: () => go(g.id) })),
-    ],
-  });
+/** The tabs down the right edge (thumb side): settings change in place; Skills and Plus open their pages. */
+function railTabs(app: App): { id: Page | 'skills' | 'plus'; icon: string; label: string }[] {
+  return [
+    { id: 'basic', icon: '⭐', label: 'Everyday' },
+    ...GROUPS.map((g) => ({ id: g.id, icon: g.icon, label: g.name })),
+    { id: 'skills', icon: '📚', label: 'Skills' },
+    ...(storeBuild(app) ? [{ id: 'plus' as const, icon: '✨', label: 'Plus' }] : []),
+  ];
 }
 
 export function parentScreen(app: App): Screen {
-  const el = html(`<section class="screen parent" aria-label="Parent area">
-    <header class="topbar"><button class="icon-btn pa-menu" aria-label="Menu">${MENU_ICON}</button><span class="t"></span><button class="icon-btn back-btn" aria-label="Close the parent area">✕</button></header>
-    <div class="scroll pa-body"></div>
+  const tabs = railTabs(app);
+  const el = html(`<section class="screen parent rail" aria-label="Parent area">
+    <header class="topbar"><span class="t"></span></header>
+    <div class="pa-wrap">
+      <div class="scroll pa-body" role="tabpanel"></div>
+      <nav class="pa-rail" role="tablist" aria-label="Parent area sections" aria-orientation="vertical">
+        <div class="pa-tabs">${tabs.map((t) => `<button class="pa-tab" role="tab" data-id="${t.id}" aria-selected="false"><span aria-hidden="true">${t.icon}</span><small>${esc(t.label)}</small></button>`).join('')}</div>
+        <button class="pa-tab pa-close back-btn" aria-label="Close the parent area"><span aria-hidden="true">✕</span><small>Close</small></button>
+      </nav>
+    </div>
   </section>`);
   const body = el.querySelector<HTMLElement>('.pa-body')!;
   const render = (animate: boolean) => {
     el.querySelector('.topbar .t')!.textContent = pageName(page);
+    el.querySelectorAll<HTMLElement>('.pa-tab[data-id]').forEach((b) => {
+      const on = b.dataset.id === page;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-selected', String(on));
+    });
     body.innerHTML = page === 'basic' ? basicHtml(app) : groupHtml(app, page);
     body.scrollTop = 0;
     bind(app, el, body, render);
-    if (animate) stagger(body.querySelectorAll(page === 'basic' ? '.pa-sec, .pa-more' : '.pa-panel > *'), { gap: 40 });
+    if (animate) stagger(body.querySelectorAll(page === 'basic' ? '.pa-sec, .pa-more' : '.pa-panel > *'), { gap: 30 });
   };
   const go = (p: Page) => {
     if (p === page) return;
     page = p;
     render(true);
   };
-  const menu = () => void parentMenu(app, go);
-  el.querySelector('.pa-menu')!.addEventListener('click', menu);
+  el.querySelectorAll<HTMLButtonElement>('.pa-tab[data-id]').forEach((b) =>
+    b.addEventListener('click', () => {
+      const id = b.dataset.id!;
+      if (id === 'skills') return void app.show(skillsIndexScreen(parentScreen));
+      if (id === 'plus') return void app.show(plusScreen(parentScreen));
+      go(id as Page);
+    }),
+  );
+  // "More settings" on the everyday page: point at the tabs.
   body.addEventListener('click', (e) => {
-    if ((e.target as HTMLElement).closest('.to-adv')) menu();
+    if (!(e.target as HTMLElement).closest('.to-adv')) return;
+    const rail = el.querySelector<HTMLElement>('.pa-tabs')!;
+    if (!reducedMotion()) rail.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-8px)' }, { transform: 'translateX(0)' }], { duration: 420, iterations: 2 });
   });
-  el.querySelector('.back-btn')!.addEventListener('click', () => void app.show(whosPlayingScreen));
+  el.querySelector('.pa-close')!.addEventListener('click', () => void app.show(whosPlayingScreen));
   render(false);
   return {
     el,

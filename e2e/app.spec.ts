@@ -706,8 +706,7 @@ test('parents choose how long timed questions last', async ({ page }) => {
   await page.goto('/?debug&demo=%4012');
   await expect(page.locator('.map')).toBeVisible();
   await page.evaluate(() => { const w = window as unknown as { __app: { show(m: unknown): void }; __screens: { parentScreen: unknown } }; w.__app.show(w.__screens.parentScreen); });
-  await page.click('.pa-menu');
-  await page.click('.dr-item[data-id="learning"]');
+  await page.click('.pa-tab[data-id=\"learning\"]');
   await expect(page.locator('.pt-val')).toHaveText('20 seconds');
   await page.locator('.pt-slider').fill('35');
   await page.locator('.pt-slider').dispatchEvent('change');
@@ -960,8 +959,7 @@ test('backup: no screen when the app opens; the Parent area says who needs it, a
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
   await expect(page.locator('.pb-due')).toHaveCount(0);
   // Reminder settings are saved (Advanced → Notes).
-  await page.click('.pa-menu');
-  await page.click('.dr-item[data-id="notes"]');
+  await page.click('.pa-tab[data-id=\"notes\"]');
   await page.locator('[data-r="melt"]').uncheck();
   await expect(page.locator('.pr-per')).toBeHidden();
   const rs = await page.evaluate(() => (window as unknown as { __app: { save: { data: { settings: { reminders?: { melt: boolean } } } } } }).__app.save.data.settings.reminders);
@@ -1067,8 +1065,7 @@ test('adventure tips: grown-ups first time without Skip, then with Skip; childre
   await expect(page.locator('.map')).toBeVisible();
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
   // In Advanced → Help (it is also on each child's page).
-  await page.click('.pa-menu');
-  await page.click('.dr-item[data-id="help"]');
+  await page.click('.pa-tab[data-id=\"help\"]');
   await page.click('.adv-what');
   await expect(page.locator('.tips-ov')).toBeVisible();
   await expect(page.locator('.tip-skip')).toHaveCount(0);
@@ -1240,7 +1237,7 @@ test('Adventure pet: the egg hatches, the child picks and names a pet, feeds it,
   expect(errors).toEqual([]);
 });
 
-test('parent area: everyday settings first, the rest in a ☰ menu, and each child has a page', async ({ page }) => {
+test('parent area: everyday settings first, the rest in tabs on the right, and each child has a page', async ({ page }) => {
   type W = { __app: { child: { challenge?: number }; show(m: unknown): void }; __screens: { parentScreen: unknown } };
   await page.goto('/?debug&demo=%4012');
   await expect(page.locator('.map')).toBeVisible();
@@ -1249,25 +1246,19 @@ test('parent area: everyday settings first, the rest in a ☰ menu, and each chi
   await expect(page.locator('.parent .topbar .t')).toHaveText('Parent area');
   for (const sel of ['.pa-kid', '.limits', '[data-k="holiday"]', '[data-k="sound"]', '[data-k="voice"]', '.theme-tile', '.bk-all', '.to-adv']) await expect(page.locator(sel).first()).toBeAttached();
   for (const sel of ['.pt-slider', '[data-r="melt"]', '.lock-row', '[data-k="showFps"]', '.adv-toggle']) await expect(page.locator(sel)).toHaveCount(0);
-  // ☰: the groups, one page at a time.
-  await page.click('.pa-menu');
-  await expect(page.locator('.drawer .dr-item')).toHaveCount(8);
-  await expect(page.locator('.dr-item.on')).toContainText('Everyday settings');
-  await page.click('.dr-item[data-id="learning"]');
-  await expect(page.locator('.drawer')).toHaveCount(0);
+  // The tabs down the right edge: each changes the settings in place.
+  await expect(page.locator('.pa-rail .pa-tab[data-id]')).toHaveCount(8);
+  await expect(page.locator('.pa-tab.on')).toContainText('Everyday');
+  await page.click('.pa-tab[data-id="learning"]');
   await expect(page.locator('.parent .topbar .t')).toHaveText('Learning');
+  await expect(page.locator('.pa-tab.on')).toHaveAttribute('data-id', 'learning');
   await expect(page.locator('.pt-slider')).toBeVisible();
-  await page.click('.pa-menu');
-  await page.click('.dr-item[data-id="device"]');
+  await page.click('.pa-tab[data-id="device"]');
   await expect(page.locator('[data-k="showFps"]')).toBeAttached();
   await expect(page.locator('.pt-slider')).toHaveCount(0);
-  // The "More settings" link opens the menu too; tapping outside closes it.
-  await page.click('.pa-menu');
-  await page.click('.dr-item[data-id="basic"]');
-  await page.click('.to-adv');
-  await expect(page.locator('.drawer')).toBeVisible();
-  await page.mouse.click(380, 400);
-  await expect(page.locator('.drawer')).toHaveCount(0);
+  // Back to everyday; Android back from a tab returns there too.
+  await page.click('.pa-tab[data-id="basic"]');
+  await expect(page.locator('.to-adv')).toBeVisible();
   // A child's own page: difficulty is changed there.
   await page.click('.kid-set');
   await expect(page.locator('.kid-settings .adv-toggle')).toBeAttached();
@@ -1422,8 +1413,7 @@ test('MN Plus video: from the Parent area Help page, plays through its 8 stops t
   await page.goto('/?debug&demo=%400&fastreel');
   await expect(page.locator('.map')).toBeVisible();
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
-  await page.click('.pa-menu');
-  await page.click('.dr-item[data-id="help"]');
+  await page.click('.pa-tab[data-id=\"help\"]');
   await page.click('.plus-row');
   await expect(page.locator('.reel[aria-label="What MN Plus adds"]')).toBeVisible();
   await expect(page.locator('.rl-count')).toHaveText(/of 8$/);
