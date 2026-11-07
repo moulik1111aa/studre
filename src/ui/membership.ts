@@ -180,7 +180,7 @@ export function plusScreen(back: (app: App) => Screen) {
       body.innerHTML = `
         <div class="mp-hero on"><div class="mp-logo">${plusSvg({ noShadow: true })}</div><h2>MN × is on</h2><p>${what}</p></div>
         <ul class="card mp-list">${featureRows()}</ul>
-        <button class="pa-row card mp-video"><b>▶ What MN × adds</b><small>The 90-second video</small></button>`;
+        <button class="pa-row card mp-video"><b>▶ What MN × adds</b><small>The 1-minute video</small></button>`;
       foot.innerHTML = s.via && s.via !== 'lifetime' && !owner ? `<button class="btn ghost mp-manage">Manage subscription</button>` : `<button class="btn mp-done">Done</button>`;
     };
 
@@ -195,7 +195,7 @@ export function plusScreen(back: (app: App) => Screen) {
       body.innerHTML = `
         <div class="mp-hero"><div class="mp-logo">${plusSvg({ noShadow: true })}</div><h2>See the whole picture</h2><p>Everything your child plays with is free. MN × is for you.</p></div>
         <ul class="card mp-list">${featureRows()}</ul>
-        <button class="pa-row card mp-video"><b>▶ What MN × adds</b><small>The 90-second video</small></button>
+        <button class="pa-row card mp-video"><b>▶ What MN × adds</b><small>The 1-minute video</small></button>
         ${pending ? '<p class="card mp-note" role="status">⏳ A payment is on its way. MN × turns on as soon as Google Play confirms it.</p>' : ''}
         <div class="mp-plans" role="radiogroup" aria-label="Choose a plan">${offers.map(card).join('')}</div>
         ${!signedIn && cloudOn(app) ? `<div class="card mp-signin"><p><b>Get ${TRIAL_DAYS_SIGNED_IN} days free instead of ${TRIAL_DAYS}</b><small>Sign in with Google first. Your family’s progress gets an online backup too.</small></p><button class="btn ghost small mp-g">Sign in with Google</button></div>` : ''}

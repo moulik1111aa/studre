@@ -131,3 +131,73 @@
 
 @media (max-height:680px){.pv-phone{width:120px;height:190px}.pv-sky{font-size:64px}.pv-topics li{font-size:13.5px}.pv-paper{padding-top:30px}}
 @media (max-width:340px){.pv-dev small{font-size:11.5px}.pv-row small{width:62px}.pv-card b{font-size:17px}}
+
+/* The MN × video (voiceover of 7 Nov): drawn scenes, no emoji. */
+.pv-ans,.pv-focus,.pv-rise,.pv-sync2,.pv-endx{position:relative;width:min(92vw,360px);display:grid;justify-items:center;gap:14px}
+.pv-chips{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.pv-chips span{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:14px;background:#fff;color:#1A1446;font-size:16px;font-weight:900;opacity:0;transform:translateY(14px) scale(.9);transition:opacity .3s,transform .4s cubic-bezier(.2,.9,.3,1.4);transition-delay:calc(var(--k)*.28s)}
+.pv-chips i{font-style:normal;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;color:#fff;background:#22C55E}
+.pv-chips span.no i{background:#F97316}
+.pv-ans.s1 .pv-chips span{opacity:1;transform:none}
+.pv-ans.s2 .pv-chips span{opacity:.35;transform:translateY(-6px) scale(.92);transition-delay:0s}
+.pv-mini-bars{display:grid;grid-template-columns:repeat(5,30px);gap:10px;align-items:end;height:110px;padding:12px 16px 0;border-radius:18px;background:rgba(255,255,255,.14);opacity:0;transition:opacity .4s}
+.pv-mini-bars i{height:0;border-radius:6px 6px 0 0;background:#FFC531;transition:height .7s cubic-bezier(.2,.8,.2,1);transition-delay:calc(var(--k)*.12s)}
+.pv-ans.s2 .pv-mini-bars{opacity:1}
+.pv-ans.s2 .pv-mini-bars i{height:var(--v)}
+.pv-side em{font-style:normal;font-size:12.5px;font-weight:800;opacity:.85}
+.pv-clear.kid i::after{background:#22C55E}
+.pv-three{display:grid;gap:8px;width:100%}
+.pv-three span{padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.16);color:#fff;font-size:16px;font-weight:900;opacity:.35;transform:scale(.96);transition:opacity .35s,transform .4s,background .35s,color .35s;transition-delay:calc(var(--k)*.35s)}
+.pv-focus.s1 .pv-three span{opacity:1;transform:none;background:#fff;color:#4C1D95}
+.pv-round{display:flex;align-items:center;gap:16px;opacity:0;transform:translateY(16px);transition:opacity .4s,transform .45s cubic-bezier(.2,.9,.3,1.3)}
+.pv-focus.s2 .pv-round{opacity:1;transform:none}
+.pv-mud{width:110px;height:116px}
+.pv-mud .muddle{width:100%;height:100%}
+.pv-clock{width:74px;height:74px;border-radius:50%;display:grid;place-items:center;align-content:center;background:#fff;color:#4C1D95;box-shadow:0 0 0 6px rgba(255,255,255,.25);opacity:0;transform:scale(.5);transition:opacity .3s,transform .4s cubic-bezier(.2,.9,.3,1.5)}
+.pv-clock b{font-size:28px;font-weight:900;line-height:1}
+.pv-clock small{font-size:12px;font-weight:800}
+.pv-focus.s3 .pv-clock{opacity:1;transform:none}
+.pv-rise{grid-template-columns:repeat(3,1fr);gap:16px;align-items:end;padding:16px;border-radius:20px;background:rgba(255,255,255,.14)}
+.pv-pair{display:flex;gap:6px;align-items:end;height:160px;justify-content:center}
+.pv-pair span{position:relative;width:26px;height:0;border-radius:7px 7px 0 0;transition:height .8s cubic-bezier(.2,.8,.2,1)}
+.pv-pair span.a{background:rgba(255,255,255,.55)}
+.pv-pair span.b{background:#FFC531}
+.pv-pair b{position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:12px;font-weight:900;color:#fff;opacity:0;transition:opacity .3s .5s;white-space:nowrap}
+.pv-rise.s1 .pv-pair span.a{height:var(--v)}
+.pv-rise.s1 .pv-pair span.a b,.pv-rise.s2 .pv-pair span.b b{opacity:1}
+.pv-rise.s2 .pv-pair span.b{height:var(--v);transition-delay:calc(var(--k)*.2s)}
+.pv-key{grid-column:1/-1;display:flex;justify-content:center;gap:16px}
+.pv-key small{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;color:#fff}
+.pv-key i{width:12px;height:12px;border-radius:3px}
+.pv-key i.a{background:rgba(255,255,255,.55)}.pv-key i.b{background:#FFC531}
+.pv-school.s3 .pv-class .c3{display:none}
+.pv-school.s3 .pv-class .c4{display:grid;animation:rl-pop .35s both}
+.pv-mini-sheet{display:grid;gap:6px;width:150px;padding:12px;border-radius:6px;background:#fff;box-shadow:0 12px 24px rgba(0,0,0,.25);transform:rotate(-3deg) translateY(20px);opacity:0;transition:opacity .35s,transform .45s cubic-bezier(.2,.9,.3,1.3)}
+.pv-mini-sheet b{font-size:13px;font-weight:900;color:#065F46}
+.pv-mini-sheet i{height:6px;border-radius:3px;background:#CBD5E1}
+.pv-mini-sheet i:nth-child(odd){width:75%}
+.pv-school.s4 .pv-mini-sheet{opacity:1;transform:rotate(-3deg)}
+.pv-sync2{grid-template-columns:auto auto auto;align-items:center;gap:12px}
+.pv-dv{display:grid;justify-items:center;gap:6px;opacity:0;transform:translateY(16px);transition:opacity .35s,transform .4s}
+.pv-dvs{width:104px;height:180px;border-radius:22px;background:#111827;padding:8px;display:grid;align-content:center;justify-items:center;gap:12px;box-shadow:0 18px 32px rgba(0,0,0,.3);position:relative}
+.pv-dv.tab .pv-dvs{width:140px;height:180px;border-radius:18px}
+.pv-dvs::before{content:"";position:absolute;inset:8px;border-radius:16px;background:linear-gradient(180deg,#A5B4FC,#F5F3FF)}
+.pv-dvs b,.pv-dvs i{position:relative}
+.pv-dvs b{font-size:20px;font-weight:900;color:#B45309}
+.pv-dvs i{width:70%;height:10px;border-radius:5px;background:linear-gradient(90deg,#FFC531 72%,#E0E7FF 72%)}
+.pv-dv small{font-size:13px;font-weight:800;color:#fff}
+.pv-sync2 .d1,.pv-sync2.s2 .d2{opacity:1;transform:none}
+.pv-sync2:not(.s1) .d1{opacity:0}
+.pv-sync2.s1 .d1{opacity:1;transform:none}
+.pv-arrows{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;color:#4F46E5;background:#fff;opacity:0;transform:scale(.5) rotate(-90deg);transition:opacity .3s,transform .5s cubic-bezier(.2,.9,.3,1.4)}
+.pv-arrows svg{width:26px;height:26px}
+.pv-sync2.s2 .pv-arrows{opacity:1;transform:none}
+.pv-endx{gap:6px;animation:rl-pop .5s both}
+.pv-x{width:120px;height:120px;filter:drop-shadow(0 14px 22px rgba(26,20,70,.35))}
+.pv-x .mnx-mark{width:100%;height:100%}
+.pv-endx > b{font-size:56px;font-weight:900;color:#fff;letter-spacing:-.02em;line-height:1}
+.pv-endx > b em{font-style:normal;color:#FFC531}
+.pv-endx > small{font-size:18px;font-weight:800;color:#fff;opacity:.92}
+.pv-endx .mnx-turn{transform-origin:100px 100px;transform:rotate(45deg)}
+.pv-endx .turn-in .mnx-turn{animation:mnx-turn 1s .3s cubic-bezier(.5,-0.3,.25,1.35) both}
+@keyframes mnx-turn{from{transform:rotate(0) scale(.86)}to{transform:rotate(45deg) scale(1)}}

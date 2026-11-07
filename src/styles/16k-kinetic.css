@@ -1,0 +1,87 @@
+/* Kinetic type for the videos (ui/reel.ts): every stop moves its caption a different way, key
+   words get a swept-in highlight, a huge outlined word drifts behind, soft colour blobs float,
+   and each stop arrives with its own entrance (circle wipe, push, zoom, slant). */
+
+/* Words sit in masks so they can rise into view. */
+.rl-cap{perspective:600px}
+.rl-m{display:inline-block;overflow:hidden;vertical-align:bottom;padding:0 .02em .08em;margin-bottom:-.08em}
+.rl-scene .rl-w{display:inline-block;opacity:1;animation:none;will-change:transform}
+.rl-scene.on .rl-w{animation:kin-rise .62s cubic-bezier(.2,.85,.25,1) both;animation-delay:var(--d)}
+@keyframes kin-rise{from{transform:translateY(110%) rotate(6deg)}to{transform:none}}
+
+/* Alternate words slide in from left and right with a skew. */
+.rl-scene.kin-sides .rl-m{overflow:visible}
+.rl-scene.kin-sides.on .rl-w{animation-name:kin-left}
+.rl-scene.kin-sides.on .rl-m:nth-child(even) .rl-w{animation-name:kin-right}
+@keyframes kin-left{from{opacity:0;transform:translateX(-70vw) skewX(-24deg)}70%{transform:translateX(8px) skewX(4deg)}to{opacity:1;transform:none}}
+@keyframes kin-right{from{opacity:0;transform:translateX(70vw) skewX(24deg)}70%{transform:translateX(-8px) skewX(-4deg)}to{opacity:1;transform:none}}
+
+/* Words fall in with a bounce. */
+.rl-scene.kin-drop .rl-m{overflow:visible}
+.rl-scene.kin-drop.on .rl-w{animation:kin-drop .75s cubic-bezier(.3,1.5,.5,1) both;animation-delay:var(--d)}
+@keyframes kin-drop{from{opacity:0;transform:translateY(-120px) rotate(calc((var(--i) - 1) * 9deg))}60%{opacity:1}to{opacity:1;transform:none}}
+
+/* Words punch in from big and blurred. */
+.rl-scene.kin-zoom .rl-m{overflow:visible}
+.rl-scene.kin-zoom.on .rl-w{animation:kin-zoom .55s cubic-bezier(.2,.8,.2,1) both;animation-delay:var(--d)}
+@keyframes kin-zoom{from{opacity:0;transform:scale(2.8);filter:blur(10px)}to{opacity:1;transform:none;filter:none}}
+
+/* Words flip up like cards. */
+.rl-scene.kin-flip .rl-m{overflow:visible}
+.rl-scene.kin-flip.on .rl-w{transform-origin:50% 100%;animation:kin-flip .7s cubic-bezier(.2,.9,.3,1.2) both;animation-delay:var(--d)}
+@keyframes kin-flip{from{opacity:0;transform:rotateX(-95deg)}to{opacity:1;transform:none}}
+
+/* Letter by letter, scattered then snapping into place. */
+.rl-scene.kin-letters .rl-m{overflow:visible}
+.rl-scene.kin-letters .rl-w b{display:inline-block;font-weight:inherit}
+.rl-scene.kin-letters.on .rl-w{animation:none}
+.rl-scene.kin-letters.on .rl-w b{animation:kin-letter .5s cubic-bezier(.2,.9,.3,1.3) both;animation-delay:calc(.15s + var(--l) * .035s)}
+@keyframes kin-letter{from{opacity:0;transform:translate(calc((var(--l) - 6) * 6px), -40px) rotate(-40deg) scale(.4)}to{opacity:1;transform:none}}
+
+/* Key words: bigger, yellow, with a highlight swept in behind. */
+.rl-key{position:relative;color:#FFE27A;font-size:1.12em;z-index:0}
+.rl-key::before{content:"";position:absolute;z-index:-1;left:-.08em;right:-.08em;bottom:.06em;height:.36em;border-radius:.1em;background:rgba(255,255,255,.22);transform:scaleX(0);transform-origin:left}
+.rl-scene.on .rl-key::before{animation:kin-sweep .45s cubic-bezier(.3,.8,.3,1) both;animation-delay:calc(var(--d) + .45s)}
+@keyframes kin-sweep{to{transform:scaleX(1)}}
+
+/* The line under the caption tracks in. */
+.rl-scene.on .rl-sub{animation:kin-track .8s cubic-bezier(.2,.8,.2,1) both;animation-delay:var(--d)}
+@keyframes kin-track{from{opacity:0;letter-spacing:.35em;filter:blur(6px)}to{opacity:1;letter-spacing:normal;filter:none}}
+
+/* A huge outlined word drifting behind everything. */
+.rl-big{position:absolute;left:0;right:0;top:50%;z-index:0;pointer-events:none;white-space:nowrap;overflow:hidden;transform:translateY(-58%) rotate(-8deg)}
+.rl-big span{display:inline-block;font-size:clamp(90px,30vw,150px);font-weight:900;letter-spacing:-.03em;line-height:1;color:transparent;-webkit-text-stroke:2px rgba(255,255,255,.14);opacity:0}
+.rl-scene.on .rl-big span{animation:kin-big-in .9s .1s ease both,kin-drift 14s linear infinite}
+.rl-scene:nth-child(even) .rl-big{transform:translateY(-30%) rotate(7deg)}
+.rl-scene.on:nth-child(even) .rl-big span{animation:kin-big-in .9s .1s ease both,kin-drift-r 14s linear infinite}
+@keyframes kin-big-in{from{opacity:0}to{opacity:1}}
+@keyframes kin-drift{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@keyframes kin-drift-r{from{transform:translateX(-50%)}to{transform:translateX(0)}}
+
+/* Soft colour blobs, slowly moving. */
+.rl-blob{position:absolute;z-index:0;width:70vw;height:70vw;max-width:420px;max-height:420px;border-radius:50%;filter:blur(40px);opacity:.45;pointer-events:none}
+.rl-blob.b1{left:-25%;top:8%;background:var(--a);mix-blend-mode:screen}
+.rl-blob.b2{right:-30%;bottom:6%;background:#fff;opacity:.12}
+.rl-scene.on .rl-blob.b1{animation:kin-blob 9s ease-in-out infinite alternate}
+.rl-scene.on .rl-blob.b2{animation:kin-blob 11s ease-in-out infinite alternate-reverse}
+@keyframes kin-blob{from{transform:translate(0,0) scale(1)}to{transform:translate(18vw,8vh) scale(1.25)}}
+.rl-art,.rl-cap,.rl-sub{position:relative;z-index:1}
+
+/* How each stop arrives. */
+.rl-scene.on.in-wipe{animation:kin-wipe .7s cubic-bezier(.65,0,.35,1) both}
+.rl-scene.on.in-push{animation:kin-push .6s cubic-bezier(.2,.9,.2,1) both}
+.rl-scene.on.in-zoom{animation:kin-zoomin .6s cubic-bezier(.2,.8,.2,1) both}
+.rl-scene.on.in-slant{animation:kin-slant .7s cubic-bezier(.65,0,.35,1) both}
+@keyframes kin-wipe{from{clip-path:circle(0% at 50% 55%)}to{clip-path:circle(150% at 50% 55%)}}
+@keyframes kin-push{from{transform:translateX(100%)}to{transform:none}}
+@keyframes kin-zoomin{from{opacity:0;transform:scale(1.35);filter:blur(8px)}to{opacity:1;transform:none;filter:none}}
+@keyframes kin-slant{from{clip-path:polygon(0 0,0 0,0 100%,0 100%)}to{clip-path:polygon(0 0,140% 0,100% 100%,-40% 100%)}}
+/* The art arrives a beat after the stop, from below. */
+.rl-scene.on .rl-art{animation:kin-art .7s .15s cubic-bezier(.2,.9,.3,1.15) both}
+@keyframes kin-art{from{opacity:0;transform:translateY(30px) scale(.94)}to{opacity:1;transform:none}}
+
+@media (prefers-reduced-motion:reduce){
+  .rl-scene.on,.rl-scene.on .rl-w,.rl-scene.on .rl-w b,.rl-scene.on .rl-sub,.rl-scene.on .rl-big span,.rl-scene.on .rl-blob,.rl-scene.on .rl-art,.rl-scene.on .rl-key::before{animation:none!important}
+  .rl-scene .rl-sub,.rl-scene .rl-big span{opacity:1}
+  .rl-key::before{transform:none}
+}

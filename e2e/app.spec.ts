@@ -1410,7 +1410,7 @@ test('MN × video: from the Parent area Help page, plays through its 8 stops to
   await expect(page.locator('.reel[aria-label="What MN × adds"]')).toBeVisible();
   await expect(page.locator('.rl-count')).toHaveText(/of 8$/);
   await expect(page.locator('.rl-go')).toBeVisible({ timeout: 30_000 });
-  await expect(page.locator('.rl-s-pv-school .pv-school.s5')).toHaveCount(1);
+  await expect(page.locator('.rl-s-pv-school .pv-school.s4')).toHaveCount(1);
   await page.click('.rl-go');
   await expect(page.locator('.screen.parent')).toBeVisible();
 });

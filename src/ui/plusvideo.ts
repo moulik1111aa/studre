@@ -1,58 +1,93 @@
-// The MN × video: about 90 seconds, for parents, made in code like the opening video
-// and played by the same player (reel.ts). Moulik recorded the voiceover
-// (assets/audio/plus.mp3); each stop plays one paragraph of it, with its own animation
-// timed to the words (beats).
+// The MN × video: about a minute, for parents, made in code like the opening video and
+// played by the same player (reel.ts). The voiceover (assets/audio/plus.mp3) was made by Moulik with a text-to-speech tool;
+// each stop plays one part of it, with its own animation timed to the words (beats).
 
 import type { App } from './app.ts';
-import { plusSvg } from './plus.ts';
+import { muddleSvg } from './muddles.ts';
+import { timesMarkSvg } from './mnx.ts';
 import { beats, reelScreen, type ReelScene, type ReelVideo } from './reel.ts';
 
-/** Where each paragraph of the voiceover starts and ends (seconds), found from its pauses. */
+/** Where each part of the voiceover starts and ends (seconds), found from its pauses. */
 const LINES: [number, number][] = [
-  [0, 8.21], [8.85, 26.43], [26.9, 45.79], [46.54, 58.56], [59.31, 68.69], [69.43, 75.26], [76.1, 82.3], [82.98, 92.5],
+  [0, 6.34], [6.62, 15.45], [16.12, 25.74], [26.12, 29.81], [30.14, 37.56], [38.21, 46.83], [47.48, 51.5], [52.14, 58.44],
 ];
 
-const STAR = '⭐';
+/** A small drawn phone or tablet for the scenes (no emoji). */
+const device = (label: string, cls = '') => `<div class="pv-dv ${cls}"><span class="pv-dvs"><b>★ 248</b><i></i></span><small>${label}</small></div>`;
 
 function scenes(): ReelScene[] {
   return [
     {
-      // "Every star your child earns is real progress. Right now, it lives on just one phone. Lose that phone…"
-      id: 'pv-one',
-      bg: ['#F43F5E', '#7C3AED'],
-      caption: 'All that progress…',
-      sub: '…on just one phone.',
-      art: `<div class="pv-one">
-        <div class="pv-phone"><div class="pv-screen"><span class="pv-stars">${Array.from({ length: 9 }, (_, k) => `<i style="--k:${k}">${STAR}</i>`).join('')}</span><span class="pv-jar">🍫</span></div></div>
-        <span class="pv-crack" aria-hidden="true"></span><span class="pv-gone">?</span>
+      // "Every day, your child plays Em En, and every answer tells you a little more about how they're doing."
+      id: 'pv-ans',
+      bg: ['#6C47FF', '#8E6BFF'],
+      caption: 'Every *answer* counts',
+      kin: 'rise',
+      sub: 'Each one tells you a little more.',
+      art: `<div class="pv-ans">
+        <div class="pv-chips">${['7 + 5 = 12', '9 − 4 = 5', '6 × 3 = 18', '¼ of 8 = 2', '40 + 7 = 47', '8 × 7 = 54'].map((q, k) => `<span class="${k === 5 ? 'no' : ''}" style="--k:${k}">${q}<i>${k === 5 ? '✗' : '✓'}</i></span>`).join('')}</div>
+        <div class="pv-mini-bars">${[72, 88, 54, 93, 61].map((v, k) => `<i style="--v:${v}%;--k:${k}"></i>`).join('')}</div>
       </div>`,
-      enter: (el, app, speed) => beats(el.querySelector('.pv-one')!, [[1200, 's1'], [4600, 's2', () => app.sfx.tap()], [6200, 's3', () => app.sfx.wrong()]], speed),
+      enter: (el, app, speed) => beats(el.querySelector('.pv-ans')!, [[300, 's1', () => app.sfx.tap()], [3100, 's2', () => app.sfx.whoosh()]], speed),
     },
     {
-      // "MN × backs it all up with Google, automatically. New phone? Sign in… one tap. Your phone, your partner's phone, grandma's tablet…"
-      id: 'pv-cloud',
-      bg: ['#0EA5E9', '#4F46E5'],
-      caption: 'Backed up with Google',
-      sub: 'Back on any phone, in one tap.',
-      art: `<div class="pv-cloud">
-        <div class="pv-sky"><span class="pv-cl">☁️</span><span class="pv-ok">✓</span></div>
-        <div class="pv-devs">
-          <div class="pv-dev d1"><b>📱</b><small>Your phone</small><span class="pv-mini">${STAR} 248</span></div>
-          <div class="pv-dev d2"><b>📱</b><small>New phone</small><span class="pv-mini">${STAR} 248</span><i class="pv-tap"></i></div>
-          <div class="pv-dev d3"><b>📱</b><small>Partner’s</small><span class="pv-mini">${STAR} 248</span></div>
-          <div class="pv-dev d4"><b>💻</b><small>Grandma’s tablet</small><span class="pv-mini">${STAR} 248</span></div>
-        </div>
-        <span class="pv-fly">${Array.from({ length: 6 }, (_, k) => `<i style="--k:${k}">${STAR}</i>`).join('')}</span>
+      // "Em En is free for every child, with no ads. Em En Times is for you, the parent. It helps you see where to help."
+      id: 'pv-half',
+      bg: ['#4C2FD9', '#7C5CFF'],
+      caption: '*Free* for every child',
+      kin: 'sides',
+      sub: 'MN × is for you, the parent.',
+      art: `<div class="pv-half">
+        <div class="pv-side without"><small>Your child · free</small><div class="pv-clear kid"><i style="--w:100%"></i><i style="--w:100%"></i><i style="--w:100%"></i><i style="--w:100%"></i></div><em>Levels, lessons, rewards</em></div>
+        <div class="pv-side with"><small>You · MN ×</small><div class="pv-clear"><i style="--w:92%"></i><i style="--w:64%"></i><i style="--w:81%"></i><i style="--w:45%"></i></div><em>Where to help</em></div>
       </div>`,
-      enter: (el, app, speed) =>
-        beats(el.querySelector('.pv-cloud')!, [[900, 's1', () => app.sfx.whoosh()], [3200, 's2', () => app.sfx.correct(1)], [5200, 's3', () => app.sfx.tap()], [7600, 's4', () => app.sfx.coin(2)], [11000, 's5', () => app.sfx.correct(2)]], speed),
+      enter: (el, app, speed) => beats(el.querySelector('.pv-half')!, [[400, 's1', () => app.sfx.tap()], [4000, 's2', () => app.sfx.correct(1)]], speed),
     },
     {
-      // "MN × also follows your child's school. Choose CBSE, ICSE or Common Core, pick the class, then tick only the topics…"
+      // "Each Monday, Em En Times picks the three skills your child is finding hardest, and turns them into short Focus rounds on the map, about three minutes each."
+      id: 'pv-focus',
+      bg: ['#5B3DF5', '#C026D3'],
+      caption: 'A *Focus* plan each Monday',
+      kin: 'zoom',
+      sub: 'Short rounds on the 3 hardest skills.',
+      art: `<div class="pv-focus">
+        <div class="pv-three">${['7 and 8 times tables', 'Subtract with borrowing', 'Fractions of amounts'].map((t, k) => `<span style="--k:${k}">${t}</span>`).join('')}</div>
+        <div class="pv-round"><div class="pv-mud">${muddleSvg(4, 0)}</div><div class="pv-clock"><b>3</b><small>min</small></div></div>
+      </div>`,
+      enter: (el, app, speed) => beats(el.querySelector('.pv-focus')!, [[700, 's1', () => app.sfx.tap()], [4300, 's2', () => app.sfx.whoosh()], [7600, 's3', () => app.sfx.correct(1)]], speed),
+    },
+    {
+      // "You can see each skill's score before the week, and how it changes."
+      id: 'pv-rise',
+      bg: ['#0EA5E9', '#6366F1'],
+      caption: '*Before*, and *after*',
+      kin: 'drop',
+      sub: 'Each skill’s score, week by week.',
+      art: `<div class="pv-rise">${[[42, 68], [55, 63], [61, 60]].map(([a, b], k) => `<div class="pv-pair" style="--k:${k}"><span class="a" style="--v:${a}%"><b>${a}%</b></span><span class="b" style="--v:${b}%"><b>${b}%</b></span></div>`).join('')}<div class="pv-key"><small><i class="a"></i>Before</small><small><i class="b"></i>This week</small></div></div>`,
+      enter: (el, app, speed) => beats(el.querySelector('.pv-rise')!, [[300, 's1', () => app.sfx.tap()], [1800, 's2', () => app.sfx.coin(2)]], speed),
+    },
+    {
+      // "The full report shows what's going well, what to practise next, how quickly they answer, and the time of day they play best."
+      id: 'pv-report',
+      bg: ['#7C3AED', '#DB2777'],
+      caption: 'The *full* report',
+      kin: 'flip',
+      sub: 'What’s going well, and what’s next.',
+      art: `<div class="pv-report">
+        <div class="pv-row r1"><small>Going well</small><b class="g">× tables</b><b class="g">Place value</b></div>
+        <div class="pv-row r2"><small>Practise next</small><b class="a">Borrowing</b><b class="a">Fractions</b></div>
+        <div class="pv-row r3"><small>Speed</small><span class="pv-meter"><i></i></span><em>4.2 s</em></div>
+        <div class="pv-row r4"><small>Best time</small><span class="pv-heat">${Array.from({ length: 21 }, (_, k) => `<i style="--k:${k};--v:${[0.2, 0.5, 0.9, 0.3, 0.7, 1, 0.4, 0.6, 0.2, 0.8, 1, 0.5, 0.3, 0.9, 0.6, 0.2, 0.7, 1, 0.4, 0.5, 0.8][k]}"></i>`).join('')}</span><em>5–6 pm</em></div>
+      </div>`,
+      enter: (el, app, speed) => beats(el.querySelector('.pv-report')!, [[400, 's1', () => app.sfx.tap()], [1900, 's2', () => app.sfx.tap()], [4300, 's3', () => app.sfx.whoosh()], [5600, 's4', () => app.sfx.coin(2)]], speed),
+    },
+    {
+      // "You can choose topics from the C B S E, I C S E or Common Core lists to match your child's class, and print a worksheet for a screen-free evening."
       id: 'pv-school',
       bg: ['#16A34A', '#0F766E'],
-      caption: 'Follows their school',
-      sub: 'You choose what’s on the path.',
+      caption: 'Topics to match their *class*',
+      kin: 'sides',
+      sub: 'And worksheets to print.',
       art: `<div class="pv-school">
         <div class="pv-boards"><b class="on">CBSE</b><b>ICSE</b><b>Common Core</b></div>
         <div class="pv-class"><span>Class</span><b class="c3">3</b><b class="c4">4</b></div>
@@ -62,77 +97,28 @@ function scenes(): ReelScene[] {
           <li class="t3 off"><i></i>Roman numerals</li>
           <li class="t4"><i></i>Times tables 2 to 10</li>
         </ul>
-        <div class="pv-path"><i></i><i></i><i class="rv">⚔️</i><i></i><i></i><i class="bs">👑</i></div>
-        <span class="pv-kept">Progress kept ✓</span>
+        <div class="pv-mini-sheet"><b>Worksheet</b><i></i><i></i><i></i><i></i></div>
       </div>`,
-      enter: (el, app, speed) =>
-        beats(el.querySelector('.pv-school')!, [[1400, 's1', () => app.sfx.tap()], [4600, 's2', () => app.sfx.tap()], [7400, 's3', () => app.sfx.coin(1)], [11200, 's4', () => app.sfx.whoosh()], [15600, 's5', () => app.sfx.correct(2)]], speed),
+      enter: (el, app, speed) => beats(el.querySelector('.pv-school')!, [[600, 's1', () => app.sfx.tap()], [2400, 's2', () => app.sfx.tap()], [3800, 's3', () => app.sfx.coin(1)], [5400, 's4', () => app.sfx.whoosh()]], speed),
     },
     {
-      // "Then see the full picture. The complete report shows strengths, the exact skills that need practice, how quickly they answer, and the days and times they learn best."
-      id: 'pv-report',
-      bg: ['#7C3AED', '#DB2777'],
-      caption: 'See the full picture',
-      sub: 'No more guessing.',
-      art: `<div class="pv-report">
-        <div class="pv-row r1"><small>Strengths</small><b class="g">× tables</b><b class="g">Place value</b></div>
-        <div class="pv-row r2"><small>Practise</small><b class="a">Borrowing</b><b class="a">Fractions</b></div>
-        <div class="pv-row r3"><small>Speed</small><span class="pv-meter"><i></i></span><em>4.2 s</em></div>
-        <div class="pv-row r4"><small>Best time</small><span class="pv-heat">${Array.from({ length: 21 }, (_, k) => `<i style="--k:${k};--v:${[0.2, 0.5, 0.9, 0.3, 0.7, 1, 0.4, 0.6, 0.2, 0.8, 1, 0.5, 0.3, 0.9, 0.6, 0.2, 0.7, 1, 0.4, 0.5, 0.8][k]}"></i>`).join('')}</span><em>5–6 pm</em></div>
-      </div>`,
-      enter: (el, app, speed) => beats(el.querySelector('.pv-report')!, [[900, 's1', () => app.sfx.tap()], [3600, 's2', () => app.sfx.tap()], [6400, 's3', () => app.sfx.whoosh()], [8600, 's4', () => app.sfx.coin(2)]], speed),
+      // "Sign in with Google, and progress is the same on every phone and tablet."
+      id: 'pv-sync',
+      bg: ['#0EA5E9', '#4F46E5'],
+      caption: 'The *same* on every phone',
+      kin: 'rise',
+      sub: 'Sign in with Google.',
+      art: `<div class="pv-sync2">${device('Your phone', 'd1')}<span class="pv-arrows"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14-4.5L4 9M4 4v5h5M4 13a8 8 0 0 0 14 4.5l2-2.5M20 20v-5h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>${device('Tablet', 'd2 tab')}</div>`,
+      enter: (el, app, speed) => beats(el.querySelector('.pv-sync2')!, [[300, 's1', () => app.sfx.tap()], [1800, 's2', () => app.sfx.correct(2)]], speed),
     },
     {
-      // "Want time away from the screen? Print a worksheet made just for your child… with an answer key for you."
-      id: 'pv-sheet',
-      bg: ['#F59E0B', '#EA580C'],
-      caption: 'Worksheets made for them',
-      sub: 'Answer key included.',
-      art: `<div class="pv-sheet">
-        <div class="pv-printer"><span></span></div>
-        <div class="pv-paper">
-          <p class="h">Riya’s maths sheet</p>
-          <p class="q q1"><b>1</b>47 + 38 = <u>85</u><i>✓</i></p>
-          <p class="q q2"><b>2</b>6 × 7 = <u>42</u><i>✓</i></p>
-          <p class="q q3"><b>3</b>903 − 458 = <u>445</u><i>✓</i></p>
-        </div>
-        <span class="pv-pencil">✏️</span>
-      </div>`,
-      enter: (el, app, speed) => beats(el.querySelector('.pv-sheet')!, [[700, 's1', () => app.sfx.whoosh()], [3800, 's2', () => app.sfx.tap()], [5800, 's3', () => app.sfx.coin(1)]], speed),
-    },
-    {
-      // "Parents with MN × know exactly where their child stands. Without it, you're only seeing part of the story."
-      id: 'pv-half',
-      bg: ['#1E1B4B', '#4338CA'],
-      caption: 'Don’t miss half the story',
-      art: `<div class="pv-half">
-        <div class="pv-side without"><small>Without MN ×</small><div class="pv-blur"><i></i><i></i><i></i><i></i></div></div>
-        <div class="pv-side with"><small>With MN ×</small><div class="pv-clear"><i style="--w:92%"></i><i style="--w:64%"></i><i style="--w:81%"></i><i style="--w:45%"></i></div></div>
-      </div>`,
-      enter: (el, app, speed) => beats(el.querySelector('.pv-half')!, [[500, 's1'], [2600, 's2', () => app.sfx.correct(1)]], speed),
-    },
-    {
-      // "Try everything free for seven days. If you love it, stay on monthly, or pay once and keep MN × for life."
-      id: 'pv-price',
-      bg: ['#0F766E', '#2563EB'],
-      caption: 'Free for 7 days',
-      sub: 'Then monthly, or once for life.',
-      art: `<div class="pv-price">
-        <span class="pv-free">7 days free</span>
-        <div class="pv-cards">
-          <div class="pv-card m"><small>Monthly</small><b>Pay monthly</b><span>Cancel any time</span></div>
-          <div class="pv-card l"><em>Best value</em><small>Lifetime</small><b>Pay once</b><span>Keep MN × forever</span></div>
-        </div>
-      </div>`,
-      enter: (el, app, speed) => beats(el.querySelector('.pv-price')!, [[600, 's1', () => app.sfx.coin(2)], [2300, 's2', () => app.sfx.tap()], [3600, 's3', () => app.sfx.correct(2)]], speed),
-    },
-    {
-      // "Everything your child plays with stays free, always. MN × is for you… Start your free week today."
+      // "Em En Times. Learning, multiplied. Try it free for seven days, and cancel any time in Google Play."
       id: 'end',
-      bg: ['#7C3AED', '#DB2777'],
-      caption: 'Start your free week',
-      sub: 'Everything your child plays with is free.',
-      art: `<div class="rl-end pv-end"><div class="rl-logo">${plusSvg({ cls: 'spin', noShadow: true })}</div><div class="rl-mark"><span>M</span><span>N</span><b class="pv-plus">Premium</b></div></div>`,
+      bg: ['#6C47FF', '#8E6BFF'],
+      caption: 'Try it *free* for 7 days',
+      kin: 'letters',
+      sub: 'Cancel any time in Google Play.',
+      art: `<div class="pv-endx"><span class="pv-x">${timesMarkSvg('turn-in')}</span><b>MN</b><small>Learning, multiplied.</small></div>`,
     },
   ];
 }
