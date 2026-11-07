@@ -584,7 +584,7 @@ export function childSettingsScreen(c: Child) {
       <div class="scroll pa-body">
         <div class="ks-hero">${avatarHtml(c.avatar, 64)}<b>${esc(c.name)}</b><small>Age ${c.age}</small></div>
         <button class="pa-row card report" data-id="${c.id}"><b>${ICONS.chart} Report</b><small>What ${esc(c.name)} has learned, and where they need help</small></button>
-        <button class="pa-row card sheet-btn"><b>🖨️ Print a worksheet ${plusTag(app)}</b><small>${c.age <= 6 ? 12 : 20} questions from where ${esc(c.name)} is now, as an A4 PDF to share or print. Answers on a separate page.</small></button>
+        <button class="pa-row card sheet-btn"><b>🖨️ Print a worksheet ${plusTag(app)}</b><small>${c.age <= 6 ? 12 : 20} questions mixed from the last skills ${esc(c.name)} played, as an A4 PDF. Answers on a separate page.</small></button>
         <button class="linkish sheet-html">Save it as a web page instead</button>
         <button class="pa-row card exam-btn"><b>📝 Exam practice ${plusTag(app)}</b><small>A timed test on topics you pick, with a score sheet to share</small></button>
         <button class="pa-row card certs-btn"><b>🏅 Certificates ${plusTag(app)}</b><small>${(() => {

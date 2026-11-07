@@ -1,9 +1,11 @@
-// A paper worksheet: which skills go on it, and how hard. Study time away from the screen,
-// made from the child's own place on the path: mostly the skill they are on now, a few from
-// just before it, the Fix-it skills still coming back, and some older ones to keep fresh.
+// A paper worksheet: the last 3 or 4 skills a child played, mixed together, so the sheet
+// practises exactly what they've been doing in MN. Each skill gets a fair share of the sheet,
+// at about the level they reached in it, and no two questions in a row are the same skill.
+// A child who hasn't played enough yet gets the skill they're on now and the ones just before.
 
 import { frontier, forAge, isPassed, type Level, type Progress } from './path.ts';
-import { dueFix, type FixHolder } from './fixit.ts';
+import type { FixHolder } from './fixit.ts';
+import type { PlayEntry } from './stats.ts';
 import type { Rng } from './rng.ts';
 
 export interface SheetItem {
@@ -18,7 +20,12 @@ export interface SheetChild extends FixHolder {
   progress: Progress;
   /** Placement has run (their first play). Until then the map hasn't moved them up to their age. */
   placed?: boolean;
+  /** The play log, newest last: what was answered in each game. */
+  log?: PlayEntry[];
 }
+
+/** Skills on a sheet: the most recently played, up to this many. */
+export const SHEET_SKILLS = 4;
 
 /** The stage meant for an age: stage s is for ages 2s+1 and 2s+2. */
 export const stageForAge = (age: number): number => Math.min(7, Math.max(1, Math.ceil((age - 2) / 2)));
@@ -29,40 +36,60 @@ export const sheetSize = (age: number): number => (age <= 6 ? 12 : 20);
 /** Difficulty for the skill in progress, from the tier the child has reached. */
 const TIER_D = [0.25, 0.4, 0.55, 0.7, 0.85];
 
-export function worksheetPlan(c: SheetChild, path: Level[], today: string, rng: Rng, stageOf: (skillId: string) => number | undefined, n = sheetSize(c.age)): SheetItem[] {
+/** The skills played most recently (newest first), from the play log's answers. */
+export function lastPlayedSkills(log: PlayEntry[] | undefined, known: (id: string) => boolean, n = SHEET_SKILLS): string[] {
+  const out: string[] = [];
+  const entries = [...(log ?? [])].sort((x, y) => y.t - x.t);
+  for (const e of entries) {
+    // Within one game, the skill answered most often counts first.
+    const ids = Object.entries(e.a ?? {})
+      .filter(([id, [asked]]) => asked > 0 && known(id))
+      .sort(([, [a1]], [, [a2]]) => a2 - a1)
+      .map(([id]) => id);
+    for (const id of ids) if (!out.includes(id)) out.push(id);
+    if (out.length >= n) break;
+  }
+  return out.slice(0, n);
+}
+
+export function worksheetPlan(c: SheetChild, path: Level[], _today: string, rng: Rng, stageOf: (skillId: string) => number | undefined, n = sheetSize(c.age)): SheetItem[] {
   const skillLevels = path.filter((l): l is Extract<Level, { kind: 'skill' }> => l.kind === 'skill');
-  const front = frontier(path, c.progress);
-  // The skill the child is on now: the first skill level at or after the frontier (or the last one).
-  let nowLevel = skillLevels.find((l) => l.index >= front) ?? skillLevels[skillLevels.length - 1];
-  if (!nowLevel) return [];
-  // Before their first play (placement), a child is still at the start of the map: begin at
-  // the stage for their age instead, as placement would, and treat what comes before as known.
-  const ageStage = stageForAge(c.age);
-  const early = !c.placed && (stageOf(nowLevel.skillId) ?? 1) < ageStage;
-  if (early) nowLevel = skillLevels.find((l) => (stageOf(l.skillId) ?? 1) >= ageStage && l.tier === 1) ?? nowLevel;
-  const passedSkills: string[] = [];
-  for (const l of skillLevels) if (l.index < nowLevel.index && (early || isPassed(c.progress, l)) && !passedSkills.includes(l.skillId) && l.skillId !== nowLevel.skillId) passedSkills.push(l.skillId);
-  const recent = passedSkills.slice(-3).reverse();
-  // Older ones to keep fresh: from the stage in progress or the one before it, not far below.
-  const nowStage = stageOf(nowLevel.skillId) ?? 1;
-  const older = passedSkills.slice(0, -3).filter((id) => (stageOf(id) ?? 0) >= nowStage - 1);
-  const age = (id: string, d: number) => forAge(d, c.age, stageOf(id) ?? 1);
+  if (!skillLevels.length) return [];
+  const onPath = new Set(skillLevels.map((l) => l.skillId));
+  const played = lastPlayedSkills(c.log, (id) => onPath.has(id) && !!stageOf(id));
 
+  // Not enough played yet: the skill they're on now and the ones just before it.
+  if (played.length < 3) {
+    const front = frontier(path, c.progress);
+    let nowLevel = skillLevels.find((l) => l.index >= front) ?? skillLevels[skillLevels.length - 1];
+    // Before their first play (placement), a child is still at the start of the map: begin at
+    // the stage for their age, as placement would.
+    const ageStage = stageForAge(c.age);
+    if (!c.placed && (stageOf(nowLevel.skillId) ?? 1) < ageStage) nowLevel = skillLevels.find((l) => (stageOf(l.skillId) ?? 1) >= ageStage && l.tier === 1) ?? nowLevel;
+    const order = [...new Set(skillLevels.filter((l) => l.index <= nowLevel.index).map((l) => l.skillId))].reverse();
+    for (const id of order) if (played.length < 3 && !played.includes(id)) played.push(id);
+  }
+
+  // About the level reached in each skill: the highest step passed, a little either side.
+  const tierOf = (id: string) => {
+    let t = 1;
+    for (let k = 1; k <= 5; k++) if (isPassed(c.progress, { id: `${id}#${k}` } as Level)) t = Math.min(5, k + 1);
+    return t;
+  };
+  const perSkill = played.map((id, i) => {
+    const share = Math.floor(n / played.length) + (i < n % played.length ? 1 : 0);
+    const base = TIER_D[Math.min(4, tierOf(id) - 1)];
+    return Array.from({ length: share }, (_, k) => ({ skillId: id, d: Math.round(forAge(Math.min(1, Math.max(0.2, base - 0.1 + (0.25 * k) / Math.max(1, share - 1))), c.age, stageOf(id) ?? 1) * 100) / 100, why: (i === 0 ? 'now' : 'recent') as SheetItem['why'] }));
+  });
+  // Mixed: round by round, each skill once per round in a shuffled order, so the sheet gets
+  // a little harder as it goes and never has the same skill twice in a row.
   const items: SheetItem[] = [];
-  const add = (skillId: string, d: number, why: SheetItem['why']) => items.length < n && items.push({ skillId, d: Math.round(d * 100) / 100, why });
-
-  // Fix-it skills first (at most a fifth of the sheet), at the difficulty they were missed.
-  const fix = dueFix(c, '9999-12-31', (id) => !!stageOf(id), Math.ceil(n / 5));
-  for (const f of fix) add(f.skillId, f.d, 'fixit');
-  // Older skills to keep fresh: a fifth of the sheet.
-  for (const id of rng.shuffle([...older]).slice(0, Math.floor(n / 5))) add(id, age(id, 0.6), 'review');
-  // The few just before now: two each.
-  for (const id of recent) for (const d of [0.5, 0.7]) add(id, age(id, d), 'recent');
-  // The rest: the skill in progress, getting a little harder down the page.
-  const base = TIER_D[nowLevel.tier - 1];
-  const left = n - items.length;
-  for (let k = 0; k < left; k++) add(nowLevel.skillId, age(nowLevel.skillId, Math.min(1, base + (0.2 * k) / Math.max(1, left - 1))), 'now');
-  // Easier ones first: the skill in progress, then recent, review and Fix-it.
-  const order: SheetItem['why'][] = ['now', 'recent', 'review', 'fixit'];
-  return items.sort((a, b) => order.indexOf(a.why) - order.indexOf(b.why) || a.d - b.d);
+  let last = '';
+  for (let r = 0; items.length < n && r < n; r++) {
+    const round = rng.shuffle(perSkill.filter((l) => l[r]).map((l) => l[r]));
+    if (round.length > 1 && round[0].skillId === last) round.push(round.shift()!);
+    for (const q of round) items.push(q);
+    last = items.at(-1)?.skillId ?? '';
+  }
+  return items.slice(0, n);
 }
