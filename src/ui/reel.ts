@@ -207,7 +207,7 @@ const LINES: [number, number][] = [
 
 /** A voiceover, inlined by the build (scripts/build.mjs) as base64 MP3 in a <script> with this id. */
 const audioUrls = new Map<string, string | null>();
-function voiceover(id = 'reel-audio'): HTMLAudioElement | null {
+export function voiceover(id = 'reel-audio'): HTMLAudioElement | null {
   if (!audioUrls.has(id)) {
     const b64 = document.getElementById(id)?.textContent?.trim();
     audioUrls.set(id, b64 ? URL.createObjectURL(new Blob([Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))], { type: 'audio/mpeg' })) : null);

@@ -5,6 +5,7 @@
 // Adventure, play together) live on that child's page.
 
 import { showParentAdventureTips, toggleAdventure } from './adventure.ts';
+import { openerScreen } from './opener.ts';
 import { backUpNow, dueKids, lastBackupText } from './backup.ts';
 import { askNotifications, notificationState, offerNotifications } from './remindsync.ts';
 import { certificatesFor } from '../core/certs.ts';
@@ -36,7 +37,6 @@ import { whosPlayingScreen } from './whos.ts';
 import { addChildScreen, limitsScreen } from './setup.ts';
 import { voiceScreen } from './voicepick.ts';
 import { lockSetupScreen } from './grownup.ts';
-import { reelScreen } from './reel.ts';
 import { accessState, lockScreen, niceDay } from './access.ts';
 import { hasPlus, needPlus, plusScreen, plusTag, plusVideoFor, storeBuild, trialDays } from './membership.ts';
 import { TRIAL_DAYS, TRIAL_DAYS_SIGNED_IN } from '../core/membership.ts';
@@ -567,7 +567,7 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
   }
   on('.mp-card', 'click', () => void app.show(plusScreen(parentScreen)));
   on('.plus-row', 'click', () => void app.show(plusVideoFor(app, parentScreen), 'liquid'));
-  on('.story-row', 'click', () => void app.show(reelScreen({ first: false, label: 'Done', done: () => void app.show(parentScreen) }), 'liquid'));
+  on('.story-row', 'click', () => void app.show(openerScreen({ first: false, label: 'Done', done: () => void app.show(parentScreen) }), 'liquid'));
   on('.tips-row', 'click', () => {
     app.save.update((d) => d.children.forEach((c) => (c.toured = false)));
     app.toast('Done. The tips show next time each child opens the map.');

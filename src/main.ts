@@ -2,9 +2,9 @@
 // video (reel.ts) and then setup; later launches go straight to "Who's playing?".
 
 import { App, errorScreen } from './ui/app.ts';
+import { openerScreen } from './ui/opener.ts';
 import { nativeBridge, nativeStorage } from './platform/native.ts';
 import { browserStorage } from './storage/save.ts';
-import { reelScreen } from './ui/reel.ts';
 import { welcomeScreen, startSetup } from './ui/setup.ts';
 import { whosPlayingScreen } from './ui/whos.ts';
 import { seedDemo } from './ui/demo.ts';
@@ -51,7 +51,7 @@ async function boot(): Promise<void> {
   const app = new App(document.getElementById('app')!, storage, native);
   if (app.debug) {
     // Screen factories for screenshots and tests.
-    Object.assign(window, { __app: app, __screens: { plusScreen, plusVideoScreen, mapScreen, adventureScreen, resultScreen, showcaseScreen, rewardsScreen, unlockScreen, timesUpScreen, trophyScreen, parentScreen, welcomeScreen, whosPlayingScreen, reportScreen, schoolScreen, faceoffSetupScreen, fightScreen, levelScreen, questScreen, placementScreen, addChildScreen, limitsScreen, meltedScreen, voiceChoiceScreen, lockSetupScreen, ownerScreen } });
+    Object.assign(window, { __app: app, __screens: { openerScreen, plusScreen, plusVideoScreen, mapScreen, adventureScreen, resultScreen, showcaseScreen, rewardsScreen, unlockScreen, timesUpScreen, trophyScreen, parentScreen, welcomeScreen, whosPlayingScreen, reportScreen, schoolScreen, faceoffSetupScreen, fightScreen, levelScreen, questScreen, placementScreen, addChildScreen, limitsScreen, meltedScreen, voiceChoiceScreen, lockSetupScreen, ownerScreen } });
     // Lessons: open one for a skill's question, or for a hand-made question.
     Object.assign(window, {
       __T: { addsub, muldiv, fractions },
@@ -149,7 +149,7 @@ async function boot(): Promise<void> {
   const firstRun = !app.save.data.settings.tourSeen && !app.save.data.children.length;
   if (firstRun && !params.has('noloader')) {
     void app.show(
-      reelScreen({
+      openerScreen({
         first: true,
         label: 'Let’s set up',
         done: () => {

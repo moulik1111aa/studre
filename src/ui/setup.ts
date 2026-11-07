@@ -1,6 +1,7 @@
 // First-run setup (parent): add children, set the daily limit and what happens at time-up.
 
 import { offerNotifications } from './remindsync.ts';
+import { openerScreen } from './opener.ts';
 import { hearVoice, mountVoiceList, speedSeg, VOICE_SAMPLE } from './voicechoice.ts';
 import { showParentAdventureTips, toggleAdventure } from './adventure.ts';
 import { restoreFromFile } from './restore.ts';
@@ -12,7 +13,6 @@ import { stagger, popIn } from '../render/motion.ts';
 import { whosPlayingScreen } from './whos.ts';
 import { setPace } from '../core/rewards.ts';
 import { recheckJars } from '../core/economy.ts';
-import { reelScreen } from './reel.ts';
 import { lockSetupScreen } from './grownup.ts';
 import { isOwnerCode } from '../core/access.ts';
 
@@ -44,7 +44,7 @@ export function welcomeScreen(app: App): Screen {
     await restoreFromFile(app, () => void app.show(app.save.data.settings.parentPin ? whosPlayingScreen : lockSetupScreen(whosPlayingScreen, true)));
   });
   el.querySelector('.tour-btn')!.addEventListener('click', () =>
-    void app.show(reelScreen({ first: !seen, label: 'Set up for my child', done: () => (void app.show(welcomeScreen), void startSetup(app)), leave: () => void app.show(welcomeScreen) }), 'liquid'),
+    void app.show(openerScreen({ first: !seen, label: 'Set up for my child', done: () => (void app.show(welcomeScreen), void startSetup(app)), leave: () => void app.show(welcomeScreen) }), 'liquid'),
   );
   return {
     el,

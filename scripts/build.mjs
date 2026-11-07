@@ -77,6 +77,8 @@ export const scriptSafe = (s) => s.replace(/<\/(script)/gi, '<\\/$1').replace(/<
 
 /** The theme fonts (Inter Display, TeX Gyre Schola), vendored in assets/fonts and inlined. */
 const FONT_FILES = [
+  ['Inter Display', 300, 'normal', 'inter-display-light.woff'],
+  ['Inter Display', 400, 'normal', 'inter-display-regular.woff'],
   ['Inter Display', 500, 'normal', 'inter-display-medium.woff'],
   ['Inter Display', 600, 'normal', 'inter-display-semibold.woff'],
   ['Inter Display', 700, 'normal', 'inter-display-bold.woff'],
