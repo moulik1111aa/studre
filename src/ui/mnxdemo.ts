@@ -11,8 +11,8 @@ import { strengths } from '../core/stats.ts';
 import { focusFor } from './focus.ts';
 import { focusPreview, todayPreview } from './widgets.ts';
 
-export type DemoId = 'focus' | 'report' | 'school' | 'sheets' | 'sync' | 'widgets';
-const ORDER: DemoId[] = ['focus', 'report', 'school', 'sheets', 'sync', 'widgets'];
+export type DemoId = 'focus' | 'report' | 'school' | 'sheets' | 'exam' | 'certs' | 'sync' | 'widgets';
+const ORDER: DemoId[] = ['focus', 'report', 'school', 'sheets', 'exam', 'certs', 'sync', 'widgets'];
 
 /** Skill names for the mocks: the child's own when known, else typical ones for their age. */
 function names(app: App, c: Child | undefined): { hard: string[]; strong: string[] } {
@@ -85,6 +85,23 @@ function pages(app: App, c: Child | undefined): Record<DemoId, Page> {
           <div class="dp-pf">${n(2)}<span>12 questions · about 15 minutes</span></div></div>
         <div class="dp-paper back"><div class="dp-ph"><b>Answers</b><small>for the parent</small></div>${n(3)}<ol>${['144', '15', '24', '163', '4,600', '63', '1,593', '¾', '12', '15:30', '80', '355'].map((x) => `<li>${x}</li>`).join('')}</ol></div>`,
       notes: ['Questions from the skills your child is on now, with fresh numbers each time.', 'Short enough to finish in one sitting.', 'An answer page for you, so checking takes a minute.'],
+    },
+    exam: {
+      title: 'Exam practice',
+      line: 'A test-style round before a school test: the topics you choose, a clock, and no hints.',
+      mock: `<div class="dp-two">${phone(`<div class="dp-bar"><b>📝 Exam practice</b><small>Question 7 of 20 · <span class="dp-clock">13:42</span></small></div>
+          <div class="dp-card">${n(1)}<p class="dp-exq">¾ of 20 = ?</p><div class="dp-opts"><span>12</span><span>15</span><span>16</span><span>5</span></div></div>`)}
+        ${phone(`<div class="dp-bar"><b>Score sheet</b><small>${who}</small></div>
+          <div class="dp-card">${n(2)}<div class="dp-score"><b>16<small>/20</small></b><span>80% · 17:05 min</span></div>
+            ${h.map((x, i) => `<div class="dp-meter${i === 0 ? ' low' : ''}"><span>${x}</span><i style="--v:${[50, 83, 100][i]}%"></i><b>${['3/6', '5/6', '8/8'][i]}</b></div>`).join('')}</div>
+          <div class="dp-card">${n(3)}<p class="dp-cap">To look at again</p><p class="dp-tick">Q4 · 7 × 8 · answer 56 <em>See how</em></p></div>`)}</div>`,
+      notes: ['You pick the topics, 10, 20 or 30 questions, and the time. No right or wrong is shown until the end.', 'Then the score, the time taken and how each topic went.', 'Each question to look at again, with the working. Share the score sheet as a PDF.'],
+    },
+    certs: {
+      title: 'Certificates',
+      line: 'Every challenge beaten on the map earns a certificate to print and put up at home.',
+      mock: `<div class="dp-cert"><div class="dp-cert-in">${n(1)}<small>MN · Mission Next</small><b class="dp-cert-k">Certificate of Achievement</b><small>This certificate is proudly given to</small><b class="dp-cert-name">${who}</b><span>for finishing Stage 2 and beating Captain Tenbeard.</span><div class="dp-cert-foot"><i></i><em>${n(2)}</em><i></i></div></div></div>`,
+      notes: ['One for each challenge beaten, and a bigger one when a stage is finished, with the date it was won.', 'Shared as an A4 PDF: print it, or send it to grandparents on WhatsApp.'],
     },
     sync: {
       title: 'Every phone in step',

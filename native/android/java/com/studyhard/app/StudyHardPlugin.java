@@ -445,6 +445,7 @@ public class StudyHardPlugin extends Plugin {
         final String html = call.getString("html", "");
         final String name = call.getString("name", "MN.pdf").replaceAll("[^A-Za-z0-9._-]", "-");
         final String title = call.getString("title", "MN worksheet");
+        final boolean landscape = Boolean.TRUE.equals(call.getBoolean("landscape", false));
         getActivity().runOnUiThread(() -> {
             final WebView wv = new WebView(getActivity());
             pdfView = wv;
@@ -456,20 +457,20 @@ public class StudyHardPlugin extends Plugin {
                 public void onPageFinished(WebView view, String url) {
                     if (started) return;
                     started = true;
-                    view.postDelayed(() -> makePdf(call, view, name, title), 350);
+                    view.postDelayed(() -> makePdf(call, view, name, title, landscape), 350);
                 }
             });
             wv.loadDataWithBaseURL("https://localhost/", html, "text/html", "utf-8", null);
         });
     }
 
-    private void makePdf(final PluginCall call, final WebView view, final String name, final String title) {
+    private void makePdf(final PluginCall call, final WebView view, final String name, final String title, final boolean landscape) {
         try {
             File dir = new File(getContext().getCacheDir(), "share");
             if (!dir.exists() && !dir.mkdirs()) throw new java.io.IOException("no folder");
             final File out = new File(dir, name);
             PrintAttributes attrs = new PrintAttributes.Builder()
-                    .setMediaSize(PrintAttributes.MediaSize.ISO_A4)
+                    .setMediaSize(landscape ? PrintAttributes.MediaSize.ISO_A4.asLandscape() : PrintAttributes.MediaSize.ISO_A4)
                     .setResolution(new PrintAttributes.Resolution("pdf", "pdf", 300, 300))
                     .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
                     .build();

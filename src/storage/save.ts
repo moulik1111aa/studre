@@ -7,6 +7,7 @@ import type { UndoEntry } from '../core/undo.ts';
 import type { OwnReward } from '../core/rewards.ts';
 import type { PlayEntry, Tally } from '../core/stats.ts';
 import type { AdventureState } from '../core/adventure.ts';
+import type { ExamRecord } from '../core/exam.ts';
 import type { ReminderSettings } from '../core/reminders.ts';
 import type { FixBank } from '../core/fixit.ts';
 import type { QuietSettings } from '../core/quiet.ts';
@@ -87,6 +88,8 @@ export interface Child {
   /** Last report-card backup (ms) and how many play days it held (for the backup reminder). */
   backupAt?: number;
   backupDays?: number;
+  /** Exam practice results, newest last (MN ×). */
+  exams?: ExamRecord[];
   /** Adventure mode: quests, chests and badges (core/adventure.ts); off when missing. */
   adventure?: AdventureState;
   /** Play log and per-skill answer tallies for the parent report (core/stats.ts). */

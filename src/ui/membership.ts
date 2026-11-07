@@ -119,8 +119,10 @@ const FEATURE_LINE: Record<PlusFeature, string> = {
   school: 'School syllabuses are part of MN ×: CBSE, ICSE or Common Core, by class, with only the topics you choose.',
   report: 'The full report is part of MN ×: strengths, skills to practise, speed, and the times of day they do best.',
   sheets: 'Printable worksheets are part of MN ×: made from where your child is now, with an answer key for you.',
+  exam: 'Exam practice is part of MN\u00a0×: a timed test on the topics you pick, then a score sheet by topic to share.',
+  certs: 'Certificates are part of MN\u00a0×: a printable one for every challenge beaten and every stage finished.',
   widgets: 'The Focus plan widget is part of MN\u00a0×: this week’s 3 skills and how each is going, on your home screen.',
-  icons: 'Choosing the app icon is part of MN ×: Sky, Night, Sunset, Space or Gold on your home screen.',
+  icons: 'The Precision look and the app icons are part of MN\u00a0×. Playground, Glass and Schoolbook are free.',
 };
 
 /**

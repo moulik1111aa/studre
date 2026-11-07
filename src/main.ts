@@ -35,7 +35,7 @@ import { showLesson } from './ui/lesson.ts';
 import { accessState, lockScreen } from './ui/access.ts';
 import { ownerScreen } from './ui/owner.ts';
 import { startCloud } from './ui/cloud.ts';
-import { hasPlus, plusScreen, startPlus } from './ui/membership.ts';
+import { hasPlus, plusScreen, startPlus, storeBuild } from './ui/membership.ts';
 import { plusVideoScreen } from './ui/plusvideo.ts';
 import * as addsub from './core/teach/addsub.ts';
 import * as muldiv from './core/teach/muldiv.ts';
@@ -108,6 +108,9 @@ async function boot(): Promise<void> {
       void app.show(lockScreen(st, () => void gate()));
     }
   });
+  // Precision is an MN × look: without MN × (Play build) it shows as Playground until MN × is on
+  // again. The saved choice is kept.
+  if (app.save.data.settings.theme === 'precision' && storeBuild(app) && !hasPlus(app) && !new URLSearchParams(location.search).has('theme')) app.applyTheme('playground');
   // The phone's reminders and home-screen widgets follow the save (never in the way of opening).
   try {
     startReminders(app);

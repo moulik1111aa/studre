@@ -567,6 +567,37 @@ test('worksheet: a printable sheet from where the child is, answers on the last 
   expect(text).toContain('× 7');
 });
 
+test('exam practice: topics, a paper with no marking until the end, a score sheet; certificates for challenges beaten', async ({ page }) => {
+  type W = { __app: { show(m: unknown): void; child: { exams?: { n: number; ok: number }[] } }; __screens: { parentScreen: unknown } };
+  await page.goto('/?debug&demo=%4030');
+  await expect(page.locator('.map')).toBeVisible();
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
+  await page.click('.kid-set');
+  await page.click('.exam-btn');
+  await expect(page.locator('.exam-setup')).toBeVisible();
+  await expect(page.locator('.ex-chip.on').first()).toBeVisible();
+  await page.click('.ex-size [data-n="10"]');
+  await expect(page.locator('.ex-start')).toHaveText('Start: 10 questions');
+  await page.click('.ex-start');
+  await page.click('.overlay .btn.mint');
+  await expect(page.locator('.screen.exam .ex-count')).toHaveText('Question 1 of 10');
+  await expect(page.locator('.ex-clock')).toBeVisible();
+  for (let i = 0; i < 10; i++) await page.click('.ex-skip');
+  await expect(page.locator('.exam-result')).toBeVisible();
+  await expect(page.locator('.ex-ring b')).toContainText('0');
+  await expect(page.locator('.ex-w')).toHaveCount(10);
+  const rec = await page.evaluate(() => (window as unknown as W).__app.child.exams?.at(-1));
+  expect(rec).toMatchObject({ n: 10, ok: 0 });
+  await page.click('.ex-done');
+  // Certificates: one per challenge beaten, each shared as a page to print.
+  await page.click('.certs-btn');
+  await expect(page.locator('.ct-card').first()).toBeVisible();
+  const [pop] = await Promise.all([page.waitForEvent('popup'), page.locator('.ct-share').first().click()]);
+  await expect(pop.locator('.name')).toBeVisible();
+  await expect(pop.locator('.kind')).toContainText('Certificate');
+  await pop.close();
+});
+
 test('lessons can be switched off by a parent, and close with ×', async ({ page }) => {
   await seeded(page, 's4.x7#1', `window.__app.save.update((d) => { d.settings.teach = false; })`);
   await page.click('.play-next');

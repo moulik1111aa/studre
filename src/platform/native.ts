@@ -17,7 +17,7 @@ export interface StudyHardPlugin {
   confirmDevice?(o: { title: string; text?: string }): Promise<{ ok?: boolean; none?: boolean }>;
   saveFile?(o: { name: string; mime: string; text: string }): Promise<{ saved?: boolean; error?: string }>;
   /** Turn HTML into an A4 PDF and open the share sheet (or the print screen if that fails). */
-  sharePdf?(o: { html: string; name: string; title: string }): Promise<{ ok: boolean; via?: 'share' | 'print'; error?: string }>;
+  sharePdf?(o: { html: string; name: string; title: string; landscape?: boolean }): Promise<{ ok: boolean; via?: 'share' | 'print'; error?: string }>;
   writeSave(o: { key: string; value: string }): Promise<void>;
   /** `parts` (newer apps): said one after another with `gap` ms of quiet between; `text` is all of it joined, for older apps. */
   /** Home-screen widgets placed, and whether the launcher can add one from the app. */

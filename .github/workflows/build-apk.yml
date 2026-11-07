@@ -15,7 +15,8 @@ name: Build APK
 
 on:
   push:
-    branches: [main]
+    # main: the shared APK and its release. play: only the Google Play bundle.
+    branches: [main, play]
     paths-ignore: ['docs/**', 'tools/**', 'site/**', 'src/admin/**', 'scripts/site.mjs', 'firebase.json', '.firebaserc', '.github/workflows/site.yml', 'README.md']
   workflow_dispatch:
     inputs:
@@ -42,6 +43,7 @@ env:
 
 jobs:
   apk:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -133,10 +135,11 @@ jobs:
 
   # The Google Play build: the same app with MN_STORE=play (no keys or approvals, MN Plus sold
   # through Play Billing), as an Android App Bundle signed with the same key (Play's upload
-  # key). Run it from Actions → Build APK → Run workflow with "play" ticked; the bundle is the
-  # "play-aab" artifact of that run, to upload in Play Console. It is never published here.
+  # key). It runs on every push to the `play` branch (or from Actions → Build APK → Run workflow
+  # with "play" ticked); the bundle is the "play-aab" artifact of that run, to upload in Play
+  # Console. It is never published as a release.
   aab:
-    if: github.event_name == 'workflow_dispatch' && inputs.play
+    if: github.ref == 'refs/heads/play' || (github.event_name == 'workflow_dispatch' && inputs.play)
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -191,6 +194,15 @@ jobs:
           name: play-aab
           path: StudyHard-play.aab
           retention-days: 30
+
+      - name: Share the result
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p ci-results
+          { echo "Play bundle, run ${{ github.run_number }}: ${{ job.status }}"; ls -l StudyHard-play.aab 2>/dev/null; } > ci-results/play-bundle.txt
+          bash scripts/push-ci-results.sh "Play bundle ${{ github.run_number }} (${{ job.status }})"
 
   # The emulator test is optional (it can take 15–30 minutes on shared runners): run it from
   # Actions → Build APK → Run workflow with "smoke" ticked. Releases no longer wait for it.

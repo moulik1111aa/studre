@@ -7,6 +7,9 @@
 import { showParentAdventureTips, toggleAdventure } from './adventure.ts';
 import { backUpNow, dueKids, lastBackupText } from './backup.ts';
 import { askNotifications, notificationState, offerNotifications } from './remindsync.ts';
+import { certificatesFor } from '../core/certs.ts';
+import { certsScreen } from './certs.ts';
+import { examSetupScreen } from './exam.ts';
 import { bindWidgetsSection, offerWidget, widgetsSectionHtml } from './widgets.ts';
 import { remindersOf, type ReminderSettings } from '../core/reminders.ts';
 import { focusFor } from './focus.ts';
@@ -161,7 +164,7 @@ function appHtml(app: App): string {
         <label class="toggle-row"><span><b>🎁 Reward ready</b><small>When a jar is full and a reward is waiting to be given.</small></span><input type="checkbox" role="switch" data-r="ready" ${rs.ready ? 'checked' : ''}></label>
         <label class="toggle-row"><span><b>💾 Backup reminder</b><small>When a week of progress isn’t backed up.</small></span><input type="checkbox" role="switch" data-r="backup" ${rs.backup ? 'checked' : ''}></label>
       </div>`)}
-    ${sec('Look', `<div class="themes" role="radiogroup" aria-label="Look of the app">${THEME_CHOICES.map((t) => `<button class="theme-tile th-${t.id}${st.theme === t.id ? ' on' : ''}" role="radio" aria-checked="${st.theme === t.id}" data-theme-id="${t.id}"><span class="th-swatch"><i></i><i></i><i></i></span><b>${t.name}</b><small>${t.note}</small></button>`).join('')}</div>
+    ${sec('Look', `<div class="themes" role="radiogroup" aria-label="Look of the app">${THEME_CHOICES.map((t) => `<button class="theme-tile th-${t.id}${st.theme === t.id ? ' on' : ''}" role="radio" aria-checked="${st.theme === t.id}" data-theme-id="${t.id}"><span class="th-swatch"><i></i><i></i><i></i></span><b>${t.name}${t.id === 'precision' ? ` ${plusTag(app)}` : ''}</b><small>${t.note}</small></button>`).join('')}</div>
       ${iconsAvailable(app) ? `<button class="pa-row card icon-row"><span class="ic-now" aria-hidden="true">${appIconSvg('sky', 'square', 40)}</span><span><b>App icon ${plusTag(app)}</b><small>Choose MN’s icon on the home screen</small></span></button>` : ''}
       <div class="card pa-toggles">${toggleRows(st, [T('vibration', 'Vibration', 'Gentle buzzes on taps and answers.'), T('fx3d', '3D challenges', 'Turn off if challenges feel slow on this phone.')])}</div>`)}
     ${sec('Rewards', `<div class="card pa-cats"><p class="cat-why">Rewards children can pick from. Tap to show or hide a kind.</p><div class="cat-chips">${CATEGORIES.map((c) => `<button class="cat-chip${st.hiddenCategories.includes(c.id) ? '' : ' on'}" aria-pressed="${!st.hiddenCategories.includes(c.id)}" data-c="${c.id}"><span aria-hidden="true">${c.icon}</span>${esc(c.name)}</button>`).join('')}</div></div>`)}
@@ -211,6 +214,8 @@ const GAINS: { id: DemoId; name: string; line: string }[] = [
   { id: 'report', name: 'The full report', line: 'Strengths, skills to practise, and how each one is changing.' },
   { id: 'school', name: 'Your school’s syllabus', line: 'CBSE, ICSE or Common Core, class by class.' },
   { id: 'sheets', name: 'Worksheets to print', line: 'From the skills they’re on now, with answers.' },
+  { id: 'exam', name: 'Exam practice', line: 'A timed test on topics you pick, then a score sheet.' },
+  { id: 'certs', name: 'Certificates', line: 'One to print for every challenge beaten.' },
   { id: 'sync', name: 'Every phone in step', line: 'Same progress on a phone and a tablet.' },
   { id: 'widgets', name: 'The Focus widget', line: 'This week’s plan on your home screen.' },
 ];
@@ -437,8 +442,10 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
     if (n) app.toast(n === kids.length ? 'Backed up! Keep the file somewhere safe, like Google Drive.' : `Saved ${n} of ${kids.length}.`);
     if (n) render(false);
   });
-  on('.theme-tile', 'click', (b) => {
+  on('.theme-tile', 'click', async (b) => {
     const theme = b.dataset.themeId as Theme;
+    // Precision is an MN × look (with the app icons).
+    if (theme === 'precision' && !(await needPlus(app, 'icons', parentScreen))) return;
     app.save.update((d) => (d.settings.theme = theme));
     app.applyTheme(theme);
     body.querySelectorAll('.theme-tile').forEach((x) => {
@@ -579,6 +586,11 @@ export function childSettingsScreen(c: Child) {
         <button class="pa-row card report" data-id="${c.id}"><b>${ICONS.chart} Report</b><small>What ${esc(c.name)} has learned, and where they need help</small></button>
         <button class="pa-row card sheet-btn"><b>🖨️ Print a worksheet ${plusTag(app)}</b><small>${c.age <= 6 ? 12 : 20} questions from where ${esc(c.name)} is now, as an A4 PDF to share or print. Answers on a separate page.</small></button>
         <button class="linkish sheet-html">Save it as a web page instead</button>
+        <button class="pa-row card exam-btn"><b>📝 Exam practice ${plusTag(app)}</b><small>A timed test on topics you pick, with a score sheet to share</small></button>
+        <button class="pa-row card certs-btn"><b>🏅 Certificates ${plusTag(app)}</b><small>${(() => {
+          const n = certificatesFor(app.pathFor(c), c.progress, c.log).length;
+          return n ? `${n} earned · print one for the fridge` : 'One for each challenge beaten on the map';
+        })()}</small></button>
         <h2 class="pa-h">Learning</h2>
         <button class="pa-row card age-btn"><b>🎂 Age</b><small>${c.age} · questions follow the age</small></button>
         <button class="pa-row card level-btn"><b>${CHALLENGE[c.challenge ?? 0].icon} Difficulty</b><small>${CHALLENGE[c.challenge ?? 0].name} · ${CHALLENGE[c.challenge ?? 0].note}</small></button>
@@ -605,6 +617,12 @@ export function childSettingsScreen(c: Child) {
     });
     el.querySelector('.school-btn')!.addEventListener('click', async () => {
       if (await needPlus(app, 'school', here)) void app.show(schoolScreen(c, here));
+    });
+    el.querySelector('.exam-btn')!.addEventListener('click', async () => {
+      if (await needPlus(app, 'exam', here)) void app.show(examSetupScreen(c, here));
+    });
+    el.querySelector('.certs-btn')!.addEventListener('click', async () => {
+      if (await needPlus(app, 'certs', here)) void app.show(certsScreen(c, here));
     });
     el.querySelector('.level-btn')!.addEventListener('click', async () => {
       const actions: { label: string; value: number; kind: 'mint' | 'ghost'; back?: boolean }[] = [
