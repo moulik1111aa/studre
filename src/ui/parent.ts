@@ -261,7 +261,7 @@ function premiumHtml(app: App): string {
   const days = account(app) ? TRIAL_DAYS_SIGNED_IN : TRIAL_DAYS;
   const kid = kids.find((c) => c.id === app.save.data.activeChildId) ?? kids[0];
   const hero = `<div class="pm-hero">
-      <div class="pm-mascot" aria-hidden="true">${plusSvg({ cls: 'alive', noShadow: true })}</div>
+      <div class="pm-mascot" aria-hidden="true">${plusSvg({ cls: 'alive shiny', noShadow: true })}</div>
       <p class="pm-brand" aria-label="MN Times">MN ${timesMarkSvg()}</p>
       ${on ? `<p class="pm-on">${store ? 'MN × is on for your family' : 'MN × is included in this version'}</p><h2 class="pm-h">Everything below is yours.</h2>` : '<h2 class="pm-h">See where to help, at a glance.</h2>'}
       <button class="pm-video"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.5v9l7.5-4.5z" fill="currentColor"/></svg>Watch the 1-minute video</button>
@@ -269,7 +269,7 @@ function premiumHtml(app: App): string {
   const peek = kid ? `<section class="pm-proof"><p class="pm-cap">${on ? 'Your full report' : 'Here’s what MN × shows you'}</p>${reportPeek(app, kid, on)}</section>` : '';
   const gains = `${on ? '<p class="pm-cap pm-have">What you have with MN ×</p>' : ''}<ul class="pm-gains${on ? ' have' : ''}">${GAINS.map((g) => `<li>${CHECK}<span><b>${esc(g.name)}</b><small>${esc(g.line)}</small></span><button class="pm-q" data-demo="${g.id}" aria-label="See what ${esc(g.name)} looks like">?</button></li>`).join('')}</ul>`;
   const free = on ? '' : '<p class="pm-free-note">Every level, lesson and reward is free for every child, with no ads.</p>';
-  const plans = !store || on ? '' : `<div class="pm-price" role="group" aria-label="Prices after the free days"><p>After the free days</p><div class="pm-price-row"><span><b>${FALLBACK.yearly.price}</b>a year</span><span><b>${FALLBACK.monthly.price}</b>a month</span><span><b>${FALLBACK.lifetime.price}</b>once</span></div></div>`;
+  const plans = !store || on ? '' : `<p class="pm-price">Then ${FALLBACK.yearly.price} a year, ${FALLBACK.monthly.price} a month, or ${FALLBACK.lifetime.price} once.</p>`;
   const cta = !store
     ? '<div class="pm-cta-bar"><p class="pm-incl">Everything in MN × is included in this version of MN.</p></div>'
     : on

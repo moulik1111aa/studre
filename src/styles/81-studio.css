@@ -92,8 +92,8 @@ html[data-theme="studio"] .av.on{box-shadow:0 0 0 3px #FBFBF7,0 0 0 6px #3D6BFF}
 html[data-theme="studio"] .treat.ready{box-shadow:inset 0 0 0 2px #1B2A5C,3px 3px 0 #FFEB3B}
 
 /* Plus goes flat: one colour, no shine. Its speech bubble is a white sheet with an ink line. */
-html[data-theme="studio"] .mascot .px-fill{fill:var(--flat)}
-html[data-theme="studio"] .mascot .px-gloss{display:none}
+html[data-theme="studio"] .mascot:not(.shiny) .px-fill{fill:var(--flat)}
+html[data-theme="studio"] .mascot:not(.shiny) .px-gloss{display:none}
 html[data-theme="studio"] .plus-says{background:#FFFFFF;color:#1B2A5C;border-radius:18px;box-shadow:inset 0 0 0 2px #1B2A5C,5px 5px 0 #FFEB3B}
 html[data-theme="studio"] .ps-plus{background:#FFF7B0;box-shadow:inset 0 0 0 2px #1B2A5C}
 html[data-theme="studio"] .ps-ok{font-family:var(--font-title);font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:#1B2A5C;color:#fff;box-shadow:none}

@@ -76,8 +76,8 @@ html[data-theme="shapes"] .field input:focus{box-shadow:inset 0 0 0 3px #2140FF}
 html[data-theme="shapes"] .av.on{box-shadow:0 0 0 3px #F3EEE4,0 0 0 6px #2140FF}
 html[data-theme="shapes"] .treat.ready{box-shadow:inset 0 0 0 2px #141414,3px 3px 0 #FFC21A}
 
-html[data-theme="shapes"] .mascot .px-fill{fill:var(--flat)}
-html[data-theme="shapes"] .mascot .px-gloss{display:none}
+html[data-theme="shapes"] .mascot:not(.shiny) .px-fill{fill:var(--flat)}
+html[data-theme="shapes"] .mascot:not(.shiny) .px-gloss{display:none}
 html[data-theme="shapes"] .plus-says{background:#FFFDF8;color:#141414;border-radius:20px;box-shadow:inset 0 0 0 2px #141414,6px 6px 0 #2140FF}
 html[data-theme="shapes"] .ps-plus{background:#FFC21A;box-shadow:inset 0 0 0 2px #141414}
 html[data-theme="shapes"] .ps-ok{font-family:var(--font-title);font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:#141414;color:#fff;box-shadow:3px 3px 0 #FF4B2B}

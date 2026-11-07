@@ -189,74 +189,9 @@ html .screen.mnx-prev,html[data-theme] .screen.mnx-prev{background:linear-gradie
 .pm-on{margin:4px auto 0;display:inline-block;padding:6px 14px;border-radius:999px;font-weight:800;font-size:14px;color:#fff;background:rgba(255,255,255,.18);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.5)}
 .pm-have{margin:4px 2px 2px}
 
-/* ---------- Blueprint: the MN × look ----------
-   The Notebook turned inside out for the paid side, the same in every look: deep navy paper
-   with a fine light grid, white ink, highlighter-yellow ticks and buttons, and the pink and blue
-   of the × mark. Flat (no glows or gradients), condensed titles like the rest of MN. */
-.screen.parent .pa-body[data-page="premium"],html .screen.mplus.mplus,html[data-theme] .screen.mplus.mplus{
-  --bp:#15224F;--bp-2:#1C2D66;--bp-line:rgba(255,255,255,.07);--bp-line-2:rgba(255,255,255,.13);
-  --bp-yel:#FFEB3B;--bp-pink:#FF6FB5;--bp-blue:#6E9BFF;--bp-ink:#1B2A5C;
-  background:
-    linear-gradient(var(--bp-line-2) 1px,transparent 1px) 0 0/120px 120px,
-    linear-gradient(90deg,var(--bp-line-2) 1px,transparent 1px) 0 0/120px 120px,
-    linear-gradient(var(--bp-line) 1px,transparent 1px) 0 0/24px 24px,
-    linear-gradient(90deg,var(--bp-line) 1px,transparent 1px) 0 0/24px 24px,
-    var(--bp);
-  color:#fff;
-}
-.screen.parent .pa-body[data-page="premium"]{--pm-a:#15224F;--pm-b:#15224F;--pm-ink:#1B2A5C;--pm-soft:rgba(27,42,92,.66)}
-.screen.parent .pa-body[data-page="premium"] .pm-mascot{filter:none}
-.screen.parent .pa-body[data-page="premium"] .pm-mascot .px-fill,.screen.mplus .mascot .px-fill{fill:var(--flat)}
-.screen.parent .pa-body[data-page="premium"] .pm-mascot .px-gloss,.screen.mplus .mascot .px-gloss{display:none}
-.screen.parent .pa-body[data-page="premium"] .pm-brand{font-family:"Heros Cn","TeX Gyre Heros Cn","Inter Display",sans-serif;font-weight:700;font-size:52px;letter-spacing:.01em;color:#fff}
-.screen.parent .pa-body[data-page="premium"] .pm-h{font-family:"Heros Cn","TeX Gyre Heros Cn","Inter Display",sans-serif;font-weight:700;font-size:28px;line-height:1.05;text-transform:uppercase;letter-spacing:.01em;color:#fff;max-width:300px}
-.screen.parent .pa-body[data-page="premium"] .pm-on{background:transparent;color:var(--bp-yel);box-shadow:inset 0 0 0 1.5px var(--bp-yel)}
-.screen.parent .pa-body[data-page="premium"] .pm-video{background:transparent;color:#fff;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.55);font-weight:600}
-.screen.parent .pa-body[data-page="premium"] .pm-video svg{color:var(--bp);background:var(--bp-yel)}
-.screen.parent .pa-body[data-page="premium"] .pm-cap{color:rgba(255,255,255,.8);font-weight:600}
-.screen.parent .pa-body[data-page="premium"] .pm-peek{border-radius:16px;box-shadow:6px 6px 0 var(--bp-yel)}
-.screen.parent .pa-body[data-page="premium"] .pm-peek-h b{font-family:"Heros Cn","TeX Gyre Heros Cn","Inter Display",sans-serif;font-weight:700;font-size:20px}
-.screen.parent .pa-body[data-page="premium"] .pm-row{border-top-color:rgba(27,42,92,.1)}
-.screen.parent .pa-body[data-page="premium"] .pm-lock{background:var(--bp);color:var(--bp-yel)}
-.screen.parent .pa-body[data-page="premium"] .pm-gains svg circle{fill:var(--bp-yel)}
-.screen.parent .pa-body[data-page="premium"] .pm-gains svg path{stroke:var(--bp)}
-.screen.parent .pa-body[data-page="premium"] .pm-gains b{font-weight:700;color:#fff}
-.screen.parent .pa-body[data-page="premium"] .pm-gains small{color:rgba(255,255,255,.78);opacity:1}
-.screen.parent .pa-body[data-page="premium"] .pm-q{width:28px;height:28px;font-size:14px;font-weight:700;color:rgba(255,255,255,.85);background:transparent;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.3)}
-.screen.parent .pa-body[data-page="premium"] .pm-free-note{color:rgba(255,255,255,.8);opacity:1}
-.screen.parent .pa-body[data-page="premium"] .pm-price{margin:-6px 0 0;display:flex;flex-direction:column;align-items:center;gap:8px;opacity:1}
-.screen.parent .pa-body[data-page="premium"] .pm-price > p{margin:0;font-size:13px;font-weight:600;color:rgba(255,255,255,.72)}
-.pm-price-row{display:grid;grid-template-columns:repeat(3,1fr);width:100%;max-width:340px;border-radius:14px;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.3)}
-.pm-price-row span{display:flex;flex-direction:column;align-items:center;gap:1px;padding:9px 4px;font-size:12.5px;font-weight:600;color:rgba(255,255,255,.75)}
-.pm-price-row span + span{box-shadow:inset 1.5px 0 0 rgba(255,255,255,.18)}
-.pm-price-row b{font-family:"Heros Cn","TeX Gyre Heros Cn","Inter Display",sans-serif;font-size:21px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums}
-.screen.parent .pa-body[data-page="premium"] .pm-cta-bar{background:linear-gradient(180deg,rgba(21,34,79,0),var(--bp) 30%)}
-.screen.parent .pa-body[data-page="premium"] .pm-buy{font-family:"Heros Cn","TeX Gyre Heros Cn","Inter Display",sans-serif;font-weight:700;font-size:21px;letter-spacing:.04em;text-transform:uppercase;border-radius:14px;color:var(--bp);background:var(--bp-yel);box-shadow:5px 5px 0 var(--bp-pink)}
-.screen.parent .pa-body[data-page="premium"] .pm-buy:active{transform:translate(3px,3px);box-shadow:2px 2px 0 var(--bp-pink)}
-.screen.parent .pa-body[data-page="premium"] .pm-buy.ghost{color:#fff;background:transparent;box-shadow:inset 0 0 0 2px #fff}
-.screen.parent .pa-body[data-page="premium"] .pm-cta-bar small,.screen.parent .pa-body[data-page="premium"] .pm-incl{color:rgba(255,255,255,.78);opacity:1}
-.screen.parent .pa-body[data-page="premium"] .pm-video:focus-visible,.screen.parent .pa-body[data-page="premium"] .pm-buy:focus-visible,.screen.parent .pa-body[data-page="premium"] .pm-q:focus-visible{outline-color:var(--bp-yel)}
-
-/* The plans screen: the same navy paper; the list and the plans stay white sheets. */
-.screen.mplus .topbar .t{font-family:"Heros Cn","TeX Gyre Heros Cn","Inter Display",sans-serif;font-weight:700;font-size:22px;color:#fff}
-.screen.mplus .topbar .icon-btn{background:transparent;color:#fff;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.55)}
-.screen.mplus .mp-hero h2{font-family:"Heros Cn","TeX Gyre Heros Cn","Inter Display",sans-serif;font-weight:700;text-transform:uppercase;line-height:1.02;color:#fff}
-.screen.mplus .mp-hero p{color:rgba(255,255,255,.8)}
-.screen.mplus .mp-list,.screen.mplus .card{background:#FFFFFF;color:var(--bp-ink);border-radius:16px;box-shadow:6px 6px 0 var(--bp-yel)}
-.screen.mplus .mp-list b,.screen.mplus .card b{color:var(--bp-ink)}
-.screen.mplus .mp-f small,.screen.mplus .card small{color:rgba(27,42,92,.72)}
-.screen.mplus .mp-f .mp-free{color:rgba(27,42,92,.52)}
-.screen.mplus .mp-f + .mp-f{border-top-color:rgba(27,42,92,.12)}
-.screen.mplus .mp-fi{width:34px;height:34px;flex:none;display:grid;place-items:center;border-radius:50%;color:var(--bp-ink);background:#FFF7B0}
-.screen.mplus .mp-fi svg{width:19px;height:19px}
-.screen.mplus .mp-plan{background:#FFFFFF;color:var(--bp-ink);box-shadow:inset 0 0 0 1.5px rgba(27,42,92,.25)}
-.screen.mplus .mp-plan small,.screen.mplus .mp-plan span{color:rgba(27,42,92,.7)}
-.screen.mplus .mp-plan b{color:var(--bp-ink)}
-.screen.mplus .mp-plan.on,.screen.mplus .mp-plan[aria-pressed="true"],.screen.mplus .mp-plan[aria-checked="true"]{box-shadow:inset 0 0 0 3px var(--bp-ink),5px 5px 0 var(--bp-yel)}
-.screen.mplus .mp-foot{background:linear-gradient(180deg,rgba(21,34,79,0),var(--bp) 30%)}
-.screen.mplus .mp-foot .btn{font-family:"Heros Cn","TeX Gyre Heros Cn","Inter Display",sans-serif;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-radius:14px}
-.screen.mplus .mp-foot .btn.mint,.screen.mplus .mp-foot .mp-done{color:var(--bp);background:var(--bp-yel);box-shadow:5px 5px 0 var(--bp-pink)}
-.screen.mplus .mp-foot .btn.ghost{color:#fff;background:transparent;box-shadow:inset 0 0 0 2px #fff}
-.screen.mplus .mp-foot .btn:active{transform:translate(3px,3px)}
-.screen.mplus .fine,.screen.mplus .lim-note{color:rgba(255,255,255,.72)}
-.mp-sheet-i svg{width:40px;height:40px;margin:0 auto;color:var(--ink,#1B2A5C)}
+/* The MN × tab keeps its own type and colours whatever the look: the looks' title rules
+   (condensed capitals, ink colour) don't reach it. */
+.screen.parent .pa-body[data-page="premium"] :is(.pm-brand,.pm-h,.pm-gains b){font-family:"Inter Display",system-ui,sans-serif;text-transform:none;letter-spacing:-.02em;color:#fff}
+.screen.parent .pa-body[data-page="premium"] .pm-h{font-weight:800;line-height:1.2;letter-spacing:0}
+.screen.parent .pa-body[data-page="premium"] .pm-brand{font-weight:900}
+.screen.parent .pa-body[data-page="premium"] .pm-peek-h b{font-family:"Inter Display",system-ui,sans-serif;text-transform:none;color:var(--pm-ink)}
