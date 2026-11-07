@@ -17,6 +17,7 @@ import { worldVars } from './worlds.ts';
 import { ICONS } from './icons.ts';
 import { plusFaceSvg } from './plus.ts';
 import { fileSafe, sharePage } from './pdfshare.ts';
+import { mnxIncluded } from './membership.ts';
 
 const MONTH = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const niceDay = (day: string) => {
@@ -43,7 +44,7 @@ export function examSetupScreen(child: Child, back: (app: App) => Screen) {
     const el = html(`<section class="screen limits exam-setup" aria-label="Exam practice">
       <header class="topbar"><button class="icon-btn back-btn" aria-label="Back">←</button><span class="t">Exam practice</span><span style="width:50px"></span></header>
       <div class="scroll lim-body ex-body">
-        <p class="ex-why">A test-style round for ${esc(child.name)}: no hints and no right or wrong until the end, then a score sheet you can share.</p>
+        ${mnxIncluded(app)}<p class="ex-why">A test-style round for ${esc(child.name)}: no hints and no right or wrong until the end, then a score sheet you can share.</p>
         ${
           learned.length
             ? `<h2 class="pa-h">Topics</h2>

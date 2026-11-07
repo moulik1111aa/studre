@@ -260,11 +260,11 @@ function premiumHtml(app: App): string {
   const hero = `<div class="pm-hero">
       <div class="pm-mascot" aria-hidden="true">${plusSvg({ cls: 'alive', noShadow: true })}</div>
       <p class="pm-brand" aria-label="MN Times">MN ${timesMarkSvg()}</p>
-      <h2 class="pm-h">See where to help, at a glance.</h2>
+      ${on ? `<p class="pm-on">✓ ${store ? 'MN × is on for your family' : 'MN × is included in this version'}</p><h2 class="pm-h">Everything below is yours.</h2>` : '<h2 class="pm-h">See where to help, at a glance.</h2>'}
       <button class="pm-video"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.5v9l7.5-4.5z" fill="currentColor"/></svg>Watch the 1-minute video</button>
     </div>`;
   const peek = kid ? `<section class="pm-proof"><p class="pm-cap">${on ? 'Your full report' : 'Here’s what MN × shows you'}</p>${reportPeek(app, kid, on)}</section>` : '';
-  const gains = `<ul class="pm-gains">${GAINS.map((g) => `<li>${CHECK}<span><b>${esc(g.name)}</b><small>${esc(g.line)}</small></span><button class="pm-q" data-demo="${g.id}" aria-label="See what ${esc(g.name)} looks like">?</button></li>`).join('')}</ul>`;
+  const gains = `${on ? '<p class="pm-cap pm-have">What you have with MN ×</p>' : ''}<ul class="pm-gains${on ? ' have' : ''}">${GAINS.map((g) => `<li>${CHECK}<span><b>${esc(g.name)}</b><small>${esc(g.line)}</small></span><button class="pm-q" data-demo="${g.id}" aria-label="See what ${esc(g.name)} looks like">?</button></li>`).join('')}</ul>`;
   const free = on ? '' : '<p class="pm-free-note">Every level, lesson and reward is free for every child, with no ads.</p>';
   const plans = !store || on ? '' : `<p class="pm-price">Then ${FALLBACK.yearly.price} a year, ${FALLBACK.monthly.price} a month, or ${FALLBACK.lifetime.price} once.</p>`;
   const cta = !store
@@ -303,7 +303,7 @@ export function parentScreen(app: App): Screen {
     <div class="pa-wrap">
       <div class="scroll pa-body" role="tabpanel"></div>
       <nav class="pa-rail" role="tablist" aria-label="Parent area sections" aria-orientation="vertical">
-        <div class="pa-tabs">${tabs.map((t) => `<button class="pa-tab" role="tab" data-id="${t.id}" aria-selected="false"><span aria-hidden="true">${t.icon}</span><small>${esc(t.label)}</small></button>`).join('')}</div>
+        <div class="pa-tabs">${tabs.map((t) => `<button class="pa-tab${t.id === 'premium' && hasPlus(app) ? ' owned' : ''}" role="tab" data-id="${t.id}" aria-selected="false"><span aria-hidden="true">${t.icon}</span><small>${esc(t.label)}</small></button>`).join('')}</div>
         <button class="pa-tab pa-close back-btn" aria-label="Close the parent area"><span aria-hidden="true">✕</span><small>Close</small></button>
       </nav>
     </div>

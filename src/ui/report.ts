@@ -7,7 +7,7 @@
 // Lifetime totals (time, answers, stars, coins, rewards) cover all play. Per-skill accuracy, speed,
 // times of day and the level list come from the play log, which starts with this update.
 
-import { hasPlus, plusScreen } from './membership.ts';
+import { hasPlus, mnxIncluded, plusScreen } from './membership.ts';
 import { html, esc, type App, type Screen } from './app.ts';
 import { resetChild, removeChild, type Child } from '../storage/save.ts';
 import { rewardById, costOf } from '../core/rewards.ts';
@@ -336,7 +336,7 @@ export function reportScreen(child: Child, start: Tab = 'overview') {
       body.innerHTML = locked
         ? `<div class="mp-lock"><div class="mp-lock-peek" inert aria-hidden="true">${bodies[tab]}</div>
             <div class="card mp-lock-card"><b>✨ ${esc(child.name)}’s full report</b><p>Strengths, skills to practise, how quickly ${esc(child.name)} answers, and the times of day they do best. Part of MN ×.</p><button class="btn mint small mp-see">See MN ×</button></div></div>`
-        : bodies[tab];
+        : (tab === 'skills' || tab === 'activity' || tab === 'rewards' ? mnxIncluded(app) : '') + bodies[tab];
       body.querySelector('.mp-see')?.addEventListener('click', () => void app.show(plusScreen(reportScreen(child, tab))));
       body.scrollTop = 0;
       el.querySelectorAll<HTMLElement>('.rp-tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));

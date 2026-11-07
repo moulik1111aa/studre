@@ -32,6 +32,7 @@ function mathVisCss(): string {
   return `.mv{--q-ink:#1A1446;--q-bg:#FFFFFF;--q-soft:#F1EEFF;--accent:#5B3DF5;--ink:#1A1446}\n${rules}.mv .mv-svg{max-height:150px}.opt-vis .mv-svg{max-height:60px}`;
 }
 import { saveTextFile } from '../platform/files.ts';
+import { sharePage } from './pdfshare.ts';
 
 const MONTH = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const nice = (day: string) => {
@@ -148,21 +149,9 @@ export async function saveWorksheet(app: App, child: Child, format: 'pdf' | 'htm
     if (!qs.length) return void app.toast('Play a level first, then the worksheet follows where they are.');
     const page = worksheetHtml(app, child, qs);
     const name = worksheetFileName(child, app.today);
-    if (format === 'pdf' && app.native?.sharePdf) {
-      app.toast('Making the PDF…', 2500);
-      const r = await app.native.sharePdf({ html: page, name: name.replace(/\.html$/, '.pdf'), title: `${child.name}’s maths worksheet` });
-      if (r.ok) return;
-      // No PDF on this phone: fall back to the web page.
-    }
-    if (format === 'pdf' && !app.native) {
-      // In a browser: open the sheet and its print screen ("Save as PDF" is one of the printers).
-      const w = window.open('', '_blank');
-      if (w) {
-        w.document.write(page);
-        w.document.close();
-        setTimeout(() => w.print(), 400);
-        return;
-      }
+    if (format === 'pdf') {
+      await sharePage(app, { html: page, name: name.replace(/\.html$/, ''), title: `${child.name}’s maths worksheet` });
+      return;
     }
     const ok = await saveTextFile(app, name, 'text/html', page);
     if (ok) app.toast(`Saved ${name}. Open it and print, or copy it onto paper.`, 5000);

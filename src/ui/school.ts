@@ -4,6 +4,7 @@
 // all progress, because skill levels are shared.
 
 import { html, esc, type App, type Screen } from './app.ts';
+import { mnxIncluded } from './membership.ts';
 import type { Child, SchoolPath } from '../storage/save.ts';
 import { BOARDS, boardById, gradeOf, gradeForAge } from '../core/curricula.ts';
 import { AREAS } from '../core/areas/index.ts';
@@ -54,7 +55,7 @@ export function schoolScreen(child: Child, back: (app: App) => Screen) {
     const paint = () => {
       el.querySelector('.stops-slot')!.innerHTML = stopsHtml(LABELS, step);
       if (step === 0) {
-        body.innerHTML = `<div class="card lim-card lim-one"><h2 class="ac-q">Which school curriculum does ${esc(child.name)} follow?</h2>
+        body.innerHTML = `${mnxIncluded(app)}<div class="card lim-card lim-one"><h2 class="ac-q">Which school curriculum does ${esc(child.name)} follow?</h2>
           <div class="seg seg-col">${BOARDS.map((b) => `<button class="seg-b${board === b.id ? ' on' : ''}" data-b="${b.id}"><b>${esc(b.name)}</b><small>${esc(b.country)}: ${esc(b.note)}</small></button>`).join('')}
           <button class="seg-b${board === '' ? ' on' : ''}" data-b=""><b>No school syllabus</b><small>Follow the app’s path for their age (every skill)</small></button></div>
           <p class="fine">Topic lists follow each board’s usual order. Check them against your school’s plan and add or remove topics. MN isn’t linked to or approved by CBSE, CISCE or Common Core.</p></div>`;

@@ -573,8 +573,11 @@ test('exam practice: topics, a paper with no marking until the end, a score shee
   await expect(page.locator('.map')).toBeVisible();
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
   await page.click('.kid-set');
+  // With MN × on, its features carry a violet ✓ MN × tag, and their screens say it's included.
+  await expect(page.locator('.exam-btn .mp-tag.own')).toContainText('MN');
   await page.click('.exam-btn');
   await expect(page.locator('.exam-setup')).toBeVisible();
+  await expect(page.locator('.exam-setup .mnx-incl')).toContainText('Included with MN');
   await expect(page.locator('.ex-chip.on').first()).toBeVisible();
   await page.click('.ex-size [data-n="10"]');
   await expect(page.locator('.ex-start')).toHaveText('Start: 10 questions');
@@ -1252,7 +1255,9 @@ test('parent area: five tabs on the right (Children, Sound, Premium, App, Help),
   expect(st.volume).toBe(0.5);
   // MN ×: everything included in this version, with the perks and how to use them.
   await page.click('.pa-tab[data-id="premium"]');
-  await expect(page.locator('.pm-h')).toContainText('where to help');
+  // This version includes MN ×, and the page and every MN × feature say so.
+  await expect(page.locator('.pm-on')).toContainText('included');
+  await expect(page.locator('.pa-tab[data-id="premium"]')).toHaveClass(/\bowned\b/);
   await expect(page.locator('.pm-gains li')).toHaveCount(8);
   // ? opens a full-screen preview of that feature.
   await page.click('.pm-q[data-demo="report"]');

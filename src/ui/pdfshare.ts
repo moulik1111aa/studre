@@ -12,7 +12,11 @@ export async function sharePage(app: App, o: { html: string; name: string; title
   if (app.native?.sharePdf) {
     app.toast('Making the PDF…', 2500);
     try {
-      const r = await app.native.sharePdf({ html: o.html, name: `${o.name}.pdf`, title: o.title, landscape: o.landscape });
+      // Never wait for ever: if the phone hasn't made it in 20 seconds, save the page instead.
+      const r = await Promise.race([
+        app.native.sharePdf({ html: o.html, name: `${o.name}.pdf`, title: o.title, landscape: o.landscape }),
+        new Promise<{ ok: false }>((res) => setTimeout(() => res({ ok: false }), 20_000)),
+      ]);
       if (r.ok) return true;
     } catch {
       /* falls back to the web page */

@@ -457,7 +457,9 @@ public class StudyHardPlugin extends Plugin {
                 public void onPageFinished(WebView view, String url) {
                     if (started) return;
                     started = true;
-                    view.postDelayed(() -> makePdf(call, view, name, title, landscape), 350);
+                    // Not view.postDelayed: this WebView is never on screen, and a detached view
+                    // only runs posted work once it's attached (so it never would).
+                    new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> makePdf(call, view, name, title, landscape), 350);
                 }
             });
             wv.loadDataWithBaseURL("https://localhost/", html, "text/html", "utf-8", null);
@@ -507,7 +509,7 @@ public class StudyHardPlugin extends Plugin {
             r.put("error", why + " / " + e.getMessage());
         }
         // The print screen holds its own reference while it is open.
-        view.postDelayed(() -> pdfView = null, 60_000);
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> pdfView = null, 60_000);
         call.resolve(r);
     }
 

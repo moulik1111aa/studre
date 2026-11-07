@@ -10,6 +10,7 @@ import { stagger } from '../render/motion.ts';
 import { plusSvg } from './plus.ts';
 import { bossFaceSvg } from './bosses.ts';
 import { fileSafe, sharePage } from './pdfshare.ts';
+import { mnxIncluded } from './membership.ts';
 
 const MONTH = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const longDay = (day: string) => {
@@ -39,6 +40,7 @@ export function certsScreen(child: Child, back: (app: App) => Screen) {
     const el = html(`<section class="screen limits certs" aria-label="Certificates">
       <header class="topbar"><button class="icon-btn back-btn" aria-label="Back">←</button><span class="t">Certificates</span><span style="width:50px"></span></header>
       <div class="scroll lim-body ct-body">
+        ${mnxIncluded(app)}
         <p class="ex-why">${certs.length ? `${esc(child.name)} has earned ${certs.length === 1 ? 'a certificate' : `${certs.length} certificates`}. Share one as a PDF to print, or send it to family.` : `Each challenge ${esc(child.name)} beats on the map earns a certificate. The first one is waiting at the next challenge.`}</p>
         ${certs
           .map((c) => {

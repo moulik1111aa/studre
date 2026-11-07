@@ -57,8 +57,15 @@ export function hasPlus(app: App): boolean {
   return plusOn(read(), Date.now());
 }
 
-/** A small "Plus" tag beside paid features (Play Store build, without Plus). */
-export const plusTag = (app: App): string => (hasPlus(app) ? '' : '<span class="mp-tag">MN&nbsp;×</span>');
+/**
+ * The tag beside every MN × feature: without MN ×, a gold "MN ×" (it's a paid extra); with it,
+ * a violet "✓ MN ×", so parents can see what came with MN ×.
+ */
+export const plusTag = (app: App): string =>
+  hasPlus(app) ? '<span class="mp-tag own" title="Included with MN ×"><span aria-hidden="true">✓ </span>MN&nbsp;×<span class="sr-only"> included</span></span>' : '<span class="mp-tag">MN&nbsp;×</span>';
+
+/** A line at the top of an MN × screen, when it's on: "✓ Included with MN ×". */
+export const mnxIncluded = (app: App): string => (hasPlus(app) ? '<p class="mnx-incl"><span class="mnx-incl-x" aria-hidden="true">✓</span>Included with MN&nbsp;×</p>' : '');
 
 const listeners = new Set<() => void>();
 /** Run `fn` whenever Plus turns on or off (a screen re-draws). */

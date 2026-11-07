@@ -180,3 +180,13 @@ html .screen.mnx-prev,html[data-theme] .screen.mnx-prev{background:linear-gradie
 .pa-nudge-go{grid-column:2;justify-self:start;min-height:38px!important;padding:0 16px!important;font-size:14px!important;background:#6C47FF!important;color:#fff!important;box-shadow:0 4px 0 #4A2FC2!important}
 .pa-nudge-close{position:absolute;top:6px;right:6px;width:32px;height:32px;border:0;background:none;color:inherit;opacity:.6;font-size:15px;cursor:pointer;border-radius:50%}
 .pa-nudge-close:focus-visible{outline:3px solid #6C47FF}
+
+/* MN × is on: features say they came with it (violet ✓ MN ×), and the tab and pages say so */
+.mp-tag.own{color:#fff;background:linear-gradient(180deg,#8E6BFF,#6C47FF);box-shadow:inset 0 -2px 0 rgba(0,0,0,.18)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.mnx-incl{display:inline-flex;align-self:flex-start;align-items:center;gap:6px;margin:0 0 2px;padding:5px 12px 5px 6px;border-radius:999px;font-size:13px;font-weight:800;color:#4A2FC2;background:#EEE8FF}
+.mnx-incl-x{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:11px;color:#fff;background:#6C47FF}
+.pa-tab.owned{position:relative}
+.pa-tab.owned::after{content:'✓';position:absolute;top:4px;right:8px;width:16px;height:16px;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:900;color:#fff;background:#6C47FF;box-shadow:0 0 0 2px #fff}
+.pm-on{margin:4px auto 0;display:inline-block;padding:6px 14px;border-radius:999px;font-weight:800;font-size:14px;color:#fff;background:rgba(255,255,255,.18);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.5)}
+.pm-have{margin:4px 2px 2px}
