@@ -569,7 +569,7 @@ test('worksheet: a printable sheet from where the child is, answers on the last 
 
 test('exam practice: topics, a paper with no marking until the end, a score sheet; certificates for challenges beaten', async ({ page }) => {
   type W = { __app: { show(m: unknown): void; child: { exams?: { n: number; ok: number }[] } }; __screens: { parentScreen: unknown } };
-  await page.goto('/?debug&demo=%4030');
+  await page.goto('/?debug&demo=%40200');
   await expect(page.locator('.map')).toBeVisible();
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
   await page.click('.kid-set');
@@ -1253,10 +1253,10 @@ test('parent area: five tabs on the right (Children, Sound, Premium, App, Help),
   // MN ×: everything included in this version, with the perks and how to use them.
   await page.click('.pa-tab[data-id="premium"]');
   await expect(page.locator('.pm-h')).toContainText('where to help');
-  await expect(page.locator('.pm-gains li')).toHaveCount(6);
+  await expect(page.locator('.pm-gains li')).toHaveCount(8);
   // ? opens a full-screen preview of that feature.
   await page.click('.pm-q[data-demo="report"]');
-  await expect(page.locator('.mnx-prev .dp-count')).toHaveText('2 of 6');
+  await expect(page.locator('.mnx-prev .dp-count')).toHaveText('2 of 8');
   await page.click('.dp-x');
   await expect(page.locator('.pm-row.locked')).toHaveCount(0);
   // App: notifications, look, Parent PIN, backup, delete.

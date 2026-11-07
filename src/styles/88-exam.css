@@ -2,9 +2,19 @@
 .ex-body{display:flex;flex-direction:column;gap:10px}
 .ex-why{margin:0 2px 4px;font-size:15px;line-height:1.45;opacity:.85}
 .ex-topics{display:grid;gap:10px}
-.ex-stage{padding:12px 14px}
-.ex-st{margin:0 0 8px;display:flex;align-items:center;gap:6px;font-size:14px}
-.ex-st .ex-all{margin-left:auto;font-size:14px}
+.ex-stage{padding:4px 14px}
+.ex-st{list-style:none;display:flex;align-items:center;gap:8px;font-size:15px;padding:10px 0;cursor:pointer}
+.ex-st::-webkit-details-marker{display:none}
+.ex-st::after{content:'';width:9px;height:9px;border-right:2.5px solid currentColor;border-bottom:2.5px solid currentColor;transform:rotate(45deg);margin:-4px 4px 0 6px;opacity:.6;transition:transform .2s}
+.ex-stage[open] .ex-st::after{transform:rotate(-135deg);margin-top:4px}
+.ex-st span{opacity:.7;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ex-picked{font-style:normal;font-size:12.5px;font-weight:800;color:#15803D}
+.ex-chips{display:flex;flex-wrap:wrap;gap:8px;padding:2px 0 8px}
+.ex-chip{appearance:none;font:inherit;font-size:14px;font-weight:700;color:var(--ink);background:transparent;border:2px solid color-mix(in srgb,var(--ink) 18%,transparent);border-radius:999px;padding:7px 13px;cursor:pointer;min-height:40px}
+.ex-chip.on{background:color-mix(in srgb,var(--mint) 22%,transparent);border-color:var(--mint)}
+.ex-chip.on::before{content:'✓ ';font-weight:900}
+.ex-chip:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
+.ex-stage .ex-all{display:block;margin:0 0 10px;font-size:14px}
 .ex-empty{padding:16px}.ex-empty p{margin:0}
 .ex-past{padding:6px 14px}
 .ex-past p{display:flex;align-items:center;gap:10px;margin:0;padding:8px 0}
@@ -24,7 +34,7 @@
 .ex-score h2{margin:0;font-size:22px}
 .ex-score p{margin:4px 0 0;opacity:.75}
 .ex-ring{--p:0;width:92px;height:92px;border-radius:50%;flex:none;display:grid;place-items:center;background:conic-gradient(var(--mint) calc(var(--p) * 1%),color-mix(in srgb,var(--ink) 10%,transparent) 0)}
-.ex-ring b{width:72px;height:72px;border-radius:50%;background:var(--card, #fff);display:grid;place-items:center;align-content:center;font-size:26px;font-weight:900;line-height:1}
+.ex-ring b{width:72px;height:72px;border-radius:50%;background:#fff;color:#1A1446;display:grid;place-items:center;align-content:center;font-size:26px;font-weight:900;line-height:1}
 .ex-ring small{font-size:13px;opacity:.7;font-weight:800}
 .ex-tp{padding:8px 14px}
 .ex-row{display:grid;grid-template-columns:1fr 80px auto;align-items:center;gap:10px;padding:7px 0;font-size:14px}

@@ -47,7 +47,10 @@ export function examSetupScreen(child: Child, back: (app: App) => Screen) {
         ${
           learned.length
             ? `<h2 class="pa-h">Topics</h2>
-        <div class="ex-topics">${[...byStage].map(([st, ids]) => `<div class="card ex-stage"><p class="ex-st"><b>Stage ${st}</b> · ${esc(AREAS[0].stages[st - 1]?.name ?? '')}<button class="linkish ex-all" data-st="${st}">All</button></p><div class="cat-chips">${ids.map((id) => `<button class="cat-chip ex-chip${picked.has(id) ? ' on' : ''}" aria-pressed="${picked.has(id)}" data-id="${esc(id)}">${esc(skillName(id))}</button>`).join('')}</div></div>`).join('')}</div>
+        <div class="ex-topics">${[...byStage]
+          .reverse()
+          .map(([st, ids], k) => `<details class="card ex-stage"${k === 0 ? ' open' : ''}><summary class="ex-st"><b>Stage ${st}</b><span>${esc(AREAS[0].stages[st - 1]?.name ?? '')}</span><em class="ex-picked" data-st="${st}"></em></summary><div class="ex-chips">${ids.map((id) => `<button class="ex-chip${picked.has(id) ? ' on' : ''}" aria-pressed="${picked.has(id)}" data-id="${esc(id)}" data-st="${st}">${esc(skillName(id))}</button>`).join('')}</div><button class="linkish ex-all" data-st="${st}">Pick all in Stage ${st}</button></details>`)
+          .join('')}</div>
         <h2 class="pa-h">Questions</h2>
         <div class="seg seg3 ex-size" role="radiogroup" aria-label="Number of questions">${EXAM_SIZES.map((n) => `<button class="seg-b${n === size ? ' on' : ''}" role="radio" aria-checked="${n === size}" data-n="${n}"><b>${n}</b></button>`).join('')}</div>
         <h2 class="pa-h">Time</h2>
@@ -60,6 +63,10 @@ export function examSetupScreen(child: Child, back: (app: App) => Screen) {
     </section>`);
     const start = el.querySelector<HTMLButtonElement>('.ex-start')!;
     const paintStart = () => {
+      el.querySelectorAll<HTMLElement>('.ex-picked').forEach((e) => {
+        const k = (byStage.get(Number(e.dataset.st)) ?? []).filter((id) => picked.has(id)).length;
+        e.textContent = k ? `${k} picked` : '';
+      });
       start.disabled = !picked.size;
       start.textContent = picked.size ? `Start: ${size} questions` : 'Pick at least one topic';
     };
@@ -228,7 +235,7 @@ export function examResultScreen(child: Child, rec: ExamRecord, qs: Question[], 
     const el = html(`<section class="screen limits exam-result" aria-label="Exam result">
       <header class="topbar"><span style="width:50px"></span><span class="t">Exam result</span><span style="width:50px"></span></header>
       <div class="scroll lim-body ex-body">
-        <div class="card ex-score"><div class="ex-ring" style="--p:${p}"><b>${rec.ok}<small>/ ${rec.n}</small></b></div><div><h2>${esc(examVerdict(rec.ok, rec.n))}</h2><p>${p}% right · ${clock(rec.sec)} minutes${rec.limit ? ` of ${clock(rec.limit)}` : ''}</p></div></div>
+        <div class="card ex-score"><div class="ex-ring" style="--p:${p}"><b>${rec.ok}<small>/ ${rec.n}</small></b></div><div><h2>${esc(examVerdict(rec.ok, rec.n))}</h2><p>${p}% right · time ${clock(rec.sec)}${rec.limit ? ` of ${clock(rec.limit)}` : ''}</p></div></div>
         <h2 class="pa-h">By topic</h2>
         <div class="card ex-tp">${topics.map(([id, [n, ok]]) => `<div class="ex-row"><span>${esc(skillName(id))}</span><i style="--v:${pct(ok, n)}%"></i><b>${ok}/${n}</b></div>`).join('')}</div>
         ${
