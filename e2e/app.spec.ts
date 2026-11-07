@@ -959,7 +959,7 @@ test('backup: no screen when the app opens; the Parent area says who needs it, a
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
   await expect(page.locator('.pb-due')).toHaveCount(0);
   // Reminder settings are saved (Advanced → Notes).
-  await page.click('.pa-tab[data-id=\"notes\"]');
+  await page.click('.pa-tab[data-id="learning"]');
   await page.locator('[data-r="melt"]').uncheck();
   await expect(page.locator('.pr-per')).toBeHidden();
   const rs = await page.evaluate(() => (window as unknown as { __app: { save: { data: { settings: { reminders?: { melt: boolean } } } } } }).__app.save.data.settings.reminders);
