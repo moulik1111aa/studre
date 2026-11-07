@@ -2,4 +2,7 @@
 <resources>
     <!-- Night-indigo backdrop: shown by the launch splash and behind the WebView before it paints. -->
     <color name="studyhard_bg">#0F1530</color>
+    <!-- Home-screen widget picker descriptions. -->
+    <string name="widget_today_desc">Your child\'s week at a glance: days played, today\'s minutes and the streak</string>
+    <string name="widget_focus_desc">MN ×: this week\'s three Focus skills and how each is going</string>
 </resources>

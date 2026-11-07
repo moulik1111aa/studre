@@ -170,3 +170,13 @@ html .screen.mnx-prev,html[data-theme] .screen.mnx-prev{background:linear-gradie
 
 .pm-brand{display:inline-flex;align-items:center;gap:8px}
 .pm-brand .mnx-mark{width:38px;height:38px}
+
+/* The free-trial note at the top of the Children tab: quiet, one line of fact, closable */
+.pa-nudge{position:relative;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:start;padding:14px 40px 14px 14px;margin-bottom:6px;border-left:4px solid #6C47FF}
+.pa-nudge-x{grid-row:span 2;width:34px;height:34px;border-radius:10px;background:#6C47FF;display:grid;place-items:center}
+.pa-nudge-x svg{width:22px;height:22px}
+.pa-nudge p{margin:0;font-size:14px;line-height:1.4;display:grid;gap:3px}
+.pa-nudge p small{opacity:.72;font-size:12.5px}
+.pa-nudge-go{grid-column:2;justify-self:start;min-height:38px!important;padding:0 16px!important;font-size:14px!important;background:#6C47FF!important;color:#fff!important;box-shadow:0 4px 0 #4A2FC2!important}
+.pa-nudge-close{position:absolute;top:6px;right:6px;width:32px;height:32px;border:0;background:none;color:inherit;opacity:.6;font-size:15px;cursor:pointer;border-radius:50%}
+.pa-nudge-close:focus-visible{outline:3px solid #6C47FF}

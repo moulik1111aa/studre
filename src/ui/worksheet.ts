@@ -123,7 +123,7 @@ ol.qs{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repe
 .key p{font-size:12.5px;color:#4a4570;margin:0 0 10px}
 .key ol{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,1fr);gap:6px 12px;font-size:14px}
 .key .topics{margin-top:14px}
-@media print{.page{padding:0}.noprint{display:none}}
+@media print{.page{padding:0;max-width:none}.noprint{display:none}header{padding-bottom:8px}header svg{width:46px;height:46px}.fill{margin:10px 0 4px}.tip{margin:6px 0 10px}ol.qs{gap:8px}.q{min-height:0;padding:8px 10px 8px 42px;border-radius:12px}.q .n{top:8px}.q .p{margin:0 0 4px;font-size:${little ? 20 : 15}px}.line{margin-top:2px}.line span{height:18px}.vis{margin:0 0 4px}.key ol{font-size:15px;gap:8px 12px}.mv .mv-svg{max-height:100px}.opt-vis .mv-svg{max-height:40px}}
 @media (max-width:560px){ol.qs{grid-template-columns:1fr}.fill{grid-template-columns:1fr 1fr}.key ol{grid-template-columns:repeat(2,1fr)}}
 .noprint{margin:0 0 12px;padding:10px 12px;border-radius:12px;background:#EEF0FF;font-size:13px}
 </style></head><body><div class="page">
@@ -137,15 +137,36 @@ ol.qs{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repe
 </div></body></html>`;
 }
 
-/** Make a new sheet and save it as a file the parent can print. */
-export async function saveWorksheet(app: App, child: Child): Promise<void> {
+/**
+ * Make a new sheet. As a PDF (the default): A4, answers always on their own page, and the share
+ * sheet opens straight away (WhatsApp, Drive, email, a printer). As a web page (html) when the
+ * parent asks: saved as a file, as before.
+ */
+export async function saveWorksheet(app: App, child: Child, format: 'pdf' | 'html' = 'pdf'): Promise<void> {
   try {
     const qs = worksheetQuestions(app, child);
     if (!qs.length) return void app.toast('Play a level first, then the worksheet follows where they are.');
+    const page = worksheetHtml(app, child, qs);
     const name = worksheetFileName(child, app.today);
-    const ok = await saveTextFile(app, name, 'text/html', worksheetHtml(app, child, qs));
+    if (format === 'pdf' && app.native?.sharePdf) {
+      app.toast('Making the PDF…', 2500);
+      const r = await app.native.sharePdf({ html: page, name: name.replace(/\.html$/, '.pdf'), title: `${child.name}’s maths worksheet` });
+      if (r.ok) return;
+      // No PDF on this phone: fall back to the web page.
+    }
+    if (format === 'pdf' && !app.native) {
+      // In a browser: open the sheet and its print screen ("Save as PDF" is one of the printers).
+      const w = window.open('', '_blank');
+      if (w) {
+        w.document.write(page);
+        w.document.close();
+        setTimeout(() => w.print(), 400);
+        return;
+      }
+    }
+    const ok = await saveTextFile(app, name, 'text/html', page);
     if (ok) app.toast(`Saved ${name}. Open it and print, or copy it onto paper.`, 5000);
   } catch {
-    app.toast('The worksheet couldn’t be saved. Please try again.');
+    app.toast('The worksheet couldn’t be made. Please try again.');
   }
 }

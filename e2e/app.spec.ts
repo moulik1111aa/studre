@@ -138,18 +138,23 @@ test('first run: setup, placement, rewards, first level', async ({ page }) => {
   await expect(page.locator('.ac-next')).toHaveText('Save Riya');
   await page.click('.ac-next');
   await page.click('.more-kids .next');
-  // Play time and rewards: four stops, the button stays in the same place.
-  await expect(page.locator('.stops li')).toHaveCount(4);
+  // Play time, rewards and the reading voice: five stops, the button stays in the same place.
+  await expect(page.locator('.stops li')).toHaveCount(5);
   await page.locator('.slider').fill('45');
   await page.click('.limits .done');
   await page.click('.seg-b[data-m="keep"]');
   await page.click('.limits .done');
   await page.click('.limits .done');
+  await page.click('.limits .done');
+  // Last stop: the parent picks the reading voice from the whole list (Automatic is always there).
   await expect(page.locator('.limits .done')).toHaveText('Finish setup');
+  await expect(page.locator('.lim-voice .vl-row').first()).toContainText('Automatic');
+  await expect(page.locator('.lim-voice .vl-row.on')).toHaveCount(1);
+  await page.click('.lim-voice .vl-speed [data-rate="0.8"]');
   // A finished stop can be tapped to go back to it.
   await page.click('.stops li[data-stop="1"]');
   await expect(page.locator('.seg-b[data-m="keep"]')).toHaveClass(/\bon\b/);
-  for (let i = 0; i < 3; i++) await page.click('.limits .done');
+  for (let i = 0; i < 4; i++) await page.click('.limits .done');
   await page.locator('.kid').first().click();
   await expect(page.locator('.placement')).toBeVisible();
   for (let i = 0; i < 30 && !(await page.locator('.go').count()); i++) {
@@ -165,12 +170,9 @@ test('first run: setup, placement, rewards, first level', async ({ page }) => {
   await page.locator('.rw-cat-head').first().click();
   await page.locator('.rw-card').first().click();
   await page.click('.pick');
-  // First: the child picks a reading voice.
-  await expect(page.locator('.voicechoice')).toBeVisible({ timeout: 5000 });
-  await expect(page.locator('.vc-go')).toBeDisabled();
-  await page.locator('.vc-card').nth(1).click();
-  await page.click('.vc-go');
+  // The voice was chosen in setup, so the child goes straight to the map.
   await expect(page.locator('.map')).toBeVisible({ timeout: 5000 });
+  await expect(page.locator('.voicechoice')).toHaveCount(0);
   // First visit: Plus's tips; skip them.
   await expect(page.locator('.tips-ov')).toBeVisible({ timeout: 5000 });
   await page.click('.tip-skip');
@@ -178,10 +180,11 @@ test('first run: setup, placement, rewards, first level', async ({ page }) => {
   await expect(page.locator('.who small')).toContainText('45 min left');
   const save = await page.evaluate(() => JSON.parse(localStorage.getItem('studyhard.save')!));
   expect(save.settings.limitMinutes).toBe(45);
+  expect(save.settings.voiceSet).toBe(true);
+  expect(save.settings.voiceRate).toBe(0.8);
   expect(save.settings.timeUpMode).toBe('keep');
   expect(save.children[0].placed).toBe(true);
   expect(Object.keys(save.children[0].progress.skipped).length).toBeGreaterThan(0);
-  expect(save.children[0].voicePicked).toBe(true);
   expect(save.children[0].together).toBe(3);
   // A parent PIN, not a times question, from now on.
   expect(save.settings.parentPin).toMatch(/:/);
@@ -551,7 +554,12 @@ test('worksheet: a printable sheet from where the child is, answers on the last 
   await expect(page.locator('.map')).toBeVisible();
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
   await page.click('.kid-set');
-  const [dl] = await Promise.all([page.waitForEvent('download'), page.click('.sheet-btn')]);
+  // The PDF (default): in a browser the sheet opens with its print screen.
+  const [pop] = await Promise.all([page.waitForEvent('popup'), page.click('.sheet-btn')]);
+  await expect(pop.locator('li.q')).toHaveCount(20);
+  await pop.close();
+  // A web page instead, when asked.
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.click('.sheet-html')]);
   expect(dl.suggestedFilename()).toMatch(/^MN-.+-worksheet-\d{4}-\d{2}-\d{2}\.html$/);
   const text = await (await dl.createReadStream()).toArray().then((b) => Buffer.concat(b).toString('utf8'));
   expect(text.match(/<li class="q/g)?.length).toBe(20);
@@ -1202,23 +1210,22 @@ test('parent area: five tabs on the right (Children, Sound, Premium, App, Help),
   await expect(page.locator('.pa-rail .pa-tab[data-id]')).toHaveCount(5);
   for (const sel of ['.pa-kid', '.limits', '.quiet-row', '[data-k="holiday"]', '.pt-slider', '[data-k="teach"]', '[data-k="confirmAnswers"]']) await expect(page.locator(sel).first()).toBeAttached();
   for (const sel of ['[data-k="sound"]', '.theme-tile', '.lock-row', '[data-k="showFps"]', '.adv-toggle']) await expect(page.locator(sel)).toHaveCount(0);
-  // Sound: a man's voice by default; a woman's voice and the volume are saved.
+  // Sound: one row opens the full voice list (no man's/woman's guess); the volume is saved.
   await page.click('.pa-tab[data-id="sound"]');
   await expect(page.locator('.parent .topbar .t')).toHaveText('Sound and voice');
-  await expect(page.locator('.voice-g .seg-b.on')).toHaveAttribute('data-g', 'm');
-  await page.click('.voice-g .seg-b[data-g="f"]');
+  await expect(page.locator('.voice-g')).toHaveCount(0);
+  await expect(page.locator('.voice-row')).toContainText('Automatic');
   await page.locator('.vol-slider').fill('0.5');
   await page.locator('.vol-slider').dispatchEvent('change');
   const st = await page.evaluate(() => (window as unknown as W).__app.save.data.settings);
-  expect(st.voiceGender).toBe('f');
   expect(st.volume).toBe(0.5);
   // MN ×: everything included in this version, with the perks and how to use them.
   await page.click('.pa-tab[data-id="premium"]');
   await expect(page.locator('.pm-h')).toContainText('where to help');
-  await expect(page.locator('.pm-gains li')).toHaveCount(5);
+  await expect(page.locator('.pm-gains li')).toHaveCount(6);
   // ? opens a full-screen preview of that feature.
   await page.click('.pm-q[data-demo="report"]');
-  await expect(page.locator('.mnx-prev .dp-count')).toHaveText('2 of 5');
+  await expect(page.locator('.mnx-prev .dp-count')).toHaveText('2 of 6');
   await page.click('.dp-x');
   await expect(page.locator('.pm-row.locked')).toHaveCount(0);
   // App: notifications, look, Parent PIN, backup, delete.
@@ -1413,6 +1420,30 @@ test('MN × video: from the Parent area Help page, plays through its 8 stops to
   await expect(page.locator('.rl-s-pv-school .pv-school.s4')).toHaveCount(1);
   await page.click('.rl-go');
   await expect(page.locator('.screen.parent')).toBeVisible();
+});
+
+test('MN × in the Play build: the video ends on the free trial, and a closable trial note shows from the second visit', async ({ page }) => {
+  type W = { __app: { show(m: unknown): void; save: { data: { settings: { parentVisits?: number; trialNudgeAt?: number } }; update(f: (d: { settings: { parentVisits?: number } }) => void): void } }; __screens: { parentScreen: unknown } };
+  await page.goto('/?debug&store&demo=%400&fastreel');
+  await expect(page.locator('.map')).toBeVisible();
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
+  // First visit: no note yet.
+  await expect(page.locator('.screen.parent')).toBeVisible();
+  await expect(page.locator('.pa-nudge')).toHaveCount(0);
+  await page.click('.pa-tab[data-id="help"]');
+  await page.click('.plus-row');
+  await expect(page.locator('.rl-cta')).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('.rl-cta')).toHaveText(/days free/);
+  await page.click('.rl-cta');
+  await expect(page.locator('.screen.mplus')).toBeVisible();
+  // Second visit: the note, which hides for two weeks when closed.
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.save.update((d) => (d.settings.parentVisits = 1)); w.__app.show(w.__screens.parentScreen); });
+  await page.click('.pa-tab[data-id="kids"]');
+  await expect(page.locator('.pa-nudge')).toBeVisible();
+  await page.click('.pa-nudge-close');
+  await expect(page.locator('.pa-nudge')).toHaveCount(0);
+  const at = await page.evaluate(() => (window as unknown as W).__app.save.data.settings.trialNudgeAt ?? 0);
+  expect(at).toBeGreaterThan(Date.now() + 13 * 86_400_000);
 });
 
 test('MN × (Play Store build): paid features say so, the trial and plans come from Play, buying turns Plus on', async ({ page }) => {

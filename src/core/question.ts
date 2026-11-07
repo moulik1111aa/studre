@@ -252,6 +252,7 @@ export function spoken(prompt: string): string {
   const asks = /\?\s*$/.test(prompt);
   let s = prompt
     .replace(/(^|[\s(=+−×÷:,-])\?(?=$|[\s/),=+−×÷])/g, '$1 what ')
+    .replace(/([\d)])\s+\/\s+(?=[\d(])/g, '$1 divided by ')
     .replace(/(\d)\/(\d)/g, '$1 over $2')
     .replace(/what\s*\/\s*(\d)/g, 'what over $1')
     .replace(/√/g, ' the square root of ')

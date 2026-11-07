@@ -120,6 +120,15 @@ export interface Settings {
   voiceRate: number;
   /** The automatic reading voice: a man's (default) or a woman's. */
   voiceGender: 'm' | 'f';
+  /** The chosen voice's pitch (1, or lower for the "deeper" version). */
+  voicePitch?: number;
+  /** Parent area visits, and whether the home-screen widget tip was shown. */
+  parentVisits?: number;
+  widgetAsked?: boolean;
+  /** The free-trial note in the Parent area stays hidden until then (ms). */
+  trialNudgeAt?: number;
+  /** The parent chose the reading voice in setup (children aren't asked again). */
+  voiceSet?: boolean;
   /** Sound effects volume, 0.2–1. */
   volume: number;
   /** Seconds per timed question (Speed and Master levels, boss fights); 0 = no timer. */

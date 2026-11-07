@@ -118,6 +118,7 @@ function scenes(): ReelScene[] {
 const VIDEO: ReelVideo = { scenes, lines: LINES, audioId: 'plus-audio', name: 'What MN × adds' };
 
 /** The MN × video. `done` runs from the button at the end; Skip goes to `leave`. */
-export function plusVideoScreen(done: () => void, label = 'Done', leave = done) {
-  return (app: App) => reelScreen({ first: false, label, done, leave, video: VIDEO })(app);
+/** `cta`: a main button at the end (to the plans), when MN × can be bought here and isn't on. */
+export function plusVideoScreen(done: () => void, label = 'Done', leave = done, cta?: { label: string; act: () => void }) {
+  return (app: App) => reelScreen({ first: false, label, done, leave, video: VIDEO, cta })(app);
 }

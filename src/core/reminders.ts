@@ -251,11 +251,41 @@ export interface WidgetAdventure {
   /** The last day played (the streak is still alive today or the day after). */
   streakDay: string;
 }
+/** The "today" widget: one child's day, whether or not Adventure is on. */
+export interface WidgetDay {
+  name: string;
+  avatar: string;
+  /** Seconds played on each of the last 14 days (YYYY-MM-DD), so the phone can fill in the week itself. */
+  days: Record<string, number>;
+  streak: number;
+  streakDay: string;
+}
+/** The MN × Focus plan widget. Locked shows a sample, and says what it is. */
+export interface WidgetFocus {
+  name: string;
+  locked: boolean;
+  week: string;
+  rounds: number;
+  goal: number;
+  skills: { name: string; before: number; now: number | null }[];
+}
 export interface WidgetData {
   kids: WidgetKid[];
   holiday: boolean;
   facts: string[];
   adventure: WidgetAdventure | null;
+  day: WidgetDay | null;
+  focus: WidgetFocus | null;
+}
+
+/** The last `n` days of play time, for the week dots on the widget. */
+export function recentDays(secondsByDay: Record<string, number>, today: string, n = 14): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (let i = 0; i < n; i++) {
+    const d = addDays(today, -i);
+    if (secondsByDay[d]) out[d] = Math.round(secondsByDay[d]);
+  }
+  return out;
 }
 
 export function widgetKid(c: RemindChild): WidgetKid | null {

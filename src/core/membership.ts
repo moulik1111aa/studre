@@ -29,13 +29,14 @@ export const TRIAL_DAYS = 7;
 export const TRIAL_DAYS_SIGNED_IN = 14;
 
 /** What MN × adds, in the order the Plus page lists them. */
-export type PlusFeature = 'focus' | 'sync' | 'school' | 'report' | 'sheets' | 'icons';
+export type PlusFeature = 'focus' | 'sync' | 'school' | 'report' | 'sheets' | 'widgets' | 'icons';
 export const FEATURES: { id: PlusFeature; icon: string; name: string; free: string; plus: string }[] = [
   { id: 'focus', icon: '🎯', name: 'Focus plan', free: 'Fix-it brings back missed questions', plus: 'Each week, short rounds on the 3 skills your child finds hardest, with before-and-after scores' },
   { id: 'sync', icon: '☁️', name: 'Backup and sync', free: 'An online backup from one phone', plus: 'Every phone in step, all the time' },
   { id: 'school', icon: '📚', name: 'School syllabuses', free: 'The path for their age', plus: 'CBSE, ICSE or Common Core, by class, with the topics you pick' },
   { id: 'report', icon: '📊', name: 'Full report', free: 'Stars, time and this week', plus: 'Strengths, skills to practise, speed and best times' },
   { id: 'sheets', icon: '🖨️', name: 'Worksheets', free: '', plus: 'Printable sheets from where they are now, with answers' },
+  { id: 'widgets', icon: '📱', name: 'Home-screen widgets', free: 'MN today, treat jars and a fun fact', plus: 'The Focus plan widget: this week’s 3 skills and how each is going, right on your home screen' },
   { id: 'icons', icon: '🎨', name: 'App icons', free: 'The sky icon', plus: 'Pick the MN icon on your home screen: Sky, Night, Sunset, Space or Gold' },
 ];
 

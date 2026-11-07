@@ -17,7 +17,8 @@ import org.json.JSONObject;
 
 /**
  * The home-screen widgets: treat jars (melting worked out here, so the line stays right even
- * when the app isn't opened), a fun fact with a "Next" button, and the Adventure level card.
+ * when the app isn't opened), a fun fact with a "Next" button, "MN today" (the week played
+ * and the streak) and the MN × Focus plan.
  * Their data comes from the web app with each reminders plan (src/core/reminders.ts).
  */
 final class Widgets {
@@ -45,6 +46,7 @@ final class Widgets {
         update(ctx, m, JarWidget.class);
         update(ctx, m, FactWidget.class);
         update(ctx, m, AdventureWidget.class);
+        update(ctx, m, FocusWidget.class);
     }
 
     static void update(Context ctx, AppWidgetManager m, Class<?> kind) {
@@ -63,6 +65,7 @@ final class Widgets {
         JSONObject d = data(ctx);
         if (kind == FactWidget.class) return fact(ctx, d);
         if (kind == AdventureWidget.class) return adventure(ctx, d);
+        if (kind == FocusWidget.class) return focus(ctx, d);
         return jar(ctx, d);
     }
 
@@ -158,33 +161,116 @@ final class Widgets {
         p.edit().putInt(KEY_FACT_TAPS, p.getInt(KEY_FACT_TAPS, 0) + 1).apply();
     }
 
-    // ── Adventure ───────────────────────────────────────────────────────────
+    // ── MN today (was the Adventure card) ───────────────────────────────────
+    private static final int[] DOTS = { R.id.d0, R.id.d1, R.id.d2, R.id.d3, R.id.d4, R.id.d5, R.id.d6 };
+    private static final int[] LETTERS = { R.id.d0_l, R.id.d1_l, R.id.d2_l, R.id.d3_l, R.id.d4_l, R.id.d5_l, R.id.d6_l };
+    private static final String WEEKDAY = "SMTWTFS"; // Calendar.SUNDAY is 1
+
     static RemoteViews adventure(Context ctx, JSONObject d) {
         RemoteViews v = new RemoteViews(ctx.getPackageName(), R.layout.widget_adventure);
         v.setOnClickPendingIntent(R.id.w_root, Reminders.openApp(ctx, "play", 8300));
+        JSONObject day = d.optJSONObject("day");
         JSONObject a = d.optJSONObject("adventure");
-        if (a == null) {
-            v.setTextViewText(R.id.a_icon, "🗺️");
-            v.setTextViewText(R.id.a_level, "Adventure");
-            v.setTextViewText(R.id.a_rank, "A grown-up can switch it on in the Parent area");
-            v.setViewVisibility(R.id.a_bar, View.GONE);
-            v.setTextViewText(R.id.a_line, "Quests · badges · levels");
+        String today = today();
+
+        // The last 7 days, today on the right.
+        JSONObject played = day == null ? null : day.optJSONObject("days");
+        SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        cal.add(java.util.Calendar.DAY_OF_YEAR, -6);
+        for (int i = 0; i < 7; i++) {
+            String key = f.format(cal.getTime());
+            boolean on = played != null && played.optInt(key, 0) > 0;
+            boolean isToday = i == 6;
+            v.setTextViewText(LETTERS[i], String.valueOf(WEEKDAY.charAt(cal.get(java.util.Calendar.DAY_OF_WEEK) - 1)));
+            v.setInt(DOTS[i], "setBackgroundResource", isToday ? (on ? R.drawable.widget_dot_today_on : R.drawable.widget_dot_today) : (on ? R.drawable.widget_dot_on : R.drawable.widget_dot_off));
+            v.setTextViewText(DOTS[i], on ? "✓" : "");
+            cal.add(java.util.Calendar.DAY_OF_YEAR, 1);
+        }
+
+        if (day == null) {
+            v.setTextViewText(R.id.a_icon, "🚀");
+            v.setTextViewText(R.id.a_title, "MN");
+            v.setTextViewText(R.id.a_streak, "🔥 0");
+            v.setTextViewText(R.id.a_line, "Open MN once to fill this in");
+            v.setViewVisibility(R.id.a_adv, View.GONE);
             return v;
         }
-        String today = today();
-        int need = a.optInt("need");
-        int into = a.optInt("into");
-        v.setViewVisibility(R.id.a_bar, View.VISIBLE);
-        v.setTextViewText(R.id.a_icon, str(a, "rankIcon"));
-        v.setTextViewText(R.id.a_level, "Level " + a.optInt("level"));
-        v.setTextViewText(R.id.a_rank, str(a, "name") + " · " + str(a, "rank"));
-        v.setProgressBar(R.id.a_bar, Math.max(1, need), need > 0 ? into : 1, false);
-        int quests = today.equals(str(a, "questDay")) ? a.optInt("quests") : 0;
-        int streak = a.optInt("streak");
-        String last = str(a, "streakDay");
+
+        String name = str(day, "name");
+        v.setTextViewText(R.id.a_icon, str(day, "avatar"));
+        v.setTextViewText(R.id.a_title, name.isEmpty() ? "This week" : name + "'s week");
+        int streak = day.optInt("streak");
+        String last = str(day, "streakDay");
         long since = last.isEmpty() ? 99 : days(last, today);
-        String flame = since <= 1 && streak > 0 ? "🔥 " + streak + (streak == 1 ? " day" : " days") : "🔥 Start a streak";
-        v.setTextViewText(R.id.a_line, "📜 " + quests + "/3 quests · " + flame);
+        boolean alive = since <= 1 && streak > 0;
+        v.setTextViewText(R.id.a_streak, "🔥 " + (alive ? streak : 0));
+
+        int secs = played == null ? 0 : played.optInt(today, 0);
+        String line;
+        if (secs > 0) line = (secs < 60 ? "Under a minute" : (secs / 60) + " min") + " today";
+        else if (alive) line = "Play today to keep the streak";
+        else line = "Tap to play today";
+        if (a != null) {
+            int quests = today.equals(str(a, "questDay")) ? a.optInt("quests") : 0;
+            line += " · " + quests + "/3 quests";
+        }
+        v.setTextViewText(R.id.a_line, line);
+
+        if (a != null) {
+            int need = a.optInt("need");
+            int into = a.optInt("into");
+            v.setViewVisibility(R.id.a_adv, View.VISIBLE);
+            v.setTextViewText(R.id.a_level, "Lv " + a.optInt("level"));
+            v.setProgressBar(R.id.a_bar, Math.max(1, need), need > 0 ? into : 1, false);
+        } else {
+            v.setViewVisibility(R.id.a_adv, View.GONE);
+        }
+        return v;
+    }
+
+    // ── Focus plan (MN ×) ───────────────────────────────────────────────────
+    private static final int[][] FOCUS_ROWS = {
+        { R.id.f0, R.id.f0_name, R.id.f0_pct },
+        { R.id.f1, R.id.f1_name, R.id.f1_pct },
+        { R.id.f2, R.id.f2_name, R.id.f2_pct },
+    };
+
+    static RemoteViews focus(Context ctx, JSONObject d) {
+        RemoteViews v = new RemoteViews(ctx.getPackageName(), R.layout.widget_focus);
+        JSONObject fo = d.optJSONObject("focus");
+        boolean locked = fo == null || fo.optBoolean("locked");
+        v.setOnClickPendingIntent(R.id.w_root, Reminders.openApp(ctx, locked ? "mnx" : "focus", 8400));
+        String name = fo == null ? "" : str(fo, "name");
+        v.setTextViewText(R.id.f_title, name.isEmpty() ? "Focus plan" : name + "'s focus");
+        JSONArray skills = fo == null ? null : fo.optJSONArray("skills");
+        int n = skills == null ? 0 : Math.min(3, skills.length());
+        for (int i = 0; i < 3; i++) {
+            JSONObject sk = i < n ? skills.optJSONObject(i) : null;
+            if (sk == null) {
+                v.setViewVisibility(FOCUS_ROWS[i][0], View.GONE);
+                continue;
+            }
+            v.setViewVisibility(FOCUS_ROWS[i][0], View.VISIBLE);
+            v.setTextViewText(FOCUS_ROWS[i][1], str(sk, "name"));
+            int before = sk.optInt("before");
+            boolean hasNow = !sk.isNull("now") && sk.has("now");
+            int now = sk.optInt("now");
+            String pct = hasNow ? before + "% → " + now + "%" : before + "%";
+            v.setTextViewText(FOCUS_ROWS[i][2], pct);
+            int color = !hasNow ? 0xFF6C47FF : now - before >= 5 ? 0xFF1E9E5A : before - now >= 5 ? 0xFFD9534F : 0xFF6C47FF;
+            v.setTextColor(FOCUS_ROWS[i][2], color);
+        }
+        String foot;
+        if (fo == null) foot = "Open MN once to fill this in";
+        else if (locked) foot = "Sample numbers. Tap to see what MN × adds";
+        else if (n == 0) foot = "The plan appears after a few days of play";
+        else {
+            int rounds = fo.optInt("rounds");
+            int goal = Math.max(1, fo.optInt("goal", 3));
+            foot = rounds >= goal ? "This week's Focus rounds are done ✓" : "Focus rounds: " + rounds + " of " + goal + " this week. Tap to play one";
+        }
+        v.setTextViewText(R.id.f_foot, foot);
         return v;
     }
 }

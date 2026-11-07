@@ -43,7 +43,12 @@ function webScore(v: SpeechSynthesisVoice): number {
 }
 
 /** Words the phone's voice gets wrong: "MN" is said letter by letter (not "man"), and "MN ×" is "M N Times". */
-export const sayable = (t: string): string => t.replace(/\bMN(?:\s|\u00a0)*×/g, 'M N Times').replace(/\bMN\b/g, 'M N');
+export const sayable = (t: string): string =>
+  t
+    .replace(/\bMN(?:\s|\u00a0)*×/g, 'M N Times')
+    .replace(/\bMN\b/g, 'M N')
+    // "5 / 2" written with spaces is a division (engines read it as "5 2").
+    .replace(/([\d)])\s+\/\s+(?=[\d(])/g, '$1 divided by ');
 
 export class Voice {
   enabled: boolean;
@@ -119,24 +124,37 @@ export class Voice {
   }
 
   say(text: string, rate = this.rate, force = false): void {
-    if ((!this.enabled && !force) || !text) return;
-    text = sayable(text);
+    this.sayParts([text], rate, force);
+  }
+
+  /**
+   * Say a few lines one after another, with a short breath between them (a lesson step's
+   * explanation and its working lines), so they don't run together as one sentence.
+   */
+  sayParts(parts: string[], rate = this.rate, force = false, gapMs = 450): void {
+    if (!this.enabled && !force) return;
+    const lines = parts.map((p) => sayable(p).trim()).filter(Boolean);
+    if (!lines.length) return;
     if (this.native) {
       // QUEUE_FLUSH replaces whatever was being said; a separate stop could land after it.
-      quietly(this.native.speak({ text, rate, pitch: this.pitch, voice: this.speaking || undefined }));
+      const o = { text: lines.join('. '), rate, pitch: this.pitch, voice: this.speaking || undefined, ...(lines.length > 1 ? { parts: lines, gap: gapMs } : {}) };
+      quietly(this.native.speak(o));
       return;
     }
     this.stop();
     try {
-      const u = new SpeechSynthesisUtterance(text);
-      u.rate = rate;
-      u.pitch = this.pitch;
       const v = this.webVoices.find((x) => x.name === this.speaking) ?? this.webVoices[0];
-      if (v) {
-        u.voice = v;
-        u.lang = v.lang;
-      } else u.lang = 'en-IN';
-      speechSynthesis.speak(u);
+      // The browser queues them and leaves a small natural gap between utterances.
+      for (const line of lines) {
+        const u = new SpeechSynthesisUtterance(line);
+        u.rate = rate;
+        u.pitch = this.pitch;
+        if (v) {
+          u.voice = v;
+          u.lang = v.lang;
+        } else u.lang = 'en-IN';
+        speechSynthesis.speak(u);
+      }
     } catch {
       /* no speech here */
     }

@@ -16,8 +16,15 @@ export interface StudyHardPlugin {
   deviceSecure?(): Promise<{ secure?: boolean }>;
   confirmDevice?(o: { title: string; text?: string }): Promise<{ ok?: boolean; none?: boolean }>;
   saveFile?(o: { name: string; mime: string; text: string }): Promise<{ saved?: boolean; error?: string }>;
+  /** Turn HTML into an A4 PDF and open the share sheet (or the print screen if that fails). */
+  sharePdf?(o: { html: string; name: string; title: string }): Promise<{ ok: boolean; via?: 'share' | 'print'; error?: string }>;
   writeSave(o: { key: string; value: string }): Promise<void>;
-  speak(o: { text: string; rate?: number; pitch?: number; voice?: string }): Promise<void>;
+  /** `parts` (newer apps): said one after another with `gap` ms of quiet between; `text` is all of it joined, for older apps. */
+  /** Home-screen widgets placed, and whether the launcher can add one from the app. */
+  widgetState?(): Promise<{ placed: number; canPin: boolean }>;
+  /** Ask the launcher to add a widget: today, focus, jar or fact. ok: its box was shown. */
+  pinWidget?(o: { kind: 'today' | 'focus' | 'jar' | 'fact' }): Promise<{ ok: boolean }>;
+  speak(o: { text: string; rate?: number; pitch?: number; voice?: string; parts?: string[]; gap?: number }): Promise<void>;
   voices(): Promise<{ voices?: { name: string; locale: string; quality: number; network: boolean }[] }>;
   stopSpeaking(): Promise<void>;
   /** Whether the voice is still talking (newer apps only). */

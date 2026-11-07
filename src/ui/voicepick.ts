@@ -1,75 +1,47 @@
-// Parent area → Reading voice: pick one of the phone's English voices and the speed,
-// with a "Try" button for each.
+// Parent area → Reading voice: every English voice on the phone (tap to choose and hear it)
+// and the speed.
 
-import { html, esc, type App, type Screen } from './app.ts';
+import { html, type App, type Screen } from './app.ts';
 import { ICONS } from './icons.ts';
-import { stagger } from '../render/motion.ts';
 import { parentScreen } from './parent.ts';
-import { voiceOptions } from './voicechoice.ts';
-
-const SAMPLE = 'Hello! What is 7 plus 8? Take your time.';
-const SPEEDS: [number, string][] = [[0.8, 'Slow'], [0.95, 'Normal'], [1.1, 'Quick']];
+import { hearVoice, mountVoiceList, speedSeg, VOICE_SAMPLE } from './voicechoice.ts';
 
 export function voiceScreen(app: App): Screen {
-  let chosen = app.save.data.settings.voiceName;
-  let rate = app.save.data.settings.voiceRate;
+  const st = app.save.data.settings;
+  let chosen = { name: st.voiceName, pitch: st.voicePitch ?? 1 };
+  let rate = st.voiceRate;
   const el = html(`<section class="screen voicepick" aria-label="Reading voice">
     <header class="topbar"><button class="icon-btn back-btn" aria-label="Back">${ICONS.back}</button><span class="t">Reading voice</span><span style="width:50px"></span></header>
     <div class="scroll pa-body">
-      <h2 class="pa-h">Speed</h2>
-      <div class="seg seg3">${SPEEDS.map(([v, t]) => `<button class="seg-b${Math.abs(v - rate) < 0.01 ? ' on' : ''}" data-rate="${v}"><b>${t}</b></button>`).join('')}</div>
       <h2 class="pa-h">Voice</h2>
-      <div class="card vp-list"><p class="fine">Finding voices…</p></div>
-      <p class="fine">This voice is used for every child. More voices: phone Settings → Text-to-speech → install voice data (Speech Recognition &amp; Synthesis by Google sounds most natural).</p>
+      <p class="fine">Tap a voice to hear it. Every child hears the one you choose.</p>
+      <div class="card vl-list"></div>
+      <h2 class="pa-h">Speed</h2>
+      ${speedSeg(rate)}
+      <p class="fine">More voices: phone Settings → Text-to-speech → install voice data (Speech Recognition &amp; Synthesis by Google sounds most natural).</p>
     </div>
     <button class="btn save">Save</button>
   </section>`);
-  const list = el.querySelector<HTMLElement>('.vp-list')!;
-  const paint = async () => {
-    const voices = voiceOptions(await app.voice.list()).filter((o) => o.pitch === 1);
-    const rows = [{ name: '', label: 'Automatic: the clearest voice on this phone' }, ...voices.map((o) => ({ name: o.name, label: `${o.icon} ${o.who} · ${o.desc}` }))];
-    list.innerHTML = rows
-      .map((v) => `<div class="vp-row${v.name === chosen ? ' on' : ''}" data-name="${esc(v.name)}"><button class="vp-pick" aria-pressed="${v.name === chosen}"><i></i><span>${esc(v.label)}</span></button><button class="btn ghost small vp-try" aria-label="Try ${esc(v.label)}">${ICONS.speaker} Try</button></div>`)
-      .join('');
-    stagger(list.children, { gap: 30 });
-  };
-  list.addEventListener('click', (e) => {
-    const row = (e.target as HTMLElement).closest<HTMLElement>('.vp-row');
-    if (!row) return;
-    const name = row.dataset.name ?? '';
-    if ((e.target as HTMLElement).closest('.vp-try')) {
-      const prev = app.voice.name;
-      app.voice.name = name;
-      app.voice.say(SAMPLE, rate, true);
-      app.voice.name = prev;
-      return;
-    }
-    chosen = name;
-    list.querySelectorAll<HTMLElement>('.vp-row').forEach((r) => {
-      r.classList.toggle('on', r === row);
-      r.querySelector('.vp-pick')!.setAttribute('aria-pressed', String(r === row));
-    });
-  });
   el.querySelectorAll<HTMLElement>('[data-rate]').forEach((b) =>
     b.addEventListener('click', () => {
       rate = Number(b.dataset.rate);
-      el.querySelectorAll('[data-rate]').forEach((x) => x.classList.toggle('on', x === b));
-      app.voice.say(SAMPLE, rate, true);
+      el.querySelectorAll('[data-rate]').forEach((x) => (x.classList.toggle('on', x === b), x.setAttribute('aria-checked', String(x === b))));
+      hearVoice(app, chosen, VOICE_SAMPLE, rate);
     }),
   );
   el.querySelector('.back-btn')!.addEventListener('click', () => void app.show(parentScreen));
   el.querySelector('.save')!.addEventListener('click', () => {
-    // One choice for everyone (each child can still pick their own voice when they start).
     app.save.update((d) => {
-      d.settings.voiceName = chosen;
+      d.settings.voiceName = chosen.name;
+      d.settings.voicePitch = chosen.pitch;
       d.settings.voiceRate = rate;
-      for (const c of d.children) if (c.voicePicked) Object.assign(c, { voiceName: chosen, voicePitch: 1 });
+      for (const c of d.children) if (c.voicePicked) Object.assign(c, { voiceName: chosen.name, voicePitch: chosen.pitch });
     });
-    app.voice.pitch = 1;
-    app.voice.name = chosen;
+    app.voice.pitch = chosen.pitch;
+    app.voice.name = chosen.name;
     app.voice.rate = rate;
     app.toast('Voice saved.');
     void app.show(parentScreen);
   });
-  return { el, mounted: () => void paint() };
+  return { el, mounted: () => void mountVoiceList(app, el.querySelector<HTMLElement>('.vl-list')!, chosen, () => rate, (o) => (chosen = { name: o.name, pitch: o.pitch })) };
 }

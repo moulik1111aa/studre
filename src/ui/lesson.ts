@@ -35,6 +35,8 @@ export function speech(s: string): string {
     .replace(/(\d)\s?%/g, '$1 percent')
     .replace(/°C/g, ' degrees')
     .replace(/(\d) r (\d)/g, '$1 remainder $2')
+    // "5 / 2" with spaces is a division; "5/2" is a fraction.
+    .replace(/([\d)])\s+\/\s+(?=[\d(])/g, '$1 divided by ')
     .replace(/(?<![\d.])(\d+)\/(\d+)(?!\d|\.\d)/g, (m, n: string, d: string) => {
       const dn = Number(d);
       if (dn < 2 || dn > 12) return m;
@@ -56,7 +58,22 @@ export function speech(s: string): string {
   return t.replace(/\s+/g, ' ').trim();
 }
 
-const stepSpeech = (s: Step): string => [s.say, ...(s.math ?? []), s.after ?? ''].map(speech).filter(Boolean).join('. ').replace(/\.\./g, '.').replace(/([?!])\./g, '$1');
+/**
+ * A step read aloud, line by line: the explanation, each working line, then the follow-on.
+ * Working lines that only repeat what was just said aloud are skipped.
+ */
+const stepLines = (s: Step): string[] => {
+  const out: string[] = [];
+  const plain = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  for (const line of [s.say, ...(s.math ?? []), s.after ?? '']) {
+    const t = speech(line).replace(/[.\s]+$/, '');
+    if (!t) continue;
+    const prev = out.length ? plain(out[out.length - 1]) : '';
+    if (prev && (prev === plain(t) || prev.endsWith(` ${plain(t)}`))) continue;
+    out.push(t);
+  }
+  return out;
+};
 
 /** Whether a wrong answer to this question opens a lesson (it has one, and lessons are on). */
 export const lessonFor = (app: App, q: Question): boolean => !!q.teach && app.save.data.settings.teach !== false;
@@ -218,7 +235,7 @@ export function showLesson(app: App, q: Question, given: string | null): Promise
       altBtn.hidden = ways.length < 2 || k < 1;
       // A short lock stops a double tap skipping a step (browser tests can turn it off with &fast).
       lockUntil = performance.now() + (FAST ? 0 : 600);
-      app.voice.say((k === 0 && note && w === 0 ? speech(note) + ' ' : '') + stepSpeech(st) + (st.turn && !turnDone ? '. ' + speech(st.turn.ask) : ''));
+      app.voice.sayParts([k === 0 && note && w === 0 ? speech(note) : '', ...stepLines(st), st.turn && !turnDone ? speech(st.turn.ask) : '']);
     };
     next.addEventListener('click', () => {
       if (performance.now() < lockUntil || !turnDone) return;
@@ -248,7 +265,7 @@ export function showLesson(app: App, q: Question, given: string | null): Promise
       if (!reducedMotion()) stage.animate([{ opacity: 0, transform: 'scale(.97)' }, { opacity: 1, transform: 'none' }], { duration: 300, easing: EASE_OUT });
       go(0);
     });
-    ov.querySelector('.ls-say-btn')!.addEventListener('click', () => app.voice.say(stepSpeech(steps[Math.max(0, i)])));
+    ov.querySelector('.ls-say-btn')!.addEventListener('click', () => app.voice.sayParts(stepLines(steps[Math.max(0, i)])));
     ov.querySelector('.ls-close')!.addEventListener('click', () => close(false));
     app.root.appendChild(ov);
     if (!reducedMotion()) {

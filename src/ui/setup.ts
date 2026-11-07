@@ -1,6 +1,7 @@
 // First-run setup (parent): add children, set the daily limit and what happens at time-up.
 
 import { offerNotifications } from './remindsync.ts';
+import { hearVoice, mountVoiceList, speedSeg, VOICE_SAMPLE } from './voicechoice.ts';
 import { showParentAdventureTips, toggleAdventure } from './adventure.ts';
 import { restoreFromFile } from './restore.ts';
 import { html, esc, type App, type Screen } from './app.ts';
@@ -232,7 +233,10 @@ export function limitsScreen(firstRun: boolean) {
     let mode = st.timeUpMode;
     const pace = { treat: st.treatPace, goal: st.goalPace };
     let step = 0;
-    const LABELS = ['Play time', 'Time’s up', 'Treats', 'Big rewards'];
+    // First run also asks who reads the questions aloud (later it's in Parent area → Sound).
+    const LABELS = firstRun ? ['Play time', 'Time’s up', 'Treats', 'Big rewards', 'Voice'] : ['Play time', 'Time’s up', 'Treats', 'Big rewards'];
+    let voice = { name: st.voiceName, pitch: st.voicePitch ?? 1 };
+    let rate = st.voiceRate;
     const el = html(`<section class="screen limits" aria-label="Daily play time">
       <header class="topbar"><button class="icon-btn back-btn" aria-label="Back">←</button><span class="t">Play time and rewards</span><span style="width:50px"></span></header>
       <div class="stops-slot"></div>
@@ -260,6 +264,21 @@ export function limitsScreen(firstRun: boolean) {
             body.querySelectorAll('[data-m]').forEach((x) => x.classList.toggle('on', x === b));
           }),
         );
+      } else if (step === 4) {
+        body.innerHTML = `<div class="card lim-card lim-one lim-voice"><h2 class="ac-q">Who should read the questions aloud?</h2>
+          <p class="fine">Tap a voice to hear it. It also explains the working when an answer goes wrong.</p>
+          <div class="vl-list"></div>
+          ${speedSeg(rate)}
+          <p class="fine">You can change it any time in the Parent area.</p></div>
+          <p class="card vc-together">🤝 <b>Next:</b> please sit with your child for their first 3 levels. They’re practice rounds: after a slip, Plus shows how and they try one like it.</p>`;
+        void mountVoiceList(app, body.querySelector<HTMLElement>('.vl-list')!, voice, () => rate, (o) => (voice = { name: o.name, pitch: o.pitch }));
+        body.querySelectorAll<HTMLElement>('[data-rate]').forEach((b) =>
+          b.addEventListener('click', () => {
+            rate = Number(b.dataset.rate);
+            body.querySelectorAll('[data-rate]').forEach((x) => (x.classList.toggle('on', x === b), x.setAttribute('aria-checked', String(x === b))));
+            hearVoice(app, voice, VOICE_SAMPLE, rate);
+          }),
+        );
       } else {
         const which = step === 2 ? 'treat' : 'goal';
         const opts = which === 'treat' ? TREAT_PACES : GOAL_PACES;
@@ -282,10 +301,21 @@ export function limitsScreen(firstRun: boolean) {
         d.settings.timeUpMode = mode;
         d.settings.treatPace = pace.treat;
         d.settings.goalPace = pace.goal;
+        if (firstRun) {
+          d.settings.voiceName = voice.name;
+          d.settings.voicePitch = voice.pitch;
+          d.settings.voiceRate = rate;
+          d.settings.voiceSet = true;
+        }
         d.setupDone = true;
         setPace(pace.treat, pace.goal);
         for (const c of d.children) recheckJars(c.wallet);
       });
+      if (firstRun) {
+        app.voice.name = voice.name;
+        app.voice.pitch = voice.pitch;
+        app.voice.rate = rate;
+      }
       void app.show(whosPlayingScreen).then(() => (firstRun ? offerNotifications(app) : undefined));
     };
     next.addEventListener('click', () => {

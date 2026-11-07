@@ -5,7 +5,11 @@
 import type { App } from './app.ts';
 import type { Child } from '../storage/save.ts';
 import { FACTS } from '../core/facts/index.ts';
-import { remindersOf, planReminders, widgetFacts, widgetKid, type RemindChild, type WidgetAdventure, type WidgetData, type WidgetKid } from '../core/reminders.ts';
+import { recentDays, remindersOf, planReminders, widgetFacts, widgetKid, type RemindChild, type WidgetAdventure, type WidgetData, type WidgetDay, type WidgetFocus, type WidgetKid } from '../core/reminders.ts';
+import { skillById } from '../core/areas/index.ts';
+import { FOCUS_GOAL } from '../core/focus.ts';
+import { focusFor, startFocus } from './focus.ts';
+import { hasPlus } from './membership.ts';
 import { streaks } from '../core/stats.ts';
 import { AVATARS } from './icons.ts';
 import { levelInfo, questBadge } from './adventure.ts';
@@ -36,6 +40,42 @@ function adventureCard(app: App): WidgetAdventure | null {
   };
 }
 
+const activeChild = (app: App): Child | undefined => app.save.data.children.find((k) => k.id === app.save.data.activeChildId) ?? app.save.data.children[0];
+
+function dayCard(app: App): WidgetDay | null {
+  const c = activeChild(app);
+  if (!c) return null;
+  return {
+    name: c.name,
+    avatar: AVATARS[c.avatar % AVATARS.length],
+    days: recentDays(c.stats.secondsByDay, app.today),
+    streak: streaks(c.stats.secondsByDay, app.today).current,
+    streakDay: c.wallet.lastPlayDay ?? '',
+  };
+}
+
+/** Sample skills the locked Focus widget shows, so a parent can see what it would do. */
+const FOCUS_SAMPLE = [
+  { name: 'Times tables: 7s', before: 55, now: 70 },
+  { name: 'Fractions of a number', before: 48, now: null },
+  { name: 'Telling the time', before: 62, now: 68 },
+];
+
+function focusCard(app: App): WidgetFocus | null {
+  const c = activeChild(app);
+  if (!c) return null;
+  if (!hasPlus(app)) return { name: c.name, locked: true, week: '', rounds: 0, goal: FOCUS_GOAL, skills: FOCUS_SAMPLE };
+  const p = focusFor(app, c);
+  return {
+    name: c.name,
+    locked: false,
+    week: p.week,
+    rounds: p.rounds,
+    goal: FOCUS_GOAL,
+    skills: p.skills.map((s) => ({ name: skillById(s.id)?.name ?? s.id, before: s.before, now: s.now })),
+  };
+}
+
 /** Everything the phone needs: the notes to show, and what the widgets draw. */
 export function buildPlan(app: App, now = new Date()): { items: ReturnType<typeof planReminders>; widget: WidgetData } {
   const d = app.save.data;
@@ -55,6 +95,8 @@ export function buildPlan(app: App, now = new Date()): { items: ReturnType<typeo
     holiday: d.settings.holiday,
     facts: widgetFacts(FACTS, app.today),
     adventure: adventureCard(app),
+    day: dayCard(app),
+    focus: focusCard(app),
   };
   return { items, widget };
 }
@@ -78,13 +120,23 @@ async function push(app: App): Promise<void> {
   }
 }
 
-/** What to do when a reminder was tapped: the backup note opens the Parent area (after the parent check). */
+/**
+ * What to do when a reminder or widget was tapped: the backup note opens the Parent area (after
+ * the parent check), the Focus widget starts a Focus round from the map, and the locked Focus
+ * widget shows the MN × tab (after the parent check).
+ */
 async function opened(app: App, open: string | undefined): Promise<void> {
-  if (open !== 'backup' || !app.save.data.children.length) return;
+  if (!open || !app.save.data.children.length) return;
   // Not over the lock screen or setup: those come first.
   if (app.screen?.el.matches('.lock, .welcome, .reel')) return;
-  if (!(await app.grownUp('Back up'))) return;
-  openParentOn('app');
+  if (open === 'focus') {
+    const c = activeChild(app);
+    if (c && hasPlus(app) && app.screen?.el.matches('.map') && focusFor(app, c).skills.length) startFocus(app, c);
+    return;
+  }
+  if (open !== 'backup' && open !== 'mnx') return;
+  if (!(await app.grownUp(open === 'mnx' ? 'MN ×' : 'Back up'))) return;
+  openParentOn(open === 'mnx' ? 'premium' : 'app');
   void app.show(parentScreen, 'fade');
 }
 

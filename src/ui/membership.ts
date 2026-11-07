@@ -119,6 +119,7 @@ const FEATURE_LINE: Record<PlusFeature, string> = {
   school: 'School syllabuses are part of MN ×: CBSE, ICSE or Common Core, by class, with only the topics you choose.',
   report: 'The full report is part of MN ×: strengths, skills to practise, speed, and the times of day they do best.',
   sheets: 'Printable worksheets are part of MN ×: made from where your child is now, with an answer key for you.',
+  widgets: 'The Focus plan widget is part of MN\u00a0×: this week’s 3 skills and how each is going, on your home screen.',
   icons: 'Choosing the app icon is part of MN ×: Sky, Night, Sunset, Space or Gold on your home screen.',
 };
 
@@ -143,6 +144,18 @@ export async function needPlus(app: App, feature: PlusFeature, back: (app: App) 
 
 const trialDaysFor = (app: App): number => (account(app) ? TRIAL_DAYS_SIGNED_IN : TRIAL_DAYS);
 const trialLine = (app: App): string => `Try it free for ${trialDaysFor(app)} days. Cancel any time in Google Play.`;
+
+/** Free days offered on this phone right now. */
+export const trialDays = (app: App): number => trialDaysFor(app);
+
+/**
+ * The MN × video. Where MN × can be bought and isn't on, it ends on "Try N days free" (to the
+ * plans), with the usual button under it.
+ */
+export function plusVideoFor(app: App, after: (app: App) => Screen, label?: string, plansBack: (app: App) => Screen = after) {
+  const sell = storeBuild(app) && !hasPlus(app);
+  return plusVideoScreen(() => void app.show(after), label, undefined, sell ? { label: `Try ${trialDaysFor(app)} days free`, act: () => void app.show(plusScreen(plansBack)) } : undefined);
+}
 
 const PLAN_NAME: Record<PlanId, string> = { monthly: 'Monthly', yearly: 'Yearly', lifetime: 'Lifetime' };
 

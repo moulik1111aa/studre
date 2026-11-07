@@ -250,6 +250,8 @@ export interface ReelOptions {
   leave?: () => void;
   /** Play another video instead of the opening one. */
   video?: ReelVideo;
+  /** A main button above the end button (the MN × video: on to the plans). */
+  cta?: { label: string; act: () => void };
 }
 
 export function reelScreen(o: ReelOptions) {
@@ -288,7 +290,7 @@ export function reelScreen(o: ReelOptions) {
         )
         .join('')}</div>
       <div class="rl-nav"><button class="rl-btn rl-prev" aria-label="Back">←</button><span class="rl-count"></span><button class="btn rl-next">Next →</button></div>
-      <div class="rl-foot" hidden><button class="btn rl-go">${esc(o.label)}</button>${o.first ? '' : '<button class="btn ghost rl-again">Watch again</button>'}</div>
+      <div class="rl-foot" hidden>${o.cta ? `<button class="btn rl-cta">${esc(o.cta.label)}</button>` : ''}<button class="btn rl-go${o.cta ? ' ghost' : ''}">${esc(o.label)}</button>${o.first ? '' : '<button class="btn ghost rl-again">Watch again</button>'}</div>
     </section>`);
     const sceneEls = [...el.querySelectorAll<HTMLElement>('.rl-scene')];
     const bars = [...el.querySelectorAll<HTMLElement>('.rl-bars i')];
@@ -432,6 +434,10 @@ export function reelScreen(o: ReelOptions) {
     el.querySelector('.rl-go')!.addEventListener('click', () => {
       finish();
       o.done();
+    });
+    el.querySelector('.rl-cta')?.addEventListener('click', () => {
+      finish();
+      o.cta!.act();
     });
     el.querySelector('.rl-again')?.addEventListener('click', () => {
       auto = true;

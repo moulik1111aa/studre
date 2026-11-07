@@ -6,6 +6,13 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
+import android.print.PdfMaker;
+import android.print.PrintAttributes;
+import android.print.PrintDocumentAdapter;
+import android.print.PrintManager;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import androidx.core.content.FileProvider;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import android.provider.Settings;
@@ -52,6 +59,7 @@ import androidx.credentials.exceptions.NoCredentialException;
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption;
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential;
 import java.util.concurrent.Executors;
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.PermissionState;
 import com.getcapacitor.Plugin;
@@ -424,6 +432,105 @@ public class StudyHardPlugin extends Plugin {
         call.resolve();
     }
 
+    /** The page being turned into a PDF (kept so it isn't collected half way). */
+    private WebView pdfView;
+
+    /**
+     * Make a PDF from a page of HTML (A4, page breaks from its CSS) and open the share sheet
+     * (WhatsApp, Drive, email, print…). If the PDF can't be made on this phone, the print
+     * screen opens instead, where "Save as PDF" and printers are offered.
+     */
+    @PluginMethod
+    public void sharePdf(final PluginCall call) {
+        final String html = call.getString("html", "");
+        final String name = call.getString("name", "MN.pdf").replaceAll("[^A-Za-z0-9._-]", "-");
+        final String title = call.getString("title", "MN worksheet");
+        getActivity().runOnUiThread(() -> {
+            final WebView wv = new WebView(getActivity());
+            pdfView = wv;
+            wv.getSettings().setJavaScriptEnabled(false);
+            wv.setWebViewClient(new WebViewClient() {
+                private boolean started = false;
+
+                @Override
+                public void onPageFinished(WebView view, String url) {
+                    if (started) return;
+                    started = true;
+                    view.postDelayed(() -> makePdf(call, view, name, title), 350);
+                }
+            });
+            wv.loadDataWithBaseURL("https://localhost/", html, "text/html", "utf-8", null);
+        });
+    }
+
+    private void makePdf(final PluginCall call, final WebView view, final String name, final String title) {
+        try {
+            File dir = new File(getContext().getCacheDir(), "share");
+            if (!dir.exists() && !dir.mkdirs()) throw new java.io.IOException("no folder");
+            final File out = new File(dir, name);
+            PrintAttributes attrs = new PrintAttributes.Builder()
+                    .setMediaSize(PrintAttributes.MediaSize.ISO_A4)
+                    .setResolution(new PrintAttributes.Resolution("pdf", "pdf", 300, 300))
+                    .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
+                    .build();
+            final PrintDocumentAdapter adapter = view.createPrintDocumentAdapter(title);
+            PdfMaker.write(adapter, attrs, out, new PdfMaker.Done() {
+                @Override
+                public void ok(File file) {
+                    getActivity().runOnUiThread(() -> {
+                        pdfView = null;
+                        shareFile(call, file, "application/pdf", title);
+                    });
+                }
+
+                @Override
+                public void fail(String why) {
+                    getActivity().runOnUiThread(() -> printInstead(call, view, title, why));
+                }
+            });
+        } catch (Throwable e) {
+            printInstead(call, view, title, String.valueOf(e.getMessage()));
+        }
+    }
+
+    /** The fallback: Android's print screen for the same page. */
+    private void printInstead(PluginCall call, WebView view, String title, String why) {
+        JSObject r = new JSObject();
+        try {
+            PrintManager pm = (PrintManager) getActivity().getSystemService(Context.PRINT_SERVICE);
+            pm.print(title, view.createPrintDocumentAdapter(title), new PrintAttributes.Builder().setMediaSize(PrintAttributes.MediaSize.ISO_A4).build());
+            r.put("ok", true);
+            r.put("via", "print");
+        } catch (Throwable e) {
+            r.put("ok", false);
+            r.put("error", why + " / " + e.getMessage());
+        }
+        // The print screen holds its own reference while it is open.
+        view.postDelayed(() -> pdfView = null, 60_000);
+        call.resolve(r);
+    }
+
+    private void shareFile(PluginCall call, File file, String mime, String title) {
+        JSObject r = new JSObject();
+        try {
+            Uri uri = FileProvider.getUriForFile(getContext(), getContext().getPackageName() + ".fileprovider", file);
+            Intent send = new Intent(Intent.ACTION_SEND);
+            send.setType(mime);
+            send.putExtra(Intent.EXTRA_STREAM, uri);
+            send.putExtra(Intent.EXTRA_SUBJECT, title);
+            send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            Intent chooser = Intent.createChooser(send, title);
+            chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            getActivity().startActivity(chooser);
+            r.put("ok", true);
+            r.put("via", "share");
+        } catch (Throwable e) {
+            r.put("ok", false);
+            r.put("error", String.valueOf(e.getMessage()));
+        }
+        call.resolve(r);
+    }
+
     /** Play's page for managing (or cancelling) the subscription. */
     @PluginMethod
     public void billingManage(PluginCall call) {
@@ -623,7 +730,22 @@ public class StudyHardPlugin extends Plugin {
             call.resolve();
             return;
         }
-        speakNow(text, rate == null ? 0.95f : rate.floatValue(), pitch == null ? 1.0f : pitch.floatValue(), voice);
+        JSArray parts = call.getArray("parts");
+        int gap = call.getInt("gap", 450);
+        float r = rate == null ? 0.95f : rate.floatValue();
+        float p = pitch == null ? 1.0f : pitch.floatValue();
+        if (parts != null && parts.length() > 1) {
+            // A lesson step: each line in turn, with a short quiet gap between them.
+            speakNow(parts.optString(0, ""), r, p, voice);
+            for (int i = 1; i < parts.length(); i++) {
+                String line = parts.optString(i, "");
+                if (line.isEmpty()) continue;
+                tts.playSilentUtterance(Math.max(0, gap), TextToSpeech.QUEUE_ADD, "gap" + i);
+                tts.speak(line, TextToSpeech.QUEUE_ADD, null, "q" + i);
+            }
+        } else {
+            speakNow(text, r, p, voice);
+        }
         call.resolve();
     }
 
@@ -736,6 +858,47 @@ public class StudyHardPlugin extends Plugin {
         Reminders.apply(ctx, plan);
         Widgets.updateAll(ctx);
         call.resolve(notificationInfo());
+    }
+
+    /** How many MN widgets are on the home screen, and whether this launcher can add one for us. */
+    @PluginMethod
+    public void widgetState(PluginCall call) {
+        Context ctx = getContext();
+        android.appwidget.AppWidgetManager m = android.appwidget.AppWidgetManager.getInstance(ctx);
+        int placed = 0;
+        boolean canPin = false;
+        if (m != null) {
+            Class<?>[] kinds = { JarWidget.class, FactWidget.class, AdventureWidget.class, FocusWidget.class };
+            for (Class<?> k : kinds) {
+                int[] ids = m.getAppWidgetIds(new android.content.ComponentName(ctx, k));
+                if (ids != null) placed += ids.length;
+            }
+            canPin = Build.VERSION.SDK_INT >= 26 && m.isRequestPinAppWidgetSupported();
+        }
+        JSObject r = new JSObject();
+        r.put("placed", placed);
+        r.put("canPin", canPin);
+        call.resolve(r);
+    }
+
+    /** Ask the launcher to add one widget (it shows its own "Add to home screen" box). */
+    @PluginMethod
+    public void pinWidget(PluginCall call) {
+        String kind = call.getString("kind", "today");
+        Class<?> k = "focus".equals(kind) ? FocusWidget.class : "jar".equals(kind) ? JarWidget.class : "fact".equals(kind) ? FactWidget.class : AdventureWidget.class;
+        Context ctx = getContext();
+        boolean ok = false;
+        try {
+            android.appwidget.AppWidgetManager m = android.appwidget.AppWidgetManager.getInstance(ctx);
+            if (m != null && Build.VERSION.SDK_INT >= 26 && m.isRequestPinAppWidgetSupported()) {
+                ok = m.requestPinAppWidget(new android.content.ComponentName(ctx, k), null, null);
+            }
+        } catch (Exception ignored) {
+            ok = false;
+        }
+        JSObject r = new JSObject();
+        r.put("ok", ok);
+        call.resolve(r);
     }
 
     private JSObject notificationInfo() {

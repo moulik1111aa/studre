@@ -45,6 +45,8 @@ const pkgPath = config.appId.split('.').join('/');
 const javaDir = join(main, 'java', pkgPath);
 if (!existsSync(join(javaDir, 'MainActivity.java'))) throw new Error(`template MainActivity not found in ${javaDir}`);
 cpSync(join(root, 'native/android/java', pkgPath), javaDir, { recursive: true });
+// The PDF maker has to live in android.print (see PdfMaker.java).
+cpSync(join(root, 'native/android/java/android'), join(main, 'java/android'), { recursive: true });
 
 // 4. Resources: icons, splash, theme. Template splash bitmaps go (ours is a layered drawable).
 const res = join(main, 'res');
@@ -85,7 +87,7 @@ manifest = patch(
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
-        </receiver>${widget('JarWidget', 'MN treat jars', 'widget_jar_info')}${widget('FactWidget', 'MN fun fact', 'widget_fact_info')}${widget('AdventureWidget', 'MN adventure', 'widget_adventure_info')}
+        </receiver>${widget('JarWidget', 'MN treat jars', 'widget_jar_info')}${widget('FactWidget', 'MN fun fact', 'widget_fact_info')}${widget('AdventureWidget', 'MN today', 'widget_adventure_info')}${widget('FocusWidget', 'MN × Focus plan', 'widget_focus_info')}
     </application>`,
 );
 // Backup files shared to MN (WhatsApp, Files, Gmail: Share or Open with) open the app, which
@@ -130,6 +132,20 @@ const aliases = ICONS.map((n) => {
 const mainEnd = manifest.indexOf('</activity>', manifest.indexOf('android:name=".MainActivity"'));
 if (mainEnd < 0) throw new Error('patch anchor not found: </activity> after MainActivity');
 manifest = manifest.slice(0, mainEnd + '</activity>'.length) + aliases + manifest.slice(mainEnd + '</activity>'.length);
+// Sharing files we make (worksheet PDFs) needs a FileProvider over the app's cache folder.
+if (!manifest.includes('androidx.core.content.FileProvider')) {
+  manifest = patch(manifest, '</application>', `    <provider android:name="androidx.core.content.FileProvider" android:authorities="\${applicationId}.fileprovider" android:exported="false" android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
+        </provider>
+    </application>`);
+}
+{
+  const fp = join(res, 'xml', 'file_paths.xml');
+  mkdirSync(dirname(fp), { recursive: true });
+  let x = existsSync(fp) ? readFileSync(fp, 'utf8') : '<?xml version="1.0" encoding="utf-8"?>\n<paths xmlns:android="http://schemas.android.com/apk/res/android">\n</paths>\n';
+  if (!x.includes('name="mn_share"')) x = x.replace('</paths>', '    <cache-path name="mn_share" path="share/" />\n</paths>');
+  writeFileSync(fp, x);
+}
 writeFileSync(manifestPath, manifest);
 
 // 6. Gradle: version, release signing (from CI secrets), and the AndroidX libraries the plugin uses.

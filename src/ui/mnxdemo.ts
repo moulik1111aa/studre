@@ -9,9 +9,10 @@ import { muddleSvg } from './muddles.ts';
 import { skillById } from '../core/areas/index.ts';
 import { strengths } from '../core/stats.ts';
 import { focusFor } from './focus.ts';
+import { focusPreview, todayPreview } from './widgets.ts';
 
-export type DemoId = 'focus' | 'report' | 'school' | 'sheets' | 'sync';
-const ORDER: DemoId[] = ['focus', 'report', 'school', 'sheets', 'sync'];
+export type DemoId = 'focus' | 'report' | 'school' | 'sheets' | 'sync' | 'widgets';
+const ORDER: DemoId[] = ['focus', 'report', 'school', 'sheets', 'sync', 'widgets'];
 
 /** Skill names for the mocks: the child's own when known, else typical ones for their age. */
 function names(app: App, c: Child | undefined): { hard: string[]; strong: string[] } {
@@ -94,6 +95,17 @@ function pages(app: App, c: Child | undefined): Record<DemoId, Page> {
         <div class="dp-strip">${n(2)}<span>Backed up with your Google account when there’s an internet connection</span></div>
         <div class="dp-strip">${n(3)}<span>New phone? Sign in to bring progress back</span></div>`,
       notes: ['Stars, jars, rewards and the report stay the same on every phone.', 'Saved to your own family space with your Google account.', 'On a new phone, sign in to bring progress back.'],
+    },
+    widgets: {
+      title: 'The Focus widget',
+      line: 'This week’s Focus plan on your home screen, so you can see how it’s going without opening MN.',
+      mock: `<div class="dp-home">
+          <div class="dp-apps">${['#FF8A5C', '#5CC8FF', '#43E0A8', '#A879FF'].map((c) => `<i style="background:${c}"></i>`).join('')}</div>
+          <div class="dp-wg">${n(1)}${focusPreview(c)}</div>
+          <div class="dp-wg">${n(2)}${todayPreview(app, c, true)}</div>
+          <div class="dp-apps">${['#FFD25A', '#FF7AA8', '#6C47FF', '#1FA394'].map((c) => `<i style="background:${c}"></i>`).join('')}</div>
+        </div>`,
+      notes: [`${who}’s 3 Focus skills, each with its score before the week and now: green when it’s going up.`, 'MN today, free for everyone: days played this week, today’s minutes and the streak.', 'Tap the Focus widget and a Focus round starts.'],
     },
   };
 }

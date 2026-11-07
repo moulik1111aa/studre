@@ -46,3 +46,18 @@ test('the voice says MN letter by letter, and MN × as M N Times', async () => {
   assert.equal(sayable('MN × is on'), 'M N Times is on');
   assert.equal(sayable('MNOP and AMNESIA'), 'MNOP and AMNESIA');
 });
+
+test('a spaced slash is read as divided by; a fraction is still a fraction', async () => {
+  const { sayable } = await import('../src/platform/voice.ts');
+  const { spoken } = await import('../src/core/question.ts');
+  assert.equal(sayable('5 / 2 = 2.5'), '5 divided by 2 = 2.5');
+  assert.equal(sayable('(8 + 4) / 3'), '(8 + 4) divided by 3');
+  assert.match(spoken('15 / 3 = ?'), /15 divided by 3/);
+  assert.match(spoken('3/4 of 20'), /3 over 4/);
+});
+
+test('the MN today widget gets the last 14 days of play, so the phone can draw the week itself', async () => {
+  const { recentDays } = await import('../src/core/reminders.ts');
+  const r = recentDays({ '2026-11-07': 610.4, '2026-11-01': 300, '2026-10-20': 900 }, '2026-11-07');
+  assert.deepEqual(r, { '2026-11-07': 610, '2026-11-01': 300 });
+});

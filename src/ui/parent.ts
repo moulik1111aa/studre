@@ -7,6 +7,7 @@
 import { showParentAdventureTips, toggleAdventure } from './adventure.ts';
 import { backUpNow, dueKids, lastBackupText } from './backup.ts';
 import { askNotifications, notificationState, offerNotifications } from './remindsync.ts';
+import { bindWidgetsSection, offerWidget, widgetsSectionHtml } from './widgets.ts';
 import { remindersOf, type ReminderSettings } from '../core/reminders.ts';
 import { focusFor } from './focus.ts';
 import { FOCUS_GOAL, trend, weekChange } from '../core/focus.ts';
@@ -33,9 +34,8 @@ import { addChildScreen, limitsScreen } from './setup.ts';
 import { voiceScreen } from './voicepick.ts';
 import { lockSetupScreen } from './grownup.ts';
 import { reelScreen } from './reel.ts';
-import { plusVideoScreen } from './plusvideo.ts';
 import { accessState, lockScreen, niceDay } from './access.ts';
-import { hasPlus, needPlus, plusScreen, plusTag, storeBuild } from './membership.ts';
+import { hasPlus, needPlus, plusScreen, plusTag, plusVideoFor, storeBuild, trialDays } from './membership.ts';
 import { TRIAL_DAYS, TRIAL_DAYS_SIGNED_IN } from '../core/membership.ts';
 import { freshProgress } from '../core/path.ts';
 import { quietSettingsScreen } from './quiet.ts';
@@ -142,12 +142,10 @@ function kidsHtml(app: App): string {
 /** Sound and voice. */
 function soundHtml(app: App): string {
   const st = app.save.data.settings;
-  const female = st.voiceGender === 'f';
   return `${sec('Sound', `<div class="card pa-toggles">${toggleRows(st, [T('sound', 'Sound effects', 'Taps, cheers and coins.')])}</div>
       <div class="card pa-vol"><div class="pt-head"><b>Volume</b><span class="vol-val">${Math.round((st.volume ?? 0.8) * 100)}%</span></div><input type="range" class="slider vol-slider" min="0.2" max="1" step="0.1" value="${st.volume ?? 0.8}" aria-label="Sound volume"></div>`)}
     ${sec('Reading aloud', `<div class="card pa-toggles">${toggleRows(st, [T('voice', 'Read questions aloud', 'Plus reads each question and tip.')])}</div>
-      <div class="seg voice-g" role="radiogroup" aria-label="Reading voice"><button class="seg-b${female ? '' : ' on'}" role="radio" aria-checked="${!female}" data-g="m"><b>👨 Man’s voice</b><small>Default</small></button><button class="seg-b${female ? ' on' : ''}" role="radio" aria-checked="${female}" data-g="f"><b>👩 Woman’s voice</b><small>&nbsp;</small></button></div>
-      <button class="pa-row card voice-row"><b>Another voice or speed</b><small>${st.voiceName ? 'A chosen voice' : 'Automatic'} · ${st.voiceRate < 0.9 ? 'slow' : st.voiceRate > 1 ? 'quick' : 'normal speed'}</small></button>`)}`;
+      <button class="pa-row card voice-row"><b>🗣️ Reading voice</b><small>${st.voiceName ? ((st.voicePitch ?? 1) < 1 ? 'A deeper voice' : 'Your chosen voice') : 'Automatic'} · ${st.voiceRate < 0.9 ? 'slow' : st.voiceRate > 1 ? 'quick' : 'normal speed'} · tap to hear every voice</small></button>`)}`;
 }
 
 /** App settings: notifications, look, vibration, parent PIN, backup. */
@@ -184,7 +182,7 @@ function appHtml(app: App): string {
       ${cloudCard(app)}`)}
     ${sec('Your data', `<button class="pa-row card privacy-row"><b>Privacy policy</b><small>What MN keeps, and where</small></button>
       <button class="pa-row card erase-row"><b>Delete account and data</b><small>Progress on this phone${account(app) ? ', the online backup and your MN sign-in' : ''}</small></button>`)}
-    ${sec('Home-screen widgets', `<div class="card pa-widgets"><small>Treat jars, a fun fact and the Adventure card. Touch and hold an empty spot on your home screen, tap Widgets, then find MN.</small></div>`)}`;
+    ${sec('Home-screen widgets', widgetsSectionHtml(app))}`;
 }
 
 /** Help: videos and answers to common questions. */
@@ -214,6 +212,7 @@ const GAINS: { id: DemoId; name: string; line: string }[] = [
   { id: 'school', name: 'Your school’s syllabus', line: 'CBSE, ICSE or Common Core, class by class.' },
   { id: 'sheets', name: 'Worksheets to print', line: 'From the skills they’re on now, with answers.' },
   { id: 'sync', name: 'Every phone in step', line: 'Same progress on a phone and a tablet.' },
+  { id: 'widgets', name: 'The Focus widget', line: 'This week’s plan on your home screen.' },
 ];
 const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#fff"/><path d="M7 12.5l3.2 3.2L17 8.8" fill="none" stroke="#6C47FF" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const LOCK = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7.5" rx="2" fill="currentColor"/><path d="M5.5 7V5.2a2.5 2.5 0 0 1 5 0V7" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>';
@@ -274,7 +273,22 @@ function premiumHtml(app: App): string {
 function pageHtml(app: App, p: Page): string {
   const invite = p === 'kids' && cloudOn(app) && !account(app) ? `<div class="card pa-invite"><p><b>☁️ Keep progress safe with Google</b><small>Sign in once. Everything on this phone is kept and backed up online.</small></p>${googleButton('cl-in')}</div>` : '';
   const html = { kids: kidsHtml, sound: soundHtml, premium: premiumHtml, app: appHtml, help: helpHtml }[p](app);
-  return `${invite}${html}`;
+  return `${invite}${p === 'kids' && !invite ? trialNudge(app) : ''}${html}`;
+}
+
+/**
+ * A small, dismissible note about the free trial (Play build, MN × not on, from the second
+ * Parent area visit). It names the child's hardest skill when MN knows it. Hidden for two
+ * weeks when closed.
+ */
+function trialNudge(app: App): string {
+  const st = app.save.data.settings;
+  if (!storeBuild(app) || hasPlus(app) || (st.parentVisits ?? 0) < 2 || Date.now() < (st.trialNudgeAt ?? 0)) return '';
+  const c = app.save.data.children.find((k) => k.id === app.save.data.activeChildId) ?? app.save.data.children[0];
+  const hard = c ? focusFor(app, c).skills[0] : undefined;
+  const skill = hard ? skillById(hard.id)?.name : undefined;
+  const line = c && skill ? `${esc(c.name)} is finding <b>${esc(skill)}</b> tricky right now. MN × turns that into a short Focus plan each week.` : 'See what each child finds tricky, with a short Focus plan for it each week.';
+  return `<div class="card pa-nudge" role="note"><span class="pa-nudge-x">${timesMarkSvg('nudge')}</span><p>${line}<small>Free for ${trialDays(app)} days. Cancel any time.</small></p><button class="btn small pa-nudge-go">See MN ×</button><button class="pa-nudge-close" aria-label="Hide this for now">✕</button></div>`;
 }
 
 export function parentScreen(app: App): Screen {
@@ -302,6 +316,7 @@ export function parentScreen(app: App): Screen {
     body.scrollTop = 0;
     void notificationState(app).then((n) => el.querySelector('.pa-tab[data-id="app"]')?.classList.toggle('warn', !!n && !n.enabled));
     bind(app, el, body, render);
+    if (page === 'app') void bindWidgetsSection(app, body);
     if (animate) stagger(body.querySelectorAll('.pa-sec, .pa-invite'), { gap: 30 });
   };
   const go = (p: Page) => {
@@ -326,7 +341,10 @@ export function parentScreen(app: App): Screen {
     },
     mounted: () => {
       stagger(body.querySelectorAll('.pa-sec, .pa-invite'), { gap: 40 });
-      void offerNotifications(app);
+      app.save.update((d) => (d.settings.parentVisits = (d.settings.parentVisits ?? 0) + 1));
+      // One offer per visit: notifications first (once), later the home-screen widget (once).
+      if (!app.save.data.settings.notifAsked && app.native?.askNotifications) void offerNotifications(app);
+      else void offerWidget(app);
     },
   };
 }
@@ -481,22 +499,6 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
   });
   void paintNotes();
   on('.voice-row', 'click', () => void app.show(voiceScreen));
-  on('.voice-g .seg-b', 'click', (b) => {
-    const g = b.dataset.g as 'm' | 'f';
-    app.save.update((d) => {
-      d.settings.voiceGender = g;
-      d.settings.voiceName = '';
-    });
-    app.voice.name = '';
-    app.voice.setGender(g);
-    body.querySelectorAll('.voice-g .seg-b').forEach((x) => {
-      x.classList.toggle('on', x === b);
-      x.setAttribute('aria-checked', String(x === b));
-    });
-    const small = body.querySelector('.voice-row small');
-    if (small) small.textContent = small.textContent!.replace('A chosen voice', 'Automatic');
-    setTimeout(() => app.voice.say('Hi! I will read the questions for you.', undefined, true), 400);
-  });
   const vol = body.querySelector<HTMLInputElement>('.vol-slider');
   if (vol) {
     const paintVol = () => {
@@ -520,7 +522,15 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
     const trial = sell ? (account(app) ? TRIAL_DAYS_SIGNED_IN : TRIAL_DAYS) : null;
     void app.show(mnxPreviewScreen(b.dataset.demo as DemoId, parentScreen, trial, () => void app.show(plusScreen(parentScreen))));
   });
-  on('.pm-video', 'click', () => void app.show(plusVideoScreen(() => void app.show(parentScreen)), 'liquid'));
+  on('.pa-nudge-go', 'click', () => {
+    openParentOn('premium');
+    render(true);
+  });
+  on('.pa-nudge-close', 'click', () => {
+    app.save.update((d) => (d.settings.trialNudgeAt = Date.now() + 14 * 86_400_000));
+    body.querySelector('.pa-nudge')?.remove();
+  });
+  on('.pm-video', 'click', () => void app.show(plusVideoFor(app, parentScreen), 'liquid'));
   on('.pm-plans', 'click', () => void app.show(plusScreen(parentScreen)));
   const ts = body.querySelector<HTMLInputElement>('.pt-slider');
   if (ts) {
@@ -549,7 +559,7 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
     });
   }
   on('.mp-card', 'click', () => void app.show(plusScreen(parentScreen)));
-  on('.plus-row', 'click', () => void app.show(plusVideoScreen(() => void app.show(parentScreen)), 'liquid'));
+  on('.plus-row', 'click', () => void app.show(plusVideoFor(app, parentScreen), 'liquid'));
   on('.story-row', 'click', () => void app.show(reelScreen({ first: false, label: 'Done', done: () => void app.show(parentScreen) }), 'liquid'));
   on('.tips-row', 'click', () => {
     app.save.update((d) => d.children.forEach((c) => (c.toured = false)));
@@ -567,7 +577,8 @@ export function childSettingsScreen(c: Child) {
       <div class="scroll pa-body">
         <div class="ks-hero">${avatarHtml(c.avatar, 64)}<b>${esc(c.name)}</b><small>Age ${c.age}</small></div>
         <button class="pa-row card report" data-id="${c.id}"><b>${ICONS.chart} Report</b><small>What ${esc(c.name)} has learned, and where they need help</small></button>
-        <button class="pa-row card sheet-btn"><b>🖨️ Print a worksheet ${plusTag(app)}</b><small>${c.age <= 6 ? 12 : 20} questions from where ${esc(c.name)} is now, with answers. Study time without a screen.</small></button>
+        <button class="pa-row card sheet-btn"><b>🖨️ Print a worksheet ${plusTag(app)}</b><small>${c.age <= 6 ? 12 : 20} questions from where ${esc(c.name)} is now, as an A4 PDF to share or print. Answers on a separate page.</small></button>
+        <button class="linkish sheet-html">Save it as a web page instead</button>
         <h2 class="pa-h">Learning</h2>
         <button class="pa-row card age-btn"><b>🎂 Age</b><small>${c.age} · questions follow the age</small></button>
         <button class="pa-row card level-btn"><b>${CHALLENGE[c.challenge ?? 0].icon} Difficulty</b><small>${CHALLENGE[c.challenge ?? 0].name} · ${CHALLENGE[c.challenge ?? 0].note}</small></button>
@@ -587,7 +598,10 @@ export function childSettingsScreen(c: Child) {
     el.querySelector('.report')!.addEventListener('click', () => void app.show(reportScreen(c)));
     el.querySelector('.age-btn')!.addEventListener('click', () => void app.show(ageScreen(c)));
     el.querySelector('.sheet-btn')!.addEventListener('click', async () => {
-      if (await needPlus(app, 'sheets', here)) void saveWorksheet(app, c);
+      if (await needPlus(app, 'sheets', here)) void saveWorksheet(app, c, 'pdf');
+    });
+    el.querySelector('.sheet-html')!.addEventListener('click', async () => {
+      if (await needPlus(app, 'sheets', here)) void saveWorksheet(app, c, 'html');
     });
     el.querySelector('.school-btn')!.addEventListener('click', async () => {
       if (await needPlus(app, 'school', here)) void app.show(schoolScreen(c, here));

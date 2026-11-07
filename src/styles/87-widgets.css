@@ -1,0 +1,45 @@
+/* Home-screen widget previews (src/ui/widgets.ts): drawn like the Android widgets so the tip,
+   the MN × preview and Parent area → App show what will appear on the home screen. */
+.wg{border-radius:24px;padding:12px 14px;font-family:inherit;text-align:left;display:grid;gap:8px;box-shadow:0 10px 24px -14px rgba(20,12,70,.55)}
+.wg-top{display:flex;align-items:center;gap:6px;min-width:0}
+.wg-top b{flex:1;font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wg-top em{font-style:normal;font-weight:800;font-size:12px;border-radius:999px;padding:3px 9px}
+.wg-av{font-size:20px;line-height:1}
+
+.wg-today{background:linear-gradient(135deg,#2A1D78,#4B3BD1);color:#fff}
+.wg-today .wg-top em{background:rgba(255,255,255,.2);font-size:13px}
+.wg-days{display:grid;grid-template-columns:repeat(7,1fr);justify-items:center;gap:2px}
+.wg-days span{display:grid;justify-items:center;gap:3px}
+.wg-days small{font-size:10px;font-weight:800;opacity:.7}
+.wg-days i{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:10px;font-weight:900;color:#1B1440;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.35)}
+.wg-days i.on{background:#FFCF5C;box-shadow:none}
+.wg-days i.today{box-shadow:inset 0 0 0 2px #fff}
+.wg-days i.today:not(.on){background:rgba(255,255,255,.18)}
+.wg p.wg-line{margin:0;font-weight:800;font-size:14px;color:inherit;text-align:left}
+
+.wg-focus{background:#fff;color:#1B1440;gap:5px}
+.wg-focus .wg-top em{background:#6C47FF;color:#fff}
+.wg-row{display:flex;align-items:center;gap:8px;background:#F2EEFF;border-radius:12px;padding:6px 10px;font-size:13px}
+.wg-row span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wg-row b{color:#6C47FF;font-weight:800}
+.wg-row b.up{color:#1E9E5A}
+.wg p.wg-foot{margin:2px 0 0;font-size:12px;color:#5A5480;text-align:left}
+
+/* The one-time tip in the Parent area */
+.wg-sheet{margin:6px auto 4px;max-width:300px}
+
+/* Parent area → App: one row per widget */
+.pa-widgets{display:grid;gap:2px;padding:6px 14px 12px}
+.wg-item{display:flex;align-items:center;gap:10px;padding:9px 0}
+.wg-item + .wg-item{border-top:1px solid var(--line)}
+.wg-item span{flex:1;display:grid;gap:1px}
+.wg-item small{opacity:.72}
+.wg-item .wg-add{flex:none;min-height:38px!important;padding:0 16px!important;font-size:14px!important}
+.pa-widgets .wg-how{text-align:left;margin:6px 0 0}
+
+/* MN × preview: a home screen with the two widgets */
+.dp-home{background:linear-gradient(160deg,#9FD8FF,#C9B8FF 60%,#FFD1E8);border-radius:28px;padding:16px 14px;display:grid;gap:12px}
+.dp-apps{display:grid;grid-template-columns:repeat(4,1fr);justify-items:center}
+.dp-apps i{width:42px;height:42px;border-radius:13px;opacity:.85}
+.dp-wg{position:relative}
+.dp-wg > .dm-n{position:absolute;left:-6px;top:-6px;z-index:1}
