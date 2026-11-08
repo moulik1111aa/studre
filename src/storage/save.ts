@@ -164,6 +164,9 @@ export interface Settings {
   notifAsked?: boolean;
   /** The parents' "What is Adventure?" tips have been seen once (after that they can be skipped). */
   advTipsSeen?: boolean;
+  /** The Parent area's Guide has been opened (its tab stops glowing), or its invite closed. */
+  guideSeen?: boolean;
+  guideInviteOff?: boolean;
   /** Bedtime and school time (core/quiet.ts), and a parent's unlock until then (ms). */
   quiet?: QuietSettings;
   quietUnlockUntil?: number;

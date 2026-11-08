@@ -6,6 +6,7 @@
 
 import { showParentAdventureTips, toggleAdventure } from './adventure.ts';
 import { openerScreen } from './opener.ts';
+import { GUIDE, SECTION_GUIDE, guideHtml } from './guide.ts';
 import { backUpNow, dueKids, lastBackupText } from './backup.ts';
 import { askNotifications, notificationState, offerNotifications } from './remindsync.ts';
 import { certificatesFor } from '../core/certs.ts';
@@ -89,10 +90,11 @@ const THEME_CHOICES: { id: Theme; name: string; note: string }[] = [
   { id: 'precision', name: 'Precision', note: 'White, one strong blue' },
 ];
 
-/** The Parent area's five tabs, down the right edge (thumb side). Each changes the page in place. */
-type Page = 'kids' | 'sound' | 'premium' | 'app' | 'help';
+/** The Parent area's six tabs, down the right edge (thumb side). Each changes the page in place. */
+type Page = 'kids' | 'guide' | 'sound' | 'premium' | 'app' | 'help';
 const TABS: { id: Page; icon: string; label: string; title: string }[] = [
   { id: 'kids', icon: ICONS.users, label: 'Children', title: 'Children' },
+  { id: 'guide', icon: ICONS.compass, label: 'Guide', title: 'Get the most from MN' },
   { id: 'sound', icon: ICONS.speaker, label: 'Sound', title: 'Sound and voice' },
   { id: 'premium', icon: timesMarkSvg('tab'), label: 'MN ×', title: 'MN ×' },
   { id: 'app', icon: ICONS.gear, label: 'App', title: 'App settings' },
@@ -124,7 +126,12 @@ function cloudCard(app: App): string {
     <button class="linkish warn cl-del">Delete the online backup</button></div>`;
 }
 
-const sec = (title: string, body: string) => `<section class="pa-sec"><h2 class="pa-h">${title}</h2>${body}</section>`;
+/** A section; one the Guide explains gets a small "Learn" link to its card there. */
+const sec = (title: string, body: string) => {
+  const g = SECTION_GUIDE[title];
+  const learn = g ? `<button class="gd-learn" data-g="${g}" aria-label="Learn about ${title} in the Guide">${ICONS.help}<span>Learn</span></button>` : '';
+  return `<section class="pa-sec"><h2 class="pa-h">${title}${learn}</h2>${body}</section>`;
+};
 
 /** Children: who plays, how long, and how lessons and rewards work. */
 function kidsHtml(app: App): string {
@@ -171,7 +178,6 @@ function appHtml(app: App): string {
       ${iconsAvailable(app) ? `<button class="pa-row card icon-row"><span class="ic-now" aria-hidden="true">${appIconSvg('sky', 'square', 40)}</span><span><b>App icon ${plusTag(app)}</b><small>Choose MN’s icon on the home screen</small></span></button>` : ''}
       <div class="card pa-toggles">${toggleRows(st, [T('vibration', 'Vibration', 'Gentle buzzes on taps and answers.'), T('fx3d', '3D challenges', 'Turn off if challenges feel slow on this phone.')])}</div>`)}
     ${sec('Rewards', `<div class="card pa-cats"><p class="cat-why">Rewards children can pick from. Tap to show or hide a kind.</p><div class="cat-chips">${CATEGORIES.map((c) => `<button class="cat-chip${st.hiddenCategories.includes(c.id) ? '' : ' on'}" aria-pressed="${!st.hiddenCategories.includes(c.id)}" data-c="${c.id}"><span aria-hidden="true">${c.icon}</span>${esc(c.name)}</button>`).join('')}</div></div>`)}
-    ${sec('What MN teaches', `<button class="pa-row card skills-row"><b>Skills list</b><small>Every skill, with an example and how it’s taught</small></button>`)}
     ${sec('Parent PIN', `<button class="pa-row card lock-row"><b>How parents unlock settings</b><small>${st.parentPin ? 'Your own PIN' : 'This phone’s screen lock'}</small></button>
       ${storeBuild(app) ? '' : '<button class="pa-row card key-row"><b>Access key</b><small class="key-left">Checking…</small></button>'}`)}
     ${sec('Backup', `<div class="card pa-backup">
@@ -280,8 +286,23 @@ function premiumHtml(app: App): string {
 
 function pageHtml(app: App, p: Page): string {
   const invite = p === 'kids' && cloudOn(app) && !account(app) ? `<div class="card pa-invite"><p><b>Keep progress safe with Google</b><small>Sign in once. Everything on this phone is kept and backed up online.</small></p>${googleButton('cl-in')}</div>` : '';
-  const html = { kids: kidsHtml, sound: soundHtml, premium: premiumHtml, app: appHtml, help: helpHtml }[p](app);
-  return `${invite}${p === 'kids' && !invite ? trialNudge(app) : ''}${html}`;
+  const html = { kids: kidsHtml, guide: guidePage, sound: soundHtml, premium: premiumHtml, app: appHtml, help: helpHtml }[p](app);
+  return `${invite}${p === 'kids' ? guideInvite(app) : ''}${p === 'kids' && !invite ? trialNudge(app) : ''}${html}`;
+}
+
+const guidePage = (app: App): string => guideHtml(app.save.data.children.map((c) => c.name), storeBuild(app), hasPlus(app));
+
+/** On the Children page until the Guide has been opened (or this is closed): an invitation to it. */
+function guideInvite(app: App): string {
+  const st = app.save.data.settings;
+  if (st.guideSeen || st.guideInviteOff) return '';
+  const kids = app.save.data.children;
+  const who = kids.length === 1 ? esc(kids[0].name) : 'your children';
+  return `<div class="card gd-invite" role="note">
+    <span class="gd-inv-i" aria-hidden="true">${ICONS.compass}</span>
+    <p><b>Get the most from MN for ${who}</b><small>Two minutes to see everything MN can do, what’s free, and how families use each part best.</small></p>
+    <div class="gd-inv-btns"><button class="btn small gd-open">Open the Guide</button><button class="icon-btn gd-x" aria-label="Close">${ICONS.cross}</button></div>
+  </div>`;
 }
 
 /**
@@ -319,6 +340,8 @@ export function parentScreen(app: App): Screen {
       b.classList.toggle('on', on);
       b.setAttribute('aria-selected', String(on));
     });
+    if (page === 'guide' && !app.save.data.settings.guideSeen) app.save.update((d) => (d.settings.guideSeen = true));
+    el.querySelector('.pa-tab[data-id="guide"]')?.classList.toggle('glow', !app.save.data.settings.guideSeen);
     body.innerHTML = pageHtml(app, page);
     body.dataset.page = page;
     body.scrollTop = 0;
@@ -363,6 +386,50 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
   const kid = (b: HTMLElement) => app.save.data.children.find((k) => k.id === b.dataset.id)!;
   on('.kid-set', 'click', (b) => void app.show(childSettingsScreen(kid(b))));
   on('.report', 'click', (b) => void app.show(reportScreen(kid(b))));
+  // The Guide: open it (at a card), and from a card, go to the setting it explains.
+  const showOn = (p: Page, sel: string, open = false) => {
+    page = p;
+    render(true);
+    requestAnimationFrame(() => {
+      const t = body.querySelector<HTMLElement>(sel);
+      if (!t) return;
+      if (open && t instanceof HTMLDetailsElement) t.open = true;
+      t.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      t.classList.remove('gd-flash');
+      void t.offsetWidth;
+      t.classList.add('gd-flash');
+      window.setTimeout(() => t.classList.remove('gd-flash'), 2200);
+    });
+  };
+  on('.gd-learn', 'click', (b) => showOn('guide', `#gd-${b.dataset.g}`, true));
+  on('.gd-open', 'click', () => showOn('guide', '.gd-start'));
+  on('.gd-x', 'click', () => {
+    app.save.update((d) => (d.settings.guideInviteOff = true));
+    body.querySelector('.gd-invite')?.remove();
+  });
+  on('.gd-f', 'click', (b) => {
+    const f = b.dataset.f!;
+    body.querySelectorAll<HTMLElement>('.gd-f').forEach((x) => {
+      x.classList.toggle('on', x === b);
+      x.setAttribute('aria-checked', String(x === b));
+    });
+    body.querySelectorAll<HTMLElement>('.gd-item').forEach((it) => {
+      const plan = it.dataset.plan;
+      it.hidden = f === 'free' ? plan === 'plus' : f === 'plus' ? plan === 'free' : false;
+    });
+    body.querySelectorAll<HTMLElement>('.gd-group').forEach((g) => (g.hidden = !g.querySelector('.gd-item:not([hidden])')));
+  });
+  on('.gd-go', 'click', (b) => {
+    const it = GUIDE.find((x) => x.id === b.dataset.id);
+    const go = it?.go;
+    if (!go) return;
+    const kids = app.save.data.children;
+    if (go === 'skills') void app.show(skillsIndexScreen(parentScreen));
+    else if (go === 'story') void app.show(openerScreen({ first: false, label: 'Done', done: () => void app.show(parentScreen) }), 'liquid');
+    else if (go === 'child') kids.length === 1 ? void app.show(childSettingsScreen(kids[0])) : showOn('kids', '.pa-kids');
+    else if (go === 'report') kids.length === 1 ? void app.show(reportScreen(kids[0])) : showOn('kids', '.pa-kids');
+    else showOn(go.tab, go.sel);
+  });
   on('.add-kid', 'click', () => void app.show(addChildScreen(false)));
   on('.restore-kid', 'click', () => void restoreFromFile(app, () => void app.show(parentScreen)));
   on('.cl-in', 'click', async () => {
@@ -415,7 +482,6 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
   });
   on('.limits', 'click', () => void app.show(limitsScreen(false)));
   on('.quiet-row', 'click', () => void app.show(quietSettingsScreen(parentScreen)));
-  on('.skills-row', 'click', () => void app.show(skillsIndexScreen(parentScreen)));
   on('.icon-row', 'click', async () => {
     if (await needPlus(app, 'icons', parentScreen)) void chooseAppIcon(app);
   });

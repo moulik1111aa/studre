@@ -1519,8 +1519,9 @@ test('parent area: the skills list shows every skill with an example and how it 
   await page.goto('/?debug&demo=%4060&noloader&fast');
   await expect(page.locator('.map')).toBeVisible();
   await page.evaluate(() => (window as unknown as { __app: { show: (s: unknown) => void }; __screens: Record<string, unknown> }).__app.show((window as unknown as { __screens: Record<string, unknown> }).__screens.parentScreen));
-  await page.click('.pa-tab[data-id="app"]');
-  await page.click('.skills-row');
+  await page.click('.pa-tab[data-id="guide"]');
+  await page.click('#gd-skills summary');
+  await page.click('#gd-skills .gd-go');
   await expect(page.locator('.skill-index')).toBeVisible();
   expect(await page.locator('.si-skill').count()).toBeGreaterThan(400);
   await page.fill('.si-search', 'clock');

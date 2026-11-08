@@ -1,0 +1,75 @@
+/* The Parent area's Guide (src/ui/guide.ts), its invitation on the Children page, the glowing
+   tab, and the "Learn" links on section headings. Built from the look's tokens, so it fits
+   every look. */
+
+/* "Learn" on a section heading. */
+.pa-sec > .pa-h{display:flex;align-items:center;gap:8px}
+.gd-learn{appearance:none;border:0;cursor:pointer;margin-left:auto;display:inline-flex;align-items:center;gap:4px;padding:5px 10px 5px 7px;border-radius:999px;font:600 12.5px/1 var(--font,system-ui);letter-spacing:0;text-transform:none;color:var(--accent);background:var(--hi-08,rgba(0,0,0,.05))}
+.gd-learn svg{width:15px;height:15px}
+.gd-learn:active{transform:scale(.96)}
+.gd-learn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+/* The invitation on the Children page. */
+.gd-invite{display:grid;grid-template-columns:auto 1fr;gap:10px 12px;align-items:start;padding:14px;margin-bottom:6px;box-shadow:inset 0 0 0 2px var(--accent),var(--surface-shadow,none)}
+.gd-inv-i{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:var(--accent-ink,#fff);background:var(--accent)}
+.gd-inv-i svg{width:24px;height:24px}
+.gd-invite p{margin:0;display:flex;flex-direction:column;gap:3px}
+.gd-invite p b{font-size:16px;line-height:1.25}
+.gd-invite p small{color:var(--ink-soft);line-height:1.4}
+.gd-inv-btns{grid-column:1/-1;display:flex;align-items:center;gap:8px}
+.gd-inv-btns .btn{flex:1}
+.gd-inv-btns .icon-btn{flex:none}
+
+/* The tab glows (a slow ring) until the Guide has been opened. */
+.pa-tab[data-id="guide"]{position:relative}
+.pa-tab.glow{color:var(--accent)}
+.pa-tab.glow::before{content:"";position:absolute;inset:2px;border-radius:16px;box-shadow:0 0 0 2px var(--accent);animation:gdGlow 1.8s ease-in-out infinite;pointer-events:none}
+.pa-tab.glow::after{content:"";position:absolute;top:8px;right:12px;width:9px;height:9px;border-radius:50%;background:var(--bad,#E8467C);box-shadow:0 0 0 2px var(--bg-1,#fff)}
+@keyframes gdGlow{0%,100%{opacity:.35;transform:scale(.96)}50%{opacity:1;transform:scale(1)}}
+
+/* Start here. */
+.gd-steps{padding:14px 16px}
+.gd-lead{margin:0 0 10px;font-weight:600}
+.gd-steps ol{margin:0;padding:0;list-style:none;counter-reset:gd;display:grid;gap:12px}
+.gd-steps li{counter-increment:gd;display:grid;grid-template-columns:30px 1fr;column-gap:10px}
+.gd-steps li::before{content:counter(gd);grid-row:span 2;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-family:var(--font-num,inherit);color:var(--accent-ink,#fff);background:var(--accent)}
+.gd-steps li b{line-height:1.3}
+.gd-steps li small{color:var(--ink-soft);line-height:1.4}
+
+/* Show everything, free or MN ×. */
+.gd-filter{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 2px}
+.gd-filter .chip{cursor:pointer;font-weight:600}
+.gd-filter .chip.on{color:var(--accent-ink,#fff);background:var(--accent);box-shadow:none}
+.gd-gline{margin:-4px 0 4px;color:var(--ink-soft);font-size:14px}
+.gd-group[hidden],.gd-item[hidden]{display:none}
+
+/* A feature: tap to open. */
+.gd-item{padding:0;overflow:hidden}
+.gd-item + .gd-item{margin-top:8px}
+.gd-item summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:38px 1fr 18px;align-items:center;gap:12px;padding:12px 14px;min-height:56px}
+.gd-item summary::-webkit-details-marker{display:none}
+.gd-item summary:focus-visible{outline:3px solid var(--accent);outline-offset:-3px;border-radius:inherit}
+.gd-i{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;color:var(--accent);background:var(--hi-10,rgba(0,0,0,.06))}
+.gd-i svg{width:21px;height:21px}
+.gd-n{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0}
+.gd-n b{line-height:1.25}
+.gd-plan{font-size:11.5px;font-weight:700;line-height:1;padding:4px 8px;border-radius:999px;color:var(--ink-soft);background:var(--hi-10,rgba(0,0,0,.06))}
+.gd-plan.x{color:#fff;background:#6C47FF}
+.gd-chev{width:10px;height:10px;border-right:2.5px solid var(--ink-faint);border-bottom:2.5px solid var(--ink-faint);transform:rotate(45deg) translateY(-3px);transition:transform .2s}
+.gd-item[open] .gd-chev{transform:rotate(225deg) translate(-2px,-1px)}
+.gd-body{padding:0 14px 14px 64px;display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.gd-body p{margin:0;line-height:1.45;color:var(--ink-soft)}
+.gd-body p b{color:var(--ink)}
+.gd-best{padding:8px 10px;border-radius:10px;background:var(--hi-08,rgba(0,0,0,.04))}
+.gd-go{margin-top:2px}
+@media (max-width:380px){.gd-body{padding-left:14px}}
+
+/* Where "Learn" or "Take me there" lands: a short highlight. */
+.gd-flash{animation:gdFlash 2.2s ease-out}
+@keyframes gdFlash{0%,35%{box-shadow:0 0 0 3px var(--accent),0 0 0 9px color-mix(in srgb,var(--accent) 25%,transparent)}100%{box-shadow:0 0 0 0 transparent}}
+.toggle-row.gd-flash,[data-k].gd-flash{border-radius:12px}
+@media (prefers-reduced-motion:reduce){.pa-tab.glow::before,.gd-flash{animation:none}.gd-chev{transition:none}}
+.gd-body p{font-size:15px}
+.gd-n b{font-size:16.5px}
+/* The FAQ's +/– sign is for the FAQ only. */
+.screen.parent details.gd-item > summary::after,.screen.parent details.gd-item[open] > summary::after{content:none;display:none}
