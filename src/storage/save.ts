@@ -167,6 +167,12 @@ export interface Settings {
   /** The Parent area's Guide has been opened (its tab stops glowing), or its invite closed. */
   guideSeen?: boolean;
   guideInviteOff?: boolean;
+  /** MN Swipe (an endless feed of quick maths for anyone, no coins): off until a parent turns it on. */
+  swipeOn?: boolean;
+  swipeBest?: number;
+  swipeTrack?: number;
+  swipeMusic?: boolean;
+  swipeBand?: string;
   /** Bedtime and school time (core/quiet.ts), and a parent's unlock until then (ms). */
   quiet?: QuietSettings;
   quietUnlockUntil?: number;

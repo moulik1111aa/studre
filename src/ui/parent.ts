@@ -194,6 +194,7 @@ function appHtml(app: App): string {
       ${cloudCard(app)}`)}
     ${sec('Your data', `<button class="pa-row card privacy-row"><b>Privacy policy</b><small>What MN keeps, and where</small></button>
       <button class="pa-row card erase-row"><b>Delete account and data</b><small>Progress on this phone${account(app) ? ', the online backup and your MN sign-in' : ''}</small></button>`)}
+    ${sec('MN Swipe', `<div class="card pa-toggles">${toggleRows(st, [T('swipeOn', 'MN Swipe on the home screen', 'Endless quick maths for anyone, with music. Just for fun: no coins, no child profile.')])}</div>`)}
     ${sec('Home-screen widgets', widgetsSectionHtml(app))}`;
 }
 

@@ -1,6 +1,9 @@
 // Who's playing? Big avatar buttons for each child, plus the parent area.
 
 import { html, esc, type App, type Screen } from './app.ts';
+import { swipeEntryHtml, swipeOn, swipeScreen } from './swipe.ts';
+import { quietNow } from './quiet.ts';
+import { niceTime } from '../core/quiet.ts';
 import { ICONS, avatarHtml } from './icons.ts';
 import { brandMark } from './loader.ts';
 import { stagger, drawOn } from '../render/motion.ts';
@@ -27,6 +30,7 @@ export function whosPlayingScreen(app: App): Screen {
       })
       .join('')}</div>
     ${kids.length ? `<button class="btn ghost fo-entry">${ICONS.swords} Face-off: play together</button>` : ''}
+    ${swipeOn(app) ? swipeEntryHtml() : ''}
   </section>`);
   el.querySelectorAll<HTMLButtonElement>('.kid').forEach((b) =>
     b.addEventListener('click', () => {
@@ -35,6 +39,11 @@ export function whosPlayingScreen(app: App): Screen {
     }),
   );
   el.querySelector('.fo-entry')?.addEventListener('click', () => void app.show(faceoffSetupScreen(), 'liquid'));
+  el.querySelector('.sw-entry')?.addEventListener('click', () => {
+    const q = quietNow(app);
+    if (q) app.toast(`MN is resting now. It opens again at ${niceTime(q.until)}.`);
+    else void app.show(swipeScreen, 'liquid');
+  });
   el.querySelector('.faceoff-btn')!.addEventListener('click', () => void app.show(faceoffSetupScreen(), 'liquid'));
   el.querySelector('.parent-btn')!.addEventListener('click', async () => {
     if (await app.grownUp('Parent area')) void app.show(parentScreen);

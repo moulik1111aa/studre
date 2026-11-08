@@ -66,6 +66,7 @@ export const GUIDE: GuideItem[] = [
   { id: 'widgets', group: 'progress', icon: ICONS.phone, name: 'Home-screen widgets', plan: 'part', what: 'MN today on your home screen: treat jars, the week, and a fun fact.', more: 'The Focus plan widget: this week’s 3 skills and how each is going.', best: 'Put MN today next to the apps you open every day.', go: { tab: 'app', sel: '.pa-sec:last-child' } },
 
   // Extras
+  { id: 'swipe', group: 'extras', icon: ICONS.phone, name: 'MN Swipe', plan: 'free', what: 'An endless feed of quick maths for anyone in the family, from every age, with music that builds as your streak grows. A wrong answer is followed by the same question, solved. Fun facts pop up as you go. No coins: just for fun.', best: 'Turn it on once your child knows their way round MN. It’s good for a few minutes together, or a quick game for a visiting cousin.', go: { tab: 'app', sel: '.toggle-row:has([data-k="swipeOn"])' }, goLabel: 'Switch it on' },
   { id: 'sheets', group: 'extras', icon: ICONS.printer, name: 'Worksheets', plan: 'plus', what: 'Printable sheets from the skills your child played last, with answers.', best: 'One sheet on a weekend morning, away from the screen.', go: 'child', goLabel: 'Open a child’s settings' },
   { id: 'certs', group: 'extras', icon: ICONS.medal, name: 'Certificates', plan: 'plus', what: 'A certificate to print for every challenge beaten and every stage finished.', best: 'Print one when they finish a stage, and put it up where they can see it.', go: 'child', goLabel: 'Open a child’s settings' },
   { id: 'backup', group: 'extras', icon: ICONS.cloud, name: 'Backup and sync', plan: 'part', what: 'An online backup with Google, or a backup file you keep.', more: 'Every phone and tablet in step, all the time.', best: 'Sign in with Google once, so a lost or new phone loses nothing.', go: { tab: 'app', sel: '.pa-backup' } },
@@ -74,7 +75,7 @@ export const GUIDE: GuideItem[] = [
 
 /** Which Guide card explains a Parent-area section (for its "Learn" link). */
 export const SECTION_GUIDE: Record<string, string> = {
-  Children: 'kids', 'Daily play': 'limit', Learning: 'teach', Sound: 'voice', 'Reading aloud': 'voice', Notifications: 'remind', Look: 'looks', Rewards: 'kinds', 'Parent PIN': 'pin', Backup: 'backup', 'Your data': 'privacy', 'Home-screen widgets': 'widgets',
+  Children: 'kids', 'Daily play': 'limit', Learning: 'teach', Sound: 'voice', 'Reading aloud': 'voice', Notifications: 'remind', Look: 'looks', Rewards: 'kinds', 'Parent PIN': 'pin', Backup: 'backup', 'Your data': 'privacy', 'Home-screen widgets': 'widgets', 'MN Swipe': 'swipe',
 };
 
 const tagFor = (it: GuideItem, store: boolean, owned: boolean): string => {

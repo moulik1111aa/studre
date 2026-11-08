@@ -1533,6 +1533,42 @@ test('parent area Guide: glows until opened, Learn links open its card, and a ca
   await expect(page.locator('.gd-invite')).toHaveCount(0);
 });
 
+test('MN Swipe: off until a parent turns it on; a wrong answer brings the same question solved, a right one starts a streak', async ({ page }) => {
+  type W = { __app: { show(m: unknown): void; save: { data: { settings: { swipeOn?: boolean } } } }; __screens: { parentScreen: unknown; whosPlayingScreen: unknown }; __swipe: { next(): void } };
+  await page.goto('/?debug&demo=%4012&noloader');
+  await expect(page.locator('.map')).toBeVisible();
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.whosPlayingScreen); });
+  await expect(page.locator('.whos')).toBeVisible();
+  await expect(page.locator('.sw-entry')).toHaveCount(0);
+  // A parent switches it on (App → MN Swipe).
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
+  await page.click('.pa-tab[data-id="app"]');
+  await page.locator('.toggle-row:has([data-k="swipeOn"])').click();
+  expect(await page.evaluate(() => (window as unknown as W).__app.save.data.settings.swipeOn)).toBe(true);
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.whosPlayingScreen); });
+  await page.click('.sw-entry');
+  await expect(page.locator('.sw-intro')).toBeVisible();
+  // Find a question card, answer it wrong: the next card is the same question, solved.
+  const toQuestion = async () => {
+    for (let i = 0; i < 10; i++) {
+      await page.evaluate(() => (window as unknown as W).__swipe.next());
+      await page.waitForTimeout(700);
+      if (await page.locator('.sw-card.now.sw-q').count()) return;
+    }
+  };
+  await toQuestion();
+  await page.locator('.sw-card.now .sw-c:not([data-right])').first().click();
+  await expect(page.locator('.sw-card.now.sw-a')).toBeVisible({ timeout: 4000 });
+  await expect(page.locator('.sw-card.now .sw-a-big')).toBeVisible();
+  await expect(page.locator('.sw-streak b')).toHaveText('0');
+  await toQuestion();
+  await page.locator('.sw-card.now .sw-c[data-right]').click();
+  await expect(page.locator('.sw-streak b')).toHaveText('1');
+  // Close goes home.
+  await page.click('.sw-x');
+  await expect(page.locator('.whos')).toBeVisible();
+});
+
 test('parent area: the skills list shows every skill with an example and how it is taught', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));

@@ -1,0 +1,140 @@
+/* MN Swipe (src/ui/swipe.ts): full-screen cards that snap one at a time, in the opening film's
+   styles. It has its own colours, the same in every look. */
+.screen.swipe,html .screen.swipe.swipe{padding:0;overflow:hidden;background:#141414!important;color:#fff;--sw-safe-t:var(--safe-top,0px);--sw-safe-b:var(--safe-bottom,0px)}
+.sw-feed{position:absolute;inset:0;overflow-y:scroll;scroll-snap-type:y mandatory;overscroll-behavior:contain;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.sw-feed::-webkit-scrollbar{display:none}
+.sw-card{position:relative;height:100%;min-height:100%;scroll-snap-align:start;scroll-snap-stop:always;display:flex;overflow:hidden}
+.sw-in{position:relative;z-index:1;margin:auto;width:100%;max-width:520px;padding:calc(var(--sw-safe-t) + 74px) 84px calc(var(--sw-safe-b) + 34px) 22px;display:flex;flex-direction:column;justify-content:center;gap:18px;min-height:100%}
+.sw-tag{margin:0;font:600 13px/1.2 "Inter Display",system-ui,sans-serif;letter-spacing:.02em;opacity:.8}
+.sw-prompt{margin:0;font:700 42px/1.05 "Heros Cn","TeX Gyre Heros Cn","Inter Display",sans-serif;letter-spacing:0;text-wrap:balance}
+.sw-prompt.long{font-size:31px;line-height:1.12}
+.sw-plate{align-self:center;max-width:100%;padding:14px;border-radius:20px;background:#fff;color:#1B2A5C;box-shadow:6px 6px 0 rgba(0,0,0,.18)}
+.sw-plate .vis{zoom:.9}
+.sw-plate.small{padding:8px;border-radius:14px}
+.sw-plate.small .vis{zoom:.6}
+.sw-choices{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.sw-c{appearance:none;border:0;cursor:pointer;min-height:70px;padding:10px;border-radius:18px;display:grid;place-items:center;font:700 30px/1.05 "Heros Cn","TeX Gyre Heros Cn","Inter Display",sans-serif;color:#141414;background:#fff;box-shadow:4px 4px 0 rgba(0,0,0,.28);transition:transform .1s,box-shadow .1s,background .15s,opacity .2s}
+.sw-c:active{transform:translate(3px,3px);box-shadow:1px 1px 0 rgba(0,0,0,.28)}
+.sw-c:focus-visible{outline:3px solid #FFC21A;outline-offset:3px}
+.sw-choices.pics .sw-c{min-height:96px}
+.sw-c .vis{zoom:.7}
+.answered .sw-c{pointer-events:none}
+.answered .sw-c:not(.right):not(.was):not(.wrong){opacity:.35}
+.sw-c.right{background:#00B386;color:#fff;animation:swPop .45s cubic-bezier(.3,1.6,.5,1)}
+.sw-c.wrong{background:#FF4B2B;color:#fff;animation:swNo .35s ease-out}
+.sw-c.was{box-shadow:inset 0 0 0 4px #00B386,4px 4px 0 rgba(0,0,0,.28)}
+@keyframes swPop{40%{transform:scale(1.1)}}
+@keyframes swNo{25%{transform:translateX(-7px)}50%{transform:translateX(7px)}75%{transform:translateX(-3px)}}
+.sw-next{margin:6px 0 0;display:flex;align-items:center;gap:6px;font:600 14px/1 "Inter Display",system-ui,sans-serif;opacity:.75}
+.sw-next svg{width:20px;height:20px;animation:swUp 1.4s ease-in-out infinite}
+.sw-next.big{font-size:17px;opacity:1}
+@keyframes swUp{50%{transform:translateY(-6px)}}
+
+/* Question looks (they take turns). */
+.look-cobalt{background:#2140FF}
+.look-cobalt::before{content:"";position:absolute;width:420px;height:420px;border-radius:50%;right:-180px;top:-160px;background:#FFC21A}
+.look-cobalt::after{content:"";position:absolute;width:260px;height:260px;left:-120px;bottom:-120px;border-radius:50%;background:#FF9EC4}
+.look-paper{color:#1B2A5C;background:linear-gradient(#C9D6FA 1.5px,transparent 1.5px) 0 0/120px 120px,linear-gradient(90deg,#C9D6FA 1.5px,transparent 1.5px) 0 0/120px 120px,linear-gradient(#E1E8FC 1px,transparent 1px) 0 0/24px 24px,linear-gradient(90deg,#E1E8FC 1px,transparent 1px) 0 0/24px 24px,#FBFBF7}
+.look-paper .sw-prompt{display:inline;align-self:flex-start;padding:0 6px;background:linear-gradient(transparent 56%,#FFEB3B 56% 90%,transparent 90%);-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.look-paper .sw-c{box-shadow:inset 0 0 0 2.5px #1B2A5C;color:#1B2A5C}
+.look-paper .sw-c.right{background:#5CF0A0;color:#1B2A5C}
+.look-paper .sw-plate{box-shadow:inset 0 0 0 2px #1B2A5C}
+.look-print{color:#1F6FD0;background:radial-gradient(circle,rgba(255,79,163,.3) 2.6px,transparent 3.1px) 0 0/12px 12px,#F4EEE2}
+.look-print .sw-prompt{font-family:"Adventor","TeX Gyre Adventor","Inter Display",sans-serif;text-shadow:4px 3px 0 rgba(255,79,163,.55)}
+.look-print .sw-c{color:#fff;background:#1F6FD0;box-shadow:6px 5px 0 #FF4FA3;font-family:"Adventor","TeX Gyre Adventor","Inter Display",sans-serif}
+.look-print .sw-c:nth-child(2){background:#00A6A0;box-shadow:6px 5px 0 #1F6FD0}
+.look-print .sw-c:nth-child(3){background:#FFD400;color:#1C1A33}
+.look-print .sw-c:nth-child(4){background:#FF4FA3;box-shadow:6px 5px 0 #1F6FD0}
+.look-print .sw-c.right{background:#00B386;color:#fff}
+.look-print .sw-c.wrong{background:#1C1A33;color:#fff}
+.look-tomato{background:#FF4B2B}
+.look-tomato::before{content:"";position:absolute;left:-40px;top:16%;width:150px;height:150px;background:#FFC21A;transform:rotate(18deg)}
+.look-tomato::after{content:"";position:absolute;right:-60px;bottom:-30px;width:240px;height:120px;border-radius:120px 120px 0 0;background:#2140FF}
+.look-tomato .sw-c{box-shadow:inset 0 0 0 3px #141414,5px 5px 0 #141414}
+.look-tomato .sw-c.wrong{background:#141414}
+.look-ink{background:#141414}
+.look-ink::before{content:"";position:absolute;inset:auto -60px -80px auto;width:300px;height:300px;border-radius:50%;border:44px solid #2140FF}
+.look-ink .sw-prompt{color:#FFC21A}
+.look-ink .sw-c{background:#141414;color:#fff;box-shadow:inset 0 0 0 2.5px #fff}
+.look-ink .sw-c.right{background:#00B386;box-shadow:none}
+
+/* The answer, after a slip: navy blueprint paper, the answer big in a yellow circle. */
+.sw-a{color:#fff;background:linear-gradient(rgba(255,255,255,.12) 1px,transparent 1px) 0 0/120px 120px,linear-gradient(90deg,rgba(255,255,255,.12) 1px,transparent 1px) 0 0/120px 120px,linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px) 0 0/24px 24px,linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px) 0 0/24px 24px,#15224F}
+.sw-a .sw-in{gap:14px}
+.sw-a-q{display:flex;align-items:center;gap:12px}
+.sw-a-q p{margin:0;font:600 17px/1.35 "Inter Display",system-ui,sans-serif;opacity:.9}
+.sw-a-big{align-self:center;min-width:150px;min-height:150px;padding:18px;border-radius:50%;display:grid;place-items:center;color:#15224F;background:#FFEB3B;box-shadow:8px 8px 0 #FF6FB5;font:700 54px/1 "Heros Cn","TeX Gyre Heros Cn",sans-serif;animation:swIn .5s cubic-bezier(.3,1.5,.5,1)}
+.sw-a-big .vis{zoom:.7}
+@keyframes swIn{from{transform:scale(.4) rotate(-12deg);opacity:0}}
+.sw-yours{margin:0;text-align:center;font:500 15px/1.3 "Inter Display",system-ui,sans-serif;opacity:.8}
+.sw-yours s{text-decoration-color:#FF6FB5;text-decoration-thickness:3px}
+.sw-how{margin:0;padding:12px 14px 12px 34px;border-radius:14px;background:rgba(255,255,255,.08);display:grid;gap:8px;font:500 15.5px/1.4 "Inter Display",system-ui,sans-serif}
+.sw-math{display:block;margin-top:2px;font:700 19px/1.25 "Heros Cn","TeX Gyre Heros Cn",sans-serif;color:#FFEB3B}
+
+/* Fun facts, a streak, a break. */
+.sw-fact{color:#141414;background:#FFC21A}
+.sw-fact::before{content:"“";position:absolute;left:14px;top:calc(var(--sw-safe-t) + 60px);font:700 200px/1 "Heros Cn",sans-serif;color:#141414;opacity:.12}
+.sw-fact::after{content:"";position:absolute;right:-50px;bottom:-50px;width:200px;height:200px;border-radius:50%;background:#FF4B2B}
+.sw-fact-t{margin:0;font:700 30px/1.15 "Heros Cn","TeX Gyre Heros Cn",sans-serif;text-wrap:pretty}
+.sw-win{background:#00B386;text-align:center}
+.sw-win .sw-in{align-items:center;padding-left:84px}
+.sw-win-n{margin:0;font:700 150px/.9 "Heros Cn","TeX Gyre Heros Cn",sans-serif;color:#fff;text-shadow:8px 8px 0 #141414;animation:swIn .55s cubic-bezier(.3,1.5,.5,1)}
+.sw-win-t{margin:0;font:700 34px/1 "Heros Cn",sans-serif;text-transform:uppercase}
+.sw-win-b{margin:0;font:600 16px/1 "Inter Display",system-ui,sans-serif;opacity:.85}
+.sw-break{background:#FF9EC4;color:#141414}
+.sw-break-b{display:flex;gap:10px;flex-wrap:wrap}
+.sw-pill{appearance:none;border:0;cursor:pointer;height:52px;padding:0 22px;border-radius:999px;font:700 17px/1 "Heros Cn","TeX Gyre Heros Cn",sans-serif;letter-spacing:.03em;text-transform:uppercase;color:#fff;background:#141414}
+.sw-pill.ghost{color:#141414;background:transparent;box-shadow:inset 0 0 0 2.5px #141414}
+.sw-intro{background:#141414}
+.sw-intro::before{content:"";position:absolute;left:50%;top:22%;width:120px;height:120px;transform:translateX(-50%) rotate(45deg);background:linear-gradient(#2140FF,#2140FF) center/34px 100% no-repeat,linear-gradient(#2140FF,#2140FF) center/100% 34px no-repeat;animation:swSpin 6s linear infinite}
+@keyframes swSpin{to{transform:translateX(-50%) rotate(405deg)}}
+.sw-intro .sw-in{padding-top:calc(var(--sw-safe-t) + 230px)}
+.sw-logo{margin:0;font:700 64px/1 "Heros Cn","TeX Gyre Heros Cn",sans-serif}
+.sw-logo span{color:#FFC21A}
+.sw-intro-t{margin:0;font:600 20px/1.35 "Inter Display",system-ui,sans-serif}
+.sw-intro-s{margin:0;font:500 16px/1.4 "Inter Display",system-ui,sans-serif;opacity:.7}
+
+/* The controls over the feed. */
+.sw-hud{position:absolute;left:0;right:0;top:0;z-index:5;display:flex;align-items:center;gap:10px;padding:calc(var(--sw-safe-t) + 12px) 14px 10px;background:linear-gradient(rgba(0,0,0,.35),transparent);pointer-events:none}
+.sw-hud > *{pointer-events:auto}
+.sw-btn{appearance:none;border:0;cursor:pointer;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:#fff;background:rgba(20,20,20,.55);backdrop-filter:blur(6px)}
+.sw-btn svg{width:22px;height:22px}
+.sw-bands{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.sw-band{appearance:none;border:0;cursor:pointer;flex:none;height:34px;padding:0 12px;border-radius:999px;font:600 13.5px/1 "Inter Display",system-ui,sans-serif;color:#fff;background:rgba(20,20,20,.5)}
+.sw-band.on{color:#141414;background:#fff}
+.sw-rail{position:absolute;right:12px;bottom:calc(var(--sw-safe-b) + 28px);z-index:5;display:flex;flex-direction:column;align-items:center;gap:14px}
+.sw-streak{display:flex;flex-direction:column;align-items:center;gap:1px;padding:8px 6px;border-radius:24px;min-width:56px;color:#fff;background:rgba(20,20,20,.55);backdrop-filter:blur(6px)}
+.sw-flame{width:28px;height:28px;color:rgba(255,255,255,.55);transition:color .2s}
+.sw-flame svg{width:100%;height:100%}
+.sw-streak b{font:700 24px/1 "Heros Cn","TeX Gyre Heros Cn",sans-serif}
+.sw-streak small{font:600 10.5px/1.2 "Inter Display",system-ui,sans-serif;opacity:.75;white-space:nowrap}
+.sw-streak.hot .sw-flame{color:#FFC21A}
+.sw-streak.pop{animation:swPop .45s cubic-bezier(.3,1.6,.5,1)}
+.sw-track{width:56px;height:auto;border-radius:22px;padding:8px 4px;display:flex;flex-direction:column;gap:2px}
+.sw-track small{font:600 10.5px/1.2 "Inter Display",system-ui,sans-serif;white-space:nowrap}
+.sw-btn:focus-visible,.sw-band:focus-visible,.sw-pill:focus-visible{outline:3px solid #FFC21A;outline-offset:2px}
+
+/* Confetti from a right answer. */
+.sw-bit{position:absolute;z-index:6;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:2px;background:var(--c);pointer-events:none;animation:swBit .65s cubic-bezier(.2,.8,.3,1) forwards}
+@keyframes swBit{to{transform:translate(var(--dx),var(--dy)) rotate(200deg) scale(.4);opacity:0}}
+
+/* The home-screen button: three stacked cards. */
+.sw-entry{appearance:none;border:0;cursor:pointer;width:100%;max-width:440px;margin:4px auto 0;display:flex;align-items:center;gap:14px;padding:12px 16px 12px 12px;border-radius:20px;text-align:left;color:#fff;background:#141414;box-shadow:5px 5px 0 #FFC21A}
+.sw-entry:active{transform:translate(3px,3px);box-shadow:2px 2px 0 #FFC21A}
+.sw-e-stack{position:relative;flex:none;width:46px;height:58px}
+.sw-e-stack i{position:absolute;inset:0;border-radius:9px}
+.sw-e-stack i:nth-child(1){background:#FF4B2B;transform:rotate(-12deg) translate(-4px,2px)}
+.sw-e-stack i:nth-child(2){background:#FFC21A;transform:rotate(-5deg)}
+.sw-e-stack i:nth-child(3){background:#2140FF;display:grid;place-items:center;color:#fff;transform:rotate(4deg)}
+.sw-e-stack svg{width:24px;height:24px;animation:swUp 1.4s ease-in-out infinite}
+.sw-e-t{display:flex;flex-direction:column;gap:3px}
+.sw-e-t b{font:700 22px/1 "Heros Cn","TeX Gyre Heros Cn",sans-serif;letter-spacing:.01em}
+.sw-e-t small{font:500 13.5px/1.35 "Inter Display",system-ui,sans-serif;opacity:.8}
+
+@media (max-height:700px){.sw-prompt{font-size:34px}.sw-prompt.long{font-size:26px}.sw-c{min-height:60px;font-size:26px}.sw-in{gap:12px}}
+@media (prefers-reduced-motion:reduce){.sw-next svg,.sw-e-stack svg,.sw-intro::before,.sw-a-big,.sw-win-n,.sw-c.right,.sw-c.wrong,.sw-streak.pop{animation:none}}
+/* The app's looks style headings; Swipe keeps its own type and colours. */
+html .screen.swipe .sw-card .sw-prompt{color:inherit;font-family:"Heros Cn","TeX Gyre Heros Cn","Inter Display",sans-serif;text-transform:none;letter-spacing:0}
+html .screen.swipe .sw-card.look-print .sw-prompt{font-family:"Adventor","TeX Gyre Adventor","Inter Display",sans-serif}
+html .screen.swipe .sw-card.look-ink .sw-prompt{color:#FFC21A}
+html .screen.swipe .sw-card.look-paper .sw-prompt{color:#1B2A5C}
