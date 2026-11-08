@@ -47,6 +47,18 @@ test('the voice says MN letter by letter, and MN × as M N Times', async () => {
   assert.equal(sayable('MNOP and AMNESIA'), 'MNOP and AMNESIA');
 });
 
+test('emoji are never read aloud; in a question, one that stands for a thing is said as its name', async () => {
+  const { sayable } = await import('../src/platform/voice.ts');
+  const { spoken } = await import('../src/core/question.ts');
+  assert.equal(sayable('🐣 A pet: an egg hatches after 3 levels.'), 'A pet: an egg hatches after 3 levels.');
+  assert.equal(sayable('Well done! 🎉'), 'Well done!');
+  assert.equal(sayable('⚔️ The weekly raid'), 'The weekly raid');
+  assert.equal(sayable('Hi 👋🏽 there'), 'Hi there');
+  assert.equal(sayable(spoken('What are the coordinates of the 🍎?')), 'What are the coordinates of the apple?');
+  assert.equal(sayable(spoken('A ball ⚽ is shaped like which one?')), 'A ball is shaped like which one?');
+  assert.equal(sayable(spoken('Each 🍎 stands for 10 apples sold.')), 'Each apple stands for 10 apples sold.');
+});
+
 test('a spaced slash is read as divided by; a fraction is still a fraction', async () => {
   const { sayable } = await import('../src/platform/voice.ts');
   const { spoken } = await import('../src/core/question.ts');

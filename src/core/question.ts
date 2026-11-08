@@ -244,13 +244,29 @@ export function indian(n: number): string {
   return Math.round(n).toLocaleString('en-IN');
 }
 
+/** Emoji that stand for a thing in a question ("the coordinates of the 🍎"). */
+const EMOJI_WORD: Record<string, string> = {
+  '⭐': 'star', '🍎': 'apple', '🚗': 'car', '🏠': 'house', '🥭': 'mango', '🎈': 'balloon', '🦆': 'duck', '🌸': 'flower', '🐟': 'fish',
+  '⚽': 'ball', '🍪': 'cookie', '🦋': 'butterfly', '🪁': 'kite', '🍌': 'banana', '🍇': 'grapes', '🍊': 'orange',
+};
+/** In a question, an emoji that stands for a word is read as the word, unless the word is already
+ *  there ("A ball ⚽"); the voice drops every other emoji. */
+function namedEmoji(prompt: string): string {
+  return prompt.replace(/(\S+\s+)?(\p{Extended_Pictographic})\uFE0F?/gu, (all, before: string | undefined, e: string) => {
+    const w = EMOJI_WORD[e];
+    if (!w) return all;
+    const prev = (before ?? '').trim().toLowerCase().replace(/[^a-z]/g, '');
+    return prev === w || prev === `${w}s` || prev === `${w}es` ? (before ?? '') : `${before ?? ''}${w}`;
+  });
+}
+
 /**
  * A written question read aloud: "10 + 3 = ?" → "10 plus 3 equals what?".
  * A "?" standing on its own is a blank ("what"); a "?" right after a word is just punctuation.
  */
 export function spoken(prompt: string): string {
   const asks = /\?\s*$/.test(prompt);
-  let s = prompt
+  let s = namedEmoji(prompt)
     .replace(/(^|[\s(=+−×÷:,-])\?(?=$|[\s/),=+−×÷])/g, '$1 what ')
     .replace(/([\d)])\s+\/\s+(?=[\d(])/g, '$1 divided by ')
     .replace(/(\d)\/(\d)/g, '$1 over $2')

@@ -42,9 +42,17 @@ function webScore(v: SpeechSynthesisVoice): number {
   return s;
 }
 
-/** Words the phone's voice gets wrong: "MN" is said letter by letter (not "man"), and "MN ×" is "M N Times". */
+/** Words the phone's voice gets wrong: "MN" is said letter by letter (not "man"), and "MN ×" is "M N Times".
+ *  Emoji are never read out ("chick hatching: A pet…"): they are decoration; a question whose emoji
+ *  stands for a word has already turned it into the word (spoken() in core/question.ts). */
 export const sayable = (t: string): string =>
   t
+    .replace(/\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier}|\u200D\p{Extended_Pictographic})*\uFE0F?/gu, ' ')
+    .replace(/[\uFE0F\u200D]/g, '')
+    .replace(/\s+([.,!?:;])/g, '$1')
+    .replace(/^[\s.,:;]+/, '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/[ \t]+$/, '')
     .replace(/\bMN(?:\s|\u00a0)*×/g, 'M N Times')
     .replace(/\bMN\b/g, 'M N')
     // "5 / 2" written with spaces is a division (engines read it as "5 2").

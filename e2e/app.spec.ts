@@ -470,13 +470,12 @@ test('practice together: a slip brings a twin question, and only first tries sco
   await seeded(page, 's4.x7#1', `window.__app.save.update((d) => { d.settings.teach = false; d.children[0].together = 3; })`);
   await page.click('.play-next');
   await page.click('.sheet .btn.mint');
-  const first = (await page.locator('.qcard .prompt').textContent()) ?? '';
   const ans = await answerWrong(page);
   // A new question of the same kind, with a different answer: no copying.
   await expect(page.locator('.again-note')).toBeVisible({ timeout: 8000 });
   const twin = (await page.locator('.qcard[data-answer]').getAttribute('data-answer'))!;
   expect(twin).not.toBe(ans);
-  expect((await page.locator('.qcard .prompt').textContent()) ?? '').not.toBe(first);
+  // Same kind of question with new numbers: a counting question keeps its wording ("How many mangoes?").
   await expect(page.locator('.dots i.miss')).toHaveCount(1);
   await playThrough(page, '.result');
   await expect(page.locator('.res-score')).toHaveText(/^(\d+) \/ (\d+) right$/);
