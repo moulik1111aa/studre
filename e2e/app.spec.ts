@@ -1223,14 +1223,14 @@ test('Adventure pet: the egg hatches, the child picks and names a pet, feeds it,
   expect(errors).toEqual([]);
 });
 
-test('parent area: five tabs on the right (Children, Sound, Premium, App, Help), and each child has a page', async ({ page }) => {
+test('parent area: six tabs on the right (Children, Guide, Sound, Premium, App, Help), and each child has a page', async ({ page }) => {
   type W = { __app: { child: { challenge?: number }; save: { data: { settings: { voiceGender?: string; volume?: number } } }; show(m: unknown): void }; __screens: { parentScreen: unknown } };
   await page.goto('/?debug&demo=%4012');
   await expect(page.locator('.map')).toBeVisible();
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
   // Children first: who plays, daily play, learning and rewards.
   await expect(page.locator('.parent .topbar .t')).toHaveText('Children');
-  await expect(page.locator('.pa-rail .pa-tab[data-id]')).toHaveCount(5);
+  await expect(page.locator('.pa-rail .pa-tab[data-id]')).toHaveCount(6);
   for (const sel of ['.pa-kid', '.limits', '.quiet-row', '[data-k="holiday"]', '.pt-slider', '[data-k="teach"]', '[data-k="confirmAnswers"]']) await expect(page.locator(sel).first()).toBeAttached();
   for (const sel of ['[data-k="sound"]', '.theme-tile', '.lock-row', '[data-k="showFps"]', '.adv-toggle']) await expect(page.locator(sel)).toHaveCount(0);
   // Sound: one row opens the full voice list (no man's/woman's guess); the volume is saved.
@@ -1255,7 +1255,7 @@ test('parent area: five tabs on the right (Children, Sound, Premium, App, Help),
   await expect(page.locator('.pm-row.locked')).toHaveCount(0);
   // App: notifications, look, Parent PIN, backup, delete.
   await page.click('.pa-tab[data-id="app"]');
-  for (const sel of ['[data-r="daily"]', '.theme-tile', '[data-k="vibration"]', '[data-k="fx3d"]', '.lock-row', '.bk-all', '.erase-row', '.skills-row', '.cat-chip']) await expect(page.locator(sel).first()).toBeAttached();
+  for (const sel of ['[data-r="daily"]', '.theme-tile', '[data-k="vibration"]', '[data-k="fx3d"]', '.lock-row', '.bk-all', '.erase-row', '.cat-chip']) await expect(page.locator(sel).first()).toBeAttached();
   // Help: videos and questions.
   await page.click('.pa-tab[data-id="help"]');
   await expect(page.locator('.pa-faq details').first()).toBeVisible();
@@ -1511,6 +1511,26 @@ test('MN × (Play Store build): paid features say so, the trial and plans come 
   // The children got the sign-in thank-you.
   const cape = await page.evaluate(() => (window as unknown as { __app: { save: { data: { children: { adventure?: { gifted?: Record<string, number> } }[] } } } }).__app.save.data.children[0].adventure?.gifted?.['cloud-cape']);
   expect(cape).toBeTruthy();
+});
+
+test('parent area Guide: glows until opened, Learn links open its card, and a card takes the parent to the setting', async ({ page }) => {
+  type W = { __app: { show(m: unknown): void; save: { data: { settings: { guideSeen?: boolean } } } }; __screens: { parentScreen: unknown } };
+  await page.goto('/?debug&demo=%4012&noloader');
+  await expect(page.locator('.map')).toBeVisible();
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
+  await expect(page.locator('.pa-tab[data-id="guide"]')).toHaveClass(/\bglow\b/);
+  await expect(page.locator('.gd-invite')).toBeVisible();
+  // "Learn" on Daily play opens the Guide at the Daily time card, open.
+  await page.locator('.pa-sec:has(.limits) .gd-learn').click();
+  await expect(page.locator('.parent .topbar .t')).toHaveText('Get the most from MN');
+  await expect(page.locator('#gd-limit')).toHaveAttribute('open', '');
+  await expect(page.locator('.pa-tab[data-id="guide"]')).not.toHaveClass(/\bglow\b/);
+  expect(await page.evaluate(() => (window as unknown as W).__app.save.data.settings.guideSeen)).toBe(true);
+  // "Take me there" goes back to the setting.
+  await page.click('#gd-limit .gd-go');
+  await expect(page.locator('.parent .topbar .t')).toHaveText('Children');
+  await expect(page.locator('.limits')).toBeVisible();
+  await expect(page.locator('.gd-invite')).toHaveCount(0);
 });
 
 test('parent area: the skills list shows every skill with an example and how it is taught', async ({ page }) => {
