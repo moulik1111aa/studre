@@ -11,8 +11,6 @@ import { AVATARS, avatarHtml } from './icons.ts';
 import { logoMark } from './loader.ts';
 import { stagger, popIn } from '../render/motion.ts';
 import { whosPlayingScreen } from './whos.ts';
-import { setPace } from '../core/rewards.ts';
-import { recheckJars } from '../core/economy.ts';
 import { lockSetupScreen } from './grownup.ts';
 import { isOwnerCode } from '../core/access.ts';
 
@@ -308,9 +306,8 @@ export function limitsScreen(firstRun: boolean) {
           d.settings.voiceSet = true;
         }
         d.setupDone = true;
-        setPace(pace.treat, pace.goal);
-        for (const c of d.children) recheckJars(c.wallet);
       });
+      app.applySettings();
       if (firstRun) {
         app.voice.name = voice.name;
         app.voice.pitch = voice.pitch;

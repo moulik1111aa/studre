@@ -1858,3 +1858,64 @@ test('MN × not confirmed for a while: the paid look stays while Play is asked, 
   // Play answers: nothing owned, so the free look.
   await expect.poll(() => page.evaluate(() => document.documentElement.dataset.theme), { timeout: 8000 }).toBe('studio');
 });
+
+test('rules restored from a family file take effect at once: the new pace prices the jar, and the own reward is in the list', async ({ page }) => {
+  type W = { __share: (t: string) => Promise<void>; __app: { child: unknown; show(m: unknown): void; save: { data: { settings: { treatPace: number } } } }; __screens: { showcaseScreen(c: unknown): unknown; rewardsScreen(c: unknown, j: string): unknown } };
+  await page.goto('/?debug&demo=%4012&noloader');
+  await expect(page.locator('.map')).toBeVisible();
+  const showcase = () => page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.showcaseScreen(w.__app.child)); });
+  await showcase();
+  await expect(page.locator('.sc-note').first()).toContainText('of 480 coins');
+  const file = await page.evaluate(async () => {
+    const sha = async (t: string) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)))].map((b) => b.toString(16).padStart(2, '0')).join('');
+    const child = { id: 'cfam1', name: 'Kabir', age: 7, avatar: 2, placed: true, placementChecks: 0, placedAt: {}, progress: { levels: {}, skipped: {}, lastSeen: {}, history: {} }, wallet: { treat: { rewardId: null, coins: 0, waiting: false }, goal: { rewardId: null, coins: 0, waiting: false }, lifetime: 0, lastPlayDay: null, meltCheckedDay: null, todaySeconds: 0, todayDay: null, earned: [] }, stats: { answered: 0, correct: 0, secondsByDay: {} }, bossesBeaten: [], createdDay: '2026-11-01', challenge: 0 };
+    const b = { format: 'mn-child-backup', version: 1, exportedAt: '2026-11-12T10:00:00.000Z', child };
+    const backup = { ...b, check: await sha('MN Mission Next · child backup · v1' + JSON.stringify(b)) };
+    return JSON.stringify({ format: 'mn-family-backup', version: 1, exportedAt: '2026-11-12T10:00:00.000Z', source: 'phone', children: [backup], rules: { treatPace: 2, ownRewards: [{ id: 'own.kite', name: 'Kite day', icon: '🎟️', tier: 'small' }] } });
+  });
+  void page.evaluate((x) => (window as unknown as W).__share(x), file);
+  await expect(page.locator('.grownup')).toBeVisible();
+  await grownUp(page);
+  await expect(page.locator('.sheet h2')).toContainText('Add Kabir');
+  await page.locator('.sheet .btn.mint').first().click();
+  await expect(page.locator('.sheet h2').last()).toContainText('Use the rules from the file?');
+  await page.locator('.sheet').last().locator('.btn.mint').click();
+  await expect.poll(() => page.evaluate(() => (window as unknown as W).__app.save.data.settings.treatPace)).toBe(2);
+  await page.waitForTimeout(700);
+  // No restart: the treat costs twice as much, and the family's own reward can be picked.
+  await showcase();
+  await expect(page.locator('.sc-note').first()).toContainText('of 960 coins');
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.rewardsScreen(w.__app.child, 'treat')); });
+  await page.click('.rw-cat[data-c="own"] .rw-cat-head');
+  await expect(page.locator('.rw-cat[data-c="own"] .rw-card:not(.rw-add)')).toContainText('Kite day');
+});
+
+test('rules changed on another phone take effect at once after a sync, and the open screen redraws', async ({ page }) => {
+  type W = { __syncNow(): Promise<{ ok: boolean }>; __app: { child: unknown; show(m: unknown): void; save: { data: { settings: { treatPace: number } } } }; __screens: { parentScreen: unknown; showcaseScreen(c: unknown): unknown } };
+  await page.goto('/?debug&demo=s4.x7%231&cloudmock');
+  await expect(page.locator('.map')).toBeVisible();
+  await asGoogle(page, 'moulik1111a@gmail.com|Moulik');
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
+  await page.click('.pa-tab[data-id="app"]');
+  await page.locator('.cl-in').first().click();
+  await page.click('.sheet .btn.mint');
+  await expect(page.locator('.pa-cloud.on')).toBeVisible();
+  // The showcase is open when another phone's change arrives.
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.showcaseScreen(w.__app.child)); });
+  const before = await page.locator('.sc-note').first().textContent();
+  const cost = Number(/of (\d+) coins/.exec(before ?? '')?.[1]);
+  expect(cost).toBeGreaterThan(0);
+  // Another phone sets the treat pace to 2 and adds an own reward (in the stand-in cloud).
+  expect((await page.evaluate(() => (window as unknown as W).__syncNow())).ok).toBe(true);
+  await page.evaluate(() => {
+    const k = Object.keys(localStorage).find((x) => x.startsWith('studyhard.mockcloud.family.') && JSON.parse(localStorage.getItem(x)!)?.family)!;
+    const d = JSON.parse(localStorage.getItem(k)!);
+    d.family.rules = { ...d.family.rules, treatPace: 2, ownRewards: [{ id: 'own.kite', name: 'Kite day', icon: '🎟️', tier: 'small' }] };
+    d.family.rulesAt = Date.now() + 1000;
+    localStorage.setItem(k, JSON.stringify(d));
+  });
+  expect((await page.evaluate(() => (window as unknown as W).__syncNow())).ok).toBe(true);
+  expect(await page.evaluate(() => (window as unknown as W).__app.save.data.settings.treatPace)).toBe(2);
+  // The open screen shows the new price without being reopened.
+  await expect(page.locator('.sc-note').first()).toContainText(`of ${cost * 2} coins`);
+});

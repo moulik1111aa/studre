@@ -3,7 +3,7 @@
 
 import { escv, html, esc, type App, type Screen } from './app.ts';
 import type { Child } from '../storage/save.ts';
-import { CATEGORIES, pickable, rewardById, setOwnRewards, OWN_ICONS, costOf, aboutOf, jarOf, PRICES, type Reward, type Jar, type PriceTier } from '../core/rewards.ts';
+import { CATEGORIES, pickable, rewardById, OWN_ICONS, costOf, aboutOf, jarOf, PRICES, type Reward, type Jar, type PriceTier } from '../core/rewards.ts';
 import { chooseReward } from '../core/economy.ts';
 import { ICONS, coinSvg, avatarHtml } from './icons.ts';
 import { stagger, popIn, EASE_OUT, reducedMotion } from '../render/motion.ts';
@@ -87,7 +87,7 @@ export function rewardsScreen(child: Child, jar: Jar) {
         }
         const own = { id: `own.${Date.now().toString(36)}`, name, icon, tier };
         app.save.update((d) => d.settings.ownRewards.push(own));
-        setOwnRewards(app.save.data.settings.ownRewards);
+        app.applySettings();
         list = pickable().filter((r) => jarOf(r) === jar && !hidden.has(r.category));
         close();
         paint();

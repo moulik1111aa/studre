@@ -16,7 +16,7 @@ import { Fx } from '../render/fx.ts';
 import { FpsMeter } from './fps.ts';
 import { webglOk } from '../render/three.ts';
 import { reducedMotion, EASE_OUT } from '../render/motion.ts';
-import { dayKey } from '../core/economy.ts';
+import { dayKey, recheckJars } from '../core/economy.ts';
 import { AREAS } from '../core/areas/index.ts';
 import { buildPath, buildBundlePath, type Level } from '../core/path.ts';
 import { setPace, setOwnRewards } from '../core/rewards.ts';
@@ -104,8 +104,7 @@ export class App {
     this.save = new SaveStore(storage);
     this.debug = new URLSearchParams(location.search).has('debug');
     const st = this.save.data.settings;
-    setPace(st.treatPace, st.goalPace);
-    setOwnRewards(st.ownRewards);
+    this.applySettings({ start: true });
     this.sfx = new Sfx(st.sound, st.volume ?? 0.8);
     this.voice = new Voice(st.voice, native, st.voiceName, st.voiceRate, st.voiceGender === 'f' ? 'f' : 'm');
     this.haptics = new Haptics(st.vibration, native);
@@ -177,6 +176,25 @@ export class App {
     void result.then((v) => {
       if (v === 'copy' && raw) void saveTextFile(this, `MN-old-data-${new Date().toISOString().slice(0, 10)}.json`, 'application/json', raw).then((ok) => this.toast(ok ? 'A copy of the old data is saved.' : 'The copy could not be saved.'));
     });
+  }
+
+  /**
+   * Put the saved settings into effect everywhere they act outside the save: reward prices (the
+   * parent's pace), the family's own rewards, jars that a new price has filled, and (through the
+   * save) the phone's reminders and widgets. At start, and after every bulk change of settings
+   * (restore, sync, setup). `redraw`: show the open screen again with the new rules, unless a
+   * child is in the middle of a level or a sheet is open.
+   */
+  applySettings(o: { start?: boolean; redraw?: boolean } = {}): void {
+    const st = this.save.data.settings;
+    setPace(st.treatPace, st.goalPace);
+    setOwnRewards(st.ownRewards);
+    const before = JSON.stringify(this.save.data.children.map((c) => [c.wallet.treat.waiting, c.wallet.goal.waiting]));
+    for (const c of this.save.data.children) recheckJars(c.wallet);
+    const after = JSON.stringify(this.save.data.children.map((c) => [c.wallet.treat.waiting, c.wallet.goal.waiting]));
+    // Saving sends the new plan to the phone's reminders and widgets (ui/remindsync.ts).
+    if (!o.start || before !== after) this.save.save();
+    if (o.redraw && this.maker && this.current && !this.current.keepAwake && !this.root.querySelector('.overlay:not(.closing)')) void this.show(this.maker, 'fade');
   }
 
   /** Whether 3D scenes should be used (setting on and WebGL available). */
@@ -307,6 +325,8 @@ export class App {
       list.appendChild(b);
     }
     const close = () => {
+      // Marked at once, so nothing waits on a sheet that is only fading out (applySettings).
+      ov.classList.add('closing');
       if (reducedMotion()) return ov.remove();
       ov.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 220, fill: 'forwards' }).finished.then(() => ov.remove());
     };

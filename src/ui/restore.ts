@@ -46,6 +46,8 @@ export async function restoreFromText(app: App, text: string, done: () => void):
     ], 'Rules from the file');
     if (await result) {
       app.save.update((d) => Object.assign(d.settings, rules));
+      // Prices, own rewards, full jars and the phone's reminders follow at once (no restart).
+      app.applySettings();
       changed = true;
     }
   }

@@ -7,7 +7,7 @@ import { cleanRules } from '../core/clean.ts';
 import { escv, esc, type App } from './app.ts';
 import { FIREBASE } from '../platform/firebase-config.ts';
 import { CloudError, FirebaseRest, MemoryCloud, OWNER_EMAIL, type CloudBackend, type Session } from '../platform/cloudapi.ts';
-import { decodeChild, familyRules, freshMemo, planSync, POLICY_VERSION, type SyncMemo } from '../core/cloud.ts';
+import { decodeChild, familyRules, freshMemo, planSync, POLICY_VERSION, sameRules, type SyncMemo } from '../core/cloud.ts';
 import type { Backup } from '../core/backup.ts';
 import { familyFileOf } from '../core/familyfile.ts';
 import { familyFileHtml, familyFileName } from './familyfile.ts';
@@ -300,6 +300,7 @@ async function doSync(app: App, asking: boolean, takeOver: boolean): Promise<Syn
     await b.putFamily(r.family, { kids: r.put.map((x) => x.childId), removed: Object.keys(r.family.removed).filter((id) => !family?.removed?.[id]), resets: r.resets, device: d.id });
     if (saves !== startedAt) return { ok: false, why: 'busy', message: 'Busy, trying again soon.' };
     applying = true;
+    const rulesBefore = familyRules(app.save.data.settings);
     app.save.update((data) => {
       // Combined with the same child from another phone: it takes that child's id.
       for (const [old, id] of Object.entries(r.renamed)) {
@@ -327,6 +328,9 @@ async function doSync(app: App, asking: boolean, takeOver: boolean): Promise<Syn
         c.backupDays = Object.values(c.stats.secondsByDay).filter((x) => x > 0).length;
       }
     });
+    // New rules from the cloud take effect at once, and the open screen shows them (still
+    // "applying", so this save isn't sent straight back up).
+    if (!sameRules(rulesBefore, familyRules(app.save.data.settings))) app.applySettings({ redraw: true });
     applying = false;
     saveMemo(r.memo);
     ls.del(OTHER_KEY);
@@ -397,6 +401,8 @@ export function startCloud(app: App): void {
       });
     }, ms);
   };
+  // Tests (debug only): sync now instead of waiting.
+  if (app.debug) Object.assign(window, { __syncNow: () => syncNow(app) });
   app.save.onSaved(() => {
     if (applying) return;
     saves++;
