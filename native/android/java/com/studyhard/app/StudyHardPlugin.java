@@ -397,10 +397,14 @@ public class StudyHardPlugin extends Plugin {
         billing().products(strings(call.getArray("subs")), strings(call.getArray("inapp")), call::resolve);
     }
 
-    /** Open Play's purchase sheet for a product (and, for a subscription, one of its offers). */
+    /**
+     * Open Play's purchase sheet for a product (and, for a subscription, one of its offers).
+     * A change of plan passes the current subscription's token and Play's replacement mode;
+     * `account` is an obfuscated id for the signed-in family.
+     */
     @PluginMethod
     public void billingBuy(PluginCall call) {
-        billing().buy(getActivity(), call.getString("product", ""), call.getString("offer", ""), call::resolve);
+        billing().buy(getActivity(), call.getString("product", ""), call.getString("offer", ""), call.getString("oldToken", ""), call.getInt("mode", 0), call.getString("account", ""), call::resolve);
     }
 
     /** What this Play account already owns. */

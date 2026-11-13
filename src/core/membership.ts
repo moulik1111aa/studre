@@ -1,8 +1,8 @@
 // MN ×, the parents' paid extras (Play Store build only). What the Play account owns
 // decides it; this file only does the deciding, with no Play or screen code, so it can be
 // tested. Plans: monthly and yearly subscriptions (with a free trial offer) and a one-time
-// lifetime purchase. Prices always come from Play (in the phone's own currency); the ones
-// here are only shown when Play can't be reached.
+// lifetime purchase. Prices, and whether a free trial is offered and for how long, always come
+// from Play (in the phone's own currency); until Play answers, no price or trial is shown.
 
 import type { PlayProduct, PlayPurchase } from '../platform/native.ts';
 
@@ -17,16 +17,16 @@ export const TAG_SIGNED_IN = 'signed-in';
 
 export type PlanId = 'monthly' | 'yearly' | 'lifetime';
 
-/** Shown only when Play's own prices haven't loaded (₹, India). */
-export const FALLBACK: Record<PlanId, { price: string; per: string }> = {
-  monthly: { price: '₹150', per: 'a month' },
-  yearly: { price: '₹960', per: 'a year' },
-  lifetime: { price: '₹1,989', per: 'once' },
-};
-
-/** Trial lengths (days). Play gives the trial; these are only for the words on screen. */
-export const TRIAL_DAYS = 7;
-export const TRIAL_DAYS_SIGNED_IN = 14;
+/**
+ * Play's replacement modes for a change of plan (BillingFlowParams.SubscriptionUpdateParams).
+ * Monthly → yearly: WITH_TIME_PRORATION. The switch is immediate and what is left of the month
+ * is credited as extra time on the year, so nothing is charged twice and nothing is lost (the
+ * yearly plan costs less per day, so Play's charge-the-difference mode doesn't apply).
+ * Yearly → monthly: DEFERRED. The year already paid for runs to its end, then monthly begins.
+ */
+export const REPLACE_WITH_TIME_PRORATION = 1;
+export const REPLACE_DEFERRED = 6;
+export const replacementMode = (to: 'monthly' | 'yearly'): number => (to === 'yearly' ? REPLACE_WITH_TIME_PRORATION : REPLACE_DEFERRED);
 
 /** What MN × adds, in the order the Plus page lists them. */
 export type PlusFeature = 'focus' | 'sync' | 'school' | 'report' | 'sheets' | 'exam' | 'certs' | 'widgets' | 'icons';
@@ -45,7 +45,10 @@ export const FEATURES: { id: PlusFeature; icon: string; name: string; free: stri
 /** The phone's record of MN × (kept on the phone, not in backups). */
 export interface PlusState {
   /** What gives Plus now; none when it isn't on. */
-  via?: 'monthly' | 'yearly' | 'lifetime' | 'subscription' | 'owner' | 'pending';
+  via?: 'monthly' | 'yearly' | 'lifetime' | 'subscription' | 'pending';
+  /** The active subscription's purchase token (a change of plan replaces it) and whether it renews. */
+  subToken?: string;
+  subRenewing?: boolean;
   /** Last time Play was asked (ms), and when a subscription was last seen active. */
   checkedAt: number;
   activeAt?: number;
@@ -63,12 +66,15 @@ const PENDING = 2;
  * What Play says the account owns. A subscription in its trial, or cancelled but not yet
  * ended, still shows up as purchased, so "owned" is simply "listed and purchased".
  */
-export function fromPurchases(list: PlayPurchase[], basePlanOf: (p: PlayPurchase) => string | null = () => null): { via: PlusState['via'] | undefined; needAck: string[] } {
+export function fromPurchases(list: PlayPurchase[], basePlanOf: (p: PlayPurchase) => string | null = () => null): { via: PlusState['via'] | undefined; needAck: string[]; subToken?: string; subRenewing?: boolean } {
   let via: PlusState['via'] | undefined;
+  let subToken: string | undefined;
+  let subRenewing: boolean | undefined;
   const needAck: string[] = [];
   for (const p of list) {
     const mine = p.products.includes(PLUS_SUB) || p.products.includes(PLUS_LIFETIME);
-    if (!mine) continue;
+    // Only purchases Billing.java checked against the app's Play licensing key count.
+    if (!mine || p.verified === false) continue;
     if (p.state === PENDING) {
       via ??= 'pending';
       continue;
@@ -76,12 +82,16 @@ export function fromPurchases(list: PlayPurchase[], basePlanOf: (p: PlayPurchase
     if (p.state !== PURCHASED) continue;
     if (!p.acknowledged) needAck.push(p.token);
     if (p.products.includes(PLUS_LIFETIME)) via = 'lifetime';
-    else if (via !== 'lifetime') {
-      const plan = basePlanOf(p);
-      via = plan === BASE_YEARLY ? 'yearly' : plan === BASE_MONTHLY ? 'monthly' : 'subscription';
+    else {
+      subToken = p.token;
+      subRenewing = p.autoRenewing;
+      if (via !== 'lifetime') {
+        const plan = basePlanOf(p);
+        via = plan === BASE_YEARLY ? 'yearly' : plan === BASE_MONTHLY ? 'monthly' : 'subscription';
+      }
     }
   }
-  return { via, needAck };
+  return { via, needAck, subToken, subRenewing };
 }
 
 /**
@@ -93,8 +103,19 @@ export const OFFLINE_GRACE = 7 * 86_400_000;
 
 export function plusOn(s: PlusState | undefined, now: number): boolean {
   if (!s?.via || s.via === 'pending') return false;
-  if (s.via === 'lifetime' || s.via === 'owner') return true;
+  if (s.via === 'lifetime') return true;
   return !!s.activeAt && now - s.activeAt < OFFLINE_GRACE;
+}
+
+/**
+ * MN × on, off, or still being checked: a subscription last seen active longer ago than
+ * OFFLINE_GRACE is "checking" until Play answers in this session (not "off", so a paid look
+ * isn't switched away while Play is slow to answer).
+ */
+export function plusStatus(s: PlusState | undefined, now: number, answered: boolean): 'on' | 'off' | 'checking' {
+  if (plusOn(s, now)) return 'on';
+  const lapsed = !!s?.via && s.via !== 'pending' && s.via !== 'lifetime';
+  return lapsed && !answered ? 'checking' : 'off';
 }
 
 /** One plan's price line, from Play when it has loaded. */
@@ -103,11 +124,14 @@ export interface PlanOffer {
   product: string;
   /** For subscriptions: the offer token Play needs to buy it. */
   token?: string;
+  /** The base plan on its own, with no trial (a subscriber changing plan gets no free days). */
+  baseToken?: string;
+  /** Play's price, in the phone's own currency. */
   price: string;
   per: string;
   /** Days free first (0: no trial offered, e.g. it was used before). */
   trialDays: number;
-  /** "₹80 a month" for the yearly plan. */
+  /** What the yearly plan comes to a month, from Play's price. */
   monthly?: string;
 }
 
@@ -127,42 +151,42 @@ const money = (micros: number, currency: string): string => {
 };
 
 /**
- * The three plans with Play's prices. For a subscription, Play lists only the offers this
- * account may use: the signed-in trial when signed in and offered, else the usual trial,
- * else the base plan on its own (trial used before).
+ * The plans with Play's prices; a plan Play didn't list is left out (nothing is made up). For a
+ * subscription, Play lists only the offers this account may use: the signed-in trial when signed
+ * in and offered, else the usual trial, else the base plan on its own (trial used before).
  */
 export function planOffers(products: PlayProduct[], signedIn: boolean): PlanOffer[] {
   const out: PlanOffer[] = [];
   const sub = products.find((p) => p.id === PLUS_SUB);
   for (const [plan, base] of [['monthly', BASE_MONTHLY], ['yearly', BASE_YEARLY]] as const) {
     const offers = (sub?.offers ?? []).filter((o) => o.basePlan === base);
-    if (!offers.length) {
-      out.push({ plan, product: PLUS_SUB, ...FALLBACK[plan], trialDays: 0 });
-      continue;
-    }
     const trial = (o: (typeof offers)[number]) => o.phases.find((ph) => ph.micros === 0);
     const pick =
       (signedIn ? offers.find((o) => o.tags.includes(TAG_SIGNED_IN) && trial(o)) : undefined) ??
       offers.find((o) => !o.tags.includes(TAG_SIGNED_IN) && o.offer && trial(o)) ??
       offers.find((o) => !o.offer) ??
       offers[0];
-    const paid = pick.phases.find((ph) => ph.micros > 0) ?? pick.phases[pick.phases.length - 1];
+    const paid = pick?.phases.find((ph) => ph.micros > 0);
+    if (!pick || !paid?.price) continue;
     const free = trial(pick);
     out.push({
       plan,
       product: PLUS_SUB,
       token: pick.token,
-      price: paid?.price ?? FALLBACK[plan].price,
+      baseToken: offers.find((o) => !o.offer)?.token ?? pick.token,
+      price: paid.price,
       per: plan === 'yearly' ? 'a year' : 'a month',
       trialDays: free ? periodDays(free.period) * Math.max(1, free.cycles) : 0,
-      monthly: plan === 'yearly' && paid ? `${money(paid.micros / 12, paid.currency)} a month` : undefined,
+      monthly: plan === 'yearly' ? `${money(paid.micros / 12, paid.currency)} a month` : undefined,
     });
   }
   const life = products.find((p) => p.id === PLUS_LIFETIME);
-  out.push({ plan: 'lifetime', product: PLUS_LIFETIME, price: life?.price ?? FALLBACK.lifetime.price, per: 'once', trialDays: 0 });
-  if (!sub) out[1].monthly = '₹80 a month';
+  if (life?.price) out.push({ plan: 'lifetime', product: PLUS_LIFETIME, price: life.price, per: 'once', trialDays: 0 });
   return out;
 }
+
+/** The longest free trial among the loaded plans (0: none offered to this account). */
+export const trialDaysOf = (offers: PlanOffer[]): number => Math.max(0, ...offers.map((o) => o.trialDays));
 
 /**
  * Free backup is an online backup from one phone, at most every few hours (Plus: a few seconds

@@ -1,0 +1,6 @@
+package com.android.billingclient.api; public class ProductDetails { public String getProductId(){return "";} public String getProductType(){return "";} public String getName(){return "";}
+ public OneTimePurchaseOfferDetails getOneTimePurchaseOfferDetails(){return null;} public java.util.List<SubscriptionOfferDetails> getSubscriptionOfferDetails(){return null;}
+ public static class OneTimePurchaseOfferDetails { public String getFormattedPrice(){return "";} public long getPriceAmountMicros(){return 0;} public String getPriceCurrencyCode(){return "";} }
+ public static class SubscriptionOfferDetails { public String getBasePlanId(){return "";} public String getOfferId(){return null;} public String getOfferToken(){return "";} public java.util.List<String> getOfferTags(){return null;} public PricingPhases getPricingPhases(){return null;} }
+ public static class PricingPhases { public java.util.List<PricingPhase> getPricingPhaseList(){return null;} }
+ public static class PricingPhase { public String getFormattedPrice(){return "";} public long getPriceAmountMicros(){return 0;} public String getPriceCurrencyCode(){return "";} public String getBillingPeriod(){return "";} public int getBillingCycleCount(){return 0;} } }

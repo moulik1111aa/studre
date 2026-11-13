@@ -50,7 +50,8 @@ export interface StudyHardPlugin {
   googleSignOut?(): Promise<void>;
   /** MN × purchases through Google Play (newer apps only; see platform/billing.ts). */
   billingProducts?(o: { subs: string[]; inapp: string[] }): Promise<{ ok: boolean; products?: PlayProduct[]; code?: number; message?: string }>;
-  billingBuy?(o: { product: string; offer?: string }): Promise<{ ok: boolean; code?: number; message?: string }>;
+  /** `oldToken` and `mode`: a change of plan (Play's subscription update); `account`: an obfuscated id for the signed-in family. */
+  billingBuy?(o: { product: string; offer?: string; oldToken?: string; mode?: number; account?: string }): Promise<{ ok: boolean; code?: number; message?: string }>;
   billingOwned?(): Promise<{ ok: boolean; purchases?: PlayPurchase[] }>;
   billingAck?(o: { token: string }): Promise<{ ok: boolean; code?: number }>;
   billingManage?(o: { product?: string }): Promise<void>;
@@ -169,8 +170,10 @@ export interface PlayPurchase {
   acknowledged: boolean;
   autoRenewing: boolean;
   time: number;
-  json: string;
-  signature: string;
+  /** Billing.java reports only purchases whose signature matches the app's Play licensing key. */
+  verified?: boolean;
+  json?: string;
+  signature?: string;
 }
 
 /** Play's answer after the purchase sheet closes. */

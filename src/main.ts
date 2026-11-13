@@ -35,7 +35,7 @@ import { showLesson } from './ui/lesson.ts';
 import { accessState, lockScreen } from './ui/access.ts';
 import { ownerScreen } from './ui/owner.ts';
 import { startCloud } from './ui/cloud.ts';
-import { hasPlus, plusScreen, startPlus, storeBuild } from './ui/membership.ts';
+import { hasPlus, onPlusChange, plusScreen, plusState, startPlus, storeBuild } from './ui/membership.ts';
 import { plusVideoScreen } from './ui/plusvideo.ts';
 import * as addsub from './core/teach/addsub.ts';
 import * as muldiv from './core/teach/muldiv.ts';
@@ -113,8 +113,18 @@ async function boot(): Promise<void> {
     }
   });
   // Shapes, Print and Precision are MN × looks: without MN × (Play build) they show as Notebook until MN × is on
-  // again. The saved choice is kept.
-  if (PLUS_THEMES.includes(app.save.data.settings.theme) && storeBuild(app) && !hasPlus(app) && !new URLSearchParams(location.search).has('theme')) app.applyTheme('studio');
+  // again. The saved choice is kept. While MN × is still being checked with Play, the look stays as it was.
+  const fitLook = () => {
+    const saved = app.save.data.settings.theme;
+    if (!PLUS_THEMES.includes(saved) || !storeBuild(app) || new URLSearchParams(location.search).has('theme')) return;
+    app.applyTheme(plusState(app) === 'off' ? 'studio' : saved);
+  };
+  fitLook();
+  // When Play's answer changes MN ×: the look again, and the map again (a school syllabus path needs MN ×).
+  onPlusChange(() => {
+    fitLook();
+    if (app.screen?.el.classList.contains('map') && app.maker) void app.show(app.maker, 'fade');
+  });
   // The phone's reminders and home-screen widgets follow the save (never in the way of opening).
   try {
     startReminders(app);

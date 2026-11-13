@@ -1502,8 +1502,11 @@ test('MN × (Play Store build): paid features say so, the trial and plans come 
   await page.click('.mp-plan[data-plan="monthly"]');
   await page.click('.mp-buy');
   await expect(page.locator('.mp-hero h2')).toHaveText('MN × is on');
-  const bought = await page.evaluate(() => (window as unknown as { __mockBilling: { bought: { product: string; offer?: string }[] } }).__mockBilling.bought);
-  expect(bought).toEqual([{ product: 'mn_plus', offer: 'monthly:trial14' }]);
+  const bought = await page.evaluate(() => (window as unknown as { __mockBilling: { bought: { product: string; offer?: string; account?: string }[] } }).__mockBilling.bought);
+  expect(bought).toHaveLength(1);
+  expect(bought[0]).toMatchObject({ product: 'mn_plus', offer: 'monthly:trial14' });
+  // Signed in: Play gets the family's obfuscated id (a hash, never the email).
+  expect(bought[0].account).toMatch(/^[0-9a-f]{64}$/);
   // Now the report is all there.
   await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.reportScreen(w.__app.save.data.children[0], 'skills')); });
   await expect(page.locator('.rp-body')).toBeVisible();
@@ -1771,4 +1774,87 @@ test('saving: a full phone storage shows the parent a message; unreadable saved 
   await expect(page.locator('.sheet h2')).toHaveText('Saved progress couldn’t be read');
   await expect(page.locator('.sheet .actions button').first()).toHaveText(/Save a copy of the old data/i);
   expect(await page.evaluate(() => localStorage.getItem('studyhard.save.unreadable'))).toBe('{"version":1,"children":[{"id":"c1","name":"Zo');
+});
+
+test('MN × with Google Play unavailable: no prices anywhere, buying is off, and no trial is promised', async ({ page }) => {
+  type W = { __app: { show(m: unknown): void }; __screens: { parentScreen: unknown } };
+  await page.addInitScript(() => Object.assign(window, { __mockBilling: { offline: true } }));
+  await page.goto('/?debug&store&demo=%405&noloader');
+  await expect(page.locator('.map')).toBeVisible();
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
+  await page.click('.pa-tab[data-id="premium"]');
+  await expect(page.locator('.pm-plans')).toHaveText('See plans');
+  await expect(page.locator('.pm-page')).not.toContainText('₹');
+  await page.click('.pm-plans');
+  await expect(page.locator('.mp-noprice')).toContainText('Prices aren’t available right now');
+  await expect(page.locator('.mp-buy')).toBeDisabled();
+  await expect(page.locator('.mp-plan')).toHaveCount(0);
+  await expect(page.locator('.mplus')).not.toContainText('₹');
+  await expect(page.locator('.mplus')).not.toContainText('days free');
+});
+
+test('MN × for an account that used its trial: prices from Play, and no free days mentioned', async ({ page }) => {
+  type W = { __app: { show(m: unknown): void }; __screens: { parentScreen: unknown } };
+  await page.addInitScript(() => Object.assign(window, { __mockBilling: { usedTrial: true } }));
+  await page.goto('/?debug&store&demo=%405&noloader');
+  await expect(page.locator('.map')).toBeVisible();
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
+  await page.click('.pa-tab[data-id="premium"]');
+  await expect(page.locator('.pm-plans')).toHaveText('See plans');
+  await page.click('.pm-plans');
+  await expect(page.locator('.mp-plan[data-plan="yearly"] b')).toHaveText('₹960');
+  await expect(page.locator('.mp-buy')).toHaveText('Subscribe for ₹960 a year');
+  await expect(page.locator('.mplus')).not.toContainText('days free');
+});
+
+test('MN × change of plan: monthly to yearly through Play\'s subscription update; lifetime while subscribed says to cancel', async ({ page }) => {
+  type MB = { __mockBilling: { bought: { product: string; offer?: string; oldToken?: string; mode?: number }[] } };
+  type W = { __app: { show(m: unknown): void }; __screens: { plusScreen(b: unknown): unknown; parentScreen: unknown } };
+  await page.goto('/?debug&store&demo=%405&noloader');
+  await expect(page.locator('.map')).toBeVisible();
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.plusScreen(w.__screens.parentScreen)); });
+  await page.click('.mp-plan[data-plan="monthly"]');
+  await page.click('.mp-buy');
+  await expect(page.locator('.mp-hero h2')).toHaveText('MN × is on');
+  await expect(page.locator('.mp-hero p')).toContainText('monthly');
+  // Change plan: yearly, replacing the monthly subscription.
+  await page.click('.mp-change');
+  await expect(page.locator('.mp-hero h2')).toHaveText('Change plan');
+  await expect(page.locator('.mp-plan[data-plan="monthly"]')).toHaveCount(0);
+  await expect(page.locator('.mp-buy')).toHaveText('Switch to yearly');
+  await page.click('.mp-buy');
+  await expect(page.locator('.mp-hero p')).toContainText('yearly');
+  let bought = await page.evaluate(() => (window as unknown as MB).__mockBilling.bought);
+  expect(bought[1]).toMatchObject({ product: 'mn_plus', offer: 'yearly', mode: 1 });
+  expect(bought[1].oldToken).toMatch(/^tok-mn_plus-/);
+  // Lifetime while the subscription renews: the parent is told to cancel it, with the way there.
+  await page.click('.mp-change');
+  await page.click('.mp-plan[data-plan="lifetime"]');
+  await expect(page.locator('.mp-buy')).toHaveText('Buy for ₹1,989');
+  await page.click('.mp-buy');
+  await expect(page.locator('.sheet h2')).toHaveText('MN × is yours for life');
+  await expect(page.locator('.sheet .actions button').first()).toHaveText(/Manage subscription/i);
+  bought = await page.evaluate(() => (window as unknown as MB).__mockBilling.bought);
+  expect(bought[2]).toMatchObject({ product: 'mn_plus_lifetime' });
+  expect(bought[2].oldToken).toBeFalsy();
+  await page.locator('.sheet .actions button').first().click();
+  await expect(page.locator('.mp-note')).toHaveCount(0);
+});
+
+test('MN × not confirmed for a while: the paid look stays while Play is asked, then follows Play\'s answer', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.assign(window, { __mockBilling: { slow: 1500 } });
+    if (sessionStorage.getItem('seeded')) return;
+    sessionStorage.setItem('seeded', '1');
+    localStorage.setItem('studyhard.plus', JSON.stringify({ via: 'yearly', checkedAt: 1, activeAt: 1 }));
+  });
+  await page.goto('/?debug&store&demo=%405&noloader');
+  await expect(page.locator('.map')).toBeVisible();
+  await page.evaluate(() => (window as unknown as { __app: { save: { update(f: (d: { settings: { theme: string } }) => void): void } } }).__app.save.update((d) => (d.settings.theme = 'shapes')));
+  await page.goto('/?debug&store&noloader');
+  await page.locator('.kid').first().click();
+  // Play hasn't answered yet: still Shapes.
+  expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe('shapes');
+  // Play answers: nothing owned, so the free look.
+  await expect.poll(() => page.evaluate(() => document.documentElement.dataset.theme), { timeout: 8000 }).toBe('studio');
 });

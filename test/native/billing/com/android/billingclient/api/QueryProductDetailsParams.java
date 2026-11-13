@@ -1,0 +1,2 @@
+package com.android.billingclient.api; public class QueryProductDetailsParams { public static Builder newBuilder(){return new Builder();} public static class Builder { public Builder setProductList(java.util.List<Product> l){return this;} public QueryProductDetailsParams build(){return null;} }
+ public static class Product { public static B newBuilder(){return new B();} public static class B { public B setProductId(String s){return this;} public B setProductType(String s){return this;} public Product build(){return null;} } } }

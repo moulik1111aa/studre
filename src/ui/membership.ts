@@ -6,9 +6,9 @@
 import { html, esc, type App, type Screen } from './app.ts';
 import { timesMarkSvg } from './mnx.ts';
 import { MockBilling, NativeBilling, type Billing } from '../platform/billing.ts';
-import { FEATURES, freshPlus, fromPurchases, planOffers, plusOn, PLUS_LIFETIME, TRIAL_DAYS, TRIAL_DAYS_SIGNED_IN, type PlanId, type PlanOffer, type PlusFeature, type PlusState } from '../core/membership.ts';
-import type { PlayPurchase, PurchasesEvent } from '../platform/native.ts';
-import { account, cloudOn, isOwnerAccount, signIn } from './cloud.ts';
+import { FEATURES, freshPlus, fromPurchases, planOffers, plusOn, plusStatus, replacementMode, trialDaysOf, type PlanId, type PlanOffer, type PlusFeature, type PlusState } from '../core/membership.ts';
+import type { PlayProduct, PlayPurchase, PurchasesEvent } from '../platform/native.ts';
+import { account, cloudOn, signIn } from './cloud.ts';
 import { plusVideoScreen } from './plusvideo.ts';
 import { plusSvg } from './plus.ts';
 import { stagger } from '../render/motion.ts';
@@ -51,11 +51,54 @@ function billing(app: App): Billing | null {
   return billingCache;
 }
 
-/** Does this phone have MN ×? (Always yes outside the Play Store build.) */
+/** Play has answered "what does this account own" in this session. */
+let answered = false;
+
+/** Does this phone have MN ×? (Always yes outside the Play Store build.) Only Play decides. */
 export function hasPlus(app: App): boolean {
   if (!storeBuild(app)) return true;
-  if (isOwnerAccount(app) && app.storeBuild) return true;
   return plusOn(read(), Date.now());
+}
+
+/** MN × on, off, or "checking": a subscription not confirmed for a while, before Play's first answer this session. */
+export function plusState(app: App): 'on' | 'off' | 'checking' {
+  if (!storeBuild(app)) return 'on';
+  return plusStatus(read(), Date.now(), answered);
+}
+
+// ── Play's plans, once loaded this session (no prices or trial words before that) ──
+
+let products: PlayProduct[] | null = null;
+let loading: Promise<PlayProduct[] | null> | null = null;
+/** Ask Play for the plans (once at a time); null when Play can't be reached. */
+export function loadPlans(app: App): Promise<PlayProduct[] | null> {
+  const b = billing(app);
+  if (!b) return Promise.resolve(null);
+  loading ??= b.products().then((p) => {
+    loading = null;
+    if (p) products = p;
+    return p;
+  });
+  return loading;
+}
+/** The plans with Play's prices for this account (empty until Play has answered). */
+export const plansNow = (app: App): PlanOffer[] => (products ? planOffers(products, !!account(app)) : []);
+/** Free days Play offers this account now (0: none, or not known yet). */
+export const offeredTrialDays = (app: App): number => trialDaysOf(plansNow(app));
+/** The words on a button to the plans: the trial only when Play offers one. */
+export const plansCta = (app: App): string => {
+  const d = offeredTrialDays(app);
+  return d ? `Try ${d} days free` : 'See plans';
+};
+/** The free days a family would get by signing in with Google first, when Play offers more that way. */
+const signedInTrialDays = (): number => (products ? trialDaysOf(planOffers(products, true)) : 0);
+
+/** The family's id for Play (obfuscatedAccountId): a hash of the Firebase account, never the email. */
+async function accountId(app: App): Promise<string> {
+  const uid = account(app)?.uid;
+  if (!uid || !globalThis.crypto?.subtle) return '';
+  const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`mn-play:${uid}`));
+  return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 64);
 }
 
 /**
@@ -89,9 +132,9 @@ export async function refreshPlus(app: App): Promise<boolean> {
 
 async function apply(app: App, list: PlayPurchase[], complete: boolean): Promise<void> {
   const b = billing(app)!;
-  const before = hasPlus(app);
+  const before = plusState(app);
   const plan = lsGet(LAST_PLAN);
-  const { via, needAck } = fromPurchases(list, () => plan);
+  const { via, needAck, subToken, subRenewing } = fromPurchases(list, () => plan);
   const s = read();
   const now = Date.now();
   for (const t of needAck) if (!s.acked?.includes(t) && (await b.ack(t))) s.acked = [...(s.acked ?? []), t].slice(-10);
@@ -102,23 +145,68 @@ async function apply(app: App, list: PlayPurchase[], complete: boolean): Promise
     delete s.via;
     delete s.activeAt;
   }
+  if (subToken) {
+    s.subToken = subToken;
+    s.subRenewing = subRenewing;
+  } else if (complete) {
+    delete s.subToken;
+    delete s.subRenewing;
+  }
   s.checkedAt = now;
   write(s);
-  if (before !== hasPlus(app)) for (const fn of listeners) fn();
+  if (complete) answered = true;
+  if (before !== plusState(app)) for (const fn of listeners) fn();
 }
 
 async function purchased(app: App, e: PurchasesEvent): Promise<void> {
   if (e.cancelled || !e.ok) return;
   await apply(app, e.purchases, false);
+  // The whole list: a lifetime purchase may leave a subscription running.
+  const all = await billing(app)?.owned();
+  if (all) await apply(app, all, true);
   const s = read();
   if (s.via === 'pending') app.toast('Payment is on its way. MN × turns on as soon as Google Play confirms it.', 6000);
+  else if (s.via === 'lifetime' && s.subToken && s.subRenewing) lifetimeWithSubscription(app);
   else if (hasPlus(app)) app.toast('MN × is on. Thank you!', 5000);
+  // A purchase or change of plan went through: screens show the plan as it is now.
+  for (const fn of listeners) fn();
+}
+
+/** Lifetime bought while a subscription still renews: Play doesn't stop it, so the parent must. */
+function lifetimeWithSubscription(app: App): void {
+  const { result } = app.sheet(
+    `<h2>MN × is yours for life</h2><p>Your MN × subscription is still active, and Google Play keeps charging for it until you cancel it. Cancel it in Google Play → Payments & subscriptions so you aren’t charged again.</p>`,
+    [
+      { label: 'Manage subscription', value: true, kind: 'mint' },
+      { label: 'Later', value: false, kind: 'ghost', back: true },
+    ],
+    'Cancel your subscription',
+  );
+  void result.then((v) => {
+    if (v) void manage(app);
+  });
+}
+
+/** Open Play's subscriptions page; check again now and when the parent comes back from it. */
+async function manage(app: App): Promise<void> {
+  const again = () => {
+    if (document.visibilityState !== 'visible') return;
+    document.removeEventListener('visibilitychange', again);
+    void refreshPlus(app).then(() => {
+      for (const fn of listeners) fn();
+    });
+  };
+  document.addEventListener('visibilitychange', again);
+  await billing(app)?.manage();
+  again();
 }
 
 /** Watch for purchases and check Play when the app opens and comes back. */
 export function startPlus(app: App): void {
   if (!storeBuild(app) || !billing(app)) return;
   void refreshPlus(app);
+  // The plans (prices, whether a trial is offered) for the words on MN × buttons and sheets.
+  void loadPlans(app);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && Date.now() - read().checkedAt > 10 * 60_000) void refreshPlus(app);
   });
@@ -155,11 +243,10 @@ export async function needPlus(app: App, feature: PlusFeature, back: (app: App) 
   return false;
 }
 
-const trialDaysFor = (app: App): number => (account(app) ? TRIAL_DAYS_SIGNED_IN : TRIAL_DAYS);
-const trialLine = (app: App): string => `Try it free for ${trialDaysFor(app)} days. Cancel any time in Google Play.`;
-
-/** Free days offered on this phone right now. */
-export const trialDays = (app: App): number => trialDaysFor(app);
+const trialLine = (app: App): string => {
+  const d = offeredTrialDays(app);
+  return d ? `Try it free for ${d} days. Cancel any time in Google Play.` : 'See the plans and prices on the MN × page.';
+};
 
 /**
  * The MN × video. Where MN × can be bought and isn't on, it ends on "Try N days free" (to the
@@ -167,17 +254,18 @@ export const trialDays = (app: App): number => trialDaysFor(app);
  */
 export function plusVideoFor(app: App, after: (app: App) => Screen, label?: string, plansBack: (app: App) => Screen = after) {
   const sell = storeBuild(app) && !hasPlus(app);
-  return plusVideoScreen(() => void app.show(after), label, undefined, sell ? { label: `Try ${trialDaysFor(app)} days free`, act: () => void app.show(plusScreen(plansBack)) } : undefined);
+  return plusVideoScreen(() => void app.show(after), label, undefined, sell ? { label: plansCta(app), act: () => void app.show(plusScreen(plansBack)) } : undefined);
 }
 
 const PLAN_NAME: Record<PlanId, string> = { monthly: 'Monthly', yearly: 'Yearly', lifetime: 'Lifetime' };
 
-/** The MN × page (Parent area). */
+/** The MN × page (Parent area). */
 export function plusScreen(back: (app: App) => Screen) {
   return (app: App): Screen => {
-    let offers: PlanOffer[] = planOffers([], !!account(app));
+    /** 'shop': the plans; 'change': a subscriber choosing another plan. */
+    let view: 'shop' | 'change' = 'shop';
+    let prices: 'loading' | 'ready' | 'none' = plansNow(app).length ? 'ready' : 'loading';
     let chosen: PlanId = 'yearly';
-    let loaded = false;
     let busy = false;
     const el = html(`<section class="screen limits mplus" aria-label="MN ×">
       <header class="topbar"><button class="icon-btn back-btn" aria-label="Back">←</button><span class="t">MN ×</span><span style="width:50px"></span></header>
@@ -187,70 +275,113 @@ export function plusScreen(back: (app: App) => Screen) {
     const body = el.querySelector<HTMLElement>('.mp-body')!;
     const foot = el.querySelector<HTMLElement>('.mp-foot')!;
 
-    const offer = (p: PlanId) => offers.find((o) => o.plan === p)!;
-    const ctaText = (o: PlanOffer) => (o.plan === 'lifetime' ? `Buy for ${o.price}` : o.trialDays ? `Start ${o.trialDays} days free` : `Subscribe for ${o.price} ${o.per}`);
-    const fine = (o: PlanOffer) =>
-      o.plan === 'lifetime'
-        ? 'One payment through Google Play. MN × stays on for good, on this Google account.'
-        : `${o.trialDays ? `Free for ${o.trialDays} days, then ${o.price} ${o.per}` : `${o.price} ${o.per}`}. Renews automatically every ${o.plan === 'yearly' ? 'year' : 'month'} until you cancel. Cancel any time in Google Play → Payments & subscriptions${o.trialDays ? '; cancel before the free days end and you pay nothing' : ''}.`;
+    /** The plans this view offers: in "change", the other subscription plan and lifetime. */
+    const offers = (): PlanOffer[] => {
+      const all = plansNow(app);
+      if (view !== 'change') return all;
+      const now = read().via;
+      return all.filter((o) => o.plan !== now);
+    };
+    const offer = (): PlanOffer | undefined => offers().find((o) => o.plan === chosen) ?? offers()[0];
+    const switching = (o: PlanOffer) => view === 'change' && o.plan !== 'lifetime';
+    const ctaText = (o: PlanOffer) =>
+      o.plan === 'lifetime' ? `Buy for ${o.price}` : switching(o) ? `Switch to ${PLAN_NAME[o.plan].toLowerCase()}` : o.trialDays ? `Start ${o.trialDays} days free` : `Subscribe for ${o.price} ${o.per}`;
+    const fine = (o: PlanOffer) => {
+      if (o.plan === 'lifetime') return `One payment through Google Play. MN × stays on for good, on this Google account.${view === 'change' ? ' Your subscription doesn’t stop by itself: cancel it in Google Play afterwards.' : ''}`;
+      if (switching(o)) return o.plan === 'yearly' ? `Switches now. What’s left of this month is added to your year, then ${o.price} ${o.per}. Google Play shows the details before you confirm.` : `Your year runs to its end, then ${o.price} ${o.per}. Google Play shows the details before you confirm.`;
+      return `${o.trialDays ? `Free for ${o.trialDays} days, then ${o.price} ${o.per}` : `${o.price} ${o.per}`}. Renews automatically every ${o.plan === 'yearly' ? 'year' : 'month'} until you cancel. Cancel any time in Google Play → Payments & subscriptions${o.trialDays ? '; cancel before the free days end and you pay nothing' : ''}.`;
+    };
 
     const featureRows = () =>
       FEATURES.map(
         (f) => `<li class="mp-f"><span class="mp-fi" aria-hidden="true">${f.icon}</span><div><b>${esc(f.name)}</b><small>${esc(f.plus)}</small>${f.free ? `<small class="mp-free">Free: ${esc(f.free)}</small>` : ''}</div></li>`,
       ).join('');
 
+    const paintChecking = () => {
+      body.innerHTML = `<div class="mp-hero"><div class="mp-logo">${plusSvg({ noShadow: true })}</div><h2>Checking MN ×</h2><p>Asking Google Play what this account has…</p></div>`;
+      foot.innerHTML = `<button class="btn ghost mp-done">Back</button>`;
+    };
+
     const paintOwned = () => {
       const s = read();
-      const owner = isOwnerAccount(app) && app.storeBuild && s.via !== 'lifetime';
-      const what = owner ? 'Included with the owner account.' : s.via === 'lifetime' ? 'Yours for life. Thank you!' : 'Your subscription is active. Thank you!';
+      const sub = s.via !== 'lifetime';
+      const what = !sub ? 'Yours for life. Thank you!' : `Your ${s.via === 'monthly' || s.via === 'yearly' ? `${s.via} ` : ''}subscription is active. Thank you!`;
+      const stillCharging = !sub && s.subToken && s.subRenewing;
       body.innerHTML = `
         <div class="mp-hero on"><div class="mp-logo">${plusSvg({ noShadow: true })}</div><h2>MN × is on</h2><p>${what}</p></div>
+        ${stillCharging ? '<p class="card mp-note" role="status">Your MN × subscription is still active. Cancel it in Google Play so you aren’t charged again.</p>' : ''}
         <ul class="card mp-list">${featureRows()}</ul>
         <button class="pa-row card mp-video"><b>▶ What MN × adds</b><small>The 1-minute video</small></button>`;
-      foot.innerHTML = s.via && s.via !== 'lifetime' && !owner ? `<button class="btn ghost mp-manage">Manage subscription</button>` : `<button class="btn mp-done">Done</button>`;
+      foot.innerHTML = sub
+        ? `<div class="mp-two"><button class="btn ghost mp-change">Change plan</button><button class="btn ghost mp-manage">Manage subscription</button></div>`
+        : stillCharging
+          ? `<button class="btn mint mp-manage">Manage subscription</button>`
+          : `<button class="btn mp-done">Done</button>`;
     };
 
     const paintShop = () => {
-      const signedIn = !!account(app);
-      const o = offer(chosen);
+      const list = offers();
+      const o = offer();
+      if (o) chosen = o.plan;
       const card = (p: PlanOffer) => `<button class="mp-plan${p.plan === chosen ? ' on' : ''}" role="radio" aria-checked="${p.plan === chosen}" data-plan="${p.plan}">
-          ${p.plan === 'yearly' ? '<em>Save almost half</em>' : p.plan === 'lifetime' ? '<em>Pay once</em>' : ''}
+          ${p.plan === 'yearly' && view !== 'change' ? '<em>Best value</em>' : p.plan === 'lifetime' ? '<em>Pay once</em>' : ''}
           <small>${PLAN_NAME[p.plan]}</small><b>${esc(p.price)}</b><span>${p.plan === 'lifetime' ? 'once, for good' : esc(p.per)}</span>
-          ${p.monthly ? `<i>${esc(p.monthly)}</i>` : p.trialDays ? `<i>${p.trialDays} days free</i>` : p.plan === 'lifetime' ? '<i>No renewals</i>' : ''}</button>`;
+          ${p.monthly ? `<i>${esc(p.monthly)}</i>` : p.trialDays && !switching(p) ? `<i>${p.trialDays} days free</i>` : p.plan === 'lifetime' ? '<i>No renewals</i>' : ''}</button>`;
       const pending = read().via === 'pending';
+      const signedIn = !!account(app);
+      const more = signedInTrialDays();
+      const now = offeredTrialDays(app);
+      const plans =
+        prices === 'ready' && list.length
+          ? `<div class="mp-plans" role="radiogroup" aria-label="Choose a plan" style="--n:${list.length}">${list.map(card).join('')}</div>${o ? `<p class="mp-fine">${esc(fine(o))}</p>` : ''}`
+          : prices === 'loading'
+            ? '<p class="card mp-note mp-loading" role="status">Getting prices from Google Play…</p>'
+            : '<div class="card mp-note mp-noprice" role="status"><p>Prices aren’t available right now. Check the internet connection, then try again.</p><button class="btn ghost small mp-retry">Try again</button></div>';
       body.innerHTML = `
-        <div class="mp-hero"><div class="mp-logo">${plusSvg({ noShadow: true })}</div><h2>See the whole picture</h2><p>Everything your child plays with is free. MN × is for you.</p></div>
+        ${view === 'change'
+          ? `<div class="mp-hero on"><div class="mp-logo">${plusSvg({ noShadow: true })}</div><h2>Change plan</h2><p>You’re on the ${read().via === 'yearly' ? 'yearly' : read().via === 'monthly' ? 'monthly' : 'current'} plan. Pick another one below.</p></div>`
+          : `<div class="mp-hero"><div class="mp-logo">${plusSvg({ noShadow: true })}</div><h2>See the whole picture</h2><p>Everything your child plays with is free. MN × is for you.</p></div>
         <ul class="card mp-list">${featureRows()}</ul>
-        <button class="pa-row card mp-video"><b>▶ What MN × adds</b><small>The 1-minute video</small></button>
+        <button class="pa-row card mp-video"><b>▶ What MN × adds</b><small>The 1-minute video</small></button>`}
         ${pending ? '<p class="card mp-note" role="status">⏳ A payment is on its way. MN × turns on as soon as Google Play confirms it.</p>' : ''}
-        <div class="mp-plans" role="radiogroup" aria-label="Choose a plan">${offers.map(card).join('')}</div>
-        ${!signedIn && cloudOn(app) ? `<div class="card mp-signin"><p><b>Get ${TRIAL_DAYS_SIGNED_IN} days free instead of ${TRIAL_DAYS}</b><small>Sign in with Google first. Your family’s progress gets an online backup too.</small></p><button class="btn ghost small mp-g">Sign in with Google</button></div>` : ''}
-        <p class="mp-fine">${esc(fine(o))}</p>
-        ${loaded ? '' : '<p class="mp-fine mp-loading">Getting prices from Google Play…</p>'}
-        <button class="linkish mp-restore">Already bought MN ×? Restore it</button>`;
-      foot.innerHTML = `<button class="btn mint mp-buy"${busy ? ' disabled' : ''}>${esc(ctaText(o))}</button>`;
+        ${plans}
+        ${view === 'shop' && !signedIn && cloudOn(app) && more > now ? `<div class="card mp-signin"><p><b>Get ${more} days free${now ? ` instead of ${now}` : ''}</b><small>Sign in with Google first. Your family’s progress gets an online backup too.</small></p><button class="btn ghost small mp-g">Sign in with Google</button></div>` : ''}
+        ${view === 'shop' ? '<button class="linkish mp-restore">Already bought MN ×? Restore it</button>' : ''}`;
+      const can = prices === 'ready' && !!o && !busy;
+      foot.innerHTML = `${view === 'change' ? '<button class="btn ghost small mp-cancel-change">Keep my plan</button>' : ''}<button class="btn mint mp-buy"${can ? '' : ' disabled'}>${o && prices === 'ready' ? esc(ctaText(o)) : prices === 'loading' ? 'Getting prices…' : 'Not available right now'}</button>`;
     };
 
     const paint = () => {
-      el.classList.toggle('owned', hasPlus(app));
-      return hasPlus(app) ? paintOwned() : paintShop();
+      const st = plusState(app);
+      el.classList.toggle('owned', st === 'on' && view === 'shop');
+      if (st === 'checking') return paintChecking();
+      if (st === 'on' && view === 'shop') return paintOwned();
+      if (st !== 'on') view = 'shop';
+      return paintShop();
     };
 
     const buy = async () => {
       const b = billing(app);
-      const o = offer(chosen);
-      if (!b || !loaded) {
+      const o = offer();
+      if (!b || prices !== 'ready' || !o) {
         app.toast('Google Play isn’t reachable right now. Check the internet connection and try again.', 5000);
+        return;
+      }
+      const s = read();
+      const change = switching(o);
+      if (change && !s.subToken) {
+        app.toast('Google Play hasn’t shown this subscription on this phone yet. Tap “Restore it”, then try again.', 5000);
         return;
       }
       busy = true;
       paint();
       try {
-        localStorage.setItem(LAST_PLAN, o.plan === 'lifetime' ? '' : o.plan);
+        if (o.plan !== 'lifetime' && !(change && o.plan === 'monthly')) localStorage.setItem(LAST_PLAN, o.plan);
+        else if (!change && o.plan === 'lifetime') localStorage.setItem(LAST_PLAN, '');
       } catch {
         /* fine */
       }
-      const r = await b.buy(o.product === PLUS_LIFETIME ? PLUS_LIFETIME : o.product, o.token);
+      const r = await b.buy(o.product, change ? o.baseToken : o.token, { account: await accountId(app), ...(change ? { oldToken: s.subToken, mode: replacementMode(o.plan as 'monthly' | 'yearly') } : {}) });
       busy = false;
       if (!r.ok) app.toast('Google Play couldn’t open just now. Please try again.', 5000);
       paint();
@@ -268,24 +399,38 @@ export function plusScreen(back: (app: App) => Screen) {
         const on = await refreshPlus(app);
         app.toast(on ? 'MN × is on.' : read().via === 'pending' ? 'Your payment is still on its way.' : 'No MN × found on this Google Play account. Use the same Google account that bought it.', 5000);
         paint();
-      } else if (t.closest('.mp-manage')) await billing(app)?.manage();
-      else if (t.closest('.mp-done')) void app.show(back);
+      } else if (t.closest('.mp-manage')) await manage(app);
+      else if (t.closest('.mp-change')) {
+        view = 'change';
+        chosen = read().via === 'yearly' ? 'monthly' : 'yearly';
+        paint();
+        if (prices !== 'ready') void load();
+      } else if (t.closest('.mp-cancel-change')) {
+        view = 'shop';
+        paint();
+      } else if (t.closest('.mp-retry')) {
+        prices = 'loading';
+        paint();
+        void load();
+      } else if (t.closest('.mp-done')) void app.show(back);
       else if (t.closest('.mp-g')) {
         const r = await signIn(app);
-        if (r === 'approved') app.toast(`Signed in. Your free trial is now ${TRIAL_DAYS_SIGNED_IN} days.`, 5000);
         await load();
+        const d = offeredTrialDays(app);
+        if (r === 'approved') app.toast(d ? `Signed in. Your free trial is ${d} days.` : 'Signed in.', 5000);
       }
     });
-    el.querySelector('.back-btn')!.addEventListener('click', () => void app.show(back));
+    el.querySelector('.back-btn')!.addEventListener('click', () => void (view === 'change' ? ((view = 'shop'), paint()) : app.show(back)));
 
     const load = async () => {
-      const b = billing(app);
-      const products = b ? await b.products() : null;
-      loaded = !!products;
-      if (products) offers = planOffers(products, !!account(app));
+      const p = await loadPlans(app);
+      prices = p && plansNow(app).length ? 'ready' : 'none';
       paint();
     };
-    const off = onPlusChange(paint);
+    const off = onPlusChange(() => {
+      view = 'shop';
+      paint();
+    });
     paint();
     return {
       el,

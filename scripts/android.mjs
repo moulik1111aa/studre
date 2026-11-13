@@ -45,6 +45,13 @@ const pkgPath = config.appId.split('.').join('/');
 const javaDir = join(main, 'java', pkgPath);
 if (!existsSync(join(javaDir, 'MainActivity.java'))) throw new Error(`template MainActivity not found in ${javaDir}`);
 cpSync(join(root, 'native/android/java', pkgPath), javaDir, { recursive: true });
+// The Play licensing key (Play Console → Monetisation setup), from the PLAY_LICENSE_KEY secret:
+// Billing.java checks every purchase's signature with it. A public key, but kept out of the repo
+// like the other keys. Without it (the shared APK, local builds) no purchase counts as verified.
+const licence = (process.env.PLAY_LICENSE_KEY ?? '').replace(/\s+/g, '');
+if (licence && !/^[A-Za-z0-9+/=]{100,1000}$/.test(licence)) throw new Error('PLAY_LICENSE_KEY is not a base64 key');
+if (process.env.MN_STORE === 'play' && !licence) console.warn('PLAY_LICENSE_KEY is not set: MN × purchases will not be verified, so none will turn MN × on.');
+writeFileSync(join(javaDir, 'PlayKey.java'), `package ${config.appId};\n\n/** Written by scripts/android.mjs. */\nfinal class PlayKey {\n    static final String LICENSE = "${licence}";\n}\n`);
 // The PDF maker has to live in android.print (see PdfMaker.java).
 cpSync(join(root, 'native/android/java/android'), join(main, 'java/android'), { recursive: true });
 

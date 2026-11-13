@@ -128,7 +128,8 @@ function pages(app: App, c: Child | undefined): Record<DemoId, Page> {
 }
 
 /** The full-screen preview, opened on one feature; swipe for the others. */
-export function mnxPreviewScreen(start: DemoId, back: (app: App) => Screen, trial: number | null, buy: () => void) {
+/** `cta`: the button to the plans ("Try 7 days free" only when Play offers it), or none (Done). */
+export function mnxPreviewScreen(start: DemoId, back: (app: App) => Screen, cta: string | null, buy: () => void) {
   return (app: App): Screen => {
     const kids = app.save.data.children;
     const kid = kids.find((c) => c.id === app.save.data.activeChildId) ?? kids[0];
@@ -141,7 +142,7 @@ export function mnxPreviewScreen(start: DemoId, back: (app: App) => Screen, tria
           <ol class="dp-notes">${p.notes.map((t, i) => `<li>${n(i + 1)}<span>${t}</span></li>`).join('')}</ol><small class="dp-sample">A preview with sample numbers. Results vary from child to child.</small></article>`;
       }).join('')}</div>
       <div class="dp-dots-nav">${ORDER.map((id) => `<button data-go="${id}" aria-label="${esc(P[id].title)}"></button>`).join('')}</div>
-      <footer class="dp-foot">${trial ? `<button class="dp-buy">Try ${trial} days free</button>` : '<button class="dp-buy ghost">Done</button>'}</footer>
+      <footer class="dp-foot">${cta ? `<button class="dp-buy">${esc(cta)}</button>` : '<button class="dp-buy ghost">Done</button>'}</footer>
     </section>`);
     const strip = el.querySelector<HTMLElement>('.dp-pages')!;
     const count = el.querySelector<HTMLElement>('.dp-count')!;
@@ -155,7 +156,7 @@ export function mnxPreviewScreen(start: DemoId, back: (app: App) => Screen, tria
     dots.forEach((d) => d.addEventListener('click', () => strip.scrollTo({ left: ORDER.indexOf(d.dataset.go as DemoId) * strip.clientWidth, behavior: 'smooth' })));
     const close = () => void app.show(back);
     el.querySelector('.dp-x')!.addEventListener('click', close);
-    el.querySelector('.dp-buy')!.addEventListener('click', () => (trial ? buy() : close()));
+    el.querySelector('.dp-buy')!.addEventListener('click', () => (cta ? buy() : close()));
     return {
       el,
       back: () => (close(), true),

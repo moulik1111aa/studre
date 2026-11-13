@@ -90,3 +90,11 @@
 .mp-preview .toggle-row{padding:10px 0}
 .mplus.owned .mp-free{display:none}
 html[data-theme="playground"] .mp-card:not(.on){background:linear-gradient(110deg,#FFF3C4,#FFFFFF 70%)}
+/* Fix 3: as many plan cards as Play listed; two buttons for subscribers; no prices yet. */
+.mp-plans{grid-template-columns:repeat(var(--n,3),1fr)}
+.mp-two{display:flex;gap:10px}
+.mp-two .btn{flex:1;width:auto}
+.mp-foot .mp-cancel-change{width:auto;align-self:center;margin-bottom:8px}
+.mp-foot{display:flex;flex-direction:column}
+.mp-noprice{display:flex;flex-direction:column;align-items:flex-start;gap:10px}
+.mp-noprice p{margin:0}

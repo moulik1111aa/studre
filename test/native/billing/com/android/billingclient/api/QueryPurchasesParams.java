@@ -1,0 +1,1 @@
+package com.android.billingclient.api; public class QueryPurchasesParams { public static Builder newBuilder(){return new Builder();} public static class Builder { public Builder setProductType(String t){return this;} public QueryPurchasesParams build(){return null;} } }

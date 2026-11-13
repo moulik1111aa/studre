@@ -23,7 +23,6 @@ import { plusSvg } from './plus.ts';
 import { timesMarkSvg } from './mnx.ts';
 import { eraseEverything } from './erase.ts';
 import { openLink, PRIVACY_URL } from './links.ts';
-import { FALLBACK } from '../core/membership.ts';
 import { schoolScreen, schoolLabel } from './school.ts';
 import { reportScreen } from './report.ts';
 import { restoreFromFile } from './restore.ts';
@@ -39,8 +38,7 @@ import { addChildScreen, limitsScreen } from './setup.ts';
 import { voiceScreen } from './voicepick.ts';
 import { lockSetupScreen } from './grownup.ts';
 import { accessState, lockScreen, niceDay } from './access.ts';
-import { hasPlus, needPlus, plusScreen, plusTag, plusVideoFor, storeBuild, trialDays } from './membership.ts';
-import { TRIAL_DAYS, TRIAL_DAYS_SIGNED_IN } from '../core/membership.ts';
+import { hasPlus, needPlus, offeredTrialDays, plansCta, plansNow, plusScreen, plusTag, plusVideoFor, storeBuild } from './membership.ts';
 import { freshProgress } from '../core/path.ts';
 import { quietSettingsScreen } from './quiet.ts';
 import { quietSummary } from '../core/quiet.ts';
@@ -265,7 +263,6 @@ function premiumHtml(app: App): string {
   const on = hasPlus(app);
   const store = storeBuild(app);
   const kids = app.save.data.children;
-  const days = account(app) ? TRIAL_DAYS_SIGNED_IN : TRIAL_DAYS;
   const kid = kids.find((c) => c.id === app.save.data.activeChildId) ?? kids[0];
   const hero = `<div class="pm-hero">
       <div class="pm-mascot" aria-hidden="true">${plusSvg({ cls: 'alive shiny', noShadow: true })}</div>
@@ -276,12 +273,16 @@ function premiumHtml(app: App): string {
   const peek = kid ? `<section class="pm-proof"><p class="pm-cap">${on ? 'Your full report' : 'Here’s what MN × shows you'}</p>${reportPeek(app, kid, on)}</section>` : '';
   const gains = `${on ? '<p class="pm-cap pm-have">What you have with MN ×</p>' : ''}<ul class="pm-gains${on ? ' have' : ''}">${GAINS.map((g) => `<li>${CHECK}<span><b>${esc(g.name)}</b><small>${esc(g.line)}</small></span><button class="pm-q" data-demo="${g.id}" aria-label="See what ${esc(g.name)} looks like">?</button></li>`).join('')}</ul>`;
   const free = on ? '' : '<p class="pm-free-note">Every level, lesson and reward is free for every child, with no ads.</p>';
-  const plans = !store || on ? '' : `<p class="pm-price">Then ${FALLBACK.yearly.price} a year, ${FALLBACK.monthly.price} a month, or ${FALLBACK.lifetime.price} once.</p>`;
+  // Prices only as Google Play gives them (nothing shown until Play has answered).
+  const offers = plansNow(app);
+  const priced = offers.map((o) => `${esc(o.price)} ${o.plan === 'lifetime' ? 'once' : esc(o.per)}`);
+  const plans = !store || on || !priced.length ? '' : `<p class="pm-price">Plans: ${priced.length > 1 ? `${priced.slice(0, -1).join(', ')} or ${priced[priced.length - 1]}` : priced[0]}.</p>`;
+  const trial = offeredTrialDays(app);
   const cta = !store
     ? '<div class="pm-cta-bar"><p class="pm-incl">Everything in MN × is included in this version of MN.</p></div>'
     : on
       ? '<div class="pm-cta-bar"><button class="pm-buy ghost pm-plans">Manage your plan</button></div>'
-      : `<div class="pm-cta-bar"><button class="pm-buy pm-plans">Try ${days} days free</button><small>Cancel any time in Google Play. No charge if you cancel during the free days.</small></div>`;
+      : `<div class="pm-cta-bar"><button class="pm-buy pm-plans">${esc(plansCta(app))}</button><small>${trial ? 'Cancel any time in Google Play. No charge if you cancel during the free days.' : 'Cancel any time in Google Play.'}</small></div>`;
   return `<div class="pm-page">${hero}${peek}${gains}${free}${plans}</div>${cta}`;
 }
 
@@ -318,7 +319,7 @@ function trialNudge(app: App): string {
   const hard = c ? focusFor(app, c).skills[0] : undefined;
   const skill = hard ? skillById(hard.id)?.name : undefined;
   const line = c && skill ? `${esc(c.name)} is finding <b>${esc(skill)}</b> tricky right now. MN × turns that into a short Focus plan each week.` : 'See what each child finds tricky, with a short Focus plan for it each week.';
-  return `<div class="card pa-nudge" role="note"><span class="pa-nudge-x">${timesMarkSvg('nudge')}</span><p>${line}<small>Free for ${trialDays(app)} days. Cancel any time.</small></p><button class="btn small pa-nudge-go">See MN ×</button><button class="pa-nudge-close" aria-label="Hide this for now">✕</button></div>`;
+  return `<div class="card pa-nudge" role="note"><span class="pa-nudge-x">${timesMarkSvg('nudge')}</span><p>${line}<small>${offeredTrialDays(app) ? `Free for ${offeredTrialDays(app)} days. Cancel any time.` : 'Cancel any time in Google Play.'}</small></p><button class="btn small pa-nudge-go">See MN ×</button><button class="pa-nudge-close" aria-label="Hide this for now">✕</button></div>`;
 }
 
 export function parentScreen(app: App): Screen {
@@ -596,8 +597,7 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
   on('.privacy-row', 'click', () => openLink(app, PRIVACY_URL));
   on('.pm-q', 'click', (b) => {
     const sell = storeBuild(app) && !hasPlus(app);
-    const trial = sell ? (account(app) ? TRIAL_DAYS_SIGNED_IN : TRIAL_DAYS) : null;
-    void app.show(mnxPreviewScreen(b.dataset.demo as DemoId, parentScreen, trial, () => void app.show(plusScreen(parentScreen))));
+    void app.show(mnxPreviewScreen(b.dataset.demo as DemoId, parentScreen, sell ? plansCta(app) : null, () => void app.show(plusScreen(parentScreen))));
   });
   on('.pa-nudge-go', 'click', () => {
     openParentOn('premium');

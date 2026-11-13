@@ -162,6 +162,7 @@ jobs:
       - name: Build the Play version of the app
         env:
           FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          PLAY_LICENSE_KEY: ${{ secrets.PLAY_LICENSE_KEY }}
           MN_STORE: play
         run: |
           npm run typecheck && npm test

@@ -9,7 +9,7 @@ import { beats, reelScreen, type ReelScene, type ReelVideo } from './reel.ts';
 
 /** Where each part of the voiceover starts and ends (seconds), found from its pauses. */
 const LINES: [number, number][] = [
-  [0, 6.34], [6.62, 15.45], [16.12, 25.74], [26.12, 29.81], [30.14, 37.56], [38.21, 46.83], [47.48, 51.5], [52.14, 58.44],
+  [0, 6.34], [6.62, 15.45], [16.12, 25.74], [26.12, 29.81], [30.14, 37.56], [38.21, 46.83], [47.48, 51.5], [52.14, 54.9],
 ];
 
 /** A small drawn phone or tablet for the scenes (no emoji). */
@@ -105,10 +105,11 @@ function scenes(): ReelScene[] {
       enter: (el, app, speed) => beats(el.querySelector('.pv-sync2')!, [[300, 's1', () => app.sfx.tap()], [1800, 's2', () => app.sfx.correct(2)]], speed),
     },
     {
-      // "Em En Times. Learning, multiplied. Try it free for seven days, and cancel any time in Google Play."
+      // "Em En Times. Learning, multiplied." (The recording went on "Try it free for seven days…";
+      // that part is cut, since whether a free trial is offered is Google Play's to say.)
       id: 'end',
       bg: ['#6C47FF', '#8E6BFF'],
-      caption: 'Try it free for 7 days',
+      caption: 'See the whole picture',
       sub: 'Cancel any time in Google Play.',
       art: `<div class="pv-endx"><span class="pv-x">${timesMarkSvg('turn-in')}</span><b>MN</b><small>Learning, multiplied.</small></div>`,
     },
