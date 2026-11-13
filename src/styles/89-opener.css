@@ -19,3 +19,11 @@
 .op-go{appearance:none;border:0;cursor:pointer;font:700 20px/1 "Heros Cn","TeX Gyre Heros Cn",sans-serif;letter-spacing:.04em;text-transform:uppercase;color:#fff;background:#141414;border-radius:999px;height:56px;padding:0 34px;box-shadow:6px 6px 0 #FF4B2B}
 .op-link{appearance:none;border:0;background:none;font:500 15px/1 "Inter Display",system-ui,sans-serif;color:#141414;opacity:.7;cursor:pointer;padding:8px}
 .op-btn:focus-visible,.op-go:focus-visible,.op-link:focus-visible{outline:3px solid #2140FF;outline-offset:3px}
+/* Wide screens (a tablet held sideways, an unfolded foldable): the film is drawn for a tall
+   phone, so it plays whole in a centred tall frame instead of being cropped to a strip. */
+@media (min-aspect-ratio:3/4){
+  .screen.opener,html .screen.opener.opener{background:#E2D9C8!important}
+  .screen.opener{--opw:min(100vw,calc(100dvh * 9 / 16))}
+  .op-svg,.op-grain,.op-ui{left:50%;right:auto;width:var(--opw);transform:translateX(-50%)}
+  .op-svg{background:#F3EEE4;box-shadow:0 0 0 1px rgba(20,20,20,.08),0 24px 60px -20px rgba(20,20,20,.35)}
+}

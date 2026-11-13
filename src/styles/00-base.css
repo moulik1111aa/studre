@@ -27,7 +27,7 @@ input{font:inherit}
 :focus-visible{outline:3px solid var(--sun);outline-offset:3px}
 @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 
-.screen{position:absolute;inset:0;display:flex;flex-direction:column;padding:calc(var(--safe-top) + 8px) 18px calc(var(--safe-bottom) + 12px)}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;padding:calc(var(--safe-top) + 8px) var(--side,18px) calc(var(--safe-bottom) + 12px)}
 .scroll{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .scroll::-webkit-scrollbar{display:none}
 

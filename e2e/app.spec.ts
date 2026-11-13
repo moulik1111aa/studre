@@ -1714,3 +1714,35 @@ test('a jar that arrives full (restored from a backup) is ready to give', async 
   await grownUp(page);
   await expect(page.locator('.rewards')).toContainText('Pick your treat');
 });
+
+test('tablet held sideways: screens sit in a centred column and the opening film plays whole', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  // The film: a tall frame in the middle, not a cropped strip across the screen.
+  await page.goto('/?debug');
+  await expect(page.locator('.opener.first')).toBeVisible();
+  const film = await page.locator('.op-svg').boundingBox();
+  expect(film!.height).toBeGreaterThan(790);
+  expect(film!.width).toBeLessThanOrEqual(Math.ceil(800 * 9 / 16) + 1);
+  expect(Math.abs(film!.x + film!.width / 2 - 640)).toBeLessThan(2);
+  // The map and the question screen: content no wider than a large phone, centred.
+  await seeded(page, '@12');
+  const centred = async (sel: string) => {
+    const b = (await page.locator(sel).first().boundingBox())!;
+    expect(b.width).toBeLessThanOrEqual(640);
+    expect(Math.abs(b.x + b.width / 2 - 640)).toBeLessThan(4);
+  };
+  // The bottom row (skip and Play) spans the column, not the screen.
+  const row = await page.locator('.play-bar > *').evaluateAll((els) => {
+    const r = els.map((e) => e.getBoundingClientRect()).filter((b) => b.width > 0);
+    return { left: Math.min(...r.map((b) => b.left)), right: Math.max(...r.map((b) => b.right)) };
+  });
+  expect(row.right - row.left).toBeLessThanOrEqual(640);
+  expect(Math.abs((row.left + row.right) / 2 - 640)).toBeLessThan(4);
+  await page.click('.play-next');
+  await expect(page.locator('.qcard')).toBeVisible();
+  await centred('.qcard');
+  // A phone keeps its own layout.
+  await page.setViewportSize({ width: 412, height: 906 });
+  const phone = (await page.locator('.qcard').boundingBox())!;
+  expect(phone.width).toBeGreaterThan(360);
+});

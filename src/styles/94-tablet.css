@@ -1,0 +1,19 @@
+/* Tablets and unfolded foldables. Android 16 ignores the portrait lock on screens 600dp and
+   wider, so MN must work upright and sideways there. Backgrounds still fill the screen; the
+   content sits in a centred column the width of a large phone. --side is each screen's
+   left and right padding (18px on phones). */
+:root{--side:18px;--column:640px}
+@media (min-width:720px){
+  :root{--side:max(24px,calc((100vw - var(--column)) / 2))}
+  .screen:not(.opener):not(.reel){padding-left:var(--side);padding-right:var(--side)}
+  .play-bar{padding-left:var(--side);padding-right:var(--side)}
+  .toast{max-width:min(560px,calc(100% - 32px))}
+  /* MN Swipe: the top row and the side buttons sit on the column, not the screen's edges. */
+  .sw-hud{padding-left:var(--side);padding-right:var(--side)}
+  .sw-rail{right:calc(var(--side) - 6px)}
+}
+/* A tall tablet: the question screen keeps the height of a large phone, centred, so the
+   answers stay near the question instead of at the far bottom of the glass. */
+@media (min-width:720px) and (min-height:1000px){
+  .screen.play{padding-top:max(calc(var(--safe-top) + 8px),calc((100dvh - 940px) / 2));padding-bottom:max(calc(var(--safe-bottom) + 12px),calc((100dvh - 940px) / 2))}
+}
