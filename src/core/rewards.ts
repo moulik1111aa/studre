@@ -144,6 +144,8 @@ export interface OwnReward {
   icon: string;
   tier: PriceTier;
 }
+/** The pictures a parent can pick for the family's own reward, per jar. */
+export const OWN_ICONS: Record<Jar, string[]> = { treat: ['🎁', '🍫', '🍦', '🍕', '🎟️', '📚', '🎨', '🧸'], goal: ['🎁', '🧸', '🎮', '🚲', '🎢', '⚽', '🎧', '🏏'] };
 const OWN: Reward[] = [];
 /** Load the family's own rewards (from settings) into the catalogue. */
 export function setOwnRewards(list: OwnReward[]): void {

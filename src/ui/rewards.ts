@@ -3,7 +3,7 @@
 
 import { html, esc, type App, type Screen } from './app.ts';
 import type { Child } from '../storage/save.ts';
-import { CATEGORIES, pickable, rewardById, setOwnRewards, costOf, aboutOf, jarOf, PRICES, type Reward, type Jar, type PriceTier } from '../core/rewards.ts';
+import { CATEGORIES, pickable, rewardById, setOwnRewards, OWN_ICONS, costOf, aboutOf, jarOf, PRICES, type Reward, type Jar, type PriceTier } from '../core/rewards.ts';
 import { chooseReward } from '../core/economy.ts';
 import { ICONS, coinSvg, avatarHtml } from './icons.ts';
 import { stagger, popIn, EASE_OUT, reducedMotion } from '../render/motion.ts';
@@ -59,7 +59,7 @@ export function rewardsScreen(child: Child, jar: Jar) {
       const sizes: [PriceTier, string][] = jar === 'treat'
         ? [['small', 'Small'], ['medium', 'Medium'], ['large', 'Large']]
         : [['toyS', 'Toy'], ['toyM', 'Bigger toy'], ['toyB', 'Big'], ['dream', 'Dream']];
-      const icons = jar === 'treat' ? ['🎁', '🍫', '🍦', '🍕', '🎟️', '📚', '🎨', '🧸'] : ['🎁', '🧸', '🎮', '🚲', '🎢', '⚽', '🎧', '🏏'];
+      const icons = OWN_ICONS[jar];
       let tier: PriceTier = sizes[0][0];
       let icon = icons[0];
       const ov = html(`<div class="overlay" role="dialog" aria-modal="true" aria-label="Add your own reward"><div class="sheet own-sheet">
