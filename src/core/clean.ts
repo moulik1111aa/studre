@@ -6,6 +6,7 @@
 
 import { PRICES, OWN_ICONS, CATEGORIES, type OwnReward, type PriceTier } from './rewards.ts';
 import type { Child, Settings } from '../storage/save.ts';
+import { historyId } from './path.ts';
 
 /** How many avatars the app has (ui/icons.ts AVATARS; a test keeps the two in step). */
 export const AVATAR_COUNT = 24;
@@ -89,7 +90,8 @@ function progress(v: unknown) {
     skipped: trueRec(p.skipped),
     lastSeen: rec(p.lastSeen, (x) => day(x) ?? undefined),
     // Question keys are only ever compared, never shown; they may hold a whole picture.
-    history: rec(p.history, (x) => arr(x, 50).filter((s): s is string => typeof s === 'string' && s.length <= 60000)),
+    // Older saves and backups hold full question keys: they become fingerprints (core/path.ts).
+    history: rec(p.history, (x) => arr(x, 50).filter((s): s is string => typeof s === 'string' && s.length <= 60000).map(historyId)),
     ...(p.skippedLevels !== undefined ? { skippedLevels: trueRec(p.skippedLevels) } : {}),
     ...(p.questBest !== undefined ? { questBest: numRec(p.questBest, 0, 1000) } : {}),
   };

@@ -1746,3 +1746,29 @@ test('tablet held sideways: screens sit in a centred column and the opening film
   const phone = (await page.locator('.qcard').boundingBox())!;
   expect(phone.width).toBeGreaterThan(360);
 });
+
+test('saving: a full phone storage shows the parent a message; unreadable saved data is kept and offered as a copy', async ({ page }) => {
+  await seeded(page, '@3');
+  // The WebView's storage stops taking writes.
+  await page.evaluate(() => {
+    Storage.prototype.setItem = () => {
+      throw new DOMException('full', 'QuotaExceededError');
+    };
+    (window as unknown as { __app: { save: { update(f: (d: { children: { wallet: { lifetime: number } }[] }) => void): void } } }).__app.save.update((d) => (d.children[0].wallet.lifetime += 1));
+  });
+  await expect(page.locator('.sheet h2')).toHaveText('MN couldn’t save');
+  await expect(page.locator('.sheet p')).toContainText('no room left');
+  await page.locator('.sheet .actions button').first().click();
+  await expect(page.locator('.overlay')).toHaveCount(0);
+  // Saved data that can't be read: MN starts fresh, keeps the text and says so.
+  // (Set from a page that isn't MN, so the running app can't save over it on the way out.)
+  await page.goto('/not-mn.txt');
+  await page.evaluate(() => {
+    localStorage.clear();
+    localStorage.setItem('studyhard.save', '{"version":1,"children":[{"id":"c1","name":"Zo');
+  });
+  await page.goto('/?debug&noloader');
+  await expect(page.locator('.sheet h2')).toHaveText('Saved progress couldn’t be read');
+  await expect(page.locator('.sheet .actions button').first()).toHaveText(/Save a copy of the old data/i);
+  expect(await page.evaluate(() => localStorage.getItem('studyhard.save.unreadable'))).toBe('{"version":1,"children":[{"id":"c1","name":"Zo');
+});

@@ -9,6 +9,7 @@ import { readAnyBackup } from '../src/core/familyfile.ts';
 import { cleanChild, cleanRules, cleanFamilyDoc, cleanSavedSettings, AVATAR_COUNT } from '../src/core/clean.ts';
 import { FAMILY_KEYS } from '../src/core/cloud.ts';
 import { newChild, parseSave, type Child } from '../src/storage/save.ts';
+import { historyId } from '../src/core/path.ts';
 import { costOf, jarOf, aboutOf, setOwnRewards, ownRewards, type Reward } from '../src/core/rewards.ts';
 import { AVATARS, avatarHtml } from '../src/ui/icons.ts';
 
@@ -77,7 +78,7 @@ test('every field of an imported child is typed: wrong kinds become safe default
   assert.deepEqual(c.progress.levels, { 's1.count5#1': { stars: 3, passes: 0 } });
   assert.deepEqual(c.progress.skipped, { 's1.b': true });
   assert.deepEqual(c.progress.lastSeen, { 's1.b': '2026-11-01' });
-  assert.deepEqual(c.progress.history, { 's1.a': ['k1', 'k2'] });
+  assert.deepEqual(c.progress.history, { 's1.a': ['k1', 'k2'].map(historyId) });
   assert.deepEqual(c.stats, { answered: 0, correct: 0, secondsByDay: { '2026-11-01': 600 } });
   assert.deepEqual(c.bossesBeaten, ['b1']);
   assert.equal(c.challenge, 2);
@@ -196,9 +197,13 @@ test('the family document from the cloud: only well-formed child ids, times and 
 });
 
 test('files and saves made by build 76 read back unchanged', async () => {
+  // Two changes from fix 2, and nothing else: the question history becomes short fingerprints,
+  // and the save gets a counter (0 for a save made before counting began).
+  const now = <T extends { progress: { history: Record<string, string[]> } }>(c: T): T => ({ ...c, progress: { ...c.progress, history: Object.fromEntries(Object.entries(c.progress.history).map(([k, v]) => [k, v.map(historyId)])) } });
   const raw = fixture('save-build76.json');
-  assert.deepEqual(JSON.parse(JSON.stringify(parseSave(raw))), JSON.parse(raw));
-  const child = JSON.parse(raw).children[0];
+  const was = JSON.parse(raw);
+  assert.deepEqual(JSON.parse(JSON.stringify(parseSave(raw))), { ...was, rev: 0, children: was.children.map(now) });
+  const child = now(was.children[0]);
   const single = await readBackup(fixture('backup-build76.json'));
   assert.ok(single.ok);
   const fam = await readAnyBackup(fixture('family-build76.json'));

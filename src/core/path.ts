@@ -70,7 +70,7 @@ export interface Progress {
   skipped: Record<string, true>;
   /** Skill id → local day (YYYY-MM-DD) it was last practised. */
   lastSeen: Record<string, string>;
-  /** Skill id → keys of the last 50 questions (no repeats). */
+  /** Skill id → the last 50 questions asked, as short fingerprints (historyId), so none repeat. */
   history: Record<string, string[]>;
   /** Single levels a parent chose to skip (0 stars, no coins). */
   skippedLevels?: Record<string, true>;
@@ -79,6 +79,26 @@ export interface Progress {
 }
 
 export const freshProgress = (): Progress => ({ levels: {}, skipped: {}, lastSeen: {}, history: {} });
+
+const HASHED = /^~[0-9a-z]{1,11}$/;
+/**
+ * A question key as the history keeps it: "~" and a 53-bit hash (cyrb53) in base 36, at most
+ * 12 characters. Full keys ran to 35 KB for picture questions and filled the save; a rare
+ * clash only means one question is treated as recently asked. Fingerprints pass through.
+ */
+export function historyId(key: string): string {
+  if (HASHED.test(key)) return key;
+  let h1 = 0xdeadbeef;
+  let h2 = 0x41c6ce57;
+  for (let i = 0; i < key.length; i++) {
+    const ch = key.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return `~${(4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36)}`;
+}
 
 export const isPassed = (p: Progress, l: Level): boolean => (p.levels[l.id]?.stars ?? 0) >= 1;
 
@@ -217,7 +237,8 @@ export function makeQuestion(skill: Skill, rng: Rng, d: number, avoid: Set<strin
   for (let tries = 0; tries < 80; tries++) {
     const k = questionKey(skill.id, made);
     const inRound = round.some((q) => questionKey(skill.id, q) === k);
-    const fresh = !avoid.has(k) && !round.some((q) => tooSimilar(made, q)) && !thirdInARow(made.prompt);
+    // `avoid` holds this round's keys and the history's fingerprints.
+    const fresh = !avoid.has(k) && !avoid.has(historyId(k)) && !round.some((q) => tooSimilar(made, q)) && !thirdInARow(made.prompt);
     if (k !== last && (fresh || (tries >= 40 && !inRound) || tries >= 70)) break;
     made = make();
   }
@@ -280,11 +301,11 @@ export function makeRound(level: Level, skillsById: (id: string) => Skill | unde
   return { rules, questions };
 }
 
-/** Remember asked questions (last 50 per skill) and when each skill was practised. */
+/** Remember asked questions (fingerprints of the last 50 per skill) and when each skill was practised. */
 export function noteAsked(p: Progress, qs: Question[], day: string): void {
   for (const q of qs) {
     const h = (p.history[q.skillId] ??= []);
-    h.push(q.key);
+    h.push(historyId(q.key));
     if (h.length > 50) h.splice(0, h.length - 50);
     p.lastSeen[q.skillId] = day;
   }

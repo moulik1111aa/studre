@@ -146,7 +146,37 @@ export class App {
       } else this.sfx.resume();
     });
     if (this.save.loadedFrom === 'backup') this.toast('Progress was restored from a backup copy.');
-    if (this.save.loadedFrom === 'reset') this.toast('Saved progress could not be read, so the app started fresh.');
+    if (this.save.loadedFrom === 'reset') setTimeout(() => this.unreadableSheet(), 600);
+    this.save.onTrouble((t) => {
+      if (t) this.saveTroubleSheet();
+      else this.toast('Saving works again. Progress is up to date.');
+    });
+  }
+
+  /** Saving stopped reaching the phone's storage: tell the parent plainly, once each time it starts. */
+  private saveTroubleSheet(): void {
+    const second = this.native ? ' MN also keeps a second copy in its own storage on the phone and uses whichever copy is newer when it opens.' : '';
+    void this.sheet(
+      `<h2>MN couldn’t save</h2><p>There’s no room left to save progress on this phone, so the latest progress might not be kept.${second} Free up some space on the phone, then close MN and open it again.</p>`,
+      [{ label: 'OK', value: true, back: true }],
+      'MN couldn’t save',
+    ).result;
+  }
+
+  /** The saved progress couldn't be read: say so, and offer the copy that was kept. */
+  private unreadableSheet(): void {
+    const raw = this.save.unreadableCopy();
+    const { result } = this.sheet(
+      `<h2>Saved progress couldn’t be read</h2><p>MN started fresh on this phone. The old data is kept aside, untouched. Save a copy of it and send it to the person who gave you MN; they may be able to bring it back.</p>`,
+      [
+        ...(raw ? [{ label: 'Save a copy of the old data', value: 'copy' as const }] : []),
+        { label: 'Not now', value: 'later' as const, kind: 'ghost' as const, back: true },
+      ],
+      'Saved progress couldn’t be read',
+    );
+    void result.then((v) => {
+      if (v === 'copy' && raw) void saveTextFile(this, `MN-old-data-${new Date().toISOString().slice(0, 10)}.json`, 'application/json', raw).then((ok) => this.toast(ok ? 'A copy of the old data is saved.' : 'The copy could not be saved.'));
+    });
   }
 
   /** Whether 3D scenes should be used (setting on and WebGL available). */

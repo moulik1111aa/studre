@@ -15,8 +15,10 @@ import type { GoogleGate } from '../core/gate.ts';
 import { cleanChild, cleanSavedSettings } from '../core/clean.ts';
 
 export const SAVE_VERSION = 1;
-const PRIMARY = 'studyhard.save';
-const BACKUP = 'studyhard.save.bak';
+export const PRIMARY = 'studyhard.save';
+export const BACKUP = 'studyhard.save.bak';
+/** Saved text no copy of which could be read, kept as it was before anything new is saved. */
+export const UNREADABLE = 'studyhard.save.unreadable';
 
 export interface ChildStats {
   answered: number;
@@ -213,6 +215,8 @@ export interface Access {
 
 export interface SaveData {
   version: number;
+  /** Counts saves. On start the copy with the higher count wins (the phone's own copy or the app's). */
+  rev?: number;
   access?: Access;
   setupDone: boolean;
   children: Child[];
@@ -224,7 +228,24 @@ export interface SaveData {
 
 export interface StorageAdapter {
   get(key: string): string | null;
-  set(key: string, value: string): void;
+  /** Store a value. `false`: it was not stored (storage full or blocked); nothing returned counts as stored. */
+  set(key: string, value: string): boolean | void;
+  /** Remove a value (frees room for the main copy when storage is full). */
+  remove?(key: string): void;
+}
+
+/** A saved copy's counter without reading the whole file (-1: not a save that can be read). */
+export function revOf(raw: string | null | undefined): number {
+  if (!raw) return -1;
+  const m = /^\{"version":\d+,"rev":(\d+)[,}]/.exec(raw.slice(0, 80));
+  if (m) return Number(m[1]);
+  try {
+    const d = JSON.parse(raw) as { rev?: unknown; children?: unknown };
+    if (typeof d !== 'object' || d === null || !Array.isArray(d.children)) return -1;
+    return typeof d.rev === 'number' && Number.isFinite(d.rev) && d.rev >= 0 ? Math.floor(d.rev) : 0;
+  } catch {
+    return -1;
+  }
 }
 
 /** Seconds per timed question for new installs. */
@@ -262,7 +283,7 @@ export const freshSettings = (): Settings => ({
 });
 
 export function freshSave(): SaveData {
-  return { version: SAVE_VERSION, setupDone: false, children: [], activeChildId: null, settings: freshSettings(), faceoff: {} };
+  return { version: SAVE_VERSION, rev: 0, setupDone: false, children: [], activeChildId: null, settings: freshSettings(), faceoff: {} };
 }
 
 export function newChild(name: string, age: number, avatar: number, today: string): Child {
@@ -332,6 +353,7 @@ function parse(raw: string | null): SaveData | null {
       ...base,
       ...d,
       version: SAVE_VERSION,
+      rev: typeof d.rev === 'number' && Number.isFinite(d.rev) && d.rev >= 0 ? Math.floor(d.rev) : 0,
       setupDone: d.setupDone === true,
       activeChildId: typeof d.activeChildId === 'string' && ids.has(d.activeChildId) ? d.activeChildId : null,
       settings: { ...base.settings, ...st, timerSeconds: timerFrom(st), ownRewards: st.ownRewards ?? [], theme: lookFrom(st), studioMoved: true },
@@ -346,32 +368,51 @@ function parse(raw: string | null): SaveData | null {
 export interface LoadResult {
   data: SaveData;
   source: 'primary' | 'backup' | 'new' | 'reset';
+  /** The text the data was read from (the spare copy for the next save). */
+  raw: string | null;
 }
 
 /** Read a saved file (exported for tests). */
 export const parseSave = (raw: string): SaveData | null => parse(raw);
 
+/** Why the last save didn't reach the phone's storage (none: it did). */
+export type SaveTrouble = 'full' | null;
+
 export class SaveStore {
   private readonly store: StorageAdapter;
   data: SaveData;
   readonly loadedFrom: LoadResult['source'];
+  /** The last text known to be stored and readable: becomes the spare copy on the next save,
+   *  so a save never has to read and check the previous one again. */
+  private good: string | null;
+  /** Set while saves are not reaching storage; cleared by the next save that does. */
+  trouble: SaveTrouble = null;
 
   constructor(store: StorageAdapter) {
     this.store = store;
     const r = SaveStore.load(store);
     this.data = r.data;
     this.loadedFrom = r.source;
+    this.good = r.raw;
   }
 
   static load(store: StorageAdapter): LoadResult {
     const primaryRaw = store.get(PRIMARY);
     const backupRaw = store.get(BACKUP);
     const primary = parse(primaryRaw);
-    if (primary) return { data: primary, source: 'primary' };
+    if (primary) return { data: primary, source: 'primary', raw: primaryRaw };
     const backup = parse(backupRaw);
-    if (backup) return { data: backup, source: 'backup' };
-    if (primaryRaw === null && backupRaw === null) return { data: freshSave(), source: 'new' };
-    return { data: freshSave(), source: 'reset' };
+    if (backup) return { data: backup, source: 'backup', raw: backupRaw };
+    if (primaryRaw === null && backupRaw === null) return { data: freshSave(), source: 'new', raw: null };
+    // Nothing could be read: keep the text aside before anything new is saved over it (only the
+    // first time, so a second failed start can't replace it with an empty save).
+    if (store.get(UNREADABLE) === null) store.set(UNREADABLE, primaryRaw ?? backupRaw ?? '');
+    return { data: freshSave(), source: 'reset', raw: null };
+  }
+
+  /** Saved text that couldn't be read when the app last started fresh, if any. */
+  unreadableCopy(): string | null {
+    return this.store.get(UNREADABLE) || null;
   }
 
   /** The saved copy as text (for "Save a copy of my data" when the app is stuck). */
@@ -391,8 +432,11 @@ export class SaveStore {
     if (!spare) return false;
     const now = this.store.get(PRIMARY);
     if (now) this.store.set(`${PRIMARY}.stuck`, now);
+    // Counted past the copy it replaces, so the phone's own copy doesn't win it back on start.
+    spare.rev = Math.max(spare.rev ?? 0, revOf(now)) + 1;
     this.data = spare;
-    this.store.set(PRIMARY, JSON.stringify(spare));
+    const json = JSON.stringify(spare);
+    if (this.write(PRIMARY, json)) this.good = json;
     return true;
   }
 
@@ -402,12 +446,38 @@ export class SaveStore {
     this.listeners.push(fn);
   }
 
+  private readonly troubleListeners: ((t: SaveTrouble) => void)[] = [];
+  /** Called when saving starts failing, and again when it works again (null). */
+  onTrouble(fn: (t: SaveTrouble) => void): void {
+    this.troubleListeners.push(fn);
+  }
+
+  /** Store a value and check it is there. */
+  private write(key: string, value: string): boolean {
+    try {
+      if (this.store.set(key, value) === false) return false;
+    } catch {
+      return false;
+    }
+    return this.store.get(key) === value;
+  }
+
   save(): void {
+    this.data.rev = (this.data.rev ?? 0) + 1;
     const json = JSON.stringify(this.data);
-    const prev = this.store.get(PRIMARY);
-    if (prev && parse(prev)) this.store.set(BACKUP, prev);
-    this.store.set(PRIMARY, json);
-    if (!prev) this.store.set(BACKUP, json);
+    // The spare copy is the last save known to be good (no need to read it back and check it).
+    if (this.good && this.good !== json) this.write(BACKUP, this.good);
+    let ok = this.write(PRIMARY, json);
+    if (!ok) {
+      // Most likely storage is full: drop the spare copy to make room, and try once more.
+      this.store.remove?.(BACKUP);
+      ok = this.write(PRIMARY, json);
+    }
+    if (!this.good && ok) this.write(BACKUP, json);
+    const was = this.trouble;
+    this.trouble = ok ? null : 'full';
+    if (ok) this.good = json;
+    if (was !== this.trouble) for (const fn of this.troubleListeners) fn(this.trouble);
     for (const fn of this.listeners) fn();
   }
 
@@ -421,23 +491,38 @@ export class SaveStore {
   }
 }
 
-/** localStorage adapter that never throws (private mode, blocked storage, previews). */
+/**
+ * localStorage adapter that never throws (private mode, blocked storage, previews). A value that
+ * didn't fit is kept in memory for this session and `set` says so; reads prefer the memory copy,
+ * so the app never goes back to an older stored value after a failed write.
+ */
 export function browserStorage(): StorageAdapter {
   const mem = new Map<string, string>();
   return {
     get(key) {
+      const m = mem.get(key);
+      if (m !== undefined) return m;
       try {
-        return localStorage.getItem(key) ?? mem.get(key) ?? null;
+        return localStorage.getItem(key);
       } catch {
-        return mem.get(key) ?? null;
+        return null;
       }
     },
     set(key, value) {
       mem.set(key, value);
       try {
         localStorage.setItem(key, value);
+        return true;
       } catch {
-        /* in-memory only */
+        return false;
+      }
+    },
+    remove(key) {
+      mem.delete(key);
+      try {
+        localStorage.removeItem(key);
+      } catch {
+        /* nothing to free */
       }
     },
   };

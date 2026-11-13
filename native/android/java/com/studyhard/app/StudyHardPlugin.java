@@ -659,8 +659,12 @@ public class StudyHardPlugin extends Plugin {
             call.reject("key and value are required");
             return;
         }
-        prefs().edit().putString(key, value).apply();
-        call.resolve();
+        // commit(), not apply(): written to disk before this returns, so a level's result survives
+        // the app being closed or killed straight after (apply() writes later, in the background).
+        boolean ok = prefs().edit().putString(key, value).commit();
+        JSObject result = new JSObject();
+        result.put("ok", ok);
+        call.resolve(result);
     }
 
     /** English voices installed on the phone, best first. */
