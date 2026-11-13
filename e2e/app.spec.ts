@@ -1626,6 +1626,87 @@ test('MN ×: the app icon can be chosen from the Parent area', async ({ page })
   await expect(page.locator('.toast').last()).toContainText('Night');
 });
 
+test('hostile backup files: nothing runs, the parent PIN stays, unknown rules are dropped, and the home screen still draws', async ({ page }) => {
+  type W = { __share: (t: string) => Promise<void>; __pwn?: number; __app: { show(m: unknown): void; save: { data: { settings: Record<string, unknown>; children: { id: string; age: unknown; avatar: unknown }[] } } }; __screens: Record<string, unknown> };
+  await page.goto('/?debug&demo=%4012&noloader');
+  await expect(page.locator('.map')).toBeVisible();
+  const pinBefore = await page.evaluate(() => (window as unknown as W).__app.save.data.settings.parentPin);
+  // Files with a valid check value, as anyone can make them (the phrase is in the app).
+  const files = await page.evaluate(async () => {
+    const PWN = '<img src=x onerror="window.__pwn=(window.__pwn||0)+1">';
+    const sha = async (t: string) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)))].map((b) => b.toString(16).padStart(2, '0')).join('');
+    const backup = async (child: Record<string, unknown>) => {
+      const b = { format: 'mn-child-backup', version: 1, exportedAt: '2026-11-12T10:00:00.000Z', child };
+      return { ...b, check: await sha('MN Mission Next · child backup · v1' + JSON.stringify(b)) };
+    };
+    const kid = (over: Record<string, unknown>) => ({ id: 'cattack1', name: 'Mallory', age: 8, avatar: 1, placed: true, placementChecks: 0, placedAt: {}, progress: { levels: {}, skipped: {}, lastSeen: {}, history: {} }, wallet: { treat: { rewardId: null, coins: 0, waiting: false }, goal: { rewardId: null, coins: 0, waiting: false }, lifetime: 0, lastPlayDay: null, meltCheckedDay: null, todaySeconds: 0, todayDay: null, earned: [] }, stats: { answered: 0, correct: 0, secondsByDay: {} }, bossesBeaten: [], createdDay: '2026-11-01', challenge: 0, ...over });
+    return {
+      ageAvatar: JSON.stringify(await backup(kid({ age: PWN, avatar: 'none' }))),
+      id: JSON.stringify(await backup(kid({ id: `c"><img src=x onerror="window.__pwn=(window.__pwn||0)+1">` }))),
+      family: JSON.stringify({ format: 'mn-family-backup', version: 1, exportedAt: '2026-11-12T10:00:00.000Z', source: 'phone', children: [await backup(kid({ id: 'cattack2', name: 'Trudy' }))], rules: { parentPin: 'evil:pin', evil: PWN, limitMinutes: PWN, timerSeconds: PWN, treatPace: 2, ownRewards: [{ id: 'own.bad', name: 'Bad tier', icon: '🍕', tier: 'huge' }, { id: 'own.ok', name: PWN.slice(0, 40), icon: PWN, tier: 'small' }] } }),
+    };
+  });
+  const share = (t: string) => void page.evaluate((x) => (window as unknown as W).__share(x), t);
+  const pwned = () => page.evaluate(() => (window as unknown as W).__pwn ?? 0);
+
+  // 1. An age that is markup and an avatar that isn't a number.
+  share(files.ageAvatar);
+  await expect(page.locator('.grownup')).toBeVisible();
+  await grownUp(page);
+  await expect(page.locator('.sheet h2')).toContainText('Add Mallory');
+  await page.waitForTimeout(300);
+  expect(await pwned()).toBe(0);
+  await expect(page.locator('.sheet img')).toHaveCount(0);
+  await page.locator('.sheet .btn.mint').first().click();
+  await expect.poll(() => page.evaluate(() => (window as unknown as W).__app.save.data.children.some((c) => c.id === 'cattack1'))).toBe(true);
+  const home = () => page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.whosPlayingScreen); });
+  await page.waitForTimeout(700);
+  await home();
+  await expect(page.locator('.whos')).toBeVisible();
+  await expect(page.locator('.oops-screen')).toHaveCount(0);
+  const added = await page.evaluate(() => (window as unknown as W).__app.save.data.children.find((c) => c.id === 'cattack1'));
+  expect(added).toMatchObject({ age: 6, avatar: 0 });
+
+  // 2. An id that tries to break out of an attribute: refused.
+  const kidsBefore = await page.evaluate(() => (window as unknown as W).__app.save.data.children.length);
+  await page.evaluate((x) => (window as unknown as W).__share(x), files.id);
+  await expect(page.locator('.toast').last()).toContainText('not an MN backup');
+  expect(await page.evaluate(() => (window as unknown as W).__app.save.data.children.length)).toBe(kidsBefore);
+
+  // 3. A family file whose rules carry a parent PIN, an unknown key, markup and a bad tier.
+  share(files.family);
+  await expect(page.locator('.grownup')).toBeVisible();
+  await grownUp(page);
+  await expect(page.locator('.sheet h2')).toContainText('Add Trudy');
+  await page.locator('.sheet .btn.mint').first().click();
+  await expect(page.locator('.sheet h2').last()).toContainText('Use the rules from the file?');
+  await page.locator('.sheet').last().locator('.btn.mint').click();
+  await expect.poll(() => page.evaluate(() => (window as unknown as W).__app.save.data.settings.treatPace)).toBe(2);
+  await page.waitForTimeout(700);
+  await home();
+  await expect(page.locator('.whos')).toBeVisible();
+  const st = await page.evaluate(() => (window as unknown as W).__app.save.data.settings);
+  expect(st.parentPin).toBe(pinBefore);
+  expect(st.evil).toBeUndefined();
+  expect(st.limitMinutes).toBe(30);
+  expect(typeof st.timerSeconds).toBe('number');
+  expect(st.treatPace).toBe(2);
+  expect(st.ownRewards).toEqual([{ id: 'own.ok', name: '<img src=x onerror="window.__pwn=(window', icon: '🎁', tier: 'small' }]);
+
+  // The Parent area and the home screen draw, after a restart too, and nothing ran.
+  await page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.parentScreen); });
+  await expect(page.locator('.limits')).toContainText('30 minutes a day');
+  // The own reward's name (kept as text) shows as text where children pick a treat.
+  await page.evaluate(() => { const w = window as unknown as W & { __app: { child: unknown } }; w.__app.show((w.__screens.rewardsScreen as (c: unknown, j: string) => unknown)(w.__app.child, 'treat')); });
+  await expect(page.locator('.rewards')).toBeVisible();
+  await expect(page.locator('.rewards img')).toHaveCount(0);
+  await page.goto('/?debug&noloader');
+  await expect(page.locator('.whos .kid')).toHaveCount(kidsBefore + 1);
+  await expect(page.locator('.oops-screen')).toHaveCount(0);
+  await expect(page.locator('.whos img')).toHaveCount(0);
+  expect(await pwned()).toBe(0);
+});
+
 test('a jar that arrives full (restored from a backup) is ready to give', async ({ page }) => {
   await seeded(page, '@0', `window.__app.save.update((d) => { const t = d.children[0].wallet.treat; t.coins = 2000; t.waiting = false; })`);
   await expect(page.locator('.unlock')).toBeVisible();

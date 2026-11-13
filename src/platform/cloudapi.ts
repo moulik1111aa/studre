@@ -4,6 +4,13 @@
 // runs in tests and debug builds (`?debug&cloudmock`).
 
 import type { CloudChild, FamilyDoc } from '../core/cloud.ts';
+import { CHILD_ID, cleanFamilyDoc } from '../core/clean.ts';
+
+/** A child id as a path segment: only ids of the app's own shape, and encoded. */
+function seg(id: string): string {
+  if (typeof id !== 'string' || !CHILD_ID.test(id)) throw new CloudError('other', 'Not a child id.');
+  return encodeURIComponent(id);
+}
 
 export interface FirebaseConfig {
   apiKey: string;
@@ -311,7 +318,8 @@ export class FirebaseRest implements CloudBackend {
     if (res.status === 404) return null;
     if (!res.ok) throw new CloudError('other', `Cloud error ${res.status}`);
     const f = unfields(((await res.json()) as { fields?: Record<string, FsValue> }).fields);
-    return { v: 1, consentAt: Number(f.consentAt ?? 0), policy: String(f.policy ?? ''), kids: (f.kids ?? {}) as Record<string, number>, removed: (f.removed ?? {}) as Record<string, number>, resets: (f.resets ?? {}) as Record<string, number>, deletedAt: f.deletedAt ? Number(f.deletedAt) : undefined, devices: (f.devices ?? {}) as FamilyDoc['devices'], rules: f.rules ? JSON.parse(String(f.rules)) : {}, rulesAt: Number(f.rulesAt ?? 0), primary: f.primary ? String(f.primary) : undefined };
+    // What the cloud holds is checked before use (core/clean.ts).
+    return cleanFamilyDoc(f);
   }
 
   async putFamily(f: FamilyDoc, ch: FamilyChanges): Promise<void> {
@@ -325,21 +333,21 @@ export class FirebaseRest implements CloudBackend {
   }
 
   async getChild(id: string): Promise<CloudChild | null> {
-    const res = await this.fs('GET', `${this.family}/children/${id}`);
+    const res = await this.fs('GET', `${this.family}/children/${seg(id)}`);
     if (res.status === 404) return null;
     if (!res.ok) throw new CloudError('other', `Cloud error ${res.status}`);
     const f = unfields(((await res.json()) as { fields?: Record<string, FsValue> }).fields);
-    return { childId: String(f.childId), updatedAt: Number(f.updatedAt), device: String(f.device ?? ''), data: String(f.data) };
+    return { childId: String(f.childId), updatedAt: Number.isFinite(Number(f.updatedAt)) ? Number(f.updatedAt) : 0, device: String(f.device ?? '').slice(0, 64), data: String(f.data) };
   }
 
   async putChild(doc: CloudChild): Promise<void> {
     const body = { fields: { v: { integerValue: '1' }, childId: { stringValue: doc.childId }, updatedAt: { integerValue: String(doc.updatedAt) }, device: { stringValue: doc.device }, data: { bytesValue: doc.data } } };
-    const res = await this.fs('PATCH', `${this.family}/children/${doc.childId}`, '', body);
+    const res = await this.fs('PATCH', `${this.family}/children/${seg(doc.childId)}`, '', body);
     if (!res.ok) throw new CloudError('other', `Cloud error ${res.status}`);
   }
 
   async deleteChild(id: string): Promise<void> {
-    const res = await this.fs('DELETE', `${this.family}/children/${id}`);
+    const res = await this.fs('DELETE', `${this.family}/children/${seg(id)}`);
     if (!res.ok && res.status !== 404) throw new CloudError('other', `Cloud error ${res.status}`);
   }
 

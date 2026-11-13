@@ -12,7 +12,9 @@ export const AVATAR_COUNT = 24;
 /** A child's id: what newChild() makes, and what a Firestore path can carry. */
 export const CHILD_ID = /^[A-Za-z0-9_-]{1,40}$/;
 /** Ids of skills, levels, rewards, badges, wardrobe items…: letters, digits and a few joiners. */
-const KEY = /^[A-Za-z0-9_.:@|+-]{1,80}$/;
+const KEY = /^[A-Za-z0-9_.:@|+#-]{1,80}$/;
+/** Names used as record keys (a strand, a method family): anything short without markup. */
+const NAME = /^[^<>&"'`\u0000-\u001f]{1,80}$/;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -240,7 +242,7 @@ export function cleanChild(raw: unknown, opts: { lenient?: boolean } = {}): Clea
     avatar: int(c.avatar, 0, 0, AVATAR_COUNT - 1),
     placed: bool(c.placed),
     placementChecks: int(c.placementChecks, 0, 0, 1000),
-    placedAt: rec(c.placedAt, (x) => key(x) ?? undefined),
+    placedAt: rec(c.placedAt, (x) => key(x) ?? undefined, (k) => NAME.test(k)),
     progress: progress(c.progress),
     wallet: wallet(c.wallet),
     stats: { answered: int(stats.answered, 0, 0, 1e9), correct: int(stats.correct, 0, 0, 1e9), secondsByDay: dayNumRec(stats.secondsByDay) },
@@ -267,7 +269,7 @@ export function cleanChild(raw: unknown, opts: { lenient?: boolean } = {}): Clea
     ...(c.tally !== undefined ? { tally: tally(c.tally, 3) } : {}),
     ...(lp ? { lastPlay: lp } : {}),
     ...(c.fixit !== undefined ? { fixit: fixit(c.fixit) } : {}),
-    ...(c.methods !== undefined ? { methods: rec(c.methods, (x) => (typeof x === 'string' ? x.slice(0, 60) : undefined)) } : {}),
+    ...(c.methods !== undefined ? { methods: rec(c.methods, (x) => (typeof x === 'string' && NAME.test(x) ? x : undefined), (k) => NAME.test(k)) } : {}),
   };
   return { ok: true, child };
 }
@@ -295,7 +297,10 @@ function quiet(v: unknown): Settings['quiet'] | undefined {
     const o = obj(r);
     return { on: bool(o.on), from: typeof o.from === 'string' && TIME.test(o.from) ? o.from : from, to: typeof o.to === 'string' && TIME.test(o.to) ? o.to : to };
   };
-  const days = [...new Set(arr(obj(v.school).days, 7).filter((d): d is number => Number.isInteger(d) && (d as number) >= 0 && (d as number) <= 6))];
+  const rawDays = obj(v.school).days;
+  // No list at all (an older save, or one set before school time existed): the usual school week.
+  if (!Array.isArray(rawDays)) return { bed: range(v.bed, '21:00', '07:00'), school: { ...range(v.school, '08:00', '14:00'), days: [1, 2, 3, 4, 5] } };
+  const days = [...new Set(arr(rawDays, 7).filter((d): d is number => Number.isInteger(d) && (d as number) >= 0 && (d as number) <= 6))];
   return { bed: range(v.bed, '21:00', '07:00'), school: { ...range(v.school, '08:00', '14:00'), days } };
 }
 
@@ -343,4 +348,39 @@ export function cleanSavedSettings<T extends Partial<Settings>>(s: T): T {
   }
   for (const k of ['voiceName', 'parentPin', 'swipeBand'] as const) if (out[k] !== undefined && typeof out[k] !== 'string') delete out[k];
   return out as T;
+}
+
+/** A device id or label as the family document carries it. */
+const DEVICE = /^[A-Za-z0-9_-]{1,64}$/;
+
+/**
+ * The family document from the cloud, made well-formed: child ids that fit CHILD_ID, finite times,
+ * checked rules (given as an object or as the JSON text the cloud stores).
+ */
+export function cleanFamilyDoc(raw: unknown) {
+  const f = obj(raw);
+  const times = (v: unknown) => rec(v, (x) => (typeof x === 'number' && Number.isFinite(x) && x >= 0 ? x : undefined), (k) => CHILD_ID.test(k), 200);
+  let rules: unknown = f.rules;
+  if (typeof rules === 'string') {
+    try {
+      rules = JSON.parse(rules);
+    } catch {
+      rules = {};
+    }
+  }
+  const primary = typeof f.primary === 'string' && DEVICE.test(f.primary) ? f.primary : undefined;
+  const deletedAt = typeof f.deletedAt === 'number' && Number.isFinite(f.deletedAt) && f.deletedAt > 0 ? f.deletedAt : undefined;
+  return {
+    v: 1 as const,
+    consentAt: num(f.consentAt, 0, 0, 1e14),
+    policy: str(f.policy, 40),
+    kids: times(f.kids),
+    removed: times(f.removed),
+    resets: times(f.resets),
+    devices: rec(f.devices, (x) => (isObj(x) ? { label: str(x.label, 60), at: num(x.at, 0, 0, 1e14) } : undefined), (k) => DEVICE.test(k), 100),
+    rules: cleanRules(rules),
+    rulesAt: num(f.rulesAt, 0, 0, 1e14),
+    ...(primary ? { primary } : {}),
+    ...(deletedAt ? { deletedAt } : {}),
+  };
 }

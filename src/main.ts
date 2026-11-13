@@ -45,10 +45,14 @@ import { makeQuestion } from './core/path.ts';
 import { createRng } from './core/rng.ts';
 
 
+/** The app once it exists, so a start-up failure can still offer "Save a copy of my data". */
+let theApp: App | undefined;
+
 async function boot(): Promise<void> {
   const native = nativeBridge();
   const storage = native ? await nativeStorage(native) : browserStorage();
   const app = new App(document.getElementById('app')!, storage, native);
+  theApp = app;
   if (app.debug) {
     // Screen factories for screenshots and tests.
     Object.assign(window, { __app: app, __screens: { openerScreen, plusScreen, plusVideoScreen, mapScreen, adventureScreen, resultScreen, showcaseScreen, rewardsScreen, unlockScreen, timesUpScreen, trophyScreen, parentScreen, welcomeScreen, whosPlayingScreen, reportScreen, schoolScreen, faceoffSetupScreen, fightScreen, levelScreen, questScreen, placementScreen, addChildScreen, limitsScreen, meltedScreen, voiceChoiceScreen, lockSetupScreen, ownerScreen } });
@@ -170,6 +174,6 @@ void boot().catch((e) => {
   console.error('boot failed', e);
   const root = document.getElementById('app');
   if (root && !root.querySelector('.screen')) {
-    root.appendChild(errorScreen(e).el);
+    root.appendChild(errorScreen(e, theApp).el);
   }
 });

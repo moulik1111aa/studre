@@ -1,7 +1,7 @@
 // Face-off (spec §6): set up two players (children or a guest with a level slider), pick a
 // mode, then race on one phone lying flat — the top half is turned 180° for the player opposite.
 
-import { html, esc, type App, type Screen } from './app.ts';
+import { escv, html, esc, type App, type Screen } from './app.ts';
 import type { Child } from '../storage/save.ts';
 import { AREAS, allSkills } from '../core/areas/index.ts';
 import { makeQuestion } from '../core/path.ts';
@@ -72,7 +72,7 @@ export function faceoffSetupScreen(prev?: { a: Player; b: Player; mode: FaceoffM
           const local = p.skill - stageStart(st);
           return `<div class="card fo-player" data-i="${i}">
             <p class="chip">${i === 0 ? 'Player 1 · near side' : 'Player 2 · far side'}</p>
-            <div class="fo-pick">${options.map((o) => `<button class="fo-who${o.id === p.id ? ' on' : ''}" data-id="${o.id}" aria-label="${esc(o.name)}">${avatarHtml(o.avatar, 50)}<small>${esc(o.name)}</small></button>`).join('')}</div>
+            <div class="fo-pick">${options.map((o) => `<button class="fo-who${o.id === p.id ? ' on' : ''}" data-id="${escv(o.id)}" aria-label="${esc(o.name)}">${avatarHtml(o.avatar, 50)}<small>${esc(o.name)}</small></button>`).join('')}</div>
             ${p.id === 'guest'
               ? `<div class="fo-guest"><div class="fo-stages">${AREAS[0].stages.map((s, k) => `<button class="fo-st${k + 1 === st ? ' on' : ''}" data-st="${k + 1}">${k + 1}</button>`).join('')}</div>
                  <input type="range" class="slider fo-skill" min="0" max="${AREAS[0].skills[st - 1].length - 1}" value="${local}" aria-label="Guest level">

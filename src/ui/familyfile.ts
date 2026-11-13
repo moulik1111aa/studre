@@ -1,6 +1,6 @@
 // The family backup file as a page that opens in any browser: who is in it and when it was
 // saved, with the backup itself inside (the same as the online backup; see core/familyfile.ts).
-import { esc, type App } from './app.ts';
+import { escv, esc, type App } from './app.ts';
 import { familyJson, makeFamilyFile, type FamilyFile } from '../core/familyfile.ts';
 import { familyRules } from '../core/cloud.ts';
 import { saveTextFile } from '../platform/files.ts';
@@ -14,7 +14,7 @@ export function familyFileHtml(f: FamilyFile): string {
     .map((b) => {
       const c = b.child;
       const passed = Object.values(c.progress.levels).filter((l) => l.stars >= 1).length;
-      return `<li><b>${esc(c.name)}</b><span>age ${c.age} · ${passed} levels passed · ${Math.round(c.wallet.lifetime)} coins earned</span></li>`;
+      return `<li><b>${esc(c.name)}</b><span>age ${escv(c.age)} · ${escv(passed)} levels passed · ${escv(Math.round(c.wallet.lifetime))} coins earned</span></li>`;
     })
     .join('');
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">

@@ -8,7 +8,7 @@
 // times of day and the level list come from the play log, which starts with this update.
 
 import { hasPlus, mnxIncluded, plusScreen } from './membership.ts';
-import { html, esc, type App, type Screen } from './app.ts';
+import { escv, html, esc, type App, type Screen } from './app.ts';
 import { resetChild, removeChild, type Child } from '../storage/save.ts';
 import { rewardById, costOf } from '../core/rewards.ts';
 import { AREAS, skillById } from '../core/areas/index.ts';
@@ -167,7 +167,7 @@ export function reportScreen(child: Child, start: Tab = 'overview') {
         : '';
     const overview = `
       <div class="card rp-hero">${avatarHtml(child.avatar, 64)}<div><h2>${esc(child.name)}</h2>
-        <p>Age ${child.age} · ${child.school?.on ? esc(schoolLabel(child.school)) : `Stage ${front?.stage ?? 7}: ${esc(stageInfo(front?.stage ?? 7).name)}`}</p>
+        <p>Age ${escv(child.age)} · ${child.school?.on ? esc(schoolLabel(child.school)) : `Stage ${front?.stage ?? 7}: ${esc(stageInfo(front?.stage ?? 7).name)}`}</p>
         <p class="rp-now">Now on: <b>${esc(levelLabel(front))}</b></p>
         <p class="rp-meta">${child.createdDay ? `Playing since ${esc(shortDate(child.createdDay))}` : ''}${lastDay ? ` · last played ${ago(lastDay, today)}` : ''}${child.assisted ? ' · 👪 plays play together' : ''}</p></div></div>
       <div class="rp-kpis">
@@ -287,7 +287,7 @@ export function reportScreen(child: Child, start: Tab = 'overview') {
       const r = jar.rewardId ? rewardById(jar.rewardId) : undefined;
       if (!r) return `<div class="card rp-jar"><p class="fine">No ${which === 'treat' ? 'treat' : 'big reward'} chosen yet.</p></div>`;
       const p = Math.floor(jarProgress(jar) * 100);
-      return `<div class="card rp-jar"><span class="rp-jar-icon">${r.icon}</span><div><small>${which === 'treat' ? 'Treat' : 'Big reward'}</small><b>${esc(r.name)}</b><div class="rep-bar"><i style="width:${p}%"></i></div><em>${Math.floor(jar.coins)} of ${costOf(r)} coins · ${jar.waiting ? 'ready to hand over!' : `${p}%`}</em></div></div>`;
+      return `<div class="card rp-jar"><span class="rp-jar-icon">${esc(r.icon)}</span><div><small>${which === 'treat' ? 'Treat' : 'Big reward'}</small><b>${esc(r.name)}</b><div class="rep-bar"><i style="width:${p}%"></i></div><em>${Math.floor(jar.coins)} of ${costOf(r)} coins · ${jar.waiting ? 'ready to hand over!' : `${p}%`}</em></div></div>`;
     };
     const earned = child.wallet.earned;
     const gaps = earned.slice(1).map((e, i) => dayDiff(earned[i].day, e.day));

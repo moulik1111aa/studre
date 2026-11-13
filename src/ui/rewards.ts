@@ -1,7 +1,7 @@
 // Choosing rewards: a picture catalogue by category. Pick a treat, then a big reward; once
 // chosen it is locked in. A parent can attach a photo of what was agreed.
 
-import { html, esc, type App, type Screen } from './app.ts';
+import { escv, html, esc, type App, type Screen } from './app.ts';
 import type { Child } from '../storage/save.ts';
 import { CATEGORIES, pickable, rewardById, setOwnRewards, OWN_ICONS, costOf, aboutOf, jarOf, PRICES, type Reward, type Jar, type PriceTier } from '../core/rewards.ts';
 import { chooseReward } from '../core/economy.ts';
@@ -28,7 +28,7 @@ export function rewardsScreen(child: Child, jar: Jar) {
         .map((c) => {
           const items = list.filter((r) => r.category === c.id);
           const open = c.id === active;
-          const cards = items.map((r) => `<button class="rw-card" data-r="${r.id}"><span class="rw-icon">${r.icon}</span><b>${esc(r.name)}</b><span class="rw-cost">${coinSvg}${costOf(r)}</span><small>${aboutOf(r)}</small></button>`).join('') + (c.id === 'own' ? `<button class="rw-card rw-add"><span class="rw-icon">＋</span><b>Add your own</b><small>A parent names it and picks its size</small></button>` : '');
+          const cards = items.map((r) => `<button class="rw-card" data-r="${escv(r.id)}"><span class="rw-icon">${escv(r.icon)}</span><b>${esc(r.name)}</b><span class="rw-cost">${coinSvg}${costOf(r)}</span><small>${aboutOf(r)}</small></button>`).join('') + (c.id === 'own' ? `<button class="rw-card rw-add"><span class="rw-icon">＋</span><b>Add your own</b><small>A parent names it and picks its size</small></button>` : '');
           const note = c.id === 'own' ? 'Something of your own' : `${items.length} to choose from · from ${quickest(items)}`;
           return `<section class="rw-cat${open ? ' open' : ''}" data-c="${c.id}">
             <button class="rw-cat-head" aria-expanded="${open}"><span class="rw-cat-ic">${c.icon}</span><span class="rw-cat-t"><b>${esc(c.name)}</b><small>${esc(note)}</small></span><i class="rw-chev">${open ? '−' : '+'}</i></button>
@@ -100,7 +100,7 @@ export function rewardsScreen(child: Child, jar: Jar) {
     const confirm = (r: Reward) => {
       let photo: string | undefined;
       const ov = html(`<div class="overlay" role="dialog" aria-modal="true" aria-label="${esc(r.name)}"><div class="sheet rw-confirm">
-        <div class="rw-big">${r.icon}</div><h2>${esc(r.name)}</h2>
+        <div class="rw-big">${esc(r.icon)}</div><h2>${esc(r.name)}</h2>
         <p class="rw-price">${coinSvg} ${costOf(r)} coins · ${aboutOf(r)}</p>
         <p class="lock-note">${ICONS.lock} Once you choose, it’s locked in until you earn it.</p>
         <div class="photo-slot"></div>

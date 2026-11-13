@@ -47,7 +47,10 @@ export const AVATAR_COLORS = [
   ['#FFD25A', '#F5A524'], ['#FF9A4D', '#E8590C'], ['#7BE495', '#2E9E6A'], ['#5CC8FF', '#2457C9'],
   ['#B48BFF', '#5F3DC4'], ['#FF7AA8', '#C2255C'],
 ];
-export function avatarHtml(i: number, size = 64): string {
+export function avatarHtml(index: number, size = 64): string {
+  // Whatever arrives (a saved number, or something else from a damaged save), draw an avatar.
+  const i = Number.isInteger(index) && index >= 0 ? index : 0;
+  const px = Number.isFinite(size) && size > 0 ? Math.round(size) : 64;
   const [a, b] = AVATAR_COLORS[i % AVATAR_COLORS.length];
-  return `<span class="avatar" style="--a:${a};--b:${b};width:${size}px;height:${size}px;font-size:${Math.round(size * 0.56)}px">${AVATARS[i % AVATARS.length]}</span>`;
+  return `<span class="avatar" style="--a:${a};--b:${b};width:${px}px;height:${px}px;font-size:${Math.round(px * 0.56)}px">${AVATARS[i % AVATARS.length]}</span>`;
 }

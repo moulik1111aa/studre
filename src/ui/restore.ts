@@ -6,6 +6,7 @@ import { newChild, type Child } from '../storage/save.ts';
 import { mergeChild, type Backup } from '../core/backup.ts';
 import { readAnyBackup } from '../core/familyfile.ts';
 import { familyRules, sameRules } from '../core/cloud.ts';
+import { cleanRules } from '../core/clean.ts';
 import { account, syncNow } from './cloud.ts';
 import { pickTextFile } from '../platform/files.ts';
 
@@ -36,13 +37,15 @@ export async function restoreFromText(app: App, text: string, done: () => void):
   let changed = false;
   for (const b of r.backups) changed = (await restoreChild(app, b, r.family)) || changed;
   // A family file also carries the family's rules (time limits, bedtime…).
-  if (r.rules && !sameRules(r.rules, familyRules(app.save.data.settings))) {
+  // Only the shared rules, each checked (never a parent PIN or anything else a file might carry).
+  const rules = r.rules ? { ...familyRules(app.save.data.settings), ...cleanRules(r.rules) } : undefined;
+  if (rules && !sameRules(rules, familyRules(app.save.data.settings))) {
     const { result } = app.sheet('<h2>Use the rules from the file?</h2><p>The file also has your family’s daily time limit, bedtime and reward pace. Use those on this phone, or keep this phone’s?</p>', [
       { label: 'Use the file’s rules', value: true, kind: 'mint' },
       { label: 'Keep this phone’s', value: false, kind: 'ghost', back: true },
     ], 'Rules from the file');
     if (await result) {
-      app.save.update((d) => Object.assign(d.settings, r.rules));
+      app.save.update((d) => Object.assign(d.settings, rules));
       changed = true;
     }
   }
@@ -60,7 +63,7 @@ async function restoreChild(app: App, b: Backup, inFamily: boolean): Promise<boo
   const passed = Object.values(incoming.progress.levels).filter((l) => l.stars >= 1).length;
   const here = app.save.data.children.find((c) => c.id === incoming.id);
   const title = inFamily ? 'Restore from a backup file' : 'Restore from a progress file';
-  const summary = `<p>Saved on <b>${esc(when)}</b>: age ${incoming.age}, ${passed} levels passed, ${Math.round(incoming.wallet.lifetime)} coins earned.</p>`;
+  const summary = `<p>Saved on <b>${esc(when)}</b>: age ${esc(String(incoming.age))}, ${esc(String(passed))} levels passed, ${esc(String(Math.round(incoming.wallet.lifetime)))} coins earned.</p>`;
   if (here) {
     const { result } = app.sheet(
       `<h2>${esc(incoming.name)} is already on this phone</h2>${summary}<p>Combine keeps the best of both: every level passed, all play days and statistics, and the jars from whichever side earned more coins.</p>`,

@@ -1,6 +1,7 @@
 // App shell: shared services (save, sound, voice, haptics, photos), screen switching with
 // premium transitions, the Android back button, toasts and the parent check.
 
+import { saveTextFile } from '../platform/files.ts';
 import { catchUp, ROAD_VERSION } from '../core/catchup.ts';
 import { SaveStore, browserStorage, type Child, type StorageAdapter, type Theme } from '../storage/save.ts';
 
@@ -191,7 +192,7 @@ export class App {
       } catch (e) {
         // Never a blank screen: say what went wrong and offer a way back.
         console.error('screen failed', e);
-        next = errorScreen(e);
+        next = errorScreen(e, this);
       }
       const swap = () => {
         this.current?.destroy?.();
@@ -260,7 +261,7 @@ export class App {
 
   /** A sheet that slides up; resolves with the chosen action's value. */
   sheet<T>(body: string, actions: { label: string; value: T; kind?: 'primary' | 'ghost' | 'mint' | 'danger'; back?: boolean }[], label: string): { el: HTMLElement; result: Promise<T> } {
-    const ov = html(`<div class="overlay" role="dialog" aria-modal="true" aria-label="${label}"><div class="sheet">${body}<div class="actions"></div></div></div>`);
+    const ov = html(`<div class="overlay" role="dialog" aria-modal="true" aria-label="${esc(label)}"><div class="sheet">${body}<div class="actions"></div></div></div>`);
     const list = ov.querySelector('.actions')!;
     let done!: (v: T) => void;
     const result = new Promise<T>((r) => (done = r));
@@ -301,18 +302,31 @@ export function html(markup: string): HTMLElement {
 }
 
 export const esc = (s: string): string => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+/** Any value (a number, an id) made safe to write into HTML. */
+export const escv = (v: unknown): string => esc(String(v ?? ''));
 
 /** Shown instead of a blank screen when a screen fails to build. */
-export function errorScreen(e: unknown): Screen {
+export function errorScreen(e: unknown, app?: App): Screen {
   const msg = e instanceof Error ? `${e.name}: ${e.message}\n${(e.stack ?? '').split('\n').slice(0, 4).join('\n')}` : String(e);
   const el = html(`<section class="screen oops-screen" aria-label="Something went wrong">
     <div class="scroll" style="display:grid;gap:14px;align-content:center;text-align:center;padding:20px 0">
       <h1 class="title">Oops, MN got stuck</h1>
-      <p class="subtitle">Your progress is safe. Tap below to start again. If it keeps happening, send a screenshot of this to the person who gave you MN.</p>
+      <p class="subtitle">Your progress is safe. Tap below to start again. If it keeps happening, save a copy of your data first${app?.save.hasSpare() ? ', then try the spare copy (your progress as it was one save earlier)' : ''}, and send a screenshot of this to the person who gave you MN.</p>
       <pre style="white-space:pre-wrap;text-align:left;font-size:12px;opacity:.75;margin:0;padding:12px;border-radius:14px;background:rgba(0,0,0,.08)">${esc(msg)}</pre>
       <button class="btn oops-reload">Start again</button>
+      ${app?.save.rawCopy() ? '<button class="btn ghost oops-copy">Save a copy of my data</button>' : ''}
+      ${app?.save.hasSpare() ? '<button class="btn ghost oops-spare">Use the spare copy</button>' : ''}
     </div>
   </section>`);
   el.querySelector('.oops-reload')!.addEventListener('click', () => location.reload());
+  // Ways out that don't need the app's data cleared: keep a copy, or go back one save.
+  el.querySelector('.oops-copy')?.addEventListener('click', () => {
+    const raw = app!.save.rawCopy();
+    if (raw) void saveTextFile(app!, `MN-data-copy-${new Date().toISOString().slice(0, 10)}.json`, 'application/json', raw).then((ok) => app!.toast(ok ? 'A copy of your data is saved.' : 'The copy could not be saved.'));
+  });
+  el.querySelector('.oops-spare')?.addEventListener('click', () => {
+    if (app!.save.useSpare()) location.reload();
+    else app!.toast('The spare copy can’t be read.');
+  });
   return { el };
 }

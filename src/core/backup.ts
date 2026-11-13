@@ -9,6 +9,7 @@ import { mergeAdventure } from './adventure.ts';
 import type { Child } from '../storage/save.ts';
 import type { LevelResult } from './path.ts';
 import { logPlay, type PlayEntry, type Tally } from './stats.ts';
+import { cleanChild } from './clean.ts';
 
 export const BACKUP_FORMAT = 'mn-child-backup';
 export const BACKUP_VERSION = 1;
@@ -57,7 +58,13 @@ export async function readBackup(text: string): Promise<ReadResult> {
   if (b.check !== (await sha256(SALT + body(b)))) return { ok: false, reason: 'This file has been changed since it was saved, so it can’t be imported.' };
   const c = b.child;
   if (typeof c.id !== 'string' || typeof c.name !== 'string' || !c.progress?.levels || !c.wallet || !c.stats) return { ok: false, reason: 'This progress file is missing some of its data.' };
-  return { ok: true, backup: b };
+  // The check value only shows the file wasn't damaged: anyone can make a file that passes it.
+  // So every field is checked and made well-formed before the app uses it (core/clean.ts).
+  const clean = cleanChild(c);
+  if (!clean.ok) return { ok: false, reason: clean.reason };
+  const exportedAt = typeof b.exportedAt === 'string' && !Number.isNaN(Date.parse(b.exportedAt)) ? new Date(b.exportedAt).toISOString() : new Date(0).toISOString();
+  const out = { format: BACKUP_FORMAT, version: BACKUP_VERSION, exportedAt, child: clean.child } as const;
+  return { ok: true, backup: { ...out, check: await sha256(SALT + body(out)) } };
 }
 
 const total = (t: Tally | undefined) => Object.values(t ?? {}).reduce((a, r) => a + r[0], 0);

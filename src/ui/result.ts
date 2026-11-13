@@ -56,7 +56,7 @@ function momentHtml(m: Moment, r: ResultInfo): string {
   const levels = `${m.perfectLevels} perfect level${m.perfectLevels === 1 ? '' : 's'}`;
   const next = m.after >= 1 ? `Your ${esc(reward.name.toLowerCase())} is ready!` : m.next >= 1 ? `<b>${levels}</b> to your ${esc(reward.name.toLowerCase())}` : `<b>${levels}</b> to reach ${pct(m.next)}`;
   return `<div class="moment card" role="group" aria-label="${esc(reward.name)}: ${pct(m.before)} to ${pct(m.after)}">
-    <div class="mo-head"><span class="mo-icon" aria-hidden="true">${reward.icon}</span><b>${esc(reward.name)}</b><span class="mo-pct">${pct(m.before)}</span></div>
+    <div class="mo-head"><span class="mo-icon" aria-hidden="true">${esc(reward.icon)}</span><b>${esc(reward.name)}</b><span class="mo-pct">${pct(m.before)}</span></div>
     <div class="mo-bar"><i class="mo-was" style="width:${m.before * 100}%"></i><i class="mo-new" style="left:${m.before * 100}%;--to:${(m.after - m.before) * 100}%"></i>${ticks}</div>
     <div class="mo-sub"><span>was ${pct(m.before)}</span><span>${r.perfect ? 'Perfect score: the biggest step' : 'Perfect scores fill it fastest'}</span></div>
     <div class="mo-rows">${rows}</div>

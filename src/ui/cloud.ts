@@ -3,7 +3,8 @@
 // family's progress backed up and in sync. All the deciding is in core/cloud.ts and
 // core/gate.ts; the talking to Google is in platform/cloudapi.ts.
 
-import { esc, type App } from './app.ts';
+import { cleanRules } from '../core/clean.ts';
+import { escv, esc, type App } from './app.ts';
 import { FIREBASE } from '../platform/firebase-config.ts';
 import { CloudError, FirebaseRest, MemoryCloud, OWNER_EMAIL, type CloudBackend, type Session } from '../platform/cloudapi.ts';
 import { decodeChild, familyRules, freshMemo, planSync, POLICY_VERSION, type SyncMemo } from '../core/cloud.ts';
@@ -317,7 +318,8 @@ async function doSync(app: App, asking: boolean, takeOver: boolean): Promise<Syn
       }
       data.children = data.children.filter((c) => !r.dropped.includes(c.id));
       if (data.activeChildId && r.dropped.includes(data.activeChildId)) data.activeChildId = data.children[0]?.id ?? null;
-      if (r.rules) Object.assign(data.settings, r.rules);
+      // The cloud's rules are checked like a file's: only the shared rules, each in range.
+      if (r.rules) Object.assign(data.settings, cleanRules(r.rules));
       if (r.added.length) data.setupDone = true;
       // The cloud now holds every child: that counts as backed up (the reminder can rest).
       for (const c of data.children) {
@@ -369,7 +371,7 @@ async function askCombine(app: App, here: Child, there: Child): Promise<boolean>
   const stars = (c: Child) => Object.values(c.progress.levels).reduce((n, l) => n + l.stars, 0);
   const { result } = app.sheet(
     `<h2>Combine ${esc(here.name)}?</h2>
-     <p>Your family’s backup already has <b>${esc(there.name)}</b> (age ${there.age}, ${stars(there)} ⭐) from another phone. This phone has <b>${esc(here.name)}</b> (age ${here.age}, ${stars(here)} ⭐).</p>
+     <p>Your family’s backup already has <b>${esc(there.name)}</b> (age ${escv(there.age)}, ${escv(stars(there))} ⭐) from another phone. This phone has <b>${esc(here.name)}</b> (age ${here.age}, ${stars(here)} ⭐).</p>
      <p>Combine them into one? Stars, coins, rewards and play from both phones are all kept.</p>`,
     [
       { label: `Yes, it’s the same child`, value: true, kind: 'mint' },

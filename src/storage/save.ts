@@ -12,6 +12,7 @@ import type { ReminderSettings } from '../core/reminders.ts';
 import type { FixBank } from '../core/fixit.ts';
 import type { QuietSettings } from '../core/quiet.ts';
 import type { GoogleGate } from '../core/gate.ts';
+import { cleanChild, cleanSavedSettings } from '../core/clean.ts';
 
 export const SAVE_VERSION = 1;
 const PRIMARY = 'studyhard.save';
@@ -307,22 +308,35 @@ function parse(raw: string | null): SaveData | null {
     if (typeof d !== 'object' || d === null || !Array.isArray(d.children)) return null;
     if (typeof d.version !== 'number' || d.version > SAVE_VERSION) return null;
     const base = freshSave();
+    // The saved copy is checked like any other outside data (core/clean.ts): a damaged or edited
+    // save can't put markup or wrong-typed values in front of the screens.
+    const st = cleanSavedSettings((typeof d.settings === 'object' && d.settings !== null ? d.settings : {}) as Partial<Settings>);
+    const children = d.children.flatMap((raw) => {
+      // Something that isn't a child at all is left out; a damaged child is repaired.
+      if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return [];
+      const c = raw as Partial<Child>;
+      const passed = Object.values((c.progress?.levels ?? {}) as Record<string, { stars?: number }>).filter((l) => (l?.stars ?? 0) >= 1).length;
+      const r = cleanChild({
+        ...c,
+        // Children from before practice-together get it only if they've hardly played.
+        together: c.together ?? (passed < 3 ? TOGETHER_LEVELS : 0),
+      }, { lenient: true });
+      return r.ok ? [{ ...newChild(r.child.name, r.child.age, r.child.avatar, r.child.createdDay), ...r.child }] : [];
+    });
+    const ids = new Set(children.map((c) => c.id));
+    const faceoff: Record<string, [number, number]> = {};
+    for (const [k, v] of Object.entries(typeof d.faceoff === 'object' && d.faceoff !== null ? d.faceoff : {})) {
+      if (k.split('|').every((id) => /^[A-Za-z0-9_@.-]{1,60}$/.test(id)) && Array.isArray(v)) faceoff[k] = [Number.isFinite(v[0]) ? Number(v[0]) : 0, Number.isFinite(v[1]) ? Number(v[1]) : 0];
+    }
     return {
       ...base,
       ...d,
       version: SAVE_VERSION,
-      settings: { ...base.settings, ...d.settings, timerSeconds: timerFrom(d.settings), ownRewards: Array.isArray(d.settings?.ownRewards) ? d.settings!.ownRewards : [], theme: lookFrom(d.settings), studioMoved: true },
-      faceoff: d.faceoff ?? {},
-      children: d.children.map((c) => ({
-        ...newChild(c.name ?? 'Champ', c.age ?? 6, c.avatar ?? 0, c.createdDay ?? ''),
-        ...c,
-        // Children from before practice-together get it only if they've hardly played.
-        together: c.together ?? (Object.values(c.progress?.levels ?? {}).filter((l) => l.stars >= 1).length < 3 ? TOGETHER_LEVELS : 0),
-        assisted: c.assisted ?? (c.age ?? 6) <= 6,
-        progress: { ...freshProgress(), ...c.progress },
-        wallet: { ...freshWallet(), ...c.wallet },
-        stats: { ...{ answered: 0, correct: 0, secondsByDay: {} }, ...c.stats },
-      })),
+      setupDone: d.setupDone === true,
+      activeChildId: typeof d.activeChildId === 'string' && ids.has(d.activeChildId) ? d.activeChildId : null,
+      settings: { ...base.settings, ...st, timerSeconds: timerFrom(st), ownRewards: st.ownRewards ?? [], theme: lookFrom(st), studioMoved: true },
+      faceoff,
+      children,
     } as SaveData;
   } catch {
     return null;
@@ -358,6 +372,28 @@ export class SaveStore {
     if (backup) return { data: backup, source: 'backup' };
     if (primaryRaw === null && backupRaw === null) return { data: freshSave(), source: 'new' };
     return { data: freshSave(), source: 'reset' };
+  }
+
+  /** The saved copy as text (for "Save a copy of my data" when the app is stuck). */
+  rawCopy(): string | null {
+    return this.store.get(PRIMARY) ?? this.store.get(BACKUP);
+  }
+
+  /** Whether the spare copy (the save before the last one) can be read. */
+  hasSpare(): boolean {
+    const spare = this.store.get(BACKUP);
+    return !!spare && spare !== this.store.get(PRIMARY) && parse(spare) !== null;
+  }
+
+  /** Go back to the spare copy. The copy it replaces is kept aside under its own key. */
+  useSpare(): boolean {
+    const spare = parse(this.store.get(BACKUP));
+    if (!spare) return false;
+    const now = this.store.get(PRIMARY);
+    if (now) this.store.set(`${PRIMARY}.stuck`, now);
+    this.data = spare;
+    this.store.set(PRIMARY, JSON.stringify(spare));
+    return true;
   }
 
   private readonly listeners: (() => void)[] = [];

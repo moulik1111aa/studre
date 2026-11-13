@@ -1,6 +1,6 @@
 // Who's playing? Big avatar buttons for each child, plus the parent area.
 
-import { html, esc, type App, type Screen } from './app.ts';
+import { escv, html, esc, type App, type Screen } from './app.ts';
 import { swipeEntryHtml, swipeOn, swipeScreen } from './swipe.ts';
 import { quietNow } from './quiet.ts';
 import { niceTime } from '../core/quiet.ts';
@@ -26,7 +26,7 @@ export function whosPlayingScreen(app: App): Screen {
       .map((c) => {
         const r = c.wallet.treat.rewardId ? rewardById(c.wallet.treat.rewardId) : undefined;
         const p = Math.round(jarProgress(c.wallet.treat) * 100);
-        return `<button class="kid card" data-id="${c.id}">${avatarHtml(c.avatar, 84)}<b>${esc(c.name)}</b><small>${r ? `${r.icon} ${p}%` : 'Age ' + c.age}</small></button>`;
+        return `<button class="kid card" data-id="${escv(c.id)}">${avatarHtml(c.avatar, 84)}<b>${esc(c.name)}</b><small>${r ? `${escv(r.icon)} ${escv(p)}%` : 'Age ' + escv(c.age)}</small></button>`;
       })
       .join('')}</div>
     ${kids.length ? `<button class="btn ghost fo-entry">${ICONS.swords} Face-off: play together</button>` : ''}

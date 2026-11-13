@@ -19,7 +19,7 @@ export function unlockScreen(child: Child, jarName: 'treat' | 'goal') {
     const el = html(`<section class="screen unlock" aria-label="Reward unlocked">
       <div class="spotlight" aria-hidden="true"></div>
       <p class="chip">${jarName === 'treat' ? 'Treat' : 'Big reward'} unlocked!</p>
-      <div class="ul-stage"><div class="ul-ring" aria-hidden="true"></div><div class="ul-icon">${r.icon}</div></div>
+      <div class="ul-stage"><div class="ul-ring" aria-hidden="true"></div><div class="ul-icon">${esc(r.icon)}</div></div>
       <h1 class="title">${esc(r.name)}</h1>
       <p class="subtitle">You earned it, ${esc(child.name)}! <b>Show this to Mummy or Papa!</b></p>
       <div class="ul-photo"></div>

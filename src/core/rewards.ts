@@ -150,7 +150,10 @@ const OWN: Reward[] = [];
 /** Load the family's own rewards (from settings) into the catalogue. */
 export function setOwnRewards(list: OwnReward[]): void {
   OWN.length = 0;
-  for (const o of list) OWN.push({ id: o.id, name: o.name, icon: o.icon, tier: o.tier, category: 'own' });
+  for (const o of Array.isArray(list) ? list : []) {
+    if (!o || typeof o.id !== 'string' || typeof o.name !== 'string' || !(o.tier in PRICES)) continue;
+    OWN.push({ id: o.id, name: o.name, icon: typeof o.icon === 'string' ? o.icon : OWN_ICONS.treat[0], tier: o.tier, category: 'own' });
+  }
 }
 export const ownRewards = (): readonly Reward[] => OWN;
 
@@ -159,7 +162,9 @@ export const REWARDS: readonly Reward[] = R;
 /** What a child can pick from now. */
 export const pickable = (): Reward[] => [...R.filter((r) => !r.hidden), ...OWN];
 export const rewardById = (id: string): Reward | undefined => R.find((r) => r.id === id) ?? OWN.find((r) => r.id === id);
-export const jarOf = (r: Reward): Jar => PRICES[r.tier].jar;
+/** The price row of a reward; a reward with an unknown size counts as a small treat instead of failing. */
+const priceOf = (r: Reward) => PRICES[r?.tier] ?? PRICES.small;
+export const jarOf = (r: Reward): Jar => priceOf(r).jar;
 
 /**
  * How fast rewards come, set by a parent (spec §4): a multiplier on every price in a jar.
@@ -167,18 +172,18 @@ export const jarOf = (r: Reward): Jar => PRICES[r.tier].jar;
  */
 export const PACE: Record<Jar, number> = { treat: 1, goal: 1 };
 export function setPace(treat: number, goal: number): void {
-  PACE.treat = treat > 0 ? treat : 1;
-  PACE.goal = goal > 0 ? goal : 1;
+  PACE.treat = Number.isFinite(treat) && treat > 0 ? treat : 1;
+  PACE.goal = Number.isFinite(goal) && goal > 0 ? goal : 1;
 }
 /** Price before the parent's pace setting (used for melting, which follows earning speed). */
-export const baseCostOf = (r: Reward): number => PRICES[r.tier].coins;
+export const baseCostOf = (r: Reward): number => priceOf(r).coins;
 /** Price in coins at the current pace (rounded to 10). */
-export const costOf = (r: Reward): number => Math.max(10, Math.round((PRICES[r.tier].coins * PACE[jarOf(r)]) / 10) * 10);
+export const costOf = (r: Reward): number => Math.max(10, Math.round((priceOf(r).coins * PACE[jarOf(r)]) / 10) * 10);
 
 const BASE_DAYS: Record<PriceTier, number> = { small: 7, medium: 14, large: 21, toyS: 30, toyM: 45, toyB: 60, dream: 135 };
 /** Rough time to earn a reward when playing daily, e.g. "about 2 weeks". */
 export function aboutOf(r: Reward): string {
-  const days = BASE_DAYS[r.tier] * PACE[jarOf(r)];
+  const days = (BASE_DAYS[r?.tier] ?? BASE_DAYS.small) * PACE[jarOf(r)];
   if (days < 10) return `about ${Math.max(2, Math.round(days))} days`;
   if (days < 26) return `about ${Math.round(days / 7)} week${Math.round(days / 7) === 1 ? '' : 's'}`;
   const m = Math.round((days / 30) * 2) / 2;

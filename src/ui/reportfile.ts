@@ -1,7 +1,7 @@
 // The exported progress file: one .html file that opens in any browser (and prints neatly),
 // with the child's backup inside so MN on another phone can import it.
 
-import { esc, type App } from './app.ts';
+import { escv, esc, type App } from './app.ts';
 import type { Child } from '../storage/save.ts';
 import { AREAS, skillById } from '../core/areas/index.ts';
 import { isMastered, frontier, TIER_NAMES, type Level, type Tier } from '../core/path.ts';
@@ -57,7 +57,7 @@ export function reportCardHtml(app: App, child: Child, backup: Backup): string {
   const jar = (w: 'treat' | 'goal') => {
     const j = child.wallet[w];
     const r = j.rewardId ? rewardById(j.rewardId) : undefined;
-    return r ? `<p>${r.icon} <b>${esc(r.name)}</b> (${w === 'treat' ? 'treat' : 'big reward'}): ${Math.floor(jarProgress(j) * 100)}%, ${Math.floor(j.coins)} of ${costOf(r)} coins</p>` : '';
+    return r ? `<p>${esc(r.icon)} <b>${esc(r.name)}</b> (${w === 'treat' ? 'treat' : 'big reward'}): ${Math.floor(jarProgress(j) * 100)}%, ${Math.floor(j.coins)} of ${costOf(r)} coins</p>` : '';
   };
   const recent = log.slice(-30).reverse();
 
@@ -107,7 +107,7 @@ footer{margin-top:18px;padding:14px 16px;border-radius:14px;background:#EEEAFE;c
 <body><main>
 <header>${plusFaceSvg()}<div><h1>${esc(child.name)}’s progress file</h1><p>MN · ${esc(nice(today))}</p></div></header>
 
-<section><div class="who"><span>Age <b>${child.age}</b></span><span>${child.school?.on ? `Path: <b>${esc(schoolLabel(child.school))}</b>` : `Stage <b>${front?.stage ?? 7}: ${esc(stage.name)}</b> (ages ${stage.ages})`}</span><span>Now on: <b>${esc(label(front))}</b></span>${child.createdDay ? `<span>Playing since <b>${esc(nice(child.createdDay))}</b></span>` : ''}</div></section>
+<section><div class="who"><span>Age <b>${escv(child.age)}</b></span><span>${child.school?.on ? `Path: <b>${esc(schoolLabel(child.school))}</b>` : `Stage <b>${front?.stage ?? 7}: ${esc(stage.name)}</b> (ages ${stage.ages})`}</span><span>Now on: <b>${esc(label(front))}</b></span>${child.createdDay ? `<span>Playing since <b>${esc(nice(child.createdDay))}</b></span>` : ''}</div></section>
 
 <section><h2>At a glance</h2><div class="kpis">
 ${kpi(totalMin >= 60 ? `${Math.floor(totalMin / 60)} h ${totalMin % 60} m` : `${totalMin} min`, `time played over ${daysPlayed} days`)}

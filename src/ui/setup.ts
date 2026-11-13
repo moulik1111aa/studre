@@ -5,7 +5,7 @@ import { openerScreen } from './opener.ts';
 import { hearVoice, mountVoiceList, speedSeg, VOICE_SAMPLE } from './voicechoice.ts';
 import { showParentAdventureTips, toggleAdventure } from './adventure.ts';
 import { restoreFromFile } from './restore.ts';
-import { html, esc, type App, type Screen } from './app.ts';
+import { escv, html, esc, type App, type Screen } from './app.ts';
 import { newChild } from '../storage/save.ts';
 import { AVATARS, avatarHtml } from './icons.ts';
 import { logoMark } from './loader.ts';
@@ -209,7 +209,7 @@ function moreChildrenScreen(app: App): Screen {
   const kids = app.save.data.children;
   const el = html(`<section class="screen more-kids" aria-label="Children">
     <h1 class="title center">Children</h1>
-    <div class="kids">${kids.map((c) => `<div class="kid card">${avatarHtml(c.avatar, 72)}<b>${esc(c.name)}</b><small>Age ${c.age}</small></div>`).join('')}</div>
+    <div class="kids">${kids.map((c) => `<div class="kid card">${avatarHtml(c.avatar, 72)}<b>${esc(c.name)}</b><small>Age ${escv(c.age)}</small></div>`).join('')}</div>
     <button class="btn ghost add">+ Add another child</button>
     <button class="btn next">Next</button>
   </section>`);

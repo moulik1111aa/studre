@@ -29,7 +29,7 @@ import { reportScreen } from './report.ts';
 import { restoreFromFile } from './restore.ts';
 import { appIconSvg } from './appicons.ts';
 import { chooseAppIcon, currentIcon, iconsAvailable } from './iconpick.ts';
-import { html, esc, type App, type Screen } from './app.ts';
+import { escv, html, esc, type App, type Screen } from './app.ts';
 import { PLUS_THEMES, type Child, type Settings, type Theme } from '../storage/save.ts';
 import { CATEGORIES } from '../core/rewards.ts';
 import { ICONS, avatarHtml } from './icons.ts';
@@ -105,7 +105,7 @@ let page: Page = 'kids';
 /** Open the Parent area on a given tab next time (e.g. from a notification or the Premium card). */
 export const openParentOn = (p: Page): void => void (page = p);
 
-const kidLine = (c: Child): string => [`Age ${c.age}`, c.adventure?.on ? 'Adventure' : '', c.school?.on ? 'School syllabus' : '', (c.challenge ?? 0) > 0 ? CHALLENGE[c.challenge ?? 0].name : ''].filter(Boolean).join(' · ');
+const kidLine = (c: Child): string => [`Age ${escv(c.age)}`, c.adventure?.on ? 'Adventure' : '', c.school?.on ? 'School syllabus' : '', (c.challenge ?? 0) > 0 ? CHALLENGE[c.challenge ?? 0].name : ''].filter(Boolean).join(' · ');
 
 /** Google backup and sync (when this build has it). */
 function cloudCard(app: App): string {
@@ -138,10 +138,10 @@ function kidsHtml(app: App): string {
   const st = app.save.data.settings;
   return `${sec('Children', `<div class="pa-kids">${app.save.data.children
         .map((c) => `<div class="pa-kid card">${avatarHtml(c.avatar, 48)}<div class="pk-who"><b>${esc(c.name)}</b><small>${kidLine(c)}</small></div>
-          <div class="pk-btns"><button class="btn ghost small report" data-id="${c.id}">${ICONS.chart} Report</button><button class="icon-btn kid-set" data-id="${c.id}" aria-label="Settings for ${esc(c.name)}">⚙️</button></div></div>`)
+          <div class="pk-btns"><button class="btn ghost small report" data-id="${escv(c.id)}">${ICONS.chart} Report</button><button class="icon-btn kid-set" data-id="${escv(c.id)}" aria-label="Settings for ${esc(c.name)}">⚙️</button></div></div>`)
         .join('')}</div>
       <button class="btn ghost small add-kid">+ Add a child</button>`)}
-    ${sec('Daily play', `<button class="pa-row card limits"><b>${st.limitMinutes} minutes a day</b><small>${st.timeUpMode === 'stop' ? 'Stops when time is up' : 'Keeps playing without coins'} · treats ${paceText(st.treatPace, 'treat')}, big reward ${paceText(st.goalPace, 'goal')}</small></button>
+    ${sec('Daily play', `<button class="pa-row card limits"><b>${escv(st.limitMinutes)} minutes a day</b><small>${st.timeUpMode === 'stop' ? 'Stops when time is up' : 'Keeps playing without coins'} · treats ${paceText(st.treatPace, 'treat')}, big reward ${paceText(st.goalPace, 'goal')}</small></button>
       <button class="pa-row card quiet-row"><b>Bedtime</b><small>${esc(quietSummary(st.quiet))}</small></button>
       <div class="card pa-toggles">${toggleRows(st, [T('holiday', 'Pause rewards', 'On holiday or unwell: jars don’t shrink and no daily reminder.')])}</div>`)}
     ${sec('Learning', `<div class="card pa-timer"><div class="pt-head"><b>Time per question</b><span class="pt-val"></span></div>
@@ -652,8 +652,8 @@ export function childSettingsScreen(c: Child) {
     const el = html(`<section class="screen parent kid-settings" aria-label="Settings for ${esc(c.name)}">
       <header class="topbar"><button class="icon-btn back-btn" aria-label="Back">${ICONS.back}</button><span class="t">${esc(c.name)}</span><span style="width:50px"></span></header>
       <div class="scroll pa-body">
-        <div class="ks-hero">${avatarHtml(c.avatar, 64)}<b>${esc(c.name)}</b><small>Age ${c.age}</small></div>
-        <button class="pa-row card report" data-id="${c.id}"><b>${ICONS.chart} Report</b><small>What ${esc(c.name)} has learned, and where they need help</small></button>
+        <div class="ks-hero">${avatarHtml(c.avatar, 64)}<b>${esc(c.name)}</b><small>Age ${escv(c.age)}</small></div>
+        <button class="pa-row card report" data-id="${escv(c.id)}"><b>${ICONS.chart} Report</b><small>What ${esc(c.name)} has learned, and where they need help</small></button>
         <button class="pa-row card sheet-btn"><b>Print a worksheet ${plusTag(app)}</b><small>${c.age <= 6 ? 12 : 20} questions mixed from the last skills ${esc(c.name)} played, as an A4 PDF. Answers on a separate page.</small></button>
         <button class="linkish sheet-html">Save it as a web page instead</button>
         <button class="pa-row card exam-btn"><b>Exam practice ${plusTag(app)}</b><small>A timed test on topics you pick, with a score sheet to share</small></button>
@@ -662,7 +662,7 @@ export function childSettingsScreen(c: Child) {
           return n ? `${n} earned · print one for the fridge` : 'One for each challenge beaten on the map';
         })()}</small></button>
         <h2 class="pa-h">Learning</h2>
-        <button class="pa-row card age-btn"><b>Age</b><small>${c.age} · questions follow the age</small></button>
+        <button class="pa-row card age-btn"><b>Age</b><small>${escv(c.age)} · questions follow the age</small></button>
         <button class="pa-row card level-btn"><b>Difficulty</b><small>${CHALLENGE[c.challenge ?? 0].name} · ${CHALLENGE[c.challenge ?? 0].note}</small></button>
         <button class="pa-row card school-btn"><b>School syllabus ${plusTag(app)}</b><small>${c.school?.on ? (hasPlus(app) ? esc(schoolLabel(c.school)) : `${esc(schoolLabel(c.school))} · paused without MN ×`) : 'Off · follow the school syllabus instead of the age path'}</small></button>
         <div class="card pa-toggles">

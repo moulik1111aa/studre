@@ -7,6 +7,7 @@
 import type { Child } from '../storage/save.ts';
 import { makeBackup, readBackup, type Backup } from './backup.ts';
 import { forCloud, type FamilyRules } from './cloud.ts';
+import { cleanRules } from './clean.ts';
 
 export const FAMILY_FORMAT = 'mn-family-backup';
 export const FAMILY_VERSION = 1;
@@ -67,5 +68,5 @@ export async function readAnyBackup(text: string): Promise<AnyBackup> {
     if (!r.ok) return { ok: false, reason: r.reason.replace('This progress file', 'A child in this file').replace('This file', 'This backup file') };
     out.push(r.backup);
   }
-  return { ok: true, backups: out, rules: fam.rules, source: fam.source, family: true };
+  return { ok: true, backups: out, rules: cleanRules(fam.rules), source: fam.source === 'cloud' ? 'cloud' : 'phone', family: true };
 }
