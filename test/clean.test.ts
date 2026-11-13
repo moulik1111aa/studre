@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { makeBackup, readBackup } from '../src/core/backup.ts';
 import { readAnyBackup } from '../src/core/familyfile.ts';
-import { cleanChild, cleanRules, cleanFamilyDoc, AVATAR_COUNT } from '../src/core/clean.ts';
+import { cleanChild, cleanRules, cleanFamilyDoc, cleanSavedSettings, AVATAR_COUNT } from '../src/core/clean.ts';
 import { FAMILY_KEYS } from '../src/core/cloud.ts';
 import { newChild, parseSave, type Child } from '../src/storage/save.ts';
 import { costOf, jarOf, aboutOf, setOwnRewards, ownRewards, type Reward } from '../src/core/rewards.ts';
