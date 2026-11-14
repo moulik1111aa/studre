@@ -176,9 +176,7 @@ export function markGiven(w: Wallet, jarName: 'treat' | 'goal', today: string): 
  */
 export function applyMelt(w: Wallet, today: string, holiday: boolean): { treat: number; goal: number; days: number } {
   const lost = { treat: 0, goal: 0, days: 0 };
-  // meltCheckedDay = the last day already accounted for (always "yesterday" after a check).
-  const anchors = [w.meltCheckedDay, w.lastPlayDay].filter((d): d is string => !!d).sort();
-  const anchor = anchors[anchors.length - 1];
+  const anchor = meltFrom(w);
   w.meltCheckedDay = addDays(today, -1);
   if (!anchor || holiday) return lost;
   const missed = Math.max(0, dayDiff(anchor, today) - 1);
@@ -194,6 +192,20 @@ export function applyMelt(w: Wallet, today: string, holiday: boolean): { treat: 
   }
   return lost;
 }
+
+/**
+ * The day melting is counted from: the later of the last day already accounted for
+ * (meltCheckedDay, "yesterday" after every check) and the last day played. The jar's coins are
+ * already lowered up to this day, so anything that works out the jar for a later day (the
+ * reminders, the home-screen widget) must count from here, not from the last day played.
+ */
+export function meltFrom(w: Pick<Wallet, 'meltCheckedDay' | 'lastPlayDay'>): string | null {
+  const days = [w.meltCheckedDay, w.lastPlayDay].filter((d): d is string => !!d).sort();
+  return days[days.length - 1] ?? null;
+}
+
+/** The one rule for "played today": play time counted inside the daily limit (leaving a level part-way counts). */
+export const playedOn = (w: Pick<Wallet, 'lastPlayDay'>, day: string): boolean => w.lastPlayDay === day;
 
 export function addDays(day: string, n: number): string {
   const d = new Date(Date.parse(day + 'T00:00:00Z') + n * 86400000);

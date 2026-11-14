@@ -73,6 +73,19 @@ final class Widgets {
         return new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
     }
 
+    /**
+     * The jar's percentage today. `coins` already includes the melting the app worked out up to
+     * `meltFrom` (economy.meltFrom), so only the full days after that melt here; counting from the
+     * last day played would subtract the same days twice. Older data has no meltFrom: the last
+     * day played is used, as before.
+     */
+    static int jarPercent(double coins, double cost, double base, double rate, String meltFrom, String lastPlay, String today, boolean still) {
+        String from = meltFrom == null || meltFrom.isEmpty() ? lastPlay : meltFrom;
+        long missed = from == null || from.isEmpty() ? 0 : Math.max(0, days(from, today) - 1);
+        double now = still ? coins : Math.max(0, coins - missed * rate * base);
+        return (int) Math.min(100, Math.floor(100 * now / cost));
+    }
+
     /** Whole days from local day a to local day b (both YYYY-MM-DD). */
     static long days(String a, String b) {
         try {
@@ -117,16 +130,14 @@ final class Widgets {
             boolean waiting = k.optBoolean("waiting");
             String last = str(k, "lastPlay");
             long since = last.isEmpty() ? -1 : days(last, today);
-            long missed = since < 0 ? 0 : Math.max(0, since - 1);
-            double now = waiting || holiday ? coins : Math.max(0, coins - missed * rate * base);
-            int pct = (int) Math.min(100, Math.floor(100 * now / cost));
+            int pct = jarPercent(coins, cost, base, rate, str(k, "meltFrom"), last, today, waiting || holiday);
             String status;
             if (waiting) status = "🎁 Ready to be given!";
             else if (holiday) status = "🏖️ Holiday: nothing melts";
             else if (since < 0) status = "Play a level to start filling it";
             else if (since == 0) status = "❄️ Frozen today. Well done!";
             else if (since == 1) status = "⏳ Play today or it melts tonight";
-            else status = "🫠 Melting! −" + Math.round(100 * (coins - now) / cost) + "% so far";
+            else status = "🫠 Melting! −" + Math.round(100 * rate * base / cost) + "% every day without play";
             v.setTextViewText(ids[i][1], str(k, "avatar"));
             v.setTextViewText(ids[i][2], str(k, "name") + " · " + str(k, "icon") + " " + str(k, "reward"));
             v.setProgressBar(ids[i][3], 100, pct, false);
@@ -209,6 +220,9 @@ final class Widgets {
         int secs = played == null ? 0 : played.optInt(today, 0);
         String line;
         if (secs > 0) line = (secs < 60 ? "Under a minute" : (secs / 60) + " min") + " today";
+        // The same rule as the jar widget's "Frozen today": the last play day is today (a level
+        // left part-way counts, though it adds no seconds to the day).
+        else if (since == 0) line = "Played today";
         else if (alive) line = "Play today to keep the streak";
         else line = "Tap to play today";
         if (a != null) {

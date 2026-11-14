@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { newChild } from '../src/storage/save.ts';
 import { DEFAULT_REMINDERS, backupDue, jarOn, planReminders, widgetFacts, widgetKid, type PlanInput, type RemindChild } from '../src/core/reminders.ts';
 import { REWARDS, costOf } from '../src/core/rewards.ts';
+import { addPlayTime, applyMelt, dayDiff, playedOn } from '../src/core/economy.ts';
 
 const FACTS = ['Octopuses have three hearts.', 'Honey never spoils.', 'A day on Venus is longer than its year.'];
 const treat = REWARDS.find((r) => r.tier === 'small')!;
@@ -100,4 +101,56 @@ test('no note at bedtime', () => {
   const bed = { on: true, from: '19:00', to: '07:00' };
   assert.equal(planReminders(input([kid('2026-10-25')], now, '2026-10-26', { settings: late })).filter((i) => i.kind === 'daily').length, 5);
   assert.equal(planReminders(input([kid('2026-10-25')], now, '2026-10-26', { settings: late, quiet: { bed } })).filter((i) => i.kind === 'daily').length, 0);
+});
+
+// Review fix 5: the treat costs 480, the jar holds 300, the last play was 5 days ago. The child
+// opens MN (melting is applied) and leaves without finishing a level.
+test('the jar on the widget and in reminders matches the app after melting has been applied', () => {
+  assert.equal(costOf(treat), 480);
+  const c = kid('2026-11-05', 300);
+  const today = '2026-11-10';
+  // What the home-screen widget does with the data it is sent (Widgets.jarPercent).
+  const widget = (w: NonNullable<ReturnType<typeof widgetKid>>, day: string) => {
+    const from = w.meltFrom || w.lastPlay;
+    const missed = from ? Math.max(0, dayDiff(from, day) - 1) : 0;
+    return Math.min(100, Math.floor((100 * (w.waiting ? w.coins : Math.max(0, w.coins - missed * w.rate * w.base))) / w.cost));
+  };
+  // Before the app is opened: 4 full days missed, counted from the last play.
+  assert.equal(widget(widgetKid(c)!, today), 42);
+  assert.equal(jarOn(c, today, today)!.pct, 42);
+  // The app opens and applies the melting: the jar now holds 204.
+  const lost = applyMelt(c.wallet, today, false);
+  assert.equal(lost.days, 4);
+  assert.equal(c.wallet.treat.coins, 204);
+  assert.equal(Math.floor((100 * c.wallet.treat.coins) / 480), 42, 'the app shows 42%');
+  const w = widgetKid(c)!;
+  assert.equal(w.meltFrom, '2026-11-09');
+  assert.equal(w.lastPlay, '2026-11-05', 'the status line still knows the last day played');
+  assert.equal(widget(w, today), 42, 'the widget shows 42% too (it showed 22%)');
+  assert.equal(jarOn(c, today, today)!.pct, 42);
+  // The next day, the app not opened: one more day melts.
+  assert.equal(widget(w, '2026-11-11'), 37, 'next day 37% (it showed 17%)');
+  assert.equal(jarOn(c, '2026-11-11', today)!.pct, 37);
+  // And when the app does open that day, it agrees.
+  applyMelt(c.wallet, '2026-11-11', false);
+  assert.equal(Math.floor((100 * c.wallet.treat.coins) / 480), 37);
+  // Data from an older build has no meltFrom: the last day played is used, as before.
+  assert.equal(widget({ ...w, meltFrom: null, coins: 300 }, today), 42);
+});
+
+test('one rule for "played today": a level left part-way counts everywhere', () => {
+  const today = '2026-11-10';
+  const c = kid('2026-11-09', 300);
+  // Left a level part-way: play time counted (inside the limit), but no seconds in the day's stats.
+  assert.equal(addPlayTime(c.wallet, today, 40, 30), true);
+  assert.equal(c.stats.secondsByDay[today], undefined);
+  assert.equal(playedOn(c.wallet, today), true);
+  assert.equal(jarOn(c, today, today)!.played, true, 'the jar is frozen today');
+  // So the daily reminder doesn't name this child as "hasn't played yet" today.
+  const plan = planReminders(input([c], new Date('2026-11-10T09:00:00'), today));
+  const daily = plan.find((i) => i.kind === 'daily' && new Date(i.at).getDate() === 10);
+  assert.equal(daily, undefined);
+  // (A child who hasn't opened a level today is still reminded.)
+  const other = planReminders(input([kid('2026-11-09', 300)], new Date('2026-11-10T09:00:00'), today));
+  assert.ok(other.find((i) => i.kind === 'daily' && new Date(i.at).getDate() === 10));
 });

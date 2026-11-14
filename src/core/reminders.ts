@@ -10,7 +10,7 @@
 //   Adventure level card.
 
 import { quietAt, type QuietSettings } from './quiet.ts';
-import { addDays, dayDiff, MELT, type Wallet } from './economy.ts';
+import { addDays, dayDiff, MELT, meltFrom, playedOn, type Wallet } from './economy.ts';
 import { baseCostOf, costOf, rewardById } from './rewards.ts';
 
 export interface ReminderSettings {
@@ -110,9 +110,12 @@ export function jarOn(c: RemindChild, day: string, today: string): JarLook | nul
   if (!r) return null;
   const cost = costOf(r);
   const last = c.wallet.lastPlayDay;
-  const played = day === today && last === today;
+  const played = day === today && playedOn(c.wallet, today);
   const missed = last ? Math.max(0, dayDiff(last, day) - 1) : 0;
-  const coins = jar.waiting ? jar.coins : Math.max(0, jar.coins - missed * MELT.treat * baseCostOf(r));
+  // The coins already carry the melting up to meltFrom (applyMelt), so only later days count.
+  const from = meltFrom(c.wallet);
+  const toMelt = from ? Math.max(0, dayDiff(from, day) - 1) : 0;
+  const coins = jar.waiting ? jar.coins : Math.max(0, jar.coins - toMelt * MELT.treat * baseCostOf(r));
   return {
     icon: r.icon,
     reward: r.name,
@@ -178,7 +181,7 @@ export function planReminders(p: PlanInput): ReminderItem[] {
       const day = addDays(p.today, d);
       const when = at(day, hh || 17, mm || 0);
       if (when < nowMs + 2 * 60_000 || asleep(when)) continue;
-      const toPlay = kids.filter((c) => !(c.stats.secondsByDay[day] > 0));
+      const toPlay = kids.filter((c) => !playedOn(c.wallet, day));
       if (!toPlay.length) continue;
       const names = listNames(toPlay.map((c) => c.name));
       const short = pick(DAILY, `${day}|d`)(names);
@@ -235,7 +238,10 @@ export interface WidgetKid {
   base: number;
   rate: number;
   waiting: boolean;
+  /** The last day played: for the status line ("Frozen today", "Play today or it melts tonight"). */
   lastPlay: string | null;
+  /** The day melting counts from (economy.meltFrom): `coins` already includes melting up to it. */
+  meltFrom: string | null;
 }
 export interface WidgetAdventure {
   name: string;
@@ -292,7 +298,7 @@ export function widgetKid(c: RemindChild): WidgetKid | null {
   const jar = c.wallet.treat;
   const r = jar.rewardId ? rewardById(jar.rewardId) : undefined;
   if (!r) return null;
-  return { name: c.name, avatar: c.avatar, icon: r.icon, reward: r.name, coins: jar.coins, cost: costOf(r), base: baseCostOf(r), rate: MELT.treat, waiting: jar.waiting, lastPlay: c.wallet.lastPlayDay };
+  return { name: c.name, avatar: c.avatar, icon: r.icon, reward: r.name, coins: jar.coins, cost: costOf(r), base: baseCostOf(r), rate: MELT.treat, waiting: jar.waiting, lastPlay: c.wallet.lastPlayDay, meltFrom: meltFrom(c.wallet) };
 }
 
 /** Facts for the widget: a fresh handful each week. */
