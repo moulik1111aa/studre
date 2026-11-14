@@ -165,8 +165,11 @@ jobs:
           PLAY_LICENSE_KEY: ${{ secrets.PLAY_LICENSE_KEY }}
           MN_STORE: play
         run: |
-          npm run typecheck && npm test
+          npm run typecheck
+          npm test
           npm run build
+          # No access keys, owner tools or test hooks in the Play build (review fix 7).
+          node scripts/check-play.mjs
           node scripts/android.mjs
 
       - name: Unlock the signing key

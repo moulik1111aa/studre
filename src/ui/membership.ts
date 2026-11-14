@@ -5,7 +5,10 @@
 
 import { html, esc, type App, type Screen } from './app.ts';
 import { timesMarkSvg } from './mnx.ts';
-import { MockBilling, NativeBilling, type Billing } from '../platform/billing.ts';
+import { NativeBilling, type Billing } from '../platform/billing.ts';
+// #unless play
+import { MockBilling } from '../platform/billing.ts';
+// #end
 import { FEATURES, freshPlus, fromPurchases, planOffers, plusOn, plusStatus, replacementMode, trialDaysOf, type PlanId, type PlanOffer, type PlusFeature, type PlusState } from '../core/membership.ts';
 import type { PlayProduct, PlayPurchase, PurchasesEvent } from '../platform/native.ts';
 import { account, cloudOn, signIn } from './cloud.ts';
@@ -44,9 +47,11 @@ export const storeBuild = (app: App): boolean => app.store;
 let billingCache: Billing | null | undefined;
 function billing(app: App): Billing | null {
   if (billingCache !== undefined) return billingCache;
+  billingCache = app.native?.billingProducts ? new NativeBilling(app.native) : null;
   // Test purchases: debug runs with ?store, and the owner's Play Store preview on the shared app.
-  const stand = !app.storeBuild && app.store;
-  billingCache = stand ? new MockBilling() : app.native?.billingProducts ? new NativeBilling(app.native) : null;
+  // #unless play
+  if (!app.storeBuild && app.store) billingCache = new MockBilling();
+  // #end
   if (billingCache) billingCache.onPurchases((e) => void purchased(app, e));
   return billingCache;
 }
@@ -444,6 +449,7 @@ export function plusScreen(back: (app: App) => Screen) {
   };
 }
 
+// #unless play
 // ── the owner's Play Store preview (on the app shared by link) ──────────────
 
 const PREVIEW = 'studyhard.storepreview';
@@ -483,3 +489,4 @@ export function previewCard(app: App, repaint: () => void): HTMLElement {
   });
   return el;
 }
+// #end

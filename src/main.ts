@@ -7,42 +7,21 @@ import { nativeBridge, nativeStorage } from './platform/native.ts';
 import { browserStorage, PLUS_THEMES } from './storage/save.ts';
 import { welcomeScreen, startSetup } from './ui/setup.ts';
 import { whosPlayingScreen } from './ui/whos.ts';
+// #unless play
 import { seedDemo } from './ui/demo.ts';
+// #end
+// #unless play
 import { enterChild, playLevel } from './ui/flow.ts';
-import { resultScreen } from './ui/result.ts';
-import { showcaseScreen } from './ui/showcase.ts';
-import { rewardsScreen } from './ui/rewards.ts';
-import { unlockScreen } from './ui/unlock.ts';
-import { timesUpScreen } from './ui/timesup.ts';
-import { trophyScreen } from './ui/trophy.ts';
-import { mapScreen } from './ui/map.ts';
-import { adventureScreen } from './ui/adventure.ts';
-import { reportScreen } from './ui/report.ts';
-import { schoolScreen } from './ui/school.ts';
-import { faceoffSetupScreen } from './ui/faceoff.ts';
-import { fightScreen } from './ui/fight.ts';
-import { levelScreen } from './ui/level.ts';
-import { questScreen } from './ui/quest.ts';
-import { placementScreen } from './ui/placement.ts';
-import { addChildScreen, limitsScreen } from './ui/setup.ts';
-import { meltedScreen } from './ui/unlock.ts';
-import { voiceChoiceScreen } from './ui/voicechoice.ts';
-import { lockSetupScreen } from './ui/grownup.ts';
+// #end
 import { startReminders } from './ui/remindsync.ts';
 import { startInbox } from './ui/inbox.ts';
-import { parentScreen } from './ui/parent.ts';
-import { showLesson } from './ui/lesson.ts';
+// #unless play
 import { accessState, lockScreen } from './ui/access.ts';
 import { ownerScreen } from './ui/owner.ts';
+import { installTestHooks } from './testhooks.ts';
+// #end
 import { startCloud } from './ui/cloud.ts';
-import { hasPlus, onPlusChange, plusScreen, plusState, startPlus, storeBuild } from './ui/membership.ts';
-import { plusVideoScreen } from './ui/plusvideo.ts';
-import * as addsub from './core/teach/addsub.ts';
-import * as muldiv from './core/teach/muldiv.ts';
-import * as fractions from './core/teach/fractions.ts';
-import { skillById } from './core/areas/index.ts';
-import { makeQuestion } from './core/path.ts';
-import { createRng } from './core/rng.ts';
+import { hasPlus, onPlusChange, plusState, startPlus, storeBuild } from './ui/membership.ts';
 
 
 /** The app once it exists, so a start-up failure can still offer "Save a copy of my data". */
@@ -53,21 +32,10 @@ async function boot(): Promise<void> {
   const storage = native ? await nativeStorage(native) : browserStorage();
   const app = new App(document.getElementById('app')!, storage, native);
   theApp = app;
-  if (app.debug) {
-    // Screen factories for screenshots and tests.
-    Object.assign(window, { __app: app, __screens: { openerScreen, plusScreen, plusVideoScreen, mapScreen, adventureScreen, resultScreen, showcaseScreen, rewardsScreen, unlockScreen, timesUpScreen, trophyScreen, parentScreen, welcomeScreen, whosPlayingScreen, reportScreen, schoolScreen, faceoffSetupScreen, fightScreen, levelScreen, questScreen, placementScreen, addChildScreen, limitsScreen, meltedScreen, voiceChoiceScreen, lockSetupScreen, ownerScreen } });
-    // Lessons: open one for a skill's question, or for a hand-made question.
-    Object.assign(window, {
-      __T: { addsub, muldiv, fractions },
-      __showLesson: (q: Parameters<typeof showLesson>[1], given: string | null) => showLesson(app, q, given),
-      __lesson: (id: string, seed = 'demo', given: string | null = null, d = 0.6) => {
-        const s = skillById(id);
-        if (!s) throw new Error(`no skill ${id}`);
-        const q = makeQuestion(s, createRng(seed), d, new Set());
-        return { q, done: showLesson(app, q, given ?? q.distractors[0] ?? null) };
-      },
-    });
-  }
+  // Test hooks: browser test runs and screenshots only (never in the Play build).
+  // #unless play
+  if (app.debug) installTestHooks(app);
+  // #end
   const params = new URLSearchParams(location.search);
 
   // Once a child exists the app opens on "Who's playing?", even if setup was left half-way.
@@ -76,16 +44,22 @@ async function boot(): Promise<void> {
   const home = () => (app.save.data.children.length ? whosPlayingScreen : welcomeScreen);
   // Access keys: the app opens only with a key for this phone (or on the owner's phone).
   // Browser test runs (?debug) skip it unless they ask for it with &lock.
-  // The Play Store build has no keys or approvals: anyone may use it (MN × is sold there).
-  const gated = !app.storeBuild && (!!native || !app.debug || params.has('lock'));
+  // The Play Store build has no keys or approvals: anyone may use it (MN × is sold there), and
+  // none of this is in it.
   let locked = false;
+  // #unless play
+  const gated = !app.storeBuild && (!!native || !app.debug || params.has('lock'));
+  // #end
   const gate = async (how: 'fade' | 'liquid' = 'liquid') => {
+    // #unless play
     const st = gated ? await accessState(app) : null;
     locked = !!st?.locked;
-    if (st?.locked) void app.show(lockScreen(st, () => void gate()), how);
-    else void app.show(home(), how);
+    if (st?.locked) return void app.show(lockScreen(st, () => void gate()), how);
+    // #end
+    void app.show(home(), how);
   };
-  // The owner area (not in the Play Store build: owner.ts is swapped for an empty stub there).
+  // #unless play
+  // The owner area (not in the Play Store build).
   if (ownerScreen && !app.storeBuild) app.ownerHook = (passed) => {
     // Back from the owner area: carry on where the owner was (a check that opened it counts as
     // passed), or open the app if it was locked.
@@ -112,6 +86,7 @@ async function boot(): Promise<void> {
       void app.show(lockScreen(st, () => void gate()));
     }
   });
+  // #end
   // Shapes, Print and Precision are MN × looks: without MN × (Play build) they show as Notebook until MN × is on
   // again. The saved choice is kept. While MN × is still being checked with Play, the look stays as it was.
   const fitLook = () => {
@@ -150,6 +125,7 @@ async function boot(): Promise<void> {
   } catch (e) {
     console.error('cloud', e);
   }
+  // #unless play
   const demo = params.get('demo');
   const seeded = app.debug && demo ? seedDemo(app, demo, { coins: Number(params.get('coins')) || 0, age: Number(params.get('age')) || 8, tips: params.has('tips') }) : null;
   if (seeded) {
@@ -158,6 +134,7 @@ async function boot(): Promise<void> {
     else enterChild(app, child);
     return;
   }
+  // #end
   // The very first launch opens with the video (it can't be skipped), then setup.
   // Later launches go straight in. Browser tests can ask for the old start with ?noloader.
   const firstRun = !app.save.data.settings.tourSeen && !app.save.data.children.length;

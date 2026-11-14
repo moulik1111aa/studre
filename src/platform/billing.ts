@@ -1,8 +1,11 @@
 // Talking to Google Play for MN ×: the native plugin on a phone (Billing.java), or a
-// stand-in for test runs and the debug preview (purchases kept in this browser).
+// stand-in for test runs and the debug preview (purchases kept in this browser; not in the Play build).
 
 import type { PlayProduct, PlayPurchase, PurchasesEvent, StudyHardPlugin } from './native.ts';
-import { BASE_MONTHLY, BASE_YEARLY, PLUS_LIFETIME, PLUS_SUB, TAG_SIGNED_IN } from '../core/membership.ts';
+import { PLUS_LIFETIME, PLUS_SUB } from '../core/membership.ts';
+// #unless play
+import { BASE_MONTHLY, BASE_YEARLY, TAG_SIGNED_IN } from '../core/membership.ts';
+// #end
 
 /** A change of plan (the subscription it replaces and Play's replacement mode), and the family's obfuscated id. */
 export interface BuyOptions {
@@ -60,6 +63,7 @@ export class NativeBilling implements Billing {
   }
 }
 
+// #unless play
 /** Purchases in this browser only (test runs: `?debug&store`). `__mockBilling.cancel` = say no. */
 export class MockBilling implements Billing {
   private cbs: ((e: PurchasesEvent) => void)[] = [];
@@ -135,3 +139,4 @@ export class MockBilling implements Billing {
     for (const cb of this.cbs) cb(e);
   }
 }
+// #end

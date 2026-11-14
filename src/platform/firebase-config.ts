@@ -3,7 +3,7 @@
 // secret (scripts/build.mjs). Without it, Google sign-in stays hidden. The cloud itself is
 // protected by firestore.rules (only approved accounts, only their own family), and the key
 // is limited to the sign-in APIs in Google Cloud.
-// Test runs and debug builds use a stand-in cloud with `?debug&cloudmock`.
+// Browser test runs use a stand-in cloud instead (see ui/cloud.ts).
 
 import type { FirebaseConfig } from './cloudapi.ts';
 

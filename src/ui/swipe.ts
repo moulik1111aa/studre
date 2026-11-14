@@ -332,7 +332,9 @@ export function swipeScreen(app: App): Screen {
   add(introHtml()).classList.add('now');
   ensureAhead();
 
+  // #unless play
   if (app.debug) Object.assign(window, { __swipe: { music, next: goNext } });
+  // #end
 
   return {
     el,

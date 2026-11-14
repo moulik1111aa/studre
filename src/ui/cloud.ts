@@ -1,18 +1,22 @@
 // Google sign-in on the phone: the parent signs in (behind the parent check, or on the
 // lock screen), the owner approves the account, and then the app unlocks and keeps the
-// family's progress backed up and in sync. All the deciding is in core/cloud.ts and
+// family's progress backed up and in sync. (The Play build has no approvals: signing in is
+// enough, and none of the approval code is in it.) All the deciding is in core/cloud.ts and
 // core/gate.ts; the talking to Google is in platform/cloudapi.ts.
 
 import { cleanRules } from '../core/clean.ts';
 import { escv, esc, type App } from './app.ts';
 import { FIREBASE } from '../platform/firebase-config.ts';
-import { CloudError, FirebaseRest, MemoryCloud, OWNER_EMAIL, type CloudBackend, type Session } from '../platform/cloudapi.ts';
+import { CloudError, FirebaseRest, type CloudBackend, type Session } from '../platform/cloudapi.ts';
+// #unless play
+import { MemoryCloud, OWNER_EMAIL } from '../platform/cloudapi.ts';
+import { confirmGate, gateState, seen, type GateState } from '../core/gate.ts';
+// #end
 import { decodeChild, familyRules, freshMemo, planSync, POLICY_VERSION, sameRules, type SyncMemo } from '../core/cloud.ts';
 import type { Backup } from '../core/backup.ts';
 import { familyFileOf } from '../core/familyfile.ts';
 import { familyFileHtml, familyFileName } from './familyfile.ts';
 import { saveTextFile } from '../platform/files.ts';
-import { confirmGate, gateState, seen, type GateState } from '../core/gate.ts';
 import { myPhone } from './access.ts';
 import type { Child } from '../storage/save.ts';
 import { freeSyncDue } from '../core/membership.ts';
@@ -52,8 +56,13 @@ const readJson = <T>(k: string): T | null => {
   }
 };
 
-/** Test runs and debug builds use a stand-in cloud. */
-const mock = (app: App): boolean => app.debug && new URLSearchParams(location.search).has('cloudmock');
+/** Browser test runs use a stand-in cloud (never in the Play build). */
+const mock = (app: App): boolean => {
+  // #unless play
+  if (app.debug && new URLSearchParams(location.search).has('cloudmock')) return true;
+  // #end
+  return false;
+};
 
 /** Is Google sign-in available in this build? */
 export const cloudOn = (app: App): boolean => !!FIREBASE || mock(app);
@@ -64,12 +73,17 @@ export function backend(app: App): CloudBackend | null {
   if (!cloudOn(app)) return null;
   const saved = readJson<Session>(SESSION_KEY);
   const keep = (s: Session | null) => (s ? ls.set(SESSION_KEY, JSON.stringify(s)) : ls.del(SESSION_KEY));
-  be = FIREBASE && !mock(app) ? new FirebaseRest(FIREBASE, saved, keep) : new MemoryCloud(ls, saved, keep);
+  // #unless play
+  if (mock(app)) return (be = new MemoryCloud(ls, saved, keep));
+  // #end
+  be = FIREBASE ? new FirebaseRest(FIREBASE, saved, keep) : null;
   return be;
 }
 
 export const account = (app: App): Session | null => backend(app)?.session ?? null;
+// #unless play
 export const isOwnerAccount = (app: App): boolean => account(app)?.email === OWNER_EMAIL;
+// #end
 
 const memo = (): SyncMemo => ({ ...freshMemo(), ...(readJson<SyncMemo>(MEMO_KEY) ?? {}) });
 const saveMemo = (m: SyncMemo) => ls.set(MEMO_KEY, JSON.stringify(m));
@@ -82,6 +96,7 @@ async function device(app: App): Promise<{ id: string; label: string; phone: str
 
 // ── unlocking with Google ───────────────────────────────────────────────────
 
+// #unless play
 /** Unlocked by an approved Google account on this phone? (Works offline for 14 days.) */
 export function googleGate(app: App): GateState {
   const g = app.save.data.access?.google;
@@ -90,6 +105,7 @@ export function googleGate(app: App): GateState {
   if (g && st.ok && now > g.maxSeen + 60_000) app.save.update((d) => (d.access!.google = seen(d.access!.google, now)));
   return st;
 }
+// #end
 
 export type AccessAnswer = 'approved' | 'waiting' | 'offline' | 'signed-out' | 'error';
 
@@ -100,6 +116,7 @@ export async function checkAccess(app: App): Promise<AccessAnswer> {
   if (!b || !s) return 'signed-out';
   // The Play Store build has no approvals: every signed-in parent may back up.
   if (app.store) return 'approved';
+  // #unless play
   try {
     const e = await b.myAccess();
     const now = Date.now();
@@ -118,9 +135,13 @@ export async function checkAccess(app: App): Promise<AccessAnswer> {
   } catch (e) {
     return e instanceof CloudError ? (e.kind === 'offline' ? 'offline' : e.kind === 'signed-out' ? 'signed-out' : 'error') : 'error';
   }
+  // #end
+  return 'approved';
 }
 
+// #unless play
 const appVersion = (): string => (globalThis as { MN_VERSION?: string }).MN_VERSION ?? 'web';
+// #end
 
 // ── signing in ──────────────────────────────────────────────────────────────
 
@@ -146,7 +167,10 @@ async function consent(app: App): Promise<boolean> {
 
 /** The Google ID token from the phone's account sheet (a stand-in in test runs). */
 async function googleIdToken(app: App): Promise<{ token: string } | { cancelled: true } | { error: string }> {
+  // #unless play
   if (!FIREBASE || mock(app)) return { token: (window as { __mockGoogle?: string }).__mockGoogle ?? 'parent@example.com|Parent' };
+  // #end
+  if (!FIREBASE) return { error: 'Google sign-in isn’t available in this version of MN.' };
   if (!app.native?.googleSignIn) return { error: 'Update MN to the newest version to sign in with Google.' };
   const r = await app.native.googleSignIn({ webClientId: FIREBASE.webClientId });
   if (r.idToken) return { token: r.idToken };
@@ -268,10 +292,12 @@ export function syncNow(app: App, asking = false, takeOver = false): Promise<Syn
 async function doSync(app: App, asking: boolean, takeOver: boolean): Promise<SyncOutcome> {
   const b = backend(app);
   if (!b?.session) return { ok: false, why: 'signed-out', message: 'Not signed in.' };
+  // #unless play
   if (!app.store && !googleGate(app).ok && !isOwnerAccount(app)) {
     const a = await checkAccess(app);
     if (a !== 'approved') return { ok: false, why: a === 'offline' ? 'offline' : 'not-approved', message: a === 'waiting' ? 'Waiting for approval.' : 'Couldn’t check the account.' };
   }
+  // #end
   const startedAt = saves;
   const d = await device(app);
   try {
@@ -401,8 +427,10 @@ export function startCloud(app: App): void {
       });
     }, ms);
   };
-  // Tests (debug only): sync now instead of waiting.
+  // Tests (debug only, never in the Play build): sync now instead of waiting.
+  // #unless play
   if (app.debug) Object.assign(window, { __syncNow: () => syncNow(app) });
+  // #end
   app.save.onSaved(() => {
     if (applying) return;
     saves++;

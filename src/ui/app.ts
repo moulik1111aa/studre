@@ -60,6 +60,7 @@ export class App {
   /** The Play Store build: no keys or approvals, and MN × is sold. */
   get store(): boolean {
     if (this.storeBuild) return true;
+    // #unless play
     if (this.debug && new URLSearchParams(location.search).has('store')) return true;
     // The owner's "Play Store preview" (owner area): this phone acts like the Play build, with test purchases.
     try {
@@ -67,6 +68,8 @@ export class App {
     } catch {
       return false;
     }
+    // #end
+    return false;
   }
   /** Really the Play Store build (not a preview). */
   get storeBuild(): boolean {
@@ -80,9 +83,11 @@ export class App {
     if (this.bundleCache?.key !== key) this.bundleCache = { key, path: buildBundlePath(AREAS[0], sp.skills, `${sp.board}-${sp.grade}`) };
     return this.bundleCache.path;
   }
-  /** Opens the owner's hidden area (set at boot): the owner code typed into a parent check. */
-  /** Opens the owner area; `passed` is called on the way back (the owner counts as a parent). */
+  // #unless play
+  /** Opens the owner area (set at boot; the owner code typed into a parent check); `passed` is
+   * called on the way back (the owner counts as a parent). */
   ownerHook: ((passed: () => void) => void) | null = null;
+  // #end
   private current: Screen | null = null;
   /** How the screen on show was made (to come back to it, e.g. from the owner area). */
   maker: ScreenMaker | null = null;

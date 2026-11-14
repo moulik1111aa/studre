@@ -8,7 +8,7 @@
 //
 // Everything is one SVG stage (1080 × 1920, cropped to fit the phone) drawn from one clock,
 // `paint(t)` with t in seconds of the voiceover, every animation frame, so the voice and the picture
-// stay together, and any moment can be drawn on its own (debug: window.__opener.seek(t)).
+// stay together, and any moment can be drawn on its own (browser test runs can seek to any moment).
 
 import { esc, html, type App, type Screen } from './app.ts';
 import { voiceover } from './reel.ts';
@@ -1131,7 +1131,9 @@ export function openerScreen(o: OpenerOptions) {
       if (audio) audio.currentTime = 0;
       void start();
     });
+    // #unless play
     if (app.debug) Object.assign(window, { __opener: { seek: (t: number) => ((manual = t), paint(t)), play: () => (manual = null) } });
+    // #end
 
     return {
       el,

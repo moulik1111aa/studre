@@ -349,7 +349,7 @@ function parse(raw: string | null): SaveData | null {
     for (const [k, v] of Object.entries(typeof d.faceoff === 'object' && d.faceoff !== null ? d.faceoff : {})) {
       if (k.split('|').every((id) => /^[A-Za-z0-9_@.-]{1,60}$/.test(id)) && Array.isArray(v)) faceoff[k] = [Number.isFinite(v[0]) ? Number(v[0]) : 0, Number.isFinite(v[1]) ? Number(v[1]) : 0];
     }
-    return {
+    const out = {
       ...base,
       ...d,
       version: SAVE_VERSION,
@@ -360,6 +360,9 @@ function parse(raw: string | null): SaveData | null {
       faceoff,
       children,
     } as SaveData;
+    // The Play build has no access keys or approvals, so it keeps none (an older copy's are dropped).
+    if ((globalThis as { __BUILD__?: { store?: string } }).__BUILD__?.store === 'play') delete out.access;
+    return out;
   } catch {
     return null;
   }

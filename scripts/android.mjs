@@ -52,7 +52,7 @@ cpSync(join(root, 'native/android/java', pkgPath), javaDir, { recursive: true })
 const licence = (process.env.PLAY_LICENSE_KEY ?? '').replace(/\s+/g, '');
 if (licence && !/^[A-Za-z0-9+/=]{100,1000}$/.test(licence)) throw new Error('PLAY_LICENSE_KEY is not a base64 key');
 if (process.env.MN_STORE === 'play' && !licence) console.warn('PLAY_LICENSE_KEY is not set: MN × purchases will not be verified, so none will turn MN × on.');
-writeFileSync(join(javaDir, 'PlayKey.java'), `package ${config.appId};\n\n/** Written by scripts/android.mjs. */\nfinal class PlayKey {\n    static final String LICENSE = "${licence}";\n}\n`);
+writeFileSync(join(javaDir, 'PlayKey.java'), `package ${config.appId};\n\n/** Written by scripts/android.mjs. */\nfinal class PlayKey {\n    static final String LICENSE = "${licence}";\n    /** The Google Play build (MN_STORE=play). */\n    static final boolean PLAY = ${process.env.MN_STORE === 'play'};\n}\n`);
 // The PDF maker has to live in android.print (see PdfMaker.java).
 cpSync(join(root, 'native/android/java/android'), join(main, 'java/android'), { recursive: true });
 

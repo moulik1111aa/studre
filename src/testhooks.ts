@@ -1,0 +1,53 @@
+// Test hooks for browser test runs and screenshots (`?debug`): screen factories, lessons on demand.
+// Never in the Play Store build: main.ts loads this module inside a `#unless play` block.
+
+import type { App } from './ui/app.ts';
+import { openerScreen } from './ui/opener.ts';
+import { welcomeScreen } from './ui/setup.ts';
+import { whosPlayingScreen } from './ui/whos.ts';
+import { resultScreen } from './ui/result.ts';
+import { showcaseScreen } from './ui/showcase.ts';
+import { rewardsScreen } from './ui/rewards.ts';
+import { unlockScreen } from './ui/unlock.ts';
+import { timesUpScreen } from './ui/timesup.ts';
+import { trophyScreen } from './ui/trophy.ts';
+import { mapScreen } from './ui/map.ts';
+import { adventureScreen } from './ui/adventure.ts';
+import { reportScreen } from './ui/report.ts';
+import { schoolScreen } from './ui/school.ts';
+import { faceoffSetupScreen } from './ui/faceoff.ts';
+import { fightScreen } from './ui/fight.ts';
+import { levelScreen } from './ui/level.ts';
+import { questScreen } from './ui/quest.ts';
+import { placementScreen } from './ui/placement.ts';
+import { addChildScreen, limitsScreen } from './ui/setup.ts';
+import { meltedScreen } from './ui/unlock.ts';
+import { voiceChoiceScreen } from './ui/voicechoice.ts';
+import { lockSetupScreen } from './ui/grownup.ts';
+import { parentScreen } from './ui/parent.ts';
+import { showLesson } from './ui/lesson.ts';
+import { ownerScreen } from './ui/owner.ts';
+import { plusScreen } from './ui/membership.ts';
+import { plusVideoScreen } from './ui/plusvideo.ts';
+import * as addsub from './core/teach/addsub.ts';
+import * as muldiv from './core/teach/muldiv.ts';
+import * as fractions from './core/teach/fractions.ts';
+import { skillById } from './core/areas/index.ts';
+import { makeQuestion } from './core/path.ts';
+import { createRng } from './core/rng.ts';
+
+export function installTestHooks(app: App): void {
+  // Screen factories for screenshots and tests.
+  Object.assign(window, { __app: app, __screens: { openerScreen, plusScreen, plusVideoScreen, mapScreen, adventureScreen, resultScreen, showcaseScreen, rewardsScreen, unlockScreen, timesUpScreen, trophyScreen, parentScreen, welcomeScreen, whosPlayingScreen, reportScreen, schoolScreen, faceoffSetupScreen, fightScreen, levelScreen, questScreen, placementScreen, addChildScreen, limitsScreen, meltedScreen, voiceChoiceScreen, lockSetupScreen, ownerScreen } });
+  // Lessons: open one for a skill's question, or for a hand-made question.
+  Object.assign(window, {
+    __T: { addsub, muldiv, fractions },
+    __showLesson: (q: Parameters<typeof showLesson>[1], given: string | null) => showLesson(app, q, given),
+    __lesson: (id: string, seed = 'demo', given: string | null = null, d = 0.6) => {
+      const s = skillById(id);
+      if (!s) throw new Error(`no skill ${id}`);
+      const q = makeQuestion(s, createRng(seed), d, new Set());
+      return { q, done: showLesson(app, q, given ?? q.distractors[0] ?? null) };
+    },
+  });
+}

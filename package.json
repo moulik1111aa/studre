@@ -13,6 +13,7 @@
     "e2e": "playwright test",
     "simulate": "node scripts/simulate.ts",
     "check": "npm run typecheck && npm test && npm run build && npm run e2e",
+    "check:play": "node scripts/check-play.mjs",
     "android": "node scripts/android.mjs",
     "icons": "node scripts/icons.mjs"
   },

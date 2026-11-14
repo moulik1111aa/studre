@@ -12,7 +12,9 @@ import { logoMark } from './loader.ts';
 import { stagger, popIn } from '../render/motion.ts';
 import { whosPlayingScreen } from './whos.ts';
 import { lockSetupScreen } from './grownup.ts';
+// #unless play
 import { isOwnerCode } from '../core/access.ts';
+// #end
 
 /** [multiplier, label, note] — relative to the calibrated pace (treat ≈ every 10 days, big toy ≈ 3 months). */
 const TREAT_PACES: [number, string, string][] = [[0.3, 'Every 3 days', 'Often'], [0.7, 'Every week', 'Faster'], [1, 'Every 10 days', 'Normal'], [3, 'Every month', 'Rare']];
@@ -167,14 +169,20 @@ export function addChildScreen(firstRun: boolean) {
       paint();
     };
     const save = async () => {
-      // The owner code as the name makes a tester: every level and boss open, no time limit.
-      const tester = !app.storeBuild && /^\d{7}$/.test(name) && (await isOwnerCode(name));
+      // The owner code as the name makes a tester: every level and boss open, no time limit
+      // (not in the Play build).
+      let tester = false;
+      // #unless play
+      tester = !app.storeBuild && /^\d{7}$/.test(name) && (await isOwnerCode(name));
+      // #end
       const c = newChild(tester ? 'Tester' : name, age, avatar, app.today);
       c.assisted = assisted ?? age <= 6;
       if (tester) Object.assign(c, { tester: true, placed: true, together: 0, assisted: false });
       app.save.update((d) => d.children.push(c));
       if (adventure) toggleAdventure(app, c);
+      // #unless play
       if (tester) app.toast('Tester made: every level is open.');
+      // #end
       void app.show(firstRun ? moreChildrenScreen : whosPlayingScreen);
     };
     next.addEventListener('click', () => {

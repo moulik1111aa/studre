@@ -37,7 +37,9 @@ import { whosPlayingScreen } from './whos.ts';
 import { addChildScreen, limitsScreen } from './setup.ts';
 import { voiceScreen } from './voicepick.ts';
 import { lockSetupScreen } from './grownup.ts';
+// #unless play
 import { accessState, lockScreen, niceDay } from './access.ts';
+// #end
 import { hasPlus, needPlus, offeredTrialDays, plansCta, plansNow, plusScreen, plusTag, plusVideoFor, storeBuild } from './membership.ts';
 import { freshProgress } from '../core/path.ts';
 import { quietSettingsScreen } from './quiet.ts';
@@ -46,7 +48,7 @@ import { saveWorksheet } from './worksheet.ts';
 import { account, cloudOn, deleteCloudCopy, downloadCloudCopy, lastSync, onePhone, otherPhone, signIn, signOut, syncNow, syncText } from './cloud.ts';
 import { saveFamilyFile } from './familyfile.ts';
 import { skillsIndexScreen } from './skillindex.ts';
-import { googleButton } from './access.ts';
+import { googleButton } from './gbutton.ts';
 
 const LOCAL_NOTE = 'Saved on this phone only';
 
@@ -627,6 +629,7 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
     });
   }
   on('.lock-row', 'click', () => void app.show(lockSetupScreen(parentScreen)));
+  // #unless play
   if (body.querySelector('.key-row')) {
     void accessState(app).then((st) => {
       const small = body.querySelector('.key-left');
@@ -635,6 +638,7 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
       body.querySelector('.key-row')!.addEventListener('click', () => void app.show(lockScreen(st, () => void app.show(parentScreen), { renew: true, back: () => void app.show(parentScreen) })));
     });
   }
+  // #end
   on('.mp-card', 'click', () => void app.show(plusScreen(parentScreen)));
   on('.plus-row', 'click', () => void app.show(plusVideoFor(app, parentScreen), 'liquid'));
   on('.story-row', 'click', () => void app.show(openerScreen({ first: false, label: 'Done', done: () => void app.show(parentScreen) }), 'liquid'));

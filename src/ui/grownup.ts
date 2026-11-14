@@ -4,7 +4,9 @@
 // pad, opens the hidden owner area instead (see core/access.ts).
 
 import { html, type App, type Screen, type ScreenMaker } from './app.ts';
+// #unless play
 import { isOwnerCode } from '../core/access.ts';
+// #end
 import { ICONS } from './icons.ts';
 import { stagger } from '../render/motion.ts';
 
@@ -90,18 +92,19 @@ export async function grownUpCheck(app: App, reason: string): Promise<boolean> {
         phone
           ? `<h2>Parents only</h2><p class="gu-note">Unlock with this phone’s screen lock.</p>
              <button type="button" class="btn mint gu-phone">${ICONS.lock} Use screen lock</button>
-             <div class="gu-pinpart" hidden><div class="gu-input dots" aria-live="polite">&nbsp;</div>${padHtml()}<button class="btn ok">Check PIN</button></div>
-             <div class="actions"><button class="btn ghost small gu-usepin">Use a PIN instead</button><button class="btn ghost" data-back>Cancel</button></div>`
+             ${app.storeBuild ? '' : `<div class="gu-pinpart" hidden><div class="gu-input dots" aria-live="polite">&nbsp;</div>${padHtml()}<button class="btn ok">Check PIN</button></div>`}
+             <div class="actions">${app.storeBuild ? '' : '<button class="btn ghost small gu-usepin">Use a PIN instead</button>'}<button class="btn ghost" data-back>Cancel</button></div>`
           : `<h2>${pin ? 'Enter the parent PIN' : `What is ${a} × ${b}?`}</h2>
              ${maths ? '<p class="gu-note">Tip: set a parent PIN in the parent area so children can’t answer this.</p>' : ''}
              <div class="gu-input${maths ? '' : ' dots'}" aria-live="polite">&nbsp;</div>${padHtml()}
              <div class="actions"><button class="btn mint ok">Check</button><button class="btn ghost" data-back>Cancel</button></div>`
       }
     </div></div>`);
-    const input = ov.querySelector<HTMLElement>('.gu-input')!;
+    // (The Play build's screen-lock check has no number pad: there is no owner code to type.)
+    const input = ov.querySelector<HTMLElement>('.gu-input');
     let typed = '';
-    const paint = () => (input.textContent = maths ? typed || ' ' : typed ? '•'.repeat(typed.length) : ' ');
-    ov.querySelector('.gu-pad')!.addEventListener('click', (e) => {
+    const paint = () => input && (input.textContent = maths ? typed || ' ' : typed ? '•'.repeat(typed.length) : ' ');
+    ov.querySelector('.gu-pad')?.addEventListener('click', (e) => {
       const k = (e.target as HTMLElement).closest<HTMLElement>('[data-k]')?.dataset.k;
       if (!k) return;
       typed = k === '⌫' ? typed.slice(0, -1) : (typed + k).slice(0, 7);
@@ -125,7 +128,7 @@ export async function grownUpCheck(app: App, reason: string): Promise<boolean> {
       }
       typed = '';
       paint();
-      input.animate([{ transform: 'translateX(-8px)' }, { transform: 'translateX(8px)' }, { transform: 'none' }], { duration: 300 });
+      input?.animate([{ transform: 'translateX(-8px)' }, { transform: 'translateX(8px)' }, { transform: 'none' }], { duration: 300 });
     };
     ov.querySelector('.gu-phone')?.addEventListener('click', async () => {
       if (await askPhone(app, reason)) {
@@ -137,7 +140,8 @@ export async function grownUpCheck(app: App, reason: string): Promise<boolean> {
       ov.querySelector<HTMLElement>('.gu-pinpart')!.hidden = false;
       (e.currentTarget as HTMLElement).hidden = true;
     });
-    ov.querySelector('.ok')!.addEventListener('click', async () => {
+    ov.querySelector('.ok')?.addEventListener('click', async () => {
+      // #unless play
       // The owner code opens the hidden area instead (it never matches a PIN or an answer).
       if (typed.length === 7 && app.ownerHook && (await isOwnerCode(typed))) {
         misses = 0;
@@ -147,6 +151,7 @@ export async function grownUpCheck(app: App, reason: string): Promise<boolean> {
         app.ownerHook(() => resolve(true));
         return;
       }
+      // #end
       const ok = maths ? Number(typed) === a * b : !!pin && validPin(typed) && (await pinMatches(typed, pin));
       if (ok) {
         misses = 0;

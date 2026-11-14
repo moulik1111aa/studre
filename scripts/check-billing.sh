@@ -10,7 +10,7 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 cp -r "$root/test/native/billing" "$work/src"
 cp "$root/native/android/java/com/studyhard/app/Billing.java" "$work/src/com/studyhard/app/"
-printf 'package com.studyhard.app;\nfinal class PlayKey { static final String LICENSE = ""; }\n' > "$work/src/com/studyhard/app/PlayKey.java"
+printf 'package com.studyhard.app;\nfinal class PlayKey { static final String LICENSE = ""; static final boolean PLAY = true; }\n' > "$work/src/com/studyhard/app/PlayKey.java"
 javac -nowarn -d "$work/out" $(find "$work/src" -name '*.java')
 java -cp "$work/out" com.studyhard.app.VerifyTest 2>&1 | grep -v JAVA_TOOL_OPTIONS
 java -cp "$work/out" com.studyhard.app.ReadyTest 2>&1 | grep -v JAVA_TOOL_OPTIONS

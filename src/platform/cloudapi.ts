@@ -1,7 +1,8 @@
 // Talking to Google: Firebase Auth (sign in with the Google ID token from the phone, keep the
 // session fresh) and Firestore (the family document and one document per child), over their
 // REST interfaces, so no Firebase library is bundled. A memory stand-in with the same shape
-// runs in tests and debug builds (`?debug&cloudmock`).
+// runs in browser tests. The approvals, the owner's tools and the stand-in are not in the Play
+// build (`#unless play`).
 
 import type { CloudChild, FamilyDoc } from '../core/cloud.ts';
 import { CHILD_ID, cleanFamilyDoc } from '../core/clean.ts';
@@ -30,8 +31,10 @@ export interface Session {
 }
 
 export type CloudErrorKind = 'offline' | 'signed-out' | 'quota' | 'denied' | 'other';
+// #unless play
 /** The account that approves people (also written into firestore.rules). */
 export const OWNER_EMAIL = 'moulik1111a@gmail.com';
+// #end
 
 export class CloudError extends Error {
   readonly kind: CloudErrorKind;
@@ -41,6 +44,7 @@ export class CloudError extends Error {
   }
 }
 
+// #unless play
 /** An approved Google account (only the owner writes these). `until` 0 = no end date. */
 export interface AccessEntry {
   email: string;
@@ -66,6 +70,8 @@ export interface CheckIn {
   devices: Record<string, { phone: string; label: string; version: string; at: number }>;
 }
 
+// #end
+
 export interface FamilyChanges {
   kids: string[];
   removed: string[];
@@ -73,6 +79,7 @@ export interface FamilyChanges {
   device: string;
 }
 
+// #unless play
 /** A phone-code key the owner made (as listed in the owner area; the master key never leaves the device). */
 export interface OwnerKey {
   id: string;
@@ -84,8 +91,11 @@ export interface OwnerKey {
   made: string;
 }
 
+// #end
+
 /** What the app needs from the cloud. */
 export interface CloudBackend {
+  // #unless play
   /** This account's approval (null: not approved). */
   myAccess(): Promise<AccessEntry | null>;
   requestAccess(r: Omit<AccessRequest, 'uid' | 'email' | 'name'>): Promise<void>;
@@ -100,6 +110,7 @@ export interface CloudBackend {
   /** The owner's list of phone-code keys made (never the master key itself). */
   ownerKeys(): Promise<OwnerKey[] | null>;
   saveOwnerKeys(list: OwnerKey[]): Promise<void>;
+  // #end
 
   signIn(googleIdToken: string): Promise<Session>;
   getFamily(): Promise<FamilyDoc | null>;
@@ -152,7 +163,9 @@ export function fromFs(v: FsValue): unknown {
 const fields = (o: Record<string, unknown>) => (toFs(o) as { mapValue: { fields: Record<string, FsValue> } }).mapValue.fields;
 const unfields = (f: Record<string, FsValue> | undefined) => fromFs({ mapValue: { fields: f ?? {} } }) as Record<string, unknown>;
 
+// #unless play
 const toEntry = (email: string, f: Record<string, unknown>): AccessEntry => ({ email, name: String(f.name ?? ''), until: Number(f.until ?? 0), addedAt: Number(f.addedAt ?? 0) });
+// #end
 
 // ── the real thing ──────────────────────────────────────────────────────────
 
@@ -237,6 +250,8 @@ export class FirebaseRest implements CloudBackend {
     return res;
   }
 
+  // The owner's tools only.
+  // #unless play
   private async list(coll: string): Promise<{ id: string; f: Record<string, unknown> }[]> {
     const out: { id: string; f: Record<string, unknown> }[] = [];
     let page = '';
@@ -255,6 +270,7 @@ export class FirebaseRest implements CloudBackend {
     const res = await this.fs('PATCH', path, q, { fields: fields(data) });
     if (!res.ok) throw new CloudError(res.status === 403 ? 'denied' : 'other', `Cloud error ${res.status}`);
   }
+  // #end
   private async remove(path: string): Promise<void> {
     const res = await this.fs('DELETE', path);
     if (!res.ok && res.status !== 404) throw new CloudError('other', `Cloud error ${res.status}`);
@@ -264,6 +280,7 @@ export class FirebaseRest implements CloudBackend {
     return this.session;
   }
 
+  // #unless play
   async myAccess(): Promise<AccessEntry | null> {
     if (this.me.email === OWNER_EMAIL) return { email: this.me.email, name: this.me.name, until: 0, addedAt: 0 };
     const res = await this.fs('GET', `access/${encodeURIComponent(this.me.email)}`).catch((e: CloudError) => {
@@ -312,6 +329,7 @@ export class FirebaseRest implements CloudBackend {
   async saveOwnerKeys(list: OwnerKey[]): Promise<void> {
     await this.patch('owner/keys', { list: JSON.stringify(list), at: Date.now() });
   }
+  // #end
 
   async getFamily(): Promise<FamilyDoc | null> {
     const res = await this.fs('GET', this.family);
@@ -383,6 +401,7 @@ export class FirebaseRest implements CloudBackend {
 
 }
 
+// #unless play
 // ── the stand-in (tests, debug builds) ──────────────────────────────────────
 
 /** Keeps the "cloud" in a storage slot, so a reload (or a second tab) acts like another phone. */
@@ -527,3 +546,4 @@ export class MemoryCloud implements CloudBackend {
     await this.deleteAll();
   }
 }
+// #end

@@ -590,7 +590,20 @@ public class StudyHardPlugin extends Plugin {
 
     @PluginMethod
     public void deviceId(PluginCall call) {
-        String id = Settings.Secure.getString(getContext().getContentResolver(), Settings.Secure.ANDROID_ID);
+        // The shared APK: Android's id for this phone (its access keys are made for it).
+        // The Play build has no access keys, so it uses a random id made once for this install
+        // instead (it only names the phone in the family's backup).
+        String id;
+        if (PlayKey.PLAY) {
+            SharedPreferences prefs = getContext().getSharedPreferences("studyhard.device", Context.MODE_PRIVATE);
+            id = prefs.getString("id", null);
+            if (id == null) {
+                id = java.util.UUID.randomUUID().toString().replace("-", "");
+                prefs.edit().putString("id", id).commit();
+            }
+        } else {
+            id = Settings.Secure.getString(getContext().getContentResolver(), Settings.Secure.ANDROID_ID);
+        }
         JSObject result = new JSObject();
         result.put("id", id == null ? "" : id);
         call.resolve(result);

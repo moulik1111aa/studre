@@ -14,6 +14,40 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const src = join(root, 'src');
 const dist = join(root, 'dist');
 
+/**
+ * The Play Store build (MN_STORE=play) leaves out access keys, the owner's tools and test hooks
+ * entirely: lines between `// #unless play` and `// #end` are blanked before a module is read
+ * (so imports inside such a block don't pull their modules in either). Other builds keep them.
+ * scripts/check-play.mjs type-checks the stripped sources and scans the Play bundle.
+ */
+export function stripForPlay(text, id = '') {
+  let depth = 0;
+  const out = text.split('\n').map((line, n) => {
+    const t = line.trim();
+    if (t === '// #unless play') {
+      depth++;
+      return '';
+    }
+    if (t === '// #end') {
+      if (!depth) throw new Error(`${id}:${n + 1}: #end without #unless play`);
+      depth--;
+      return '';
+    }
+    // A misspelt marker would quietly leave its block in the Play build.
+    if (/^\/\/\s*#\s*(unless|end|if)\b/.test(t)) throw new Error(`${id}:${n + 1}: unknown marker "${t}" (use "// #unless play" and "// #end")`);
+    return depth ? '' : line;
+  });
+  if (depth) throw new Error(`${id}: #unless play without #end`);
+  return out.join('\n');
+}
+
+/** The source of a module as the build sees it: X.play.ts for X.ts and marked blocks removed (Play build). */
+export function sourceFor(file, play = process.env.MN_STORE === 'play') {
+  const swap = play && file.endsWith('.ts') && existsSync(file.replace(/\.ts$/, '.play.ts'));
+  const text = readFileSync(swap ? file.replace(/\.ts$/, '.play.ts') : file, 'utf8');
+  return play ? stripForPlay(text, relative(src, file)) : text;
+}
+
 /** Bundle one entry into a self-executing script string. */
 export function bundle(entryAbs) {
   const modules = new Map(); // id -> { deps: {spec: id}, code }
@@ -22,10 +56,9 @@ export function bundle(entryAbs) {
     const file = queue.pop();
     const id = relative(src, file).split('\\').join('/');
     if (modules.has(id)) continue;
-    // The Play Store build (MN_STORE=play) uses X.play.ts in place of X.ts where one exists:
-    // the owner area is left out of that app entirely.
-    const play = process.env.MN_STORE === 'play' && file.endsWith('.ts') && existsSync(file.replace(/\.ts$/, '.play.ts'));
-    const text = readFileSync(play ? file.replace(/\.ts$/, '.play.ts') : file, 'utf8');
+    // The Play Store build (MN_STORE=play) uses X.play.ts in place of X.ts where one exists
+    // (the owner area is left out of that app entirely), and drops `#unless play` blocks.
+    const text = sourceFor(file);
     const deps = {};
     for (const imp of ts.preProcessFile(text, true, true).importedFiles) {
       const spec = imp.fileName;
@@ -119,7 +152,7 @@ function firebaseKey() {
   }
 }
 
-export function build() {
+export function build({ outDir = dist } = {}) {
   const css = readdirSync(join(src, 'styles'))
     .filter((f) => f.endsWith('.css'))
     .sort()
@@ -138,8 +171,8 @@ export function build() {
     .replace('/*__CSS__*/', () => css)
     .replace('/*__JS__*/', () => scriptSafe(js))
     .replace('<div id="app"></div>', () => `<div id="app"></div>\n${threeTag()}\n${audioTag()}`);
-  mkdirSync(dist, { recursive: true });
-  writeFileSync(join(dist, 'index.html'), html);
+  mkdirSync(outDir, { recursive: true });
+  writeFileSync(join(outDir, 'index.html'), html);
   // Artifact variant: the host wraps the page in its own document skeleton, so it
   // carries only the title, styles, app root and script.
   // The shared preview link is a playtest build: it also offers preview tools.
@@ -147,7 +180,7 @@ export function build() {
   const artifact =
     `<title>MN</title>\n<meta name="theme-color" content="#0F1530">\n<style>${fontCss}</style>\n<style>${css}</style>\n` +
     `<div id="app" aria-live="polite"></div>\n${threeTag()}\n${audioTag()}\n<script>${scriptSafe(previewJs)}</script>\n`;
-  writeFileSync(join(dist, 'artifact.html'), artifact);
+  writeFileSync(join(outDir, 'artifact.html'), artifact);
   return { bytes: Buffer.byteLength(html) };
 }
 

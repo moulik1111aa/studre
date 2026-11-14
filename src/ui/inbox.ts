@@ -58,6 +58,8 @@ export function startInbox(app: App, ready: () => boolean): void {
     /* older app */
   }
   setTimeout(() => void take(), 800);
-  // Browser test runs: hand in a file's text directly.
+  // Browser test runs: hand in a file's text directly (not in the Play build).
+  // #unless play
   if (app.debug) Object.assign(window, { __share: (text: string) => receiveShared(app, text, ready), __shared: (f: { text?: string; error?: string }) => handleShared(app, f, ready) });
+  // #end
 }
