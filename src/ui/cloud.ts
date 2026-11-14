@@ -151,7 +151,7 @@ async function consent(app: App): Promise<boolean> {
   const { result } = app.sheet(
     `<h2>Sign in with Google</h2>
      <p>For parents only. MN keeps a private copy of your family’s progress in your own space in Google’s cloud (Mumbai), so it is backed up and the same on every phone:</p>
-     <ul class="cl-list"><li>your Google email and name</li><li>each child’s first name, age and avatar</li><li>levels, stars, rewards and play times</li><li>your family’s settings, like time limits and bedtime</li></ul>
+     <ul class="cl-list"><li>your Google email and name</li><li>each child’s first name, age and avatar</li><li>levels, stars, rewards and play times</li><li>your family’s settings, like time limits and bedtime</li><li>a label for each phone you sign in on, like “Phone K7Q4-MZ2P”, and when it last synced</li></ul>
      <p>No photos, location or contacts, and no ads. You can delete the online backup any time in the Parent area.</p>
      <p class="fine" style="overflow-wrap:anywhere">Privacy policy: mn-mission-next.web.app/privacy</p>`,
     [

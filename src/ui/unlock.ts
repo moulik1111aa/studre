@@ -35,6 +35,7 @@ export function unlockScreen(child: Child, jarName: 'treat' | 'goal') {
     el.querySelector('.given')!.addEventListener('click', async () => {
       if (!(await app.grownUp('Mark the reward as given'))) return;
       app.save.update(() => markGiven(child.wallet, jarName, app.today));
+      void app.photos.tidy(app.save.data); // its photo isn't needed any more
       app.sfx.fanfare();
       void app.show(rewardsScreen(child, jarName));
     });

@@ -14,7 +14,7 @@ import { newChild, type Child, type Settings } from '../storage/save.ts';
 import { makeBackup, mergeChild, readBackup, type Backup } from './backup.ts';
 
 /** Which version of the privacy policy a parent agrees to when signing in. */
-export const POLICY_VERSION = '2026-11-05';
+export const POLICY_VERSION = '2026-11-15';
 
 // ── a child in the cloud ────────────────────────────────────────────────────
 

@@ -111,7 +111,14 @@ export function rewardsScreen(child: Child, jar: Jar) {
         </div>
         <input type="file" accept="image/*" class="file" hidden>
       </div></div>`);
-      const close = () => ov.remove();
+      let chosen = false;
+      const close = () => {
+        ov.remove();
+        // A photo taken here but not used (the parent looked at other rewards) is deleted.
+        // (If the sheet goes some other way, the next start tidies it up.)
+        if (photo && !chosen) void app.photos.delete(photo);
+        else if (photo) app.photos.release(photo);
+      };
       ov.querySelector('[data-back]')!.addEventListener('click', close);
       const file = ov.querySelector<HTMLInputElement>('.file')!;
       ov.querySelector('.add-photo')!.addEventListener('click', async () => {
@@ -121,7 +128,11 @@ export function rewardsScreen(child: Child, jar: Jar) {
         const f = file.files?.[0];
         if (!f) return;
         try {
+          const before = photo;
           photo = await app.photos.save(f);
+          app.photos.hold(photo);
+          // A retaken photo replaces the one before, which is deleted.
+          if (before) void app.photos.delete(before);
           const url = await app.photos.load(photo);
           ov.querySelector('.photo-slot')!.innerHTML = `<img class="agreed" alt="Agreed reward photo" src="${url}">`;
           popIn(ov.querySelector('.agreed')!);
@@ -130,7 +141,9 @@ export function rewardsScreen(child: Child, jar: Jar) {
         }
       });
       ov.querySelector('.pick')!.addEventListener('click', () => {
-        app.save.update(() => chooseReward(child.wallet, r.id, photo));
+        app.save.update(() => {
+          chosen = chooseReward(child.wallet, r.id, photo);
+        });
         close();
         app.sfx.fanfare();
         const b = el.querySelector(`[data-r="${CSS.escape(r.id)}"]`)?.getBoundingClientRect();

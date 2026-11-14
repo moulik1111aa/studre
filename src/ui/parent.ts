@@ -185,7 +185,7 @@ function appHtml(app: App): string {
           const due = dueKids(app);
           return due.length ? `<p class="pb-due" role="status"><span>${esc(due.map((c) => c.name).join(' and '))} ${due.length === 1 ? 'has' : 'have'} new progress that isn’t backed up yet.</span></p>` : '';
         })()}
-        <p class="pb-why"><small>${account(app) ? 'Progress is backed up online. A backup file is an extra copy you can keep anywhere.' : 'Progress is saved only on this phone. A backup file (in Google Drive or email) brings it back on any phone.'}</small></p>
+        <p class="pb-why"><small>${account(app) ? 'Progress is backed up online. A backup file is an extra copy you can keep anywhere.' : 'Progress is saved on this phone (and in the phone’s own Google backup, if that is on, though it doesn’t always come back). A backup file (in Google Drive or email) brings it back on any phone.'}</small></p>
         <ul class="pb-kids">${app.save.data.children.map((c) => `<li>${avatarHtml(c.avatar, 28)}<span>${esc(c.name)}</span><small>${lastBackupText(c)}</small></li>`).join('')}</ul>
         <button class="btn small bk-family">Save a backup file</button>
         <button class="linkish restore-kid">Restore from a backup file</button>
@@ -193,7 +193,7 @@ function appHtml(app: App): string {
       </div>
       ${cloudCard(app)}`)}
     ${sec('Your data', `<button class="pa-row card privacy-row"><b>Privacy policy</b><small>What MN keeps, and where</small></button>
-      <button class="pa-row card erase-row"><b>Delete account and data</b><small>Progress on this phone${account(app) ? ', the online backup and your MN sign-in' : ''}</small></button>`)}
+      <button class="pa-row card erase-row"><b>Delete account and data</b><small>Progress, reward photos and reminders on this phone${account(app) ? ', the online backup and your MN sign-in' : ''}</small></button>`)}
     ${sec('MN Swipe', `<div class="card pa-toggles">${toggleRows(st, [T('swipeOn', 'MN Swipe on the home screen', 'Endless quick maths for anyone, with music. Just for fun: no coins, no child profile.')])}</div>`)}
     ${sec('Home-screen widgets', widgetsSectionHtml(app))}`;
 }

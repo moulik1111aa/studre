@@ -407,6 +407,7 @@ export function reportScreen(child: Child, start: Tab = 'overview') {
         void result.then((yes) => {
           if (!yes) return;
           app.save.update(() => resetChild(child, app.today));
+          void app.photos.tidy(app.save.data); // the jars' photos go with the jars
           noteReplaced(child.id);
           app.toast(`${child.name} is starting fresh.`);
           void app.show(reportScreen(child, 'manage'));
@@ -420,6 +421,7 @@ export function reportScreen(child: Child, start: Tab = 'overview') {
         void result.then((yes) => {
           if (!yes) return;
           app.save.update((d) => removeChild(d, child.id));
+          void app.photos.tidy(app.save.data); // and the child's reward photos
           noteRemoved(child.id);
           app.toast(`${child.name}’s profile was deleted.`);
           void app.show(app.save.data.children.length ? parentScreen : addChildScreen(false));

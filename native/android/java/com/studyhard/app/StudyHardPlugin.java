@@ -824,10 +824,14 @@ public class StudyHardPlugin extends Plugin {
 
     // ── Reward photos: JPEGs in the app's private files folder ──
 
+    private File photoDir() {
+        return new File(getContext().getFilesDir(), "photos");
+    }
+
     private File photoFile(String id) {
-        File dir = new File(getContext().getFilesDir(), "photos");
+        File dir = photoDir();
         if (!dir.exists()) dir.mkdirs();
-        return new File(dir, id.replaceAll("[^A-Za-z0-9_-]", "_") + ".jpg");
+        return LocalData.photoFile(dir, id);
     }
 
     @PluginMethod
@@ -875,6 +879,36 @@ public class StudyHardPlugin extends Plugin {
         String id = call.getString("id");
         if (id != null) photoFile(id).delete();
         call.resolve();
+    }
+
+    /** The ids of the photos kept, so the app can delete the ones no reward uses any more. */
+    @PluginMethod
+    public void listPhotos(PluginCall call) {
+        JSArray ids = new JSArray();
+        for (String id : LocalData.photoIds(photoDir())) ids.put(id);
+        JSObject r = new JSObject();
+        r.put("ids", ids);
+        call.resolve(r);
+    }
+
+    /**
+     * "Delete account and data": everything MN keeps on the phone outside the save (the app
+     * writes a fresh save itself). Every photo, every reminder and note, the widget data, and
+     * the files made for sharing.
+     */
+    @PluginMethod
+    public void wipeLocal(PluginCall call) {
+        Context ctx = getContext();
+        boolean ok = LocalData.deleteTree(photoDir());
+        // An empty plan cancels every alarm set before; then the plan, snooze and widget data go.
+        Reminders.apply(ctx, "{\"items\":[]}");
+        Reminders.prefs(ctx).edit().clear().commit();
+        NotificationManagerCompat.from(ctx).cancelAll();
+        Widgets.updateAll(ctx);
+        ok &= LocalData.deleteTree(new File(ctx.getCacheDir(), "share"));
+        JSObject r = new JSObject();
+        r.put("ok", ok);
+        call.resolve(r);
     }
 
     private SharedPreferences prefs() {

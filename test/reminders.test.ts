@@ -79,7 +79,7 @@ test('backups: due after two new play days and a week; the note comes at a paren
   const b = items.find((i) => i.kind === 'backup')!;
   assert.ok(b);
   assert.equal(new Date(b.at).getHours(), 19);
-  assert.match(b.text, /only on this phone/);
+  assert.match(b.text, /saved on this phone/);
   // Snoozed: not before the snooze ends.
   const snoozed = planReminders(input([c], new Date(now), '2026-10-26', { backupSnoozeUntil: now + 3 * 86_400_000 })).find((i) => i.kind === 'backup')!;
   assert.ok(snoozed.at >= now + 3 * 86_400_000);

@@ -53,6 +53,7 @@ export interface Wallet {
   todaySeconds: number;
   todayDay: string | null;
   /** Rewards given so far. */
+  /** (`photo`: older saves only; a given reward's photo is deleted.) */
   earned: { rewardId: string; day: string; photo?: string }[];
 }
 
@@ -156,12 +157,13 @@ export function chooseReward(w: Wallet, rewardId: string, photo?: string): boole
   return true;
 }
 
-/** A parent marks a waiting reward as given: it is recorded and the jar keeps any surplus. */
+/** A parent marks a waiting reward as given: it is recorded and the jar keeps any surplus.
+ * Its photo is no longer used (the app deletes it). */
 export function markGiven(w: Wallet, jarName: 'treat' | 'goal', today: string): boolean {
   const jar = w[jarName];
   const r = jar.rewardId ? rewardById(jar.rewardId) : undefined;
   if (!r || !jar.waiting) return false;
-  w.earned.push({ rewardId: r.id, day: today, photo: jar.photo });
+  w.earned.push({ rewardId: r.id, day: today });
   jar.coins = Math.max(0, Math.round((jar.coins - costOf(r)) * 100) / 100);
   jar.rewardId = null;
   jar.photo = undefined;

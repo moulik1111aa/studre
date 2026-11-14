@@ -33,6 +33,10 @@ export interface StudyHardPlugin {
   savePhoto(o: { id: string; dataUrl: string }): Promise<void>;
   loadPhoto(o: { id: string }): Promise<{ dataUrl?: string }>;
   deletePhoto(o: { id: string }): Promise<void>;
+  /** The ids of the reward photos kept on the phone (newer apps only). */
+  listPhotos?(): Promise<{ ids?: string[] }>;
+  /** "Delete account and data": every photo, reminder, note, the widget data and the share folder (newer apps only). */
+  wipeLocal?(): Promise<{ ok?: boolean }>;
   setReminders?(o: { plan: string }): Promise<{ enabled?: boolean; canAsk?: boolean; snoozeUntil?: number }>;
   notificationState?(): Promise<{ enabled?: boolean; canAsk?: boolean; snoozeUntil?: number }>;
   askNotifications?(): Promise<{ enabled?: boolean; canAsk?: boolean }>;

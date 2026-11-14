@@ -12,6 +12,7 @@ import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, write
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { FILE_PATHS_XML, shareFilters } from './android-share.mjs';
+import { BACKUP_RULES_XML, DATA_EXTRACTION_RULES_XML, backupAttributes } from './android-backup.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const run = (cmd) => execSync(cmd, { cwd: root, stdio: 'inherit' });
@@ -137,6 +138,10 @@ if (!manifest.includes('androidx.core.content.FileProvider')) {
   mkdirSync(dirname(fp), { recursive: true });
   writeFileSync(fp, FILE_PATHS_XML);
 }
+// Android's own backup copies MN's save only (not the sign-in, photos or reminders): see android-backup.mjs.
+manifest = backupAttributes(manifest);
+writeFileSync(join(res, 'xml', 'backup_rules.xml'), BACKUP_RULES_XML);
+writeFileSync(join(res, 'xml', 'data_extraction_rules.xml'), DATA_EXTRACTION_RULES_XML);
 writeFileSync(manifestPath, manifest);
 
 // 6. Gradle: version, release signing (from CI secrets), and the AndroidX libraries the plugin uses.

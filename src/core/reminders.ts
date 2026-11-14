@@ -153,7 +153,7 @@ function backupWhen(c: RemindChild, now: number): number | null {
 }
 
 export const BACKUP_TEXT = (names: string) =>
-  `${names}’s stars, coins, jars and rewards are saved only on this phone. If it’s lost, reset or swapped, they’d start again from zero. Save a progress file to Google Drive or email it to yourself: it takes 20 seconds, and it restores everything on any phone with MN.`;
+  `${names}’s stars, coins, jars and rewards are saved on this phone. If it’s lost, reset or swapped, the phone’s own Google backup may not bring them back, and they’d start again from zero. Save a progress file to Google Drive or email it to yourself: it takes 20 seconds, and it restores everything on any phone with MN.`;
 
 const listNames = (names: string[]) => (names.length <= 1 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`);
 

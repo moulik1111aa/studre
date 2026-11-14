@@ -100,6 +100,9 @@ async function boot(): Promise<void> {
     fitLook();
     if (app.screen?.el.classList.contains('map') && app.maker) void app.show(app.maker, 'fade');
   });
+  // Reward photos no reward uses any more (left by older versions, or a sheet closed some
+  // other way) are deleted.
+  void app.photos.tidy(app.save.data).catch((e) => console.error('photos', e));
   // The phone's reminders and home-screen widgets follow the save (never in the way of opening).
   try {
     startReminders(app);
