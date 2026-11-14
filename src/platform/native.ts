@@ -41,7 +41,8 @@ export interface StudyHardPlugin {
   openUrl?(o: { url: string }): Promise<void>;
   launchAction?(): Promise<{ open?: string }>;
   /** A file shared to MN or opened with it (taken once): its text and name. Newer apps only. */
-  sharedFile?(): Promise<{ text?: string; name?: string }>;
+  /** A file shared to MN, once: its text and name, or why it wasn't read ('too-big', 'unsupported', 'unreadable'). */
+  sharedFile?(): Promise<{ text?: string; name?: string; error?: string }>;
   /** The launcher icon (MN × members can pick one). Newer apps only. */
   setAppIcon?(o: { name: string }): Promise<{ ok: boolean }>;
   appIcon?(): Promise<{ name?: string }>;

@@ -22,7 +22,6 @@ import android.util.Base64;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
-import java.io.ByteArrayOutputStream;
 import android.content.ComponentName;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
@@ -96,9 +95,9 @@ public class StudyHardPlugin extends Plugin {
     private float pendingRate = 0.95f;
     /** "play" or "backup" when the app was opened from a reminder (read once by the web app). */
     private String pendingOpen = null;
-    /** A file shared to MN (or opened with it): its text and name, read once by the web app. */
-    private String sharedText = null;
-    private String sharedName = null;
+    /** Files shared to MN (or opened with it): read off the main thread, collected once by the web app. */
+    private SharedInbox inbox;
+    private final java.util.concurrent.ExecutorService shareReader = java.util.concurrent.Executors.newSingleThreadExecutor();
     /** The launcher icons (activity-alias names in the manifest, added by scripts/android.mjs). */
     static final String[] ICONS = { "sky", "night", "sunset", "space", "gold" };
 
@@ -133,8 +132,28 @@ public class StudyHardPlugin extends Plugin {
 
         AppCompatActivity activity = getActivity();
         Intent start = activity.getIntent();
-        readShared(start);
-        if (start != null && start.hasExtra(Reminders.EXTRA_OPEN)) {
+        inbox = new SharedInbox(new SharedInbox.Files() {
+            @Override
+            public InputStream open(Uri uri) throws java.io.IOException {
+                return getContext().getContentResolver().openInputStream(uri);
+            }
+
+            @Override
+            public String name(Uri uri) {
+                return displayName(uri);
+            }
+
+            @Override
+            public boolean ours(String authority) {
+                String me = getContext().getPackageName();
+                if (authority.equals(me) || authority.startsWith(me + ".")) return true;
+                android.content.pm.ProviderInfo p = getContext().getPackageManager().resolveContentProvider(authority, 0);
+                return p != null && me.equals(p.packageName);
+            }
+        }, shareReader, () -> notifyListeners("shared", new JSObject(), true));
+        inbox.take(start);
+        // Reopened from Recents: Android hands back the original intent, already handled once.
+        if (start != null && !SharedInbox.fromHistory(start) && start.hasExtra(Reminders.EXTRA_OPEN)) {
             pendingOpen = start.getStringExtra(Reminders.EXTRA_OPEN);
             start.removeExtra(Reminders.EXTRA_OPEN);
         }
@@ -162,6 +181,7 @@ public class StudyHardPlugin extends Plugin {
 
     @Override
     protected void handleOnDestroy() {
+        shareReader.shutdownNow();
         if (tts != null) {
             tts.stop();
             tts.shutdown();
@@ -174,8 +194,8 @@ public class StudyHardPlugin extends Plugin {
     @Override
     protected void handleOnNewIntent(Intent intent) {
         super.handleOnNewIntent(intent);
-        if (readShared(intent)) notifyListeners("shared", new JSObject());
-        if (intent == null || !intent.hasExtra(Reminders.EXTRA_OPEN)) return;
+        if (inbox != null) inbox.take(intent);
+        if (intent == null || SharedInbox.fromHistory(intent) || !intent.hasExtra(Reminders.EXTRA_OPEN)) return;
         pendingOpen = intent.getStringExtra(Reminders.EXTRA_OPEN);
         intent.removeExtra(Reminders.EXTRA_OPEN);
         JSObject d = new JSObject();
@@ -961,60 +981,17 @@ public class StudyHardPlugin extends Plugin {
         call.resolve();
     }
 
-    /** What the app was opened for from a reminder ("play", "backup" or nothing), once. */
+    /** The file shared to MN, once: { text, name } when it was read, { error } when it wasn't (SharedInbox). */
     @PluginMethod
     public void sharedFile(PluginCall call) {
         JSObject r = new JSObject();
-        if (sharedText != null) {
-            r.put("text", sharedText);
-            r.put("name", sharedName == null ? "" : sharedName);
+        String[] f = inbox == null ? new String[3] : inbox.collect();
+        if (f[0] != null) {
+            r.put("text", f[0]);
+            r.put("name", f[1] == null ? "" : f[1]);
         }
-        sharedText = null;
-        sharedName = null;
+        if (f[2] != null) r.put("error", f[2]);
         call.resolve(r);
-    }
-
-    /** Read a file handed to MN by Share or Open with (WhatsApp, Files, Gmail…). */
-    @SuppressWarnings("deprecation")
-    private boolean readShared(Intent intent) {
-        if (intent == null) return false;
-        String action = intent.getAction();
-        Uri uri = null;
-        try {
-            if (Intent.ACTION_SEND.equals(action)) {
-                uri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
-                if (uri == null) {
-                    CharSequence t = intent.getCharSequenceExtra(Intent.EXTRA_TEXT);
-                    if (t == null || t.length() == 0) return false;
-                    sharedText = t.toString();
-                    sharedName = "";
-                    intent.setAction(Intent.ACTION_MAIN);
-                    return true;
-                }
-            } else if (Intent.ACTION_VIEW.equals(action)) {
-                uri = intent.getData();
-            }
-            if (uri == null) return false;
-            ByteArrayOutputStream buf = new ByteArrayOutputStream();
-            try (InputStream in = getContext().getContentResolver().openInputStream(uri)) {
-                if (in == null) return false;
-                byte[] chunk = new byte[65536];
-                int n;
-                while ((n = in.read(chunk)) > 0) {
-                    buf.write(chunk, 0, n);
-                    if (buf.size() > 30 * 1024 * 1024) return false;
-                }
-            }
-            sharedText = new String(buf.toByteArray(), StandardCharsets.UTF_8);
-            sharedName = displayName(uri);
-            // Handled: a restart of the activity does not read it again.
-            intent.setAction(Intent.ACTION_MAIN);
-            intent.setData(null);
-            intent.removeExtra(Intent.EXTRA_STREAM);
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
     }
 
     private String displayName(Uri uri) {

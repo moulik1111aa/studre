@@ -11,6 +11,7 @@ import { execSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { FILE_PATHS_XML, shareFilters } from './android-share.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const run = (cmd) => execSync(cmd, { cwd: root, stdio: 'inherit' });
@@ -102,22 +103,7 @@ manifest = patch(
 // members can pick an icon (StudyHardPlugin.setAppIcon turns one on and the others off).
 const launcher = /<intent-filter>\s*<action android:name="android\.intent\.action\.MAIN"\s*\/>\s*<category android:name="android\.intent\.category\.LAUNCHER"\s*\/>\s*<\/intent-filter>/;
 if (!launcher.test(manifest)) throw new Error('patch anchor not found: the MainActivity launcher intent-filter');
-const mimes = ['text/html', 'application/json', 'text/plain', 'application/octet-stream'];
-const shareFilters = mimes
-  .map((m) => `
-            <intent-filter>
-                <action android:name="android.intent.action.SEND" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="${m}" />
-            </intent-filter>`)
-  .join('') + `
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:scheme="content" android:mimeType="text/html" />
-                <data android:scheme="content" android:mimeType="application/json" />
-            </intent-filter>`;
-manifest = manifest.replace(launcher, shareFilters.trim());
+manifest = manifest.replace(launcher, shareFilters());
 const ICONS = ['sky', 'night', 'sunset', 'space', 'gold'];
 const aliases = ICONS.map((n) => {
   const Name = n[0].toUpperCase() + n.slice(1);
@@ -149,9 +135,7 @@ if (!manifest.includes('androidx.core.content.FileProvider')) {
 {
   const fp = join(res, 'xml', 'file_paths.xml');
   mkdirSync(dirname(fp), { recursive: true });
-  let x = existsSync(fp) ? readFileSync(fp, 'utf8') : '<?xml version="1.0" encoding="utf-8"?>\n<paths xmlns:android="http://schemas.android.com/apk/res/android">\n</paths>\n';
-  if (!x.includes('name="mn_share"')) x = x.replace('</paths>', '    <cache-path name="mn_share" path="share/" />\n</paths>');
-  writeFileSync(fp, x);
+  writeFileSync(fp, FILE_PATHS_XML);
 }
 writeFileSync(manifestPath, manifest);
 

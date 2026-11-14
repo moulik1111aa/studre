@@ -1919,3 +1919,18 @@ test('rules changed on another phone take effect at once after a sync, and the o
   // The open screen shows the new price without being reopened.
   await expect(page.locator('.sc-note').first()).toContainText(`of ${cost * 2} coins`);
 });
+
+test('a shared file the phone refused (too big, from MN itself or a file path, unreadable) gets a plain message', async ({ page }) => {
+  type W = { __shared(f: { text?: string; error?: string }): Promise<void> };
+  await page.goto('/?debug&demo=%405&noloader');
+  await expect(page.locator('.map')).toBeVisible();
+  for (const [error, words] of [['too-big', 'too big to be an MN backup'], ['unsupported', 'can’t open that file from there'], ['unreadable', 'couldn’t read that file'], ['something-new', 'couldn’t read that file']]) {
+    await page.evaluate((e) => (window as unknown as W).__shared({ error: e }), error);
+    await expect(page.locator('.toast').last()).toContainText(words);
+  }
+  // Nothing shared: nothing shown.
+  const toasts = await page.locator('.toast').count();
+  await page.evaluate(() => (window as unknown as W).__shared({}));
+  await page.waitForTimeout(400);
+  expect(await page.locator('.toast').count()).toBeLessThanOrEqual(toasts);
+});
