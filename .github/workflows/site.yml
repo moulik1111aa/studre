@@ -4,7 +4,9 @@
 #   /admin    MN Access, the owner's page for approving people
 # It also publishes firestore.rules, so the cloud's rules always match the repo.
 # Needs two secrets: FIREBASE_API_KEY (as the app build) and FIREBASE_SERVICE_ACCOUNT
-# (the JSON key of the project's firebase-adminsdk service account).
+# (the JSON key of the project's firebase-adminsdk service account). The rules also need
+# OWNER_UID, the owner's account id (Firebase Console → Authentication → Users → User UID):
+# without it the website is published but the rules are not (the ones live stay).
 name: Website
 
 on:
@@ -52,11 +54,20 @@ jobs:
         if: steps.sa.outputs.ok == 'true'
         env:
           SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          OWNER_UID: ${{ secrets.OWNER_UID }}
         run: |
           printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
           npx --yes firebase-tools@13 deploy --only hosting --project mn-mission-next --non-interactive
-          # The rules too (a warning, not a failure, if the account can't publish rules yet).
-          npx --yes firebase-tools@13 deploy --only firestore:rules --project mn-mission-next --non-interactive \
-            || echo "::warning::The website is published, but the Firestore rules weren't. Check the service account has the Firebase Admin role."
+          # The rules too, with the owner's account id filled in (a warning, not a failure, if they can't be published).
+          if [ -z "$OWNER_UID" ]; then
+            echo "::warning::The website is published, but the Firestore rules weren't: add the OWNER_UID secret (the owner's account id)."
+          elif ! printf '%s' "$OWNER_UID" | grep -Eq '^[A-Za-z0-9]{10,128}$'; then
+            echo "::warning::The OWNER_UID secret doesn't look like an account id, so the Firestore rules weren't published."
+          else
+            sed -i "s/__OWNER_UID__/$OWNER_UID/g" firestore.rules
+            grep -q '__OWNER_UID__' firestore.rules && { echo "::error::The owner's account id wasn't filled in."; exit 1; }
+            npx --yes firebase-tools@13 deploy --only firestore:rules --project mn-mission-next --non-interactive \
+              || echo "::warning::The website is published, but the Firestore rules weren't. Check the service account has the Firebase Admin role."
+          fi
           rm -f "$RUNNER_TEMP/sa.json"

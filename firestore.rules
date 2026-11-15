@@ -1,40 +1,113 @@
 rules_version = '2';
 
 // MN — who can do what in the cloud (see src/core/cloud.ts, src/platform/cloudapi.ts).
+// Tested against the Firestore emulator by test/rules/firestore.test.mjs (.github/workflows/rules.yml).
 //
+//   families/{uid}            a family's sync document: its own grown-up only
+//   families/{uid}/children/* one child each: the gzipped, checked backup
+//
+// The shared APK's approvals (not used by the Play Store build):
 //   access/{email}            the owner's approved Google accounts (only the owner writes them)
 //   requests/{uid}            "please let me in": written by the person, read by the owner
 //   checkins/{uid}            which phones an account uses, and when (read by the owner)
 //   owner/keys                the owner's list of phone-code keys made
-//   families/{uid}            a family's sync document (any signed-in grown-up, their own only;
-//                             the Play Store build has no approvals)
-//   families/{uid}/children/* one child each: the gzipped, checked backup
+//
+// The owner is an account id, never an email address. __OWNER_UID__ is filled in from the
+// OWNER_UID secret when the website workflow publishes these rules (site.yml); without the
+// secret the rules are not published, so the placeholder never goes live.
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() {
       return request.auth != null && request.auth.token.email_verified == true;
     }
-    function email() {
-      return request.auth.token.email.lower();
-    }
     function isOwner() {
-      return signedIn() && email() == 'moulik1111a@gmail.com';
+      return signedIn() && request.auth.uid == '__OWNER_UID__';
     }
     function mine(uid) {
       return signedIn() && request.auth.uid == uid;
     }
+    // The signed-in person's own address (only ever compared with what they write about themselves).
+    function myEmail() {
+      return request.auth.token.email.lower();
+    }
+    function data() {
+      return request.resource.data;
+    }
+    function text(v, max) {
+      return v is string && v.size() <= max;
+    }
+    function time(v) {
+      return v is int && v >= 0;
+    }
+    // A field that may be left out, and is short text when it is there.
+    function optText(field, max) {
+      return !(field in data()) || text(data()[field], max);
+    }
+    function optTime(field) {
+      return !(field in data()) || time(data()[field]);
+    }
+    // A child id, as src/core/clean.ts CHILD_ID.
+    function childId(v) {
+      return v is string && v.matches('^[A-Za-z0-9_-]{1,40}$');
+    }
+    // A map of child id → time, at most `max` entries.
+    function childTimes(m, max) {
+      return m is map && m.size() <= max;
+    }
 
+    // ── a family's online backup ────────────────────────────────────────────
+    match /families/{uid} {
+      allow get, delete: if mine(uid);
+      allow create, update: if mine(uid) && (familyDoc() || deletedNote());
+
+      function familyDoc() {
+        return data().keys().hasOnly(['v', 'policy', 'consentAt', 'kids', 'removed', 'resets', 'devices', 'rules', 'rulesAt', 'deletedAt', 'primary'])
+          && data().v == 1
+          && optText('policy', 40)
+          && optTime('consentAt')
+          && (!('kids' in data()) || childTimes(data().kids, 20))
+          && (!('removed' in data()) || childTimes(data().removed, 200))
+          && (!('resets' in data()) || childTimes(data().resets, 200))
+          && (!('devices' in data()) || (data().devices is map && data().devices.size() <= 20))
+          && optText('rules', 20000)
+          && optTime('rulesAt')
+          && optTime('deletedAt')
+          && optText('primary', 64);
+      }
+      // "Delete the online backup" leaves only this note, so other phones stop syncing.
+      function deletedNote() {
+        return data().keys().hasOnly(['v', 'deletedAt']) && data().v == 1 && time(data().deletedAt);
+      }
+
+      match /children/{child} {
+        allow get, list, delete: if mine(uid);
+        allow create, update: if mine(uid)
+          && childId(child)
+          && data().keys().hasOnly(['v', 'childId', 'updatedAt', 'device', 'data'])
+          && data().v == 1
+          && data().childId == child
+          && time(data().updatedAt)
+          && text(data().device, 64)
+          && data().data is bytes
+          && data().data.size() < 900000;
+      }
+    }
+
+    // ── the shared APK's approvals (the owner by account id) ────────────────
     match /access/{addr} {
-      allow read: if isOwner() || (signedIn() && email() == addr);
+      // Each person may read the one entry for their own address; the owner reads and writes all.
+      allow get: if isOwner() || (signedIn() && myEmail() == addr);
       allow list, write: if isOwner();
     }
 
     match /requests/{uid} {
-      allow read, list, delete: if isOwner();
-      allow get, delete: if mine(uid);
+      allow get, delete: if isOwner() || mine(uid);
+      allow list: if isOwner();
       allow create, update: if mine(uid)
-        && request.resource.data.keys().hasOnly(['email', 'name', 'phone', 'device', 'version', 'at'])
-        && request.resource.data.email == email();
+        && data().keys().hasOnly(['email', 'name', 'phone', 'device', 'version', 'at'])
+        && data().email == myEmail()
+        && optText('name', 100) && optText('phone', 20) && optText('device', 64) && optText('version', 40)
+        && optTime('at');
     }
 
     // The owner's list of phone-code keys (names, phone codes, keys; never the master key).
@@ -43,28 +116,13 @@ service cloud.firestore {
     }
 
     match /checkins/{uid} {
-      allow read, list, delete: if isOwner();
-      allow delete: if mine(uid);
+      allow get, list: if isOwner();
+      allow delete: if isOwner() || mine(uid);
       allow create, update: if mine(uid)
-        && request.resource.data.keys().hasOnly(['email', 'name', 'devices'])
-        && request.resource.data.email == email();
-    }
-
-    match /families/{uid} {
-      allow read, delete: if mine(uid);
-      allow create, update: if mine(uid) && (
-        request.resource.data.keys().hasOnly(['v', 'policy', 'consentAt', 'kids', 'removed', 'resets', 'devices', 'rules', 'rulesAt', 'deletedAt', 'primary'])
-        // "Delete the cloud copy" leaves only this note, even for an account no longer approved.
-        || request.resource.data.keys().hasOnly(['v', 'deletedAt']));
-
-      match /children/{childId} {
-        allow read, delete: if mine(uid);
-        allow create, update: if mine(uid)
-          && request.resource.data.keys().hasOnly(['v', 'childId', 'updatedAt', 'device', 'data'])
-          && request.resource.data.childId == childId
-          && request.resource.data.data is bytes
-          && request.resource.data.data.size() < 1000000;
-      }
+        && data().keys().hasOnly(['email', 'name', 'devices'])
+        && data().email == myEmail()
+        && optText('name', 100)
+        && (!('devices' in data()) || (data().devices is map && data().devices.size() <= 20));
     }
 
     // Everything else is closed.

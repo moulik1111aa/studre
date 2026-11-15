@@ -1,0 +1,45 @@
+# The cloud rules (firestore.rules) tested against the Firestore emulator: on every push that
+# changes them or their tests, on any branch. The emulator needs no account or secret.
+# For comparison it also runs the same tests on the rules on main (what is live once the
+# website workflow has published them); that step never fails the run.
+name: Cloud rules
+
+on:
+  push:
+    paths: ['firestore.rules', 'test/rules/**', '.github/workflows/rules.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  emulator:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install the emulator and the test library
+        run: npm install --no-save --no-audit --no-fund firebase-tools@13 @firebase/rules-unit-testing@4 firebase@11
+
+      - name: Test the rules
+        run: npx firebase emulators:exec --only firestore --project demo-mn "node --test test/rules/"
+
+      - name: For comparison, the same tests on the rules on main
+        continue-on-error: true
+        run: |
+          git show origin/main:firestore.rules > "$RUNNER_TEMP/main.rules"
+          RULES_FILE="$RUNNER_TEMP/main.rules" npx firebase emulators:exec --only firestore --project demo-mn "node --test test/rules/" \
+            && echo "::notice::The rules on main pass the same tests." \
+            || echo "::notice::The rules on main fail some of these tests (see above): they change when this reaches main."
