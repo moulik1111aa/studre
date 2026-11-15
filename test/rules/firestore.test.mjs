@@ -1,6 +1,6 @@
 // The cloud rules (firestore.rules) against the Firestore emulator (review fix 9).
 // Run by .github/workflows/rules.yml:
-//   firebase emulators:exec --only firestore --project demo-mn "node --test test/rules/"
+//   firebase emulators:exec --only firestore --project demo-mn "node --test test/rules/firestore.test.mjs"
 // RULES_FILE picks another rules file (the workflow also tries the rules live now, for comparison).
 import { after, before, beforeEach, test } from 'node:test';
 import { readFileSync } from 'node:fs';

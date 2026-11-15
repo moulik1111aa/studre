@@ -34,5 +34,5 @@ test('the limits the review asks for', () => {
 test('the emulator tests run on every change to the rules', () => {
   const wf = readFileSync('.github/workflows/rules.yml', 'utf8');
   assert.match(wf, /paths: \['firestore\.rules', 'test\/rules\/\*\*'/);
-  assert.match(wf, /emulators:exec --only firestore --project demo-mn "node --test test\/rules\/"/);
+  assert.match(wf, /emulators:exec --only firestore --project demo-mn "node --test test\/rules\/firestore\.test\.mjs"/);
 });

@@ -34,12 +34,12 @@ jobs:
         run: npm install --no-save --no-audit --no-fund firebase-tools@13 @firebase/rules-unit-testing@4 firebase@11
 
       - name: Test the rules
-        run: npx firebase emulators:exec --only firestore --project demo-mn "node --test test/rules/"
+        run: npx firebase emulators:exec --only firestore --project demo-mn "node --test test/rules/firestore.test.mjs"
 
       - name: For comparison, the same tests on the rules on main
         continue-on-error: true
         run: |
           git show origin/main:firestore.rules > "$RUNNER_TEMP/main.rules"
-          RULES_FILE="$RUNNER_TEMP/main.rules" npx firebase emulators:exec --only firestore --project demo-mn "node --test test/rules/" \
+          RULES_FILE="$RUNNER_TEMP/main.rules" npx firebase emulators:exec --only firestore --project demo-mn "node --test test/rules/firestore.test.mjs" \
             && echo "::notice::The rules on main pass the same tests." \
             || echo "::notice::The rules on main fail some of these tests (see above): they change when this reaches main."
