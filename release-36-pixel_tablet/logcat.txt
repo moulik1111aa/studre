@@ -1,0 +1,99 @@
+11-15 10:43:56.439  2911  2911 D nativeloader: Load /system/lib64/libwebviewchromium_plat_support.so using class loader ns clns-11 (caller=/data/app/~~HWYV02otlzewZO6ynOmYGw==/com.google.android.webview-WbI9BNoH_FDPazKC4HwTJg==/WebViewGoogle.apk): ok
+11-15 10:43:56.673  2911  2950 I chromium: [1115/104356.661622:INFO:variations_seed_loader.cc(67)] Failed to open file for reading.: No such file or directory (2)
+11-15 10:43:56.673  2911  2950 I chromium: [1115/104356.673613:INFO:variations_seed_loader.cc(67)] Failed to open file for reading.: No such file or directory (2)
+11-15 10:43:58.846  2911  3004 E chromium: [ERROR:simple_version_upgrade.cc(151)] Failed to write a new fake index.
+11-15 10:43:58.879  2911  3000 E chromium: [ERROR:simple_file_enumerator.cc(21)] opendir /data/user/0/com.studyhard.app/cache/WebView/Default/HTTP Cache/Code Cache/wasm: No such file or directory (2)
+11-15 10:43:58.879  2911  3000 E chromium: [ERROR:simple_index_file.cc(613)] Could not reconstruct index from disk
+11-15 10:44:00.578  2911  2911 D Capacitor: Starting BridgeActivity
+11-15 10:44:00.656  2911  2911 D Capacitor: Registering plugin instance: CapacitorCookies
+11-15 10:44:00.679  2911  2911 D Capacitor: Registering plugin instance: WebView
+11-15 10:44:00.726  2911  2911 D Capacitor: Registering plugin instance: CapacitorHttp
+11-15 10:44:00.757  2911  2911 D Capacitor: Registering plugin instance: SystemBars
+11-15 10:44:00.758  2911  2911 D Capacitor: Registering plugin instance: StudyHard
+11-15 10:44:00.945  2911  2911 W Capacitor: Unable to read file at path public/plugins
+11-15 10:44:00.994  2911  2911 D Capacitor: Loading app at https://localhost
+11-15 10:44:01.680  2911  2911 D Capacitor: App started
+11-15 10:44:01.775  2911  2911 D Capacitor: App resumed
+11-15 10:44:01.959  2911  3130 W chromium: [WARNING:viz_main_impl.cc(85)] VizNullHypothesis is disabled (not a warning)
+11-15 10:44:02.046  2911  2998 D Capacitor: Handling local request: https://localhost/
+11-15 10:44:03.009  2911  2911 E Capacitor/Console: File:  - Line 6 - Msg: Error injecting safe area CSS: TypeError: Cannot read properties of null (reading 'style')
+11-15 10:44:03.197  2911  2911 E Capacitor/Console: File:  - Line 6 - Msg: Error injecting safe area CSS: TypeError: Cannot read properties of null (reading 'style')
+11-15 10:44:03.204  2911  2911 E Capacitor/Console: File:  - Line 6 - Msg: Error injecting safe area CSS: TypeError: Cannot read properties of null (reading 'style')
+11-15 10:44:04.622  2911  2911 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-15 10:44:04.624  2911  2911 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 5415992, pluginId: StudyHard, methodName: readSave
+11-15 10:44:04.624  2911  2911 V Capacitor: callback: 5415992, pluginId: StudyHard, methodName: readSave, methodData: {}
+11-15 10:44:04.628  2911  2911 I Capacitor/Console: File:  - Line 334 - Msg: {"values":{}}
+11-15 10:44:04.635  2911  2911 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-15 10:44:04.635  2911  2911 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 5415993, pluginId: StudyHard, methodName: voices
+11-15 10:44:04.635  2911  2911 V Capacitor: callback: 5415993, pluginId: StudyHard, methodName: voices, methodData: {}
+11-15 10:44:04.665  2911  2911 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-15 10:44:04.665  2911  2911 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-15 10:44:04.665  2911  2911 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-15 10:44:04.665  2911  2911 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 5415994, pluginId: SystemBars, methodName: setStyle
+11-15 10:44:04.665  2911  2911 V Capacitor: callback: 5415994, pluginId: SystemBars, methodName: setStyle, methodData: {"style":"LIGHT"}
+11-15 10:44:04.666  2911  2911 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 5415995, pluginId: StudyHard, methodName: addListener
+11-15 10:44:04.666  2911  2911 V Capacitor: callback: 5415995, pluginId: StudyHard, methodName: addListener, methodData: {"eventName":"back"}
+11-15 10:44:04.666  2911  2911 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 5415996, pluginId: StudyHard, methodName: listPhotos
+11-15 10:44:04.666  2911  2911 V Capacitor: callback: 5415996, pluginId: StudyHard, methodName: listPhotos, methodData: {}
+11-15 10:44:04.679  2911  2911 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-15 10:44:04.680  2911  2911 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-15 10:44:04.680  2911  2911 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-15 10:44:04.680  2911  2911 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-15 10:44:04.680  2911  2911 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 5415997, pluginId: StudyHard, methodName: setReminders
+11-15 10:44:04.681  2911  2911 V Capacitor: callback: 5415997, pluginId: StudyHard, methodName: setReminders, methodData: {"plan":"{\"items\":[],\"widget\":{\"kids\":[],\"holiday\":false,\"facts\":[\"Mudskippers are fish that can walk on mud and breathe air for a while.\",\"Smell is closely linked to memory, so a smell can remind you of a day long ago.\",\"Children have 20 baby teeth; grown-ups have 32 teeth.\",\"Your skin colour comes from a substance called melanin.\",\"The neem tree has bitter leaves that keep many insects away.\",\"Cactuses store water in their thick stems.\",\"Plants need nitrogen, which they get from the soil.\",\"Melted rock underground is called magma; when it comes out it is called lava.\",\"The air around Earth is mostly nitrogen, with some oxygen.\",\"Rivers carve valleys as they flow.\",\"Birds are living relatives of dinosaurs.\",\"Woolly mammoths had long hair and curved tusks.\",\"Hadrosaurs had hundreds of teeth packed together for grinding plants.\",\"The Earth acts like a giant magnet.\",\"It is easier to float in salty water than in fresh water.\",\"Fireworks get their colours from different metals, such as copper for blue.\",\"Hot things grow slightly bigger and cold things shrink, which is why railway tracks have small gaps.\",\"A QR code is a square picture that a phone camera can read, and it was invented in Japan in 1994.\",\"Elisha Otis invented a safety brake that made lifts safe enough for tall buildings.\",\"A computer chip can be smaller than your fingernail but hold billions of tiny switches.\",\"The first record player, made by Thomas Edison in 1877, played back the words Mary had a little lamb.\",\"Jackfruit is the largest fruit that grows on a tree, and one can weigh more than 30 kilograms.\",\"Assam grows more tea than any other part of the world.\",\"Injera is a soft, spongy flatbread from Ethiopia that people use to scoop up food.\",\"The Taj Mahal in Agra took more than 20 years to build and is made of white marble.\",\"Shampoo comes from the Hindi word champo, which means to massage.\",\"The Colosseum in Rome is almost 2,000 years old.\",\"Ugadi, Gudi Padwa and Vishu are New Year festivals in different parts of India.\",\"Brahmagupta also wrote rules for negative numbers, which he explained using debts.\",\"Tiles can cover a floor with no gaps if they are squares, triangles or hexagons.\",\"A billion seconds is about 32 years.\",\"There are 100 centimetres in a metre and 1,000 metres in a kilometre.\",\"The Great Bath of Mohenjo-daro is one of the oldest water tanks made by people.\",\"The Kailasa temple at Ellora was carved from a single huge rock about 1,200 years ago.\",\"Helen Keller could not see or hear, but she learned to read, write and become an author.\",\"The workers who built the pyramids were paid, and they were given bread and a place to live.\",\"Dragonflies catch mosquitoes and other small insects while they fly.\",\"A giant tortoise named Jonathan, on the island of Saint Helena, is more than 190 years old.\",\"A bird's nest can be made of twigs, grass, mud or even spider webs.\",\"Cricket began in England, and it is now one of the most loved sports in India.\"],\"adventure\":null,\"day\":null,\"focus\":null}}"}
+11-15 10:44:04.681  2911  2911 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 5415998, pluginId: StudyHard, methodName: addListener
+11-15 10:44:04.681  2911  2911 V Capacitor: callback: 5415998, pluginId: StudyHard, methodName: addListener, methodData: {"eventName":"launch"}
+11-15 10:44:04.681  2911  2911 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 5415999, pluginId: StudyHard, methodName: launchAction
+11-15 10:44:04.681  2911  2911 V Capacitor: callback: 5415999, pluginId: StudyHard, methodName: launchAction, methodData: {}
+11-15 10:44:04.681  2911  2911 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 5416000, pluginId: StudyHard, methodName: addListener
+11-15 10:44:04.681  2911  2911 V Capacitor: callback: 5416000, pluginId: StudyHard, methodName: addListener, methodData: {"eventName":"shared"}
+11-15 10:44:05.807  2911  2911 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-15 10:44:05.807  2911  2911 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 5416001, pluginId: StudyHard, methodName: stopSpeaking
+11-15 10:44:05.807  2911  2911 V Capacitor: callback: 5416001, pluginId: StudyHard, methodName: stopSpeaking, methodData: {}
+11-15 10:44:05.810  2911  2911 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-15 10:44:05.811  2911  2911 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 5416002, pluginId: StudyHard, methodName: keepAwake
+11-15 10:44:05.811  2911  2911 V Capacitor: callback: 5416002, pluginId: StudyHard, methodName: keepAwake, methodData: {"on":true}
+11-15 10:44:06.094  2911  2911 I Capacitor/Console: File:  - Line 334 - Msg: {"voices":[{"name":"en-us-x-tpf-local","locale":"en-US","quality":400,"network":false},{"name":"en-us-x-sfg-local","locale":"en-US","quality":400,"network":false},{"name":"en-us-x-iob-local","locale":"en-US","quality":400,"network":false},{"name":"en-us-x-iom-local","locale":"en-US","quality":400,"network":false},{"name":"en-US-language","locale":"en-US","quality":400,"network":false},{"name":"en-us-x-tpd-local","locale":"en-US","quality":400,"network":false},{"name":"en-us-x-iog-local","locale":"en-US","quality":400,"network":false},{"name":"en-us-x-tpc-local","locale":"en-US","quality":400,"network":false},{"name":"en-us-x-iol-local","locale":"en-US","quality":400,"network":false},{"name":"en-us-x-sfg-network","locale":"en-US","quality":400,"network":true},{"name":"en-us-x-tpd-network","locale":"en-US","quality":400,"network":true},{"name":"en-us-x-tpc-network","locale":"en-US","quality":400,"network":true},{"name":"en-us-x-iob-network","locale":"en-US","quality":400,"network":true},{"name":"en-us-x-iol-network","locale":"en-US","quality":400,"network":true},{"name":"en-us-x-iom-network","locale":"en-US","quality":400,"network":true},{"name":"en-us-x-iog-network","locale":"en-US","quality":400,"network":true},{"name":"en-us-x-tpf-network","locale":"en-US","quality":400,"network":true}],"state":"ready"}
+11-15 10:44:06.094  2911  2911 I Capacitor/Console: File:  - Line 334 - Msg: undefined
+11-15 10:44:06.094  2911  2911 I Capacitor/Console: File:  - Line 334 - Msg: {"ids":[]}
+11-15 10:44:06.095  2911  2911 I Capacitor/Console: File:  - Line 334 - Msg: {"enabled":false,"canAsk":true,"snoozeUntil":0}
+11-15 10:44:06.095  2911  2911 I Capacitor/Console: File:  - Line 334 - Msg: {"open":""}
+11-15 10:44:11.185  2911  2911 I Capacitor/Console: File:  - Line 334 - Msg: undefined
+11-15 10:44:11.185  2911  2911 I Capacitor/Console: File:  - Line 334 - Msg: undefined
+11-15 10:44:11.185  2911  2911 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-15 10:44:11.232  2911  3004 D Capacitor: Handling local request: https://localhost/favicon.ico
+11-15 10:44:11.643  2911  2911 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 5416003, pluginId: StudyHard, methodName: sharedFile
+11-15 10:44:11.643  2911  2911 V Capacitor: callback: 5416003, pluginId: StudyHard, methodName: sharedFile, methodData: {}
+11-15 10:44:12.629  2911  2911 I Capacitor/Console: File:  - Line 334 - Msg: {}
+11-15 10:45:17.022  2911  2911 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-15 10:45:17.022  2911  2911 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-15 10:45:17.312  2911  2911 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 5416004, pluginId: StudyHard, methodName: writeSave
+11-15 10:45:17.312  2911  2911 V Capacitor: callback: 5416004, pluginId: StudyHard, methodName: writeSave, methodData: {"key":"studyhard.save","value":"{\"version\":1,\"rev\":1,\"setupDone\":false,\"children\":[],\"activeChildId\":null,\"settings\":{\"limitMinutes\":30,\"timeUpMode\":\"stop\",\"treatPace\":1,\"goalPace\":1,\"holiday\":false,\"hiddenCategories\":[],\"sound\":true,\"music\":true,\"vibration\":true,\"voice\":true,\"voiceName\":\"\",\"voiceRate\":0.95,\"voiceGender\":\"m\",\"volume\":0.8,\"timerSeconds\":20,\"theme\":\"studio\",\"studioMoved\":true,\"ownRewards\":[],\"fx3d\":true,\"showFps\":false,\"confirmAnswers\":false,\"teach\":true,\"tourSeen\":true},\"faceoff\":{}}"}
+11-15 10:45:17.313  2911  2911 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 5416005, pluginId: StudyHard, methodName: writeSave
+11-15 10:45:17.317  2911  2911 V Capacitor: callback: 5416005, pluginId: StudyHard, methodName: writeSave, methodData: {"key":"studyhard.save.bak","value":"{\"version\":1,\"rev\":1,\"setupDone\":false,\"children\":[],\"activeChildId\":null,\"settings\":{\"limitMinutes\":30,\"timeUpMode\":\"stop\",\"treatPace\":1,\"goalPace\":1,\"holiday\":false,\"hiddenCategories\":[],\"sound\":true,\"music\":true,\"vibration\":true,\"voice\":true,\"voiceName\":\"\",\"voiceRate\":0.95,\"voiceGender\":\"m\",\"volume\":0.8,\"timerSeconds\":20,\"theme\":\"studio\",\"studioMoved\":true,\"ownRewards\":[],\"fx3d\":true,\"showFps\":false,\"confirmAnswers\":false,\"teach\":true,\"tourSeen\":true},\"faceoff\":{}}"}
+11-15 10:45:17.589  2911  2911 I Capacitor/Console: File:  - Line 334 - Msg: {"ok":true}
+11-15 10:45:17.589  2911  2911 I Capacitor/Console: File:  - Line 334 - Msg: {"ok":true}
+11-15 10:45:31.545  2911  2911 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-15 10:45:31.545  2911  2911 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-15 10:45:31.603  2911  2911 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 5416006, pluginId: StudyHard, methodName: deviceId
+11-15 10:45:31.603  2911  2911 V Capacitor: callback: 5416006, pluginId: StudyHard, methodName: deviceId, methodData: {}
+11-15 10:45:31.603  2911  2911 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 5416007, pluginId: StudyHard, methodName: haptic
+11-15 10:45:31.603  2911  2911 V Capacitor: callback: 5416007, pluginId: StudyHard, methodName: haptic, methodData: {"kind":"tap"}
+11-15 10:45:31.657  2911  2911 I Capacitor/Console: File:  - Line 334 - Msg: {"id":"330b65140213a38b"}
+11-15 10:45:31.658  2911  2911 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-15 10:45:31.658  2911  2911 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-15 10:45:31.658  2911  2911 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-15 10:45:31.660  2911  2911 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-15 10:45:31.661  2911  2911 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 5416008, pluginId: StudyHard, methodName: writeSave
+11-15 10:45:31.661  2911  2911 V Capacitor: callback: 5416008, pluginId: StudyHard, methodName: writeSave, methodData: {"key":"studyhard.save.bak","value":"{\"version\":1,\"rev\":1,\"setupDone\":false,\"children\":[],\"activeChildId\":null,\"settings\":{\"limitMinutes\":30,\"timeUpMode\":\"stop\",\"treatPace\":1,\"goalPace\":1,\"holiday\":false,\"hiddenCategories\":[],\"sound\":true,\"music\":true,\"vibration\":true,\"voice\":true,\"voiceName\":\"\",\"voiceRate\":0.95,\"voiceGender\":\"m\",\"volume\":0.8,\"timerSeconds\":20,\"theme\":\"studio\",\"studioMoved\":true,\"ownRewards\":[],\"fx3d\":true,\"showFps\":false,\"confirmAnswers\":false,\"teach\":true,\"tourSeen\":true},\"faceoff\":{}}"}
+11-15 10:45:31.661  2911  2911 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 5416009, pluginId: StudyHard, methodName: writeSave
+11-15 10:45:31.661  2911  2911 V Capacitor: callback: 5416009, pluginId: StudyHard, methodName: writeSave, methodData: {"key":"studyhard.save","value":"{\"version\":1,\"rev\":2,\"setupDone\":false,\"children\":[],\"activeChildId\":null,\"settings\":{\"limitMinutes\":30,\"timeUpMode\":\"stop\",\"treatPace\":1,\"goalPace\":1,\"holiday\":false,\"hiddenCategories\":[],\"sound\":true,\"music\":true,\"vibration\":true,\"voice\":true,\"voiceName\":\"\",\"voiceRate\":0.95,\"voiceGender\":\"m\",\"volume\":0.8,\"timerSeconds\":20,\"theme\":\"studio\",\"studioMoved\":true,\"ownRewards\":[],\"fx3d\":true,\"showFps\":false,\"confirmAnswers\":false,\"teach\":true,\"tourSeen\":true},\"faceoff\":{},\"access\":{\"maxDay\":\"2026-11-15\"}}"}
+11-15 10:45:31.661  2911  2911 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 5416010, pluginId: StudyHard, methodName: stopSpeaking
+11-15 10:45:31.661  2911  2911 V Capacitor: callback: 5416010, pluginId: StudyHard, methodName: stopSpeaking, methodData: {}
+11-15 10:45:31.662  2911  2911 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 5416011, pluginId: StudyHard, methodName: keepAwake
+11-15 10:45:31.662  2911  2911 V Capacitor: callback: 5416011, pluginId: StudyHard, methodName: keepAwake, methodData: {"on":false}
+11-15 10:45:31.707  2911  2911 I Capacitor/Console: File:  - Line 334 - Msg: undefined
+11-15 10:45:31.708  2911  2911 I Capacitor/Console: File:  - Line 334 - Msg: {"ok":true}
+11-15 10:45:31.786  2911  2911 I Capacitor/Console: File:  - Line 334 - Msg: {"ok":true}
+11-15 10:45:31.798  2911  2911 I Capacitor/Console: File:  - Line 334 - Msg: undefined
+11-15 10:45:31.799  2911  2911 I Capacitor/Console: File:  - Line 334 - Msg: undefined

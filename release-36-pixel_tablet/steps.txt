@@ -1,0 +1,18 @@
+[release] device: sdk_gphone64_x86_64, Android 16 (API 36), Physical size: 2560x1600
+Performing Streamed Install
+Success
+[release] installed
+[release] WebView: 133.0.6943.137
+[release] screen sideways: 2560×1600
+Starting: Intent { cmp=com.studyhard.app/.MainActivity }
+Status: ok
+LaunchState: COLD
+Activity: com.studyhard.app/.MainActivity
+TotalTime: 7524
+WaitTime: 7541
+Complete
+[release] after launch: pid 2911; on screen: Viewing full screen | To exit, swipe down from the top of your screen | Got it
+[release] after the film (30s), the lock screen asked the native plugin for the phone code
+[release] lock screen shows the phone code
+[release] process alive
+[release] all release checks passed
