@@ -82,3 +82,17 @@ test('the release is checked on emulators: API 24, 34 and 36, and a tablet held 
   const wf = readFileSync('.github/workflows/release-check.yml', 'utf8');
   for (const line of ['{ api: 24,', '{ api: 34,', '{ api: 36, target: google_apis, profile: pixel_7', "profile: pixel_tablet, sideways: 'sideways'", 'assembleRelease', 'scripts/release-smoke.sh']) assert.ok(wf.includes(line), line);
 });
+
+test('Android 7 can list the plugin’s methods: none mentions a class newer than Android 7 in its signature', () => {
+  // Capacitor lists every method of a plugin class at start-up; on API 24–25 a method that
+  // returns or takes a newer class (VibrationEffect is Android 8) fails that listing and MN
+  // closes as it opens. Such code lives in helper classes (Haptics.java).
+  const newer = ['VibrationEffect', 'VibrationAttributes', 'VibratorManager', 'WindowInsetsController'];
+  for (const f of ['StudyHardPlugin', 'Billing']) {
+    const decls = java(f).match(/^\s+(?:@\w+(?:\([^)]*\))?\s+)*(?:public|private|protected|static|final|synchronized|\s)+[\w.<>[\], ]+\s+\w+\s*\([^)]*\)\s*(?:throws [\w., ]+)?\s*\{/gm) ?? [];
+    assert.ok(decls.length > 10, `${f}: method declarations found`);
+    for (const d of decls) for (const c of newer) assert.ok(!new RegExp(`\\b${c.replace('.', '\\.')}\\b`).test(d), `${f}: ${d.trim()}`);
+  }
+  assert.match(java('StudyHardPlugin'), /Haptics\.play\(vibrator, kind\)/);
+  assert.match(java('Haptics'), /static void play\(Vibrator vibrator, String kind\)/);
+});
