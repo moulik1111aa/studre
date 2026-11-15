@@ -39,6 +39,11 @@ wait_for() {
   done
   return 1
 }
+screen_text() {
+  ui | python3 -c '
+import sys, re, html
+print(" | ".join(html.unescape(t) for t in re.findall(r"(?:text|content-desc)=\"([^\"]+)\"", sys.stdin.read()))[:600])'
+}
 tap_text() {
   local xy; xy=$(find_node "$1")
   if [ -z "$xy" ]; then fail "could not find \"$1\" to tap"; return 1; fi
@@ -58,17 +63,23 @@ fi
 adb shell am start -W -n $PKG/.MainActivity | tee -a "$OUT/steps.txt"
 sleep 5; shot launch
 # The opening film (about a minute) ends on "Let's set up".
-if wait_for "set up" 150; then note "opening film finished"; shot film-end; tap_text "set up"; else fail "the opening film did not finish"; fi
-if wait_for "Your phone code" 40; then note "lock screen with this phone's code (native plugin works)"; else fail "lock screen with the phone code did not appear"; fi
+if wait_for "set up" 150; then note "opening film finished"; shot film-end; tap_text "set up"; else fail "the opening film did not finish"; note "on screen: $(screen_text)"; shot film-stuck; fi
+if wait_for "Your phone code" 40; then note "lock screen with this phone's code (native plugin works)"; else fail "lock screen with the phone code did not appear"; note "on screen: $(screen_text)"; fi
 sleep 2; shot lock
 [ -n "$(adb shell pidof $PKG | tr -d '\r')" ] && note "process alive" || fail "process died"
 
+# The app's own log lines only (other apps on the emulator log missing classes too).
+PID=$(adb shell pidof $PKG | tr -d '\r')
 adb logcat -d > "$OUT/logcat-full.txt"
-grep -E "AndroidRuntime|Capacitor|chromium|StudyHard|$PKG|System.err|R8|ClassNotFound|NoSuchMethod" "$OUT/logcat-full.txt" | tail -n 300 > "$OUT/logcat.txt"
-grep -q "FATAL EXCEPTION" "$OUT/logcat-full.txt" && fail "app crashed (FATAL EXCEPTION)"
-grep -qE "ClassNotFoundException|NoSuchMethodException|NoSuchFieldException" "$OUT/logcat-full.txt" && fail "a class or method is missing (R8 removed something used by name)"
-grep -qE "is not implemented on android|No such method|Unable to find method" "$OUT/logcat-full.txt" && fail "a Capacitor plugin method is missing"
-if grep -E "Capacitor/Console.*(Uncaught|TypeError|ReferenceError)" "$OUT/logcat-full.txt" | grep -v "Error injecting safe area CSS" > "$OUT/js-errors.txt"; then fail "JavaScript errors in the console"; fi
+if [ -n "$PID" ]; then adb logcat -d --pid="$PID" > "$OUT/logcat-app.txt"; else grep -E "$PKG|AndroidRuntime" "$OUT/logcat-full.txt" > "$OUT/logcat-app.txt"; fi
+grep -E "AndroidRuntime|Capacitor|chromium|StudyHard|System.err|ClassNotFound|NoSuchMethod" "$OUT/logcat-app.txt" | tail -n 300 > "$OUT/logcat.txt"
+if grep -A12 "FATAL EXCEPTION" "$OUT/logcat-full.txt" | grep -q "$PKG"; then fail "app crashed (FATAL EXCEPTION)"; grep -A20 "FATAL EXCEPTION" "$OUT/logcat-full.txt" | head -40; fi
+if grep -E "ClassNotFoundException|NoSuchMethodException|NoSuchFieldException" "$OUT/logcat-app.txt" > "$OUT/missing.txt"; then
+  fail "a class or method is missing (R8 removed something used by name)"; head -20 "$OUT/missing.txt"
+fi
+if grep -E "is not implemented on android|No such method|Unable to find method" "$OUT/logcat-app.txt"; then fail "a Capacitor plugin method is missing"; fi
+if grep -E "Capacitor/Console.*(Uncaught|TypeError|ReferenceError)" "$OUT/logcat-app.txt" | grep -v "Error injecting safe area CSS" > "$OUT/js-errors.txt"; then fail "JavaScript errors in the console"; head -20 "$OUT/js-errors.txt"; fi
+echo "── the app's log (last 60 lines) ──"; tail -n 60 "$OUT/logcat.txt"
 rm -f "$OUT/logcat-full.txt"
 
 if [ ${#FAILS[@]} -gt 0 ]; then
