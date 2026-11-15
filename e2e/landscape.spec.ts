@@ -78,7 +78,7 @@ for (const size of [
     }
     // The Parent area, every tab.
     await show(page, 'parentScreen', '');
-    const tabs = await page.locator('.pa-tab').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.id!));
+    const tabs = await page.locator('.pa-tab[data-id]').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.id!));
     expect(tabs.length).toBeGreaterThan(2);
     for (const id of tabs) {
       await page.click(`.pa-tab[data-id="${id}"]`);
