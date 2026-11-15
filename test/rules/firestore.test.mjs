@@ -88,7 +88,7 @@ test('a family document must have the app’s shape', async () => {
     'family rules that are not text': family({ rules: { limit: 30 } }),
     '21 phones': family({ devices: Object.fromEntries(Array.from({ length: 21 }, (_, i) => [`d${i}`, { label: 'x', at: 1 }])) }),
     'a time that is text': family({ consentAt: 'now' }),
-    'a note with more in it': { v: 1, deletedAt: 1, kids: {} },
+    'a deletion note whose time is text': { v: 1, deletedAt: 'yesterday' },
   };
   for (const [what, d] of Object.entries(bad)) await assertFails(setDoc(doc(db, 'families/alice'), d)).catch((e) => Promise.reject(new Error(`${what}: ${e.message}`)));
   await assertSucceeds(setDoc(doc(db, 'families/alice'), family({ kids: Object.fromEntries(Array.from({ length: 20 }, (_, i) => [`k${i}`, 1])), rules: 'x'.repeat(20000) })));
