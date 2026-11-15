@@ -58,10 +58,15 @@ adb shell settings put global hide_error_dialogs 1
 note "device: $(adb shell getprop ro.product.model | tr -d '\r'), Android $(adb shell getprop ro.build.version.release | tr -d '\r') (API $(adb shell getprop ro.build.version.sdk | tr -d '\r')), $(adb shell wm size | tr -d '\r')"
 adb install -r "$APK" | tee -a "$OUT/steps.txt" || { fail "install failed"; exit 1; }
 adb logcat -c
+shot_size() { adb exec-out screencap -p | python3 -c 'import sys,struct; d=sys.stdin.buffer.read(24); print(*struct.unpack(">II", d[16:24]))'; }
 if [ -n "$SIDEWAYS" ]; then
+  # Wider than tall, whichever way the device holds itself naturally (a tablet: already sideways).
   adb shell settings put system accelerometer_rotation 0
-  adb shell settings put system user_rotation 1
-  note "screen turned sideways"
+  for r in 0 1; do
+    adb shell settings put system user_rotation $r; sleep 2
+    set -- $(shot_size); [ "$1" -gt "$2" ] && break
+  done
+  set -- $(shot_size); note "screen sideways: ${1}×${2}"; [ "$1" -gt "$2" ] || fail "couldn't turn the screen sideways"
 fi
 adb shell am start -W -n $PKG/.MainActivity | tee -a "$OUT/steps.txt"
 sleep 5; shot launch
@@ -75,8 +80,7 @@ if film_seen || [ -n "$(find_node "set up")" ]; then
   note "opening film finished (${t}s)"; sleep 3; shot film-end
   xy=$(find_node "set up")
   if [ -z "$xy" ]; then
-    size=$(adb exec-out screencap -p | python3 -c 'import sys,struct; d=sys.stdin.buffer.read(24); print(*struct.unpack(">II", d[16:24]))')
-    set -- $size; xy="$(( $1 / 2 )) $(( $2 * 93 / 100 ))"
+    set -- $(shot_size); xy="$(( $1 / 2 )) $(( $2 * 93 / 100 ))"
   fi
   adb shell input tap $xy; note "tapped Let's set up at $xy"
 else
