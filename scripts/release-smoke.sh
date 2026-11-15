@@ -62,6 +62,7 @@ if [ -n "$SIDEWAYS" ]; then
 fi
 adb shell am start -W -n $PKG/.MainActivity | tee -a "$OUT/steps.txt"
 sleep 5; shot launch
+note "after launch: pid $(adb shell pidof $PKG | tr -d '\r'); on screen: $(screen_text)"
 # The opening film (about a minute) ends on "Let's set up".
 if wait_for "set up" 150; then note "opening film finished"; shot film-end; tap_text "set up"; else fail "the opening film did not finish"; note "on screen: $(screen_text)"; shot film-stuck; fi
 if wait_for "Your phone code" 40; then note "lock screen with this phone's code (native plugin works)"; else fail "lock screen with the phone code did not appear"; note "on screen: $(screen_text)"; fi
@@ -79,7 +80,8 @@ if grep -E "ClassNotFoundException|NoSuchMethodException|NoSuchFieldException" "
 fi
 if grep -E "is not implemented on android|No such method|Unable to find method" "$OUT/logcat-app.txt"; then fail "a Capacitor plugin method is missing"; fi
 if grep -E "Capacitor/Console.*(Uncaught|TypeError|ReferenceError)" "$OUT/logcat-app.txt" | grep -v "Error injecting safe area CSS" > "$OUT/js-errors.txt"; then fail "JavaScript errors in the console"; head -20 "$OUT/js-errors.txt"; fi
-echo "── the app's log (last 60 lines) ──"; tail -n 60 "$OUT/logcat.txt"
+echo "── MN in the system log ──"
+grep -E "FATAL|Process: $PKG|Caused by|E AndroidRuntime|ActivityManager.*$PKG|ActivityTaskManager.*$PKG|libc.*$PKG|DEBUG.*(signal|Abort|backtrace)|chromium.*(CONSOLE|ERROR)|Capacitor" "$OUT/logcat-full.txt" | grep -v uiautomator | head -n 120
 rm -f "$OUT/logcat-full.txt"
 
 if [ ${#FAILS[@]} -gt 0 ]; then
