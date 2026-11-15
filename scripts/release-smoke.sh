@@ -59,7 +59,11 @@ note "device: $(adb shell getprop ro.product.model | tr -d '\r'), Android $(adb 
 timeout 300 adb install -r "$APK" | tee -a "$OUT/steps.txt" || { fail "install failed"; exit 1; }
 note "installed"
 timeout 30 adb logcat -c || note "(couldn't clear the log)"
-note "WebView: $(timeout 20 adb shell dumpsys package com.google.android.webview | grep -m1 versionName | tr -d '\r' | sed 's/^ *//')"
+WV=$(timeout 20 adb shell dumpsys package com.google.android.webview | grep -m1 versionName | tr -d '\r' | sed 's/^ *versionName=//')
+note "WebView: $WV"
+# MN's code needs a WebView from about 2020 on (Chrome 80+). Android 7 phones get one from the
+# Play Store; this emulator image has an older one, where MN shows how to update it instead.
+OLD_WEBVIEW=""; [ "${WV%%.*}" -lt 80 ] 2>/dev/null && OLD_WEBVIEW=1
 shot_size() { adb exec-out screencap -p | python3 -c 'import sys,struct; d=sys.stdin.buffer.read(24); print(*struct.unpack(">II", d[16:24]))'; }
 if [ -n "$SIDEWAYS" ]; then
   # Wider than tall, whichever way the device holds itself naturally (a tablet: already sideways).
@@ -73,26 +77,26 @@ fi
 timeout 90 adb shell am start -W -n $PKG/.MainActivity | tee -a "$OUT/steps.txt" || note "(the launch didn't report back within 90 s)"
 sleep 5; shot launch
 note "after launch: pid $(adb shell pidof $PKG | tr -d '\r'); on screen: $(screen_text)"
-# The opening film (about a minute) ends on "Let's set up" at the bottom, in the middle. The
-# WebView's words aren't always visible to uiautomator, so its end is also read from MN's log
-# (the film saves that it has been seen) and the button is tapped where it sits.
-film_seen() { adb logcat -d | grep -q "methodName: writeSave"; }
-t=0; while [ $t -lt 150 ] && ! film_seen && [ -z "$(find_node "set up")" ]; do sleep 3; t=$((t + 3)); xy=$(find_node "Got it"); [ -n "$xy" ] && adb shell input tap $xy; done
-if film_seen || [ -n "$(find_node "set up")" ]; then
-  note "opening film finished (${t}s)"; sleep 3; shot film-end
-  xy=$(find_node "set up")
-  if [ -z "$xy" ]; then
-    set -- $(shot_size); xy="$(( $1 / 2 )) $(( $2 * 93 / 100 ))"
-  fi
-  adb shell input tap $xy; note "tapped Let's set up at $xy"
+if [ -n "$OLD_WEBVIEW" ]; then
+  if wait_for "Android System WebView" 40; then note "old WebView: MN shows how to update it"; else fail "old WebView: no note on how to update it"; fi
+  shot old-webview
 else
-  fail "the opening film did not finish"; shot film-stuck
-fi
-# The lock screen asks the native plugin for this phone's code.
-t=0; while [ $t -lt 40 ] && ! adb logcat -d | grep -q "methodName: deviceId"; do sleep 2; t=$((t + 2)); done
-if adb logcat -d | grep -q "methodName: deviceId"; then note "the lock screen asked the native plugin for the phone code"; else fail "the lock screen didn't ask for the phone code"; fi
+# The opening film ends on "Let's set up" at the bottom, in the middle. The WebView's words
+# aren't always visible to uiautomator, so the button is tapped where it sits, every few seconds
+# until the lock screen asks the native plugin for this phone's code.
+asked() { adb logcat -d | grep -q "methodName: deviceId"; }
+t=0
+while [ $t -lt 180 ] && ! asked; do
+  xy=$(find_node "Got it"); [ -n "$xy" ] && adb shell input tap $xy
+  xy=$(find_node "set up")
+  if [ -z "$xy" ]; then set -- $(shot_size); xy="$(( $1 / 2 )) $(( $2 * 93 / 100 ))"; fi
+  [ $t -ge 10 ] && adb shell input tap $xy
+  sleep 6; t=$((t + 6))
+done
+if asked; then note "after the film (${t}s), the lock screen asked the native plugin for the phone code"; else fail "the lock screen didn't ask for the phone code"; shot stuck; fi
 sleep 4
 if wait_for "Your phone code" 10; then note "lock screen shows the phone code"; else note "(the lock screen's words aren't visible to uiautomator: see the screenshot)"; fi
+fi
 sleep 2; shot lock
 [ -n "$(adb shell pidof $PKG | tr -d '\r')" ] && note "process alive" || fail "process died"
 
@@ -102,11 +106,11 @@ adb logcat -d > "$OUT/logcat-full.txt"
 if [ -n "$PID" ]; then adb logcat -d --pid="$PID" > "$OUT/logcat-app.txt"; else grep -E "$PKG|AndroidRuntime" "$OUT/logcat-full.txt" > "$OUT/logcat-app.txt"; fi
 grep -E "AndroidRuntime|Capacitor|chromium|StudyHard|System.err|ClassNotFound|NoSuchMethod" "$OUT/logcat-app.txt" | tail -n 300 > "$OUT/logcat.txt"
 if grep -A12 "FATAL EXCEPTION" "$OUT/logcat-full.txt" | grep -q "$PKG"; then fail "app crashed (FATAL EXCEPTION)"; grep -A20 "FATAL EXCEPTION" "$OUT/logcat-full.txt" | head -40; fi
-if grep -E "ClassNotFoundException|NoSuchMethodException|NoSuchFieldException" "$OUT/logcat-app.txt" > "$OUT/missing.txt"; then
+if grep -E "ClassNotFoundException|NoSuchMethodException|NoSuchFieldException" "$OUT/logcat-app.txt" | grep -vE "android\.webkit\.|/system/app/(Chrome|WebView)|com\.android\.webview|org\.chromium" > "$OUT/missing.txt"; then
   fail "a class or method is missing (R8 removed something used by name)"; head -20 "$OUT/missing.txt"
 fi
 if grep -E "is not implemented on android|No such method|Unable to find method" "$OUT/logcat-app.txt"; then fail "a Capacitor plugin method is missing"; fi
-if grep -E "Capacitor/Console.*(Uncaught|TypeError|ReferenceError)" "$OUT/logcat-app.txt" | grep -v "Error injecting safe area CSS" > "$OUT/js-errors.txt"; then fail "JavaScript errors in the console"; head -20 "$OUT/js-errors.txt"; fi
+if [ -z "$OLD_WEBVIEW" ] && grep -E "Capacitor/Console.*(Uncaught|TypeError|ReferenceError)" "$OUT/logcat-app.txt" | grep -v "Error injecting safe area CSS" > "$OUT/js-errors.txt"; then fail "JavaScript errors in the console"; head -20 "$OUT/js-errors.txt"; fi
 echo "── MN in the system log ──"
 grep -E "FATAL|Process: $PKG|Caused by|E AndroidRuntime|ActivityManager.*$PKG|ActivityTaskManager.*$PKG|libc.*$PKG|DEBUG.*(signal|Abort|backtrace)|chromium.*(CONSOLE|ERROR)|Capacitor" "$OUT/logcat-full.txt" | grep -v uiautomator | head -n 120
 rm -f "$OUT/logcat-full.txt"

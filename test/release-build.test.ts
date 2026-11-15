@@ -96,3 +96,13 @@ test('Android 7 can list the plugin’s methods: none mentions a class newer tha
   assert.match(java('StudyHardPlugin'), /Haptics\.play\(vibrator, kind\)/);
   assert.match(java('Haptics'), /static void play\(Vibrator vibrator, String kind\)/);
 });
+
+test('an old WebView gets a note on how to update it, not an empty screen', () => {
+  const page = readFileSync('src/index.html', 'utf8');
+  const guard = /<script>\/\*[^*]*\*\/\(function\(\)\{try\{new Function\("([^"]+)"\)\}catch\(e\)\{document\.getElementById\("app"\)\.innerHTML='([^']+)'\}\}\)\(\)<\/script>\s*<script>\/\*__JS__\*\/<\/script>/.exec(page);
+  assert.ok(guard, 'the check runs just before the app');
+  assert.doesNotThrow(() => new Function(guard[1]), 'a current engine passes the check');
+  assert.match(guard[2], /Android System WebView/);
+  // The check itself is plain old JavaScript (no arrow functions, let, const or template text).
+  assert.ok(!/=>|\blet\b|\bconst\b|`/.test(guard[0].replace(guard[1], '')));
+});
