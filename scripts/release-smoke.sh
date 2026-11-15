@@ -35,6 +35,9 @@ wait_for() {
   local t=0
   while [ $t -lt "${2:-30}" ]; do
     [ -n "$(find_node "$1")" ] && return 0
+    # Android's "Viewing full screen" tip covers the app the first time.
+    xy=$(find_node "Got it"); [ -n "$xy" ] && { adb shell input tap $xy; note "closed the full-screen tip"; }
+    [ $((t % 30)) -eq 0 ] && { note "waiting for \"$1\" (${t}s): pid $(adb shell pidof $PKG | tr -d '\r'), top: $(adb shell dumpsys activity activities | grep -m1 -E 'topResumedActivity|mResumedActivity' | tr -d '\r' | sed 's/^ *//')"; shot "wait-$t"; }
     sleep 2; t=$((t + 2))
   done
   return 1
