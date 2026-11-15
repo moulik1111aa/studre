@@ -56,8 +56,10 @@ tap_text() {
 sleep 15
 adb shell settings put global hide_error_dialogs 1
 note "device: $(adb shell getprop ro.product.model | tr -d '\r'), Android $(adb shell getprop ro.build.version.release | tr -d '\r') (API $(adb shell getprop ro.build.version.sdk | tr -d '\r')), $(adb shell wm size | tr -d '\r')"
-adb install -r "$APK" | tee -a "$OUT/steps.txt" || { fail "install failed"; exit 1; }
-adb logcat -c
+timeout 300 adb install -r "$APK" | tee -a "$OUT/steps.txt" || { fail "install failed"; exit 1; }
+note "installed"
+timeout 30 adb logcat -c || note "(couldn't clear the log)"
+note "WebView: $(timeout 20 adb shell dumpsys package com.google.android.webview | grep -m1 versionName | tr -d '\r' | sed 's/^ *//')"
 shot_size() { adb exec-out screencap -p | python3 -c 'import sys,struct; d=sys.stdin.buffer.read(24); print(*struct.unpack(">II", d[16:24]))'; }
 if [ -n "$SIDEWAYS" ]; then
   # Wider than tall, whichever way the device holds itself naturally (a tablet: already sideways).
@@ -68,7 +70,7 @@ if [ -n "$SIDEWAYS" ]; then
   done
   set -- $(shot_size); note "screen sideways: ${1}×${2}"; [ "$1" -gt "$2" ] || fail "couldn't turn the screen sideways"
 fi
-adb shell am start -W -n $PKG/.MainActivity | tee -a "$OUT/steps.txt"
+timeout 90 adb shell am start -W -n $PKG/.MainActivity | tee -a "$OUT/steps.txt" || note "(the launch didn't report back within 90 s)"
 sleep 5; shot launch
 note "after launch: pid $(adb shell pidof $PKG | tr -d '\r'); on screen: $(screen_text)"
 # The opening film (about a minute) ends on "Let's set up" at the bottom, in the middle. The
