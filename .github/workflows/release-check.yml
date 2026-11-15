@@ -99,11 +99,11 @@ jobs:
           script: bash scripts/release-smoke.sh StudyHard-release-check.apk ci-results/release-${{ matrix.api }}-${{ matrix.profile }} ${{ matrix.sideways }}
       # One device's screenshots also go to the ci-results branch (run files can't always be
       # downloaded from where the code is written).
-      - name: Share the API 34 screenshots
-        if: always() && matrix.api == 34
+      - name: Share the tablet's screenshots
+        if: always() && matrix.sideways == 'sideways'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: bash scripts/push-ci-results.sh "Release check API 34 (${{ job.status }})"
+        run: bash scripts/push-ci-results.sh "Release check, API 36 tablet sideways (${{ job.status }})"
       - name: Keep the screenshots and logs
         if: always()
         uses: actions/upload-artifact@v6
