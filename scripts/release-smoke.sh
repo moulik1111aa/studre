@@ -66,9 +66,27 @@ fi
 adb shell am start -W -n $PKG/.MainActivity | tee -a "$OUT/steps.txt"
 sleep 5; shot launch
 note "after launch: pid $(adb shell pidof $PKG | tr -d '\r'); on screen: $(screen_text)"
-# The opening film (about a minute) ends on "Let's set up".
-if wait_for "set up" 150; then note "opening film finished"; shot film-end; tap_text "set up"; else fail "the opening film did not finish"; note "on screen: $(screen_text)"; shot film-stuck; fi
-if wait_for "Your phone code" 40; then note "lock screen with this phone's code (native plugin works)"; else fail "lock screen with the phone code did not appear"; note "on screen: $(screen_text)"; fi
+# The opening film (about a minute) ends on "Let's set up" at the bottom, in the middle. The
+# WebView's words aren't always visible to uiautomator, so its end is also read from MN's log
+# (the film saves that it has been seen) and the button is tapped where it sits.
+film_seen() { adb logcat -d | grep -q "methodName: writeSave"; }
+t=0; while [ $t -lt 150 ] && ! film_seen && [ -z "$(find_node "set up")" ]; do sleep 3; t=$((t + 3)); xy=$(find_node "Got it"); [ -n "$xy" ] && adb shell input tap $xy; done
+if film_seen || [ -n "$(find_node "set up")" ]; then
+  note "opening film finished (${t}s)"; sleep 3; shot film-end
+  xy=$(find_node "set up")
+  if [ -z "$xy" ]; then
+    size=$(adb exec-out screencap -p | python3 -c 'import sys,struct; d=sys.stdin.buffer.read(24); print(*struct.unpack(">II", d[16:24]))')
+    set -- $size; xy="$(( $1 / 2 )) $(( $2 * 93 / 100 ))"
+  fi
+  adb shell input tap $xy; note "tapped Let's set up at $xy"
+else
+  fail "the opening film did not finish"; shot film-stuck
+fi
+# The lock screen asks the native plugin for this phone's code.
+t=0; while [ $t -lt 40 ] && ! adb logcat -d | grep -q "methodName: deviceId"; do sleep 2; t=$((t + 2)); done
+if adb logcat -d | grep -q "methodName: deviceId"; then note "the lock screen asked the native plugin for the phone code"; else fail "the lock screen didn't ask for the phone code"; fi
+sleep 4
+if wait_for "Your phone code" 10; then note "lock screen shows the phone code"; else note "(the lock screen's words aren't visible to uiautomator: see the screenshot)"; fi
 sleep 2; shot lock
 [ -n "$(adb shell pidof $PKG | tr -d '\r')" ] && note "process alive" || fail "process died"
 
