@@ -88,9 +88,8 @@ public class StudyHardPlugin extends Plugin {
     private static final String PREFS = "studyhard_save";
     private Vibrator vibrator;
     private TextToSpeech tts;
-    private boolean ttsReady = false;
-    /** A line asked for before the speech engine was ready; spoken as soon as it is. */
-    private String pendingText = null;
+    /** Starting, ready or none (no engine or no English voice), and a line waiting for it. */
+    private final VoiceState voice = new VoiceState();
     private String pendingVoice = null;
     private float pendingRate = 0.95f;
     /** "play" or "backup" when the app was opened from a reminder (read once by the web app). */
@@ -98,6 +97,8 @@ public class StudyHardPlugin extends Plugin {
     /** Files shared to MN (or opened with it): read off the main thread, collected once by the web app. */
     private SharedInbox inbox;
     private final java.util.concurrent.ExecutorService shareReader = java.util.concurrent.Executors.newSingleThreadExecutor();
+    /** Google sign-in and sign-out answers arrive on this one thread (not a new one each time). */
+    private final java.util.concurrent.ExecutorService signInWork = java.util.concurrent.Executors.newSingleThreadExecutor();
     /** The launcher icons (activity-alias names in the manifest, added by scripts/android.mjs). */
     static final String[] ICONS = { "sky", "night", "sunset", "space", "gold" };
 
@@ -112,22 +113,25 @@ public class StudyHardPlugin extends Plugin {
         }
 
         tts = new TextToSpeech(ctx.getApplicationContext(), status -> {
-            if (status != TextToSpeech.SUCCESS || tts == null) return;
-            // Indian English first (familiar to the children), then British, then US.
-            Locale[] wanted = { new Locale("en", "IN"), Locale.UK, Locale.US, Locale.ENGLISH };
-            for (Locale l : wanted) {
-                int r = tts.setLanguage(l);
-                if (r != TextToSpeech.LANG_MISSING_DATA && r != TextToSpeech.LANG_NOT_SUPPORTED) {
-                    ttsReady = true;
-                    break;
+            boolean ok = status == TextToSpeech.SUCCESS && tts != null;
+            boolean english = false;
+            if (ok) {
+                // Indian English first (familiar to the children), then British, then US.
+                Locale[] wanted = { new Locale("en", "IN"), Locale.UK, Locale.US, Locale.ENGLISH };
+                for (Locale l : wanted) {
+                    int r = tts.setLanguage(l);
+                    if (r != TextToSpeech.LANG_MISSING_DATA && r != TextToSpeech.LANG_NOT_SUPPORTED) {
+                        english = true;
+                        break;
+                    }
                 }
             }
+            // No engine or no English voice: the waiting line is dropped and the app is told "none".
+            String line = voice.started(ok, english);
+            if (!english) return;
             Voice best = bestVoice();
             if (best != null) tts.setVoice(best);
-            if (ttsReady && pendingText != null) {
-                speakNow(pendingText, pendingRate, 1.0f, pendingVoice);
-                pendingText = null;
-            }
+            if (line != null) speakNow(line, pendingRate, 1.0f, pendingVoice);
         });
 
         AppCompatActivity activity = getActivity();
@@ -182,6 +186,7 @@ public class StudyHardPlugin extends Plugin {
     @Override
     protected void handleOnDestroy() {
         shareReader.shutdownNow();
+        signInWork.shutdown();
         if (tts != null) {
             tts.stop();
             tts.shutdown();
@@ -361,7 +366,7 @@ public class StudyHardPlugin extends Plugin {
         GetSignInWithGoogleOption option = new GetSignInWithGoogleOption.Builder(clientId).build();
         GetCredentialRequest request = new GetCredentialRequest.Builder().addCredentialOption(option).build();
         CredentialManager cm = CredentialManager.create(getContext());
-        cm.getCredentialAsync(getActivity(), request, null, Executors.newSingleThreadExecutor(), new CredentialManagerCallback<GetCredentialResponse, GetCredentialException>() {
+        cm.getCredentialAsync(getActivity(), request, null, signInWork, new CredentialManagerCallback<GetCredentialResponse, GetCredentialException>() {
             @Override
             public void onResult(GetCredentialResponse response) {
                 JSObject r = new JSObject();
@@ -575,7 +580,7 @@ public class StudyHardPlugin extends Plugin {
     @PluginMethod
     public void googleSignOut(PluginCall call) {
         CredentialManager cm = CredentialManager.create(getContext());
-        cm.clearCredentialStateAsync(new ClearCredentialStateRequest(), null, Executors.newSingleThreadExecutor(), new CredentialManagerCallback<Void, ClearCredentialException>() {
+        cm.clearCredentialStateAsync(new ClearCredentialStateRequest(), null, signInWork, new CredentialManagerCallback<Void, ClearCredentialException>() {
             @Override
             public void onResult(Void v) {
                 call.resolve();
@@ -741,7 +746,7 @@ public class StudyHardPlugin extends Plugin {
     @PluginMethod
     public void voices(PluginCall call) {
         com.getcapacitor.JSArray arr = new com.getcapacitor.JSArray();
-        if (tts != null && ttsReady) {
+        if (tts != null && VoiceState.READY.equals(voice.state())) {
             for (Voice v : englishVoices()) {
                 JSObject o = new JSObject();
                 o.put("name", v.getName());
@@ -753,6 +758,8 @@ public class StudyHardPlugin extends Plugin {
         }
         JSObject result = new JSObject();
         result.put("voices", arr);
+        // "none": no speech engine or no English voice (the Parent area says to install one).
+        result.put("state", voice.state());
         call.resolve(result);
     }
 
@@ -766,11 +773,12 @@ public class StudyHardPlugin extends Plugin {
             call.resolve();
             return;
         }
-        if (!ttsReady) {
-            // The engine is still starting (first question after launch): say it when ready.
-            pendingText = text;
-            pendingVoice = voice;
-            pendingRate = rate == null ? 0.95f : rate.floatValue();
+        if (!VoiceState.READY.equals(this.voice.state())) {
+            // Still starting (first question after launch): say it when ready. No voice: say nothing.
+            if (this.voice.queue(text, System.currentTimeMillis())) {
+                pendingVoice = voice;
+                pendingRate = rate == null ? 0.95f : rate.floatValue();
+            }
             call.resolve();
             return;
         }
@@ -809,7 +817,7 @@ public class StudyHardPlugin extends Plugin {
 
     @PluginMethod
     public void stopSpeaking(PluginCall call) {
-        pendingText = null;
+        voice.stop();
         if (tts != null) tts.stop();
         call.resolve();
     }
@@ -818,7 +826,7 @@ public class StudyHardPlugin extends Plugin {
     @PluginMethod
     public void speaking(PluginCall call) {
         JSObject r = new JSObject();
-        r.put("speaking", tts != null && (tts.isSpeaking() || (!ttsReady && pendingText != null)));
+        r.put("speaking", tts != null && voice.speaking(tts.isSpeaking(), System.currentTimeMillis()));
         call.resolve(r);
     }
 

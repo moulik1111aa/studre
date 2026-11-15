@@ -26,7 +26,8 @@ export interface StudyHardPlugin {
   /** Ask the launcher to add a widget: today, focus, jar or fact. ok: its box was shown. */
   pinWidget?(o: { kind: 'today' | 'focus' | 'jar' | 'fact' }): Promise<{ ok: boolean }>;
   speak(o: { text: string; rate?: number; pitch?: number; voice?: string; parts?: string[]; gap?: number }): Promise<void>;
-  voices(): Promise<{ voices?: { name: string; locale: string; quality: number; network: boolean }[] }>;
+  /** state (newer apps): 'none' when the phone has no speech engine or no English voice. */
+  voices(): Promise<{ voices?: { name: string; locale: string; quality: number; network: boolean }[]; state?: 'starting' | 'ready' | 'none' }>;
   stopSpeaking(): Promise<void>;
   /** Whether the voice is still talking (newer apps only). */
   speaking?(): Promise<{ speaking: boolean }>;

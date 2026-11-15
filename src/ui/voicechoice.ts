@@ -77,13 +77,19 @@ export function hearVoice(app: App, o: { name: string; pitch: number }, text = V
  * A tappable list of every voice (Parent area and setup): tap one to choose it and hear it.
  * Returns when the list is drawn.
  */
+/** Shown when the phone has no speech engine or no English voice. */
+export const NO_VOICE_NOTE = '<p class="card vl-none" role="note"><b>This phone has no English voice yet.</b> MN shows every question as text, but can’t read aloud. To add one: phone Settings → search “Text-to-speech” → Preferred engine: Speech Recognition &amp; Synthesis by Google → install English voice data. Then open this page again.</p>';
+
 export async function mountVoiceList(app: App, host: HTMLElement, chosen: { name: string; pitch: number }, rate: () => number, onPick: (o: VoiceOption) => void): Promise<void> {
   host.innerHTML = '<p class="fine">Finding voices…</p>';
-  const options = [AUTO_VOICE, ...voiceOptions(await app.voice.list())];
+  const found = await app.voice.list();
+  const options = [AUTO_VOICE, ...voiceOptions(found)];
   const isOn = (o: VoiceOption) => o.name === chosen.name && Math.abs(o.pitch - chosen.pitch) < 0.01;
   host.innerHTML = options
     .map((o, k) => `<button class="vl-row${isOn(o) ? ' on' : ''}" data-k="${k}" role="radio" aria-checked="${isOn(o)}"><i class="vl-dot" aria-hidden="true"></i><span><b>${esc(o.who)}</b><small>${esc(o.desc)}</small></span><span class="vl-play" aria-hidden="true">▶</span></button>`)
     .join('');
+  // No voice on the phone: say so, and how to get one (questions are still shown as text).
+  if (!found.length && (await app.voice.state()) === 'none') host.insertAdjacentHTML('afterbegin', NO_VOICE_NOTE);
   host.setAttribute('role', 'radiogroup');
   host.setAttribute('aria-label', 'Reading voice');
   stagger(host.children, { gap: 30 });

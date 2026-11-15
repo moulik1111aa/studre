@@ -8,6 +8,8 @@ import { saveTextFile } from '../platform/files.ts';
 /** A file name part from a child's name: "Riya Shah" → "Riya-Shah". */
 export const fileSafe = (s: string): string => s.replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'child';
 
+export const PRINT_INSTEAD = 'This phone couldn’t make the PDF, so its print screen is open: choose “Save as PDF” to keep it or share it.';
+
 export async function sharePage(app: App, o: { html: string; name: string; title: string; landscape?: boolean }): Promise<boolean> {
   if (app.native?.sharePdf) {
     app.toast('Making the PDF…', 2500);
@@ -17,7 +19,11 @@ export async function sharePage(app: App, o: { html: string; name: string; title
         app.native.sharePdf({ html: o.html, name: `${o.name}.pdf`, title: o.title, landscape: o.landscape }),
         new Promise<{ ok: false }>((res) => setTimeout(() => res({ ok: false }), 20_000)),
       ]);
-      if (r.ok) return true;
+      if (r.ok) {
+        // The phone couldn't make the PDF itself, so its print screen opened instead.
+        if ('via' in r && r.via === 'print') app.toast(PRINT_INSTEAD, 7000);
+        return true;
+      }
     } catch {
       /* falls back to the web page */
     }

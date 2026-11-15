@@ -118,6 +118,17 @@ export class Voice {
     return !!this.native || 'speechSynthesis' in globalThis;
   }
 
+  /** Whether the phone can speak English: 'none' means no speech engine or no English voice
+   * (the Parent area then says to install one); 'unknown' in a browser or an older app. */
+  async state(): Promise<'starting' | 'ready' | 'none' | 'unknown'> {
+    if (!this.native) return 'unknown';
+    try {
+      return (await this.native.voices()).state ?? 'unknown';
+    } catch {
+      return 'unknown';
+    }
+  }
+
   /** English voices to choose from, best first. */
   async list(): Promise<VoiceInfo[]> {
     if (this.native) {

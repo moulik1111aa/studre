@@ -90,6 +90,7 @@
 .vl-list{padding:4px 6px;display:grid}
 .vl-row{appearance:none;border:0;background:none;color:var(--ink);font:inherit;cursor:pointer;display:flex;align-items:center;gap:12px;text-align:left;padding:11px 8px;border-radius:14px;min-height:52px}
 .vl-row + .vl-row{border-top:1px solid var(--line)}
+.vl-none{margin:4px 2px 8px;padding:12px 14px;font-size:14px;line-height:1.45}
 .vl-row > span:not(.vl-play){flex:1;display:grid;gap:1px}
 .vl-row b{font-weight:800;font-size:16px}
 .vl-row small{opacity:.7;font-size:13px}

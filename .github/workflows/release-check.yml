@@ -1,0 +1,106 @@
+# The release build with R8 and resource shrinking (review fix 10), checked before it reaches
+# main: build the shared APK as main does (signed with the debug key here: no secrets), check
+# the shrunk APK still holds what Capacitor and the PDF maker reach by name, then install and
+# open it on Android 7 (API 24), 14 (API 34) and 16 (API 36), and on an Android 16 tablet
+# held sideways. Screenshots and logs are kept with the run (release-check-<api>-<device>).
+name: Release check
+
+on:
+  push:
+    branches: [polish]
+    paths: ['native/**', 'scripts/android*.mjs', 'scripts/build.mjs', 'scripts/release-smoke.sh', '.github/workflows/release-check.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-check
+  cancel-in-progress: true
+
+env:
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Build the web app and the Android project
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+          node scripts/android.mjs
+
+      - name: Build the shrunk release APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon --stacktrace
+          grep -q "minifyEnabled true" app/build.gradle
+
+      - name: Check what R8 kept
+        run: |
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          ls -l "$APK"
+          mkdir -p dex && unzip -o -q "$APK" 'classes*.dex' -d dex
+          for name in Lcom/studyhard/app/StudyHardPlugin\; Landroid/print/PdfMaker\; Lcom/getcapacitor/Bridge\; sharePdf deviceId readSave wipeLocal listPhotos speaking; do
+            if cat dex/classes*.dex | grep -aq "$name"; then echo "kept: $name"; else echo "::error::R8 removed $name"; exit 1; fi
+          done
+          cp "$APK" StudyHard-release-check.apk
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: release-check-apk
+          path: StudyHard-release-check.apk
+          retention-days: 7
+
+  emulator:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { api: 24, target: google_apis, profile: pixel_2, sideways: '' }
+          - { api: 34, target: google_apis, profile: pixel_7, sideways: '' }
+          - { api: 36, target: google_apis, profile: pixel_7, sideways: '' }
+          - { api: 36, target: google_apis, profile: pixel_tablet, sideways: 'sideways' }
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v6
+        with:
+          name: release-check-apk
+      - name: Enable hardware acceleration for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Install and open on API ${{ matrix.api }} (${{ matrix.profile }} ${{ matrix.sideways }})
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          target: ${{ matrix.target }}
+          arch: x86_64
+          profile: ${{ matrix.profile }}
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash scripts/release-smoke.sh StudyHard-release-check.apk ci-results/release-${{ matrix.api }}-${{ matrix.profile }} ${{ matrix.sideways }}
+      - name: Keep the screenshots and logs
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: release-check-${{ matrix.api }}-${{ matrix.profile }}
+          path: ci-results/
+          retention-days: 7

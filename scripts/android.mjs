@@ -13,6 +13,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { FILE_PATHS_XML, shareFilters } from './android-share.mjs';
 import { BACKUP_RULES_XML, DATA_EXTRACTION_RULES_XML, backupAttributes } from './android-backup.mjs';
+import { PROGUARD_RULES, withShrinking } from './android-release.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const run = (cmd) => execSync(cmd, { cwd: root, stdio: 'inherit' });
@@ -151,7 +152,7 @@ if (!gradle.includes(`applicationId "${config.appId}"`)) throw new Error('app/bu
 writeFileSync(
   gradlePath,
   `${gradle}
-
+${withShrinking(`
 // ── Study Hard release settings (added by scripts/android.mjs) ──
 android {
     defaultConfig {
@@ -178,7 +179,7 @@ android {
         }
     }
 }
-
+`)}
 dependencies {
     implementation "androidx.core:core:$androidxCoreVersion"
     implementation "androidx.activity:activity:$androidxActivityVersion"
@@ -191,6 +192,12 @@ dependencies {
 }
 `,
 );
+
+// Shrinking keeps what Capacitor and the PDF maker reach by reflection (android-release.mjs).
+{
+  const pg = join(android, 'app/proguard-rules.pro');
+  writeFileSync(pg, (existsSync(pg) ? readFileSync(pg, 'utf8') : '') + PROGUARD_RULES);
+}
 
 // 7. Copy the web assets and config into the native project.
 run('npx cap sync android');

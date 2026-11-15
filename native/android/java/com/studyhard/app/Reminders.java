@@ -176,7 +176,8 @@ final class Reminders {
             b.addAction(0, ready ? "Open MN" : "Play now", tap);
         }
         try {
-            NotificationManagerCompat.from(ctx).notify(id, b.build());
+            // One note per kind: a new day's reminder replaces yesterday's instead of piling up.
+            NotificationManagerCompat.from(ctx).notify(NoteIds.forItem(kind, id), b.build());
         } catch (SecurityException ignored) {
             // Notifications switched off meanwhile.
         }

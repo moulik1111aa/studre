@@ -76,7 +76,8 @@ export function bundle(entryAbs) {
         target: ts.ScriptTarget.ES2022,
         verbatimModuleSyntax: false,
         isolatedModules: true,
-        removeComments: false,
+        // Comments stay in the sources, not in the app (smaller, and nothing to read in the APK).
+        removeComments: true,
       },
     });
     const errs = (out.diagnostics || []).filter((d) => d.category === ts.DiagnosticCategory.Error);
@@ -152,12 +153,26 @@ function firebaseKey() {
   }
 }
 
+/**
+ * Smaller CSS: comments out, runs of white space made one space, and none around { } ; or
+ * after a comma. Text in quotes is left exactly as it is.
+ */
+export function minifyCss(css) {
+  return css
+    .replace(/("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')|\/\*[\s\S]*?\*\//g, (m, str) => str ?? '')
+    .replace(/("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')|\s+/g, (m, str) => str ?? ' ')
+    .replace(/("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')|\s*([{};])\s*|,\s+/g, (m, str, p) => str ?? (p ?? ','))
+    .trim();
+}
+
 export function build({ outDir = dist } = {}) {
-  const css = readdirSync(join(src, 'styles'))
-    .filter((f) => f.endsWith('.css'))
-    .sort()
-    .map((f) => readFileSync(join(src, 'styles', f), 'utf8'))
-    .join('\n');
+  const css = minifyCss(
+    readdirSync(join(src, 'styles'))
+      .filter((f) => f.endsWith('.css'))
+      .sort()
+      .map((f) => readFileSync(join(src, 'styles', f), 'utf8'))
+      .join('\n'),
+  );
   const appSrc = bundle(join(src, 'main.ts'));
   // MN_STORE=play: the Google Play build (no keys or approvals; MN Plus is sold through Play).
   const store = process.env.MN_STORE === 'play' ? 'play' : '';
