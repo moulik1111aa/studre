@@ -368,7 +368,7 @@ async function doSync(app: App, asking: boolean, takeOver: boolean): Promise<Syn
     if (saves !== startedAt) return { ok: false, why: 'busy', message: 'Busy, trying again soon.' };
     for (const doc of r.put) await b.putChild(doc);
     for (const id of r.del) await b.deleteChild(id);
-    await b.putFamily(r.family, { kids: r.put.map((x) => x.childId), removed: Object.keys(r.family.removed).filter((id) => !family?.removed?.[id]), resets: r.resets, device: d.id });
+    await b.putFamily(r.family, { kids: r.put.map((x) => x.childId), removed: Object.keys(r.family.removed).filter((id) => !family?.removed?.[id]), resets: r.resets, device: d.id, gone: r.gonePhones });
     if (saves !== startedAt) return { ok: false, why: 'busy', message: 'Busy, trying again soon.' };
     applying = true;
     const rulesBefore = familyRules(app.save.data.settings);

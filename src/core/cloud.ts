@@ -119,7 +119,7 @@ export interface FamilyDoc {
   removed: Record<string, number>;
   /** childId → when a phone replaced the online backup (undo, starting over): other phones take it as it is. */
   resets: Record<string, number>;
-  /** deviceId → its label and last sync (ms). */
+  /** deviceId → its label and last sync (ms). At most KEEP_PHONES: the phones that synced longest ago drop off. */
   devices: Record<string, { label: string; at: number }>;
   rules: FamilyRules;
   rulesAt: number;
@@ -189,6 +189,24 @@ export interface SyncResult {
   skipped: string[];
   /** Children combined with a same-named child from the cloud: id here → the cloud's id (which they now use). */
   renamed: Record<string, string>;
+  /** Phones taken off the family document's list (the ones that synced longest ago), so it stays short. */
+  gonePhones: string[];
+}
+
+/**
+ * The family document keeps at most this many phones: the one syncing and the others that synced
+ * most recently. Every new phone or reinstall adds one, and the cloud's rules refuse a family
+ * document with more than 20, so without this a family would one day stop backing up.
+ */
+export const KEEP_PHONES = 10;
+
+/** The phones to take off the list so that at most `keep` are left: never `self`, longest ago first. */
+export function phonesToDrop(devices: FamilyDoc['devices'], self: string, keep = KEEP_PHONES): string[] {
+  return Object.entries(devices)
+    .filter(([id]) => id !== self)
+    .sort(([a, x], [b, y]) => (Number(y?.at) || 0) - (Number(x?.at) || 0) || (a < b ? -1 : a > b ? 1 : 0))
+    .slice(Math.max(0, keep - 1))
+    .map(([id]) => id);
 }
 
 export async function planSync(p: SyncInput): Promise<SyncResult> {
@@ -324,10 +342,13 @@ export async function planSync(p: SyncInput): Promise<SyncResult> {
   memo.rulesAt = fam.rulesAt;
 
   memo.force = {};
+  fam.devices ??= {};
   fam.devices[p.device] = { label: p.label, at: p.now };
+  const gonePhones = phonesToDrop(fam.devices, p.device);
+  for (const id of gonePhones) delete fam.devices[id];
   fam.primary = p.device;
   memo.lastSync = p.now;
-  return { children, added, dropped, put, del, resets, family: fam, rules, memo, skipped, renamed };
+  return { children, added, dropped, put, del, resets, family: fam, rules, memo, skipped, renamed, gonePhones };
 }
 
 /** The latest moment this child played (ms). */

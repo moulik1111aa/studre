@@ -3,7 +3,7 @@
 // lists, and errors (offline, busy, signed out).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CloudError, FirebaseRest, fromFs, toFs, type Session } from '../src/platform/cloudapi.ts';
+import { CloudError, FirebaseRest, MemoryCloud, fieldPath, fromFs, toFs, type Session } from '../src/platform/cloudapi.ts';
 
 const cfg = { apiKey: 'KEY', projectId: 'mn-test', webClientId: 'web.apps.googleusercontent.com' };
 type Call = { url: string; method: string; body?: string; auth?: string };
@@ -74,6 +74,36 @@ test('the family document: only the changed children, devices and removals are w
   assert.equal(fromFs(body.primary), 'dA');
   assert.deepEqual(fromFs(body.kids), { c1: 10 });
   assert.equal(fromFs(body.rules), JSON.stringify({ limitMinutes: 30 }));
+});
+
+test('the family document: phones taken off the list are in the mask with no value (so they are deleted)', async () => {
+  const g = fakeGoogle(() => ({ json: {} }));
+  const b = new FirebaseRest(cfg, live(), () => undefined, g.http);
+  const fam = { v: 1 as const, consentAt: 5, policy: 'p', kids: {}, removed: {}, resets: {}, devices: { dA: { label: 'Phone A', at: 40 } }, rules: {}, rulesAt: 7 };
+  // The phone writing is never taken off, even if it is named.
+  await b.putFamily(fam, { kids: [], removed: [], resets: [], device: 'dA', gone: ['dOld1', 'dOld2', 'dA'] });
+  const mask = new URL(g.calls[0].url).searchParams.getAll('updateMask.fieldPaths');
+  assert.ok(mask.includes('devices.dOld1') && mask.includes('devices.dOld2') && mask.includes('devices.dA'));
+  assert.deepEqual(fromFs(JSON.parse(g.calls[0].body!).fields.devices), { dA: { label: 'Phone A', at: 40 } });
+});
+
+test('field paths: plain names as they are, anything else in backticks', () => {
+  assert.equal(fieldPath('kids', 'c1ab'), 'kids.c1ab');
+  assert.equal(fieldPath('kids', 'kid-A'), 'kids.`kid-A`');
+  assert.equal(fieldPath('kids', '7up'), 'kids.`7up`');
+  assert.equal(fieldPath('a', 'b`c\\d'), 'a.`b\\`c\\\\d`');
+});
+
+test('the stand-in cloud takes phones off the list the same way', async () => {
+  const m = new Map<string, string>();
+  const mc = new MemoryCloud({ get: (k) => m.get(k) ?? null, set: (k, v) => void m.set(k, v) }, null, () => undefined);
+  await mc.signIn('a@b.com|A');
+  const fam = { v: 1 as const, consentAt: 5, policy: 'p', kids: {}, removed: {}, resets: {}, devices: { dA: { label: 'A', at: 1 } }, rules: {}, rulesAt: 1 };
+  await mc.putFamily(fam, { kids: [], removed: [], resets: [], device: 'dA' });
+  await mc.putFamily({ ...fam, devices: { dB: { label: 'B', at: 2 } } }, { kids: [], removed: [], resets: [], device: 'dB' });
+  assert.deepEqual(Object.keys((await mc.getFamily())!.devices).sort(), ['dA', 'dB']);
+  await mc.putFamily({ ...fam, devices: { dB: { label: 'B', at: 3 } } }, { kids: [], removed: [], resets: [], device: 'dB', gone: ['dA'] });
+  assert.deepEqual(Object.keys((await mc.getFamily())!.devices), ['dB']);
 });
 
 test('a child copy goes up as bytes and comes back the same', async () => {

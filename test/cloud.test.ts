@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { newChild, freshSettings, type Child } from '../src/storage/save.ts';
-import { combine, decodeChild, encodeChild, familyRules, freshMemo, nudgeFor, planSync, type CloudChild, type FamilyDoc, type FamilyRules, type SyncMemo } from '../src/core/cloud.ts';
+import { KEEP_PHONES, combine, decodeChild, encodeChild, familyRules, freshMemo, nudgeFor, phonesToDrop, planSync, type CloudChild, type FamilyDoc, type FamilyRules, type SyncMemo } from '../src/core/cloud.ts';
 import { logPlay } from '../src/core/stats.ts';
 
 const kid = (name = 'Riya') => {
@@ -101,6 +101,30 @@ test('first sync uploads; a new phone restores; both phones then combine their p
   await sync(a, cl, 7000);
   for (const ph of [a, b]) assert.deepEqual(Object.keys(ph.children.find((c) => c.name === 'Riya')!.progress.levels).sort(), ['s1.count5#1', 's1.count5#2', 's1.count5#3']);
   assert.equal(a.children.find((c) => c.name === 'Riya')!.log!.length, 3);
+});
+
+test('the family keeps at most 10 phones: the ones that synced longest ago drop off, never the one syncing', async () => {
+  assert.equal(KEEP_PHONES, 10);
+  const devs = Object.fromEntries(Array.from({ length: 12 }, (_, i) => [`d${i}`, { label: `Phone ${i}`, at: 1000 + i }]));
+  assert.deepEqual(phonesToDrop(devs, 'd11').sort(), ['d0', 'd1']);
+  // The phone syncing stays, even when it is the one that synced longest ago.
+  assert.deepEqual(phonesToDrop(devs, 'd0').sort(), ['d1', 'd2']);
+  assert.deepEqual(phonesToDrop({ dA: { label: 'A', at: 1 }, dB: { label: 'B', at: 2 } }, 'dA'), []);
+  // A phone with no time on it goes first.
+  assert.deepEqual(phonesToDrop({ ...devs, dX: { label: 'X', at: undefined as unknown as number } }, 'd11').sort(), ['d0', 'd1', 'dX']);
+
+  // A family that has been on 15 phones (reinstalls count): the next sync trims it to 10.
+  const cl = cloud();
+  const a = phone('A', [kid()]);
+  await sync(a, cl, 1000);
+  cl.family!.devices = { ...cl.family!.devices, ...Object.fromEntries(Array.from({ length: 14 }, (_, i) => [`old${i}`, { label: 'x', at: 100 + i }])) };
+  const r = await sync(phone('B'), cl, 2000);
+  assert.equal(Object.keys(r.family.devices).length, 10);
+  assert.ok(r.family.devices.A && r.family.devices.B);
+  assert.deepEqual(r.gonePhones.sort(), ['old0', 'old1', 'old2', 'old3', 'old4', 'old5']);
+  assert.equal(r.family.primary, 'B');
+  // Short lists are left alone.
+  assert.deepEqual((await sync(a, cl, 3000)).gonePhones, []);
 });
 
 test('nothing new: nothing is sent, and only the family document is read', async () => {

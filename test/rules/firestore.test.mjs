@@ -3,9 +3,10 @@
 //   firebase emulators:exec --only firestore --project demo-mn "node --test test/rules/firestore.test.mjs"
 // RULES_FILE picks another rules file (the workflow also tries the rules live now, for comparison).
 import { after, before, beforeEach, test } from 'node:test';
+import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { assertFails, assertSucceeds, initializeTestEnvironment } from '@firebase/rules-unit-testing';
-import { Bytes, collection, deleteDoc, doc, getDoc, getDocs, setDoc, updateDoc } from 'firebase/firestore';
+import { Bytes, collection, deleteDoc, deleteField, doc, getDoc, getDocs, setDoc, updateDoc } from 'firebase/firestore';
 
 const OWNER = 'owner-uid';
 let env;
@@ -92,6 +93,19 @@ test('a family document must have the app’s shape', async () => {
   };
   for (const [what, d] of Object.entries(bad)) await assertFails(setDoc(doc(db, 'families/alice'), d)).catch((e) => Promise.reject(new Error(`${what}: ${e.message}`)));
   await assertSucceeds(setDoc(doc(db, 'families/alice'), family({ kids: Object.fromEntries(Array.from({ length: 20 }, (_, i) => [`k${i}`, 1])), rules: 'x'.repeat(20000) })));
+});
+
+test('a family already listing too many phones can still back up: the app’s write trims the list (review fix 12)', async () => {
+  await seed('families/alice', family({ devices: Object.fromEntries(Array.from({ length: 21 }, (_, i) => [`d${i}`, { label: 'x', at: i }])) }));
+  const db = as('alice');
+  // Only adding this phone would leave 22: refused.
+  await assertFails(updateDoc(doc(db, 'families/alice'), { 'devices.dNEW': { label: 'Phone NEW', at: 99 } }));
+  // As the app writes it: this phone in, the 12 that synced longest ago out, 10 left.
+  const trim = Object.fromEntries(Array.from({ length: 12 }, (_, i) => [`devices.d${i}`, deleteField()]));
+  await assertSucceeds(updateDoc(doc(db, 'families/alice'), { 'devices.dNEW': { label: 'Phone NEW', at: 99 }, primary: 'dNEW', ...trim }));
+  const left = (await getDoc(doc(db, 'families/alice'))).data();
+  assert.equal(Object.keys(left.devices).length, 10);
+  assert.ok(left.devices.dNEW && left.devices.d20 && !left.devices.d0);
 });
 
 test('a child document must have the app’s shape, its id and a backup under 900 KB', async () => {

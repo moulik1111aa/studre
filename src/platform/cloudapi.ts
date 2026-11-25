@@ -77,7 +77,12 @@ export interface FamilyChanges {
   removed: string[];
   resets: string[];
   device: string;
+  /** Phones to take off the family's list (core/cloud.ts phonesToDrop). */
+  gone?: string[];
 }
+
+/** A Firestore field path: each name that isn't a plain identifier goes in backticks (a child id may hold "-"). */
+export const fieldPath = (...names: string[]): string => names.map((n) => (/^[A-Za-z_][A-Za-z_0-9]*$/.test(n) ? n : `\`${n.replace(/[`\\]/g, (c) => `\\${c}`)}\``)).join('.');
 
 // #unless play
 /** A phone-code key the owner made (as listed in the owner area; the master key never leaves the device). */
@@ -313,7 +318,7 @@ export class FirebaseRest implements CloudBackend {
     await this.remove(`requests/${this.me.uid}`);
   }
   async checkIn(deviceId: string, d: CheckIn['devices'][string]): Promise<void> {
-    await this.patch(`checkins/${this.me.uid}`, { email: this.me.email, name: this.me.name, devices: { [deviceId]: d } }, ['email', 'name', `devices.${deviceId}`]);
+    await this.patch(`checkins/${this.me.uid}`, { email: this.me.email, name: this.me.name, devices: { [deviceId]: d } }, ['email', 'name', fieldPath('devices', deviceId)]);
   }
   async listAccess(): Promise<AccessEntry[]> {
     return (await this.list('access')).map((d) => toEntry(d.id, d.f));
@@ -360,8 +365,10 @@ export class FirebaseRest implements CloudBackend {
 
   async putFamily(f: FamilyDoc, ch: FamilyChanges): Promise<void> {
     const { kids, removed, resets, device } = ch;
-    // Only these fields change, so two phones syncing at once don't undo each other.
-    const paths = ['v', 'policy', 'consentAt', 'rules', 'rulesAt', 'deletedAt', 'primary', `devices.${device}`, ...kids.map((id) => `kids.${id}`), ...removed.flatMap((id) => [`removed.${id}`, `kids.${id}`]), ...resets.map((id) => `resets.${id}`)];
+    // Only these fields change, so two phones syncing at once don't undo each other. Phones
+    // taken off the list are in the mask with no value, which deletes them.
+    const gone = (ch.gone ?? []).filter((id) => id !== device);
+    const paths = ['v', 'policy', 'consentAt', 'rules', 'rulesAt', 'deletedAt', 'primary', fieldPath('devices', device), ...gone.map((id) => fieldPath('devices', id)), ...kids.map((id) => fieldPath('kids', id)), ...removed.flatMap((id) => [fieldPath('removed', id), fieldPath('kids', id)]), ...resets.map((id) => fieldPath('resets', id))];
     const body = { fields: fields({ v: 1, policy: f.policy, consentAt: f.consentAt, rules: JSON.stringify(f.rules), rulesAt: f.rulesAt, primary: f.primary ?? device, devices: { [device]: f.devices[device] }, kids: Object.fromEntries(kids.filter((id) => f.kids[id] !== undefined).map((id) => [id, f.kids[id]])), removed: Object.fromEntries(removed.map((id) => [id, f.removed[id]])), resets: Object.fromEntries(resets.map((id) => [id, f.resets[id]])) }) };
     const q = `?${[...new Set(paths)].map((p) => `updateMask.fieldPaths=${encodeURIComponent(p)}`).join('&')}`;
     const res = await this.fs('PATCH', this.family, q, body);
@@ -556,6 +563,7 @@ export class MemoryCloud implements CloudBackend {
     const old = d.family;
     const merged: FamilyDoc = old && !old.deletedAt ? { ...old, v: 1, policy: f.policy, consentAt: f.consentAt, rules: f.rules, rulesAt: f.rulesAt, kids: { ...old.kids }, removed: { ...old.removed }, resets: { ...(old.resets ?? {}) }, devices: { ...old.devices } } : { ...f, kids: {}, removed: {}, resets: {}, devices: {} };
     for (const id of resets) merged.resets[id] = f.resets[id];
+    for (const id of ch.gone ?? []) if (id !== device) delete merged.devices[id];
     merged.devices[device] = f.devices[device];
     merged.primary = f.primary ?? device;
     for (const id of kids) if (f.kids[id] !== undefined) merged.kids[id] = f.kids[id];
