@@ -1,5 +1,6 @@
-// Unlocking with an approved Google account: works offline for 14 days after the last check,
-// respects an end date, notices the clock being turned back, and is cleared when removed.
+// MN × the owner gave a Google account (the app shared by link): works offline for 14 days
+// after the last check, respects an end date, notices the clock being turned back, and is
+// cleared when turned off.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { OFFLINE_DAYS, confirmGate, gateState, seen } from '../src/core/gate.ts';
@@ -7,7 +8,7 @@ import { OFFLINE_DAYS, confirmGate, gateState, seen } from '../src/core/gate.ts'
 const DAY = 86_400_000;
 const T = Date.parse('2026-11-05T10:00:00Z');
 
-test('approved: unlocked for 14 days after the last check, then asks to connect', () => {
+test('given: on for 14 days after the last check, then waits for the next check', () => {
   assert.deepEqual(gateState(undefined, T), { ok: false, reason: 'none' });
   const g = confirmGate(undefined, 'a@b.com', 0, T);
   assert.equal(gateState(g, T + 13 * DAY).ok, true);
@@ -16,7 +17,7 @@ test('approved: unlocked for 14 days after the last check, then asks to connect'
   assert.equal(gateState(confirmGate(g, 'a@b.com', 0, T + 13 * DAY), T + 20 * DAY).ok, true);
 });
 
-test('an end date, the clock turned back, and removal', () => {
+test('an end date, the clock turned back, and turned off', () => {
   const g = confirmGate(undefined, 'a@b.com', T + 5 * DAY, T);
   assert.equal(gateState(g, T + 4 * DAY).ok, true);
   assert.equal((gateState(g, T + 5 * DAY) as { reason: string }).reason, 'ended');

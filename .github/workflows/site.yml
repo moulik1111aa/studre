@@ -1,7 +1,7 @@
 # The website on Firebase Hosting: https://mn-mission-next.web.app
 #   /         home page
 #   /privacy  privacy policy
-#   /admin    MN Access, the owner's page for approving people
+#   /admin    MN Access, the owner's page for MN × requests and phone keys
 # It also publishes firestore.rules, so the cloud's rules always match the repo.
 # Needs two secrets: FIREBASE_API_KEY (as the app build) and FIREBASE_SERVICE_ACCOUNT
 # (the JSON key of the project's firebase-adminsdk service account). The rules also need

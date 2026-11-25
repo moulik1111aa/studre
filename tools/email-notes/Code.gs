@@ -1,9 +1,10 @@
 /**
- * MN: email notes for access requests (free, runs in your own Google account).
+ * MN: email notes for MN × requests (free, runs in your own Google account).
  *
  * Every 5 minutes this script looks at MN's cloud (Firestore, project mn-mission-next):
- *  - someone asked to use MN  → an email to them ("we've got your request"), with a hidden copy to you;
- *  - you approved someone      → a welcome email to them ("You're in"), only once SEND_WELCOME is true.
+ *  - a parent asked for MN ×  → an email to them ("we've got your request"), with a hidden copy to you;
+ *  - you gave someone MN ×    → an email to them ("MN × is on"), only once SEND_WELCOME is true.
+ * (Since 25 Nov anyone can sign in to MN with Google; MN × is what people ask for.)
  * It only reads the cloud; it never changes anything there.
  *
  * Set up once: paste this file and appsscript.json into a new project at script.google.com,
@@ -13,14 +14,14 @@
 const PROJECT = 'mn-mission-next';
 /** Gets a hidden copy (bcc) of every request email. */
 const NOTIFY_TO = 'mbatechindore@gmail.com';
-/** Welcome emails to approved people: on hold for now. Set to true to start them (only approvals from then on get one). */
+/** "MN × is on" emails: on hold for now. Set to true to start them (only MN × given from then on gets one). */
 const SEND_WELCOME = false;
 /** What people see as the sender, and where their replies go. */
 const FROM_NAME = 'MN';
 const REPLY_TO = 'moulikmishra11@gmail.com';
 const PRIVACY = 'https://mn-mission-next.web.app/privacy';
 
-/** Run this once by hand: it remembers who is already approved (no emails for them) and starts the 5-minute check. */
+/** Run this once by hand: it remembers who already has MN × (no emails for them) and starts the 5-minute check. */
 function setup() {
   const props = PropertiesService.getScriptProperties();
   const access = list_('access');
@@ -31,7 +32,7 @@ function setup() {
   ScriptApp.getProjectTriggers().forEach((t) => ScriptApp.deleteTrigger(t));
   ScriptApp.newTrigger('check').timeBased().everyMinutes(5).create();
   check();
-  Logger.log('Set up. ' + access.length + ' approved account(s) noted; checking every 5 minutes.');
+  Logger.log('Set up. ' + access.length + ' account(s) with MN × noted; checking every 5 minutes.');
 }
 
 /** Runs every 5 minutes. */
@@ -43,8 +44,8 @@ function check() {
   const approved = {};
   access.forEach((d) => (approved[d.id] = d.f));
 
-  // New requests (from someone not approved yet): an email to them, with a hidden copy to you.
-  // Once per request: tapping "Check again" in MN doesn't send another.
+  // New MN × requests (from someone without MN ×): an email to them, with a hidden copy to you.
+  // Once per request: asking again in MN doesn't send another.
   const requests = list_('requests');
   const stillOpen = {};
   requests.forEach((d) => {
@@ -55,17 +56,17 @@ function check() {
     if (d.id in seenReq) return;
     seenReq[d.id] = at;
     if (!r.email) return;
-    send_(String(r.email), 'MN: we’ve got your request',
+    send_(String(r.email), 'MN: we’ve got your request for MN ×',
       '<p>Hi' + (r.name ? ' ' + esc_(String(r.name).split(' ')[0]) : '') + ',</p>' +
-      '<p>Thanks for signing in to MN with <b>' + esc_(r.email) + '</b>. Your request to use MN is with us, and we’ll let you know once it’s approved.</p>' +
+      '<p>Thanks for asking for MN × for <b>' + esc_(r.email) + '</b>. Your request is with us. MN × turns on in the app once it’s given.</p>' +
       '<p>Phone code: <b>' + esc_(r.phone || '?') + '</b><br>Requested: ' + esc_(when_(at)) + '</p>' +
-      '<p>Once you’re approved, open MN and tap <b>Check again</b>. If you have a phone-code key, you can keep using MN with it meanwhile.</p>' +
+      '<p>MN itself works as usual meanwhile. To see if MN × is on, open MN → Parent area → MN × and tap <b>Check again</b>.</p>' +
       '<p style="color:#5B5F7A;font-size:13px">Questions? Just reply to this email.</p>',
       NOTIFY_TO);
   });
   Object.keys(seenReq).forEach((k) => { if (!(k in stillOpen)) delete seenReq[k]; });
 
-  // Newly approved accounts: a welcome email to them.
+  // Accounts newly given MN ×: an email to them.
   access.forEach((d) => {
     const a = d.f;
     const added = Number(a.addedAt || 0);
@@ -73,10 +74,10 @@ function check() {
     seenAcc[d.id] = added;
     if (!SEND_WELCOME) return; // on hold: noted as seen, so turning it on later doesn't email past approvals
     const until = Number(a.until || 0);
-    send_(d.id, 'You’re in: MN is ready',
+    send_(d.id, 'MN × is on for you',
       '<p>Hi' + (a.name ? ' ' + esc_(String(a.name).split(' ')[0]) : '') + ',</p>' +
-      '<p>Your Google account <b>' + esc_(d.id) + '</b> can now use MN' + (until ? ', until ' + esc_(day_(until)) : '') + '.</p>' +
-      '<p>Open MN on your phone and tap <b>Check again</b>, or just close MN and open it again. Your children’s progress is backed up from now on.</p>' +
+      '<p>Your Google account <b>' + esc_(d.id) + '</b> has MN × now' + (until ? ', until ' + esc_(day_(until)) : '') + '.</p>' +
+      '<p>Open MN → Parent area → MN × and tap <b>Check again</b>, or just close MN and open it again.</p>' +
       '<p style="color:#5B5F7A;font-size:13px">Questions? Just reply to this email. Privacy policy: <a href="' + PRIVACY + '">' + PRIVACY + '</a></p>');
   });
   Object.keys(seenAcc).forEach((k) => { if (!approved[k]) delete seenAcc[k]; });

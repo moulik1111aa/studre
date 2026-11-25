@@ -1,5 +1,5 @@
 // The website on Firebase Hosting (https://mn-mission-next.web.app): the home page, the
-// privacy policy, and MN Access (/admin), the owner's page for approving people.
+// privacy policy, and MN Access (/admin), the owner's page for MN × requests and phone keys.
 // Usage: node scripts/site.mjs [outDir]   (default _site; tests build into dist/site)
 // The Firebase Web API key comes from FIREBASE_API_KEY (a GitHub secret) or .firebase-key.
 import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';

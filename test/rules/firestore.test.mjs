@@ -110,9 +110,9 @@ test('a child document must have the app’s shape, its id and a backup under 90
   await assertSucceeds(setDoc(doc(db, 'families/alice/children/kid_A-1'), child('kid_A-1', 899999)));
 });
 
-// ── the shared APK's approvals: the owner is an account id, not an address ─
+// ── MN × on the shared APK: the owner is an account id, not an address ───
 
-test('the owner (by account id) sees and manages approvals', async () => {
+test('the owner (by account id) sees MN × requests and gives MN ×', async () => {
   await seed('requests/alice', { email: 'alice@example.com', name: 'Alice', phone: 'K7Q4-MZ2P', device: 'Phone K7Q4-MZ2P', version: '1.0', at: 1 });
   await seed('checkins/alice', { email: 'alice@example.com', name: 'Alice', devices: {} });
   const db = as(OWNER, 'owner@example.com');
@@ -136,7 +136,7 @@ test('the owner’s address on another account opens nothing', async () => {
   await assertFails(setDoc(doc(impostor, 'owner/keys'), { list: '[]', at: 1 }));
 });
 
-test('a grown-up asks for access, checks in, and reads only their own approval', async () => {
+test('a parent asks for MN ×, reads the request back, checks in, and reads only their own MN ×', async () => {
   await seed('access/alice@example.com', { email: 'alice@example.com', name: 'Alice', until: 0, addedAt: 1 });
   await seed('access/bob@example.com', { email: 'bob@example.com', name: 'Bob', until: 0, addedAt: 1 });
   const db = as('alice');
@@ -150,6 +150,9 @@ test('a grown-up asks for access, checks in, and reads only their own approval',
   await assertFails(setDoc(doc(db, 'requests/alice'), { email: 'alice@example.com', at: 1, approved: true }), 'an unknown field');
   await assertFails(setDoc(doc(db, 'requests/bob'), { email: 'alice@example.com', at: 1 }), 'another account’s request');
   await assertFails(getDocs(collection(db, 'requests')));
+  // Once MN × is given, the phone tidies its own request away (and no one else's).
+  await assertFails(deleteDoc(doc(db, 'requests/bob')));
+  await assertSucceeds(deleteDoc(doc(db, 'requests/alice')));
   await assertSucceeds(setDoc(doc(db, 'checkins/alice'), { email: 'alice@example.com', name: 'Alice', devices: { dK7Q4MZ2P: { phone: 'K7Q4-MZ2P', label: 'Phone K7Q4-MZ2P', version: '1.0', at: 1 } } }));
   await assertFails(getDocs(collection(db, 'checkins')));
   await assertFails(getDoc(doc(db, 'owner/keys')));

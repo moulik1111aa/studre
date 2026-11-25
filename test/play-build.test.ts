@@ -43,7 +43,7 @@ test('the shared APK keeps its keys, owner area and approvals', async () => {
     build({ outDir: out });
     const html = readFileSync(join(out, 'index.html'), 'utf8');
     const words = scan(html).map((f: { word: string }) => f.word);
-    for (const w of ['isOwnerCode', 'accessState', 'myAccess', 'requestAccess', 'ownerHook', "the owner's email"]) assert.ok(words.includes(w), `shared build still has ${w}`);
+    for (const w of ['isOwnerCode', 'accessState', 'myAccess', 'requestAccess', 'ownerHook', "the owner's email", 'askForPlus', 'Request MN']) assert.ok(words.includes(w), `shared build still has ${w}`);
   } finally {
     if (before !== undefined) process.env.MN_STORE = before;
     rmSync(out, { recursive: true, force: true });

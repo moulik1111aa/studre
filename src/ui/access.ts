@@ -1,5 +1,9 @@
-// Access keys on screen: the lock screen (phone code + paste a key). The owner's area, where
-// keys are made, is in ui/owner.ts (left out of the Play Store build). See core/access.ts.
+// Opening MN on the app shared by link: the lock screen (sign in with Google, or this phone's
+// code and a key). Since 25 Nov any parent may open MN by signing in with Google; keys open it
+// without Google. MN × comes with a key or the owner's phone, and for a Google account when the
+// owner gives it (asked for in the Parent area: ui/membership.ts, ui/cloud.ts). The owner's
+// area, where keys are made, is in ui/owner.ts. See core/access.ts. (The Play Store build has
+// none of this: access.play.ts stands in for this file.)
 
 import { html, esc, type App, type Screen } from './app.ts';
 import { checkKey, dayNo, dayOf, isOwnerCode, phoneCode, signingKey, type KeyCheck } from '../core/access.ts';
@@ -7,7 +11,8 @@ import type { Access } from '../storage/save.ts';
 import { plusFaceSvg } from './plus.ts';
 import { ICONS } from './icons.ts';
 import { stagger, popIn } from '../render/motion.ts';
-import { account, checkAccess, cloudOn, googleGate, signIn, signOut } from './cloud.ts';
+import { account, cloudOn, plusGrant, signIn } from './cloud.ts';
+import { plusChanged } from './pluschange.ts';
 
 import { googleButton } from './gbutton.ts';
 export { GOOGLE_G, googleButton } from './gbutton.ts';
@@ -45,7 +50,30 @@ export const access = (app: App): Access => (app.save.data.access ??= {});
 /** "20 Nov 2026". */
 export const niceDay = (n: number): string => new Date(`${dayOf(n)}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
-export type AccessState = { locked: false; owner: boolean; until?: number; phone: string; via?: 'google' } | { locked: true; reason: 'none' | 'bad' | 'expired' | 'revoked' | 'clock' | 'old' | 'google-stale' | 'google-ended'; until?: number; phone: string };
+/** How MN was opened on this phone: the owner's phone, a key, Google, or (browser test runs) no lock at all. */
+export type OpenedBy = 'owner' | 'key' | 'google' | 'open';
+
+export type AccessState = { locked: false; owner: boolean; until?: number; phone: string; via: OpenedBy } | { locked: true; reason: 'none' | 'bad' | 'expired' | 'revoked' | 'clock' | 'old'; until?: number; phone: string };
+
+let opened: OpenedBy | null = null;
+/** How MN was opened this time (null until the lock check has run, or while locked). */
+export const openedBy = (): OpenedBy | null => opened;
+
+/** MN × here: with a key, on the owner's phone, and in browser test runs without the lock; for a
+ *  Google account, once the owner gives it. 'checking' until the lock check has run. */
+export function sharedPlus(app: App): 'on' | 'off' | 'checking' {
+  if (!opened) return 'checking';
+  if (opened !== 'google') return 'on';
+  return plusGrant(app).ok ? 'on' : 'off';
+}
+
+/** Set by the start-up lock check (main.ts). Screens that depend on MN × redraw when it changes. */
+export function setOpenedBy(app: App, v: OpenedBy | null): void {
+  if (v === opened) return;
+  const before = sharedPlus(app);
+  opened = v;
+  if (sharedPlus(app) !== before) plusChanged();
+}
 
 let ownerCache: { master: string; ok: boolean } | null = null;
 async function isOwnerPhone(app: App): Promise<boolean> {
@@ -55,32 +83,23 @@ async function isOwnerPhone(app: App): Promise<boolean> {
   return ownerCache.ok;
 }
 
-/** Is the app unlocked on this phone today? Also keeps the latest day seen (for the clock check). */
+/** Is the app unlocked on this phone today, and how? Also keeps the latest day seen (for the clock check). */
 export async function accessState(app: App): Promise<AccessState> {
   // Keys need the phone's built-in crypto (missing only in very old web engines).
   if (!globalThis.crypto?.subtle) return { locked: true, reason: 'old', phone: '—' };
   const phone = await myPhone(app);
   const a = access(app);
   const today = app.today;
-  if (await isOwnerPhone(app)) return { locked: false, owner: true, phone };
-  // The date going back more than a day means the clock was turned back.
-  if (a.maxDay && dayNo(today) < dayNo(a.maxDay) - 1) return { locked: true, reason: 'clock', phone };
-  if (!a.maxDay || dayNo(today) > dayNo(a.maxDay)) app.save.update(() => (access(app).maxDay = today));
-  // An approved Google account (checked online at least every 14 days).
-  let google = googleGate(app);
-  if (!google.ok && google.reason === 'stale' && account(app)) {
-    // Due a check: ask now (quickly), and carry on if the answer is yes.
-    const answer = await Promise.race([checkAccess(app), new Promise<'slow'>((r) => setTimeout(() => r('slow'), 6000))]);
-    if (answer !== 'slow') google = googleGate(app);
-  }
-  if (google.ok) return { locked: false, owner: false, phone, via: 'google' };
-  if (a.key) {
-    const r: KeyCheck = await checkKey(a.key, phone, today);
-    if (r.ok) return { locked: false, owner: false, until: r.until, phone };
-    return { locked: true, reason: r.reason === 'other-phone' ? 'bad' : r.reason, until: r.until, phone };
-  }
-  if (google.reason === 'stale' || google.reason === 'clock') return { locked: true, reason: google.reason === 'clock' ? 'clock' : 'google-stale', phone };
-  if (google.reason === 'ended') return { locked: true, reason: 'google-ended', phone };
+  if (await isOwnerPhone(app)) return { locked: false, owner: true, phone, via: 'owner' };
+  // The date going back more than a day means the clock was turned back: keys aren't trusted then.
+  const clockBack = !!a.maxDay && dayNo(today) < dayNo(a.maxDay) - 1;
+  if (!clockBack && (!a.maxDay || dayNo(today) > dayNo(a.maxDay))) app.save.update(() => (access(app).maxDay = today));
+  const key: KeyCheck | null = a.key && !clockBack ? await checkKey(a.key, phone, today) : null;
+  if (key?.ok) return { locked: false, owner: false, until: key.until, phone, via: 'key' };
+  // Signed in with Google: open for any parent, no approval (MN × once the owner gives it).
+  if (account(app)) return { locked: false, owner: false, phone, via: 'google' };
+  if (clockBack) return { locked: true, reason: 'clock', phone };
+  if (key && !key.ok) return { locked: true, reason: key.reason === 'other-phone' ? 'bad' : key.reason, until: key.until, phone };
   return { locked: true, reason: 'none', phone };
 }
 
@@ -114,9 +133,9 @@ const REASON: Record<string, (until?: number) => string> = {
   revoked: () => 'This key has been switched off. Ask for a new one. All progress is safe on this phone.',
   clock: () => 'This phone’s date looks wrong. Set the correct date and time in your phone’s settings, then try again.',
   old: () => 'This phone’s web engine is too old to check keys. Update “Android System WebView” from the Play Store, then open MN again.',
-  'google-stale': () => 'MN needs to check your Google account. Connect to the internet, then tap “Check again”.',
-  'google-ended': () => 'Your access has ended. Ask the person who gave you MN, or use a key.',
 };
+/** Under the Google button on the lock screen. */
+const GOOGLE_NOTE = 'For parents. It backs up your family’s progress too.';
 
 /** The lock screen (or, with `renew`, the "enter a new key" screen from the parent area). */
 export function lockScreen(state: AccessState, then: () => void, o: { renew?: boolean; back?: () => void } = {}) {
@@ -129,11 +148,10 @@ export function lockScreen(state: AccessState, then: () => void, o: { renew?: bo
       <div class="scroll lk-body">
         <div class="lk-coach">${plusFaceSvg({ cls: 'alive' })}</div>
         <h1 class="lk-title">${o.renew ? 'Enter a new key' : 'Unlock MN'}</h1>
-        <p class="lk-why">${o.renew ? `${!state.locked && state.until !== undefined ? `Your key works until ${niceDay(state.until)}. ` : ''}Got a new key? Paste it here. Progress carries on as it is.` : google && reason === 'none' ? 'Sign in with an approved Google account. No Google account? Send your phone code to the person who gave you MN, and they’ll send you a key.' : esc(REASON[reason](state.until))}</p>
+        <p class="lk-why">${o.renew ? `${!state.locked && state.until !== undefined ? `Your key works until ${niceDay(state.until)}. ` : ''}Got a new key? Paste it here. Progress carries on as it is.` : google && reason === 'none' ? 'Sign in with Google to start. No Google account? Send your phone code to the person who gave you MN, and they’ll send you a key.' : esc(REASON[reason](state.until))}</p>
         ${google ? `<div class="card lk-google">
-          ${who ? '<button class="btn lk-g">Check again</button>' : googleButton('lk-g')}
-          <p class="lk-gmsg" aria-live="polite">${who ? `Signed in as <b>${esc(who.email)}</b>. Waiting for approval.` : 'For parents. Your account needs to be approved once.'}</p>
-          ${who ? '<button class="linkish lk-other">Use another account</button>' : ''}
+          ${who ? '<button class="btn lk-g">Try again</button>' : googleButton('lk-g')}
+          <p class="lk-gmsg" aria-live="polite">${who ? `Signed in as <b>${esc(who.email)}</b>.` : GOOGLE_NOTE}</p>
         </div>
         <p class="lk-or"><span>or use a key</span></p>` : ''}
         <div class="card lk-phone"><small>Your phone code</small><b>${esc(state.phone)}</b><button class="btn ghost small lk-copy">Copy code</button></div>
@@ -148,40 +166,26 @@ export function lockScreen(state: AccessState, then: () => void, o: { renew?: bo
     const unlocked = () => {
       const rect = el.querySelector('.lk-g')!.getBoundingClientRect();
       app.fx.confetti(rect.x + rect.width / 2, rect.y, 60);
-      app.toast('Unlocked with Google.');
+      app.toast('Signed in with Google.');
       then();
     };
     const answer = (a: string) => {
       if (!gmsg) return;
-      if (a === 'approved') return unlocked();
-      const email = esc(account(app)?.email ?? '');
-      gmsg.innerHTML =
-        a === 'waiting'
-          ? `Signed in as <b>${email}</b>. We’ve asked for your account to be approved. Tap “Check again” once you hear back.`
-          : a === 'offline'
-            ? 'No internet connection. Connect and try again.'
-            : a === 'cancelled'
-              ? 'For parents. Your account needs to be approved once.'
-              : 'That didn’t work. Please try again.';
-      const old = el.querySelector('.lk-g')!;
-      const fresh = html(account(app) ? '<button class="btn lk-g">Check again</button>' : googleButton('lk-g'));
-      old.replaceWith(fresh);
-      fresh.addEventListener('click', () => void go(fresh as HTMLButtonElement));
+      if (a === 'signed-in') return unlocked();
+      gmsg.textContent = a === 'offline' ? 'No internet connection. Connect and try again.' : a === 'cancelled' ? GOOGLE_NOTE : 'That didn’t work. Please try again.';
       popIn(gmsg, 0, 0.95);
     };
     const go = async (b: HTMLButtonElement) => {
+      // Already signed in (only when something else keeps MN locked, like the date): look again.
+      if (account(app)) return then();
       b.disabled = true;
       try {
-        answer(account(app) ? await checkAccess(app) : await signIn(app));
+        answer(await signIn(app));
       } finally {
         b.disabled = false;
       }
     };
     el.querySelector('.lk-g')?.addEventListener('click', (e) => void go(e.currentTarget as HTMLButtonElement));
-    el.querySelector('.lk-other')?.addEventListener('click', async () => {
-      await signOut(app);
-      answer(await signIn(app));
-    });
     el.querySelector('.lk-copy')!.addEventListener('click', () => void copy(app, state.phone, 'Phone code copied'));
     el.querySelector('.back-btn')?.addEventListener('click', () => o.back?.());
     el.querySelector('.lk-adult')?.addEventListener('click', async () => {

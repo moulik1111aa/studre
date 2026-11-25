@@ -85,7 +85,8 @@ const tagFor = (it: GuideItem, store: boolean, owned: boolean): string => {
   return '<span class="gd-plan">Free</span>';
 };
 
-/** The Guide page. `store`: the Play build, where some features come with MN ×. */
+/** The Guide page. `store`: MN × is its own thing on this phone (sold by Play, or asked for on the
+ *  app shared by link), so features say whether they come with it. */
 export function guideHtml(kidNames: string[], store: boolean, owned: boolean): string {
   const who = kidNames.length === 1 ? esc(kidNames[0]) : kidNames.length ? 'your children' : 'your child';
   const start = `<section class="pa-sec gd-start">

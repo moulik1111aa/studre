@@ -1,15 +1,17 @@
-// Unlocking MN with an approved Google account (decided 5 Nov): the owner approves each
-// account; the phone remembers the approval and re-checks whenever it is online. Without a
-// check for 14 days (or with the clock turned back) it asks to connect again. Guests without
-// Google use the phone-code keys (core/access.ts).
+// MN × given by the owner to a Google account, on the app shared by link (decided 25 Nov: anyone
+// may sign in with Google and use MN; MN × is asked for, and the owner gives it, with an end date
+// or none). The phone remembers the owner's answer and checks it again whenever it is online.
+// Without a check for 14 days (or with the clock turned back) MN × waits for the next check.
+// (Before 25 Nov this unlocked the app itself; the save keeps the same shape, so accounts approved
+// then keep MN ×.)
 
 export const OFFLINE_DAYS = 14;
 const DAY = 86_400_000;
 
-/** What this phone remembers about its Google approval (kept in the save, on this phone). */
+/** What this phone remembers about the owner's MN × for the signed-in account (kept in the save). */
 export interface GoogleGate {
   email: string;
-  /** Approved until (ms); 0 = no end date. */
+  /** MN × until (ms); 0 = no end date. */
   until: number;
   /** The last time the cloud confirmed it (ms), and the latest time this phone has seen. */
   checkedAt: number;
@@ -30,10 +32,10 @@ export function gateState(g: GoogleGate | undefined, now: number): GateState {
   return { ok: true, email: g.email, until: g.until, checkBy };
 }
 
-/** After the cloud answers: approved (until), or not (null clears it). */
-export function confirmGate(g: GoogleGate | undefined, email: string, approvedUntil: number | null, now: number): GoogleGate | undefined {
-  if (approvedUntil === null) return undefined;
-  return { email, until: approvedUntil, checkedAt: now, maxSeen: Math.max(now, g?.maxSeen ?? 0) };
+/** After the cloud answers: given (until), or not (null clears it). */
+export function confirmGate(g: GoogleGate | undefined, email: string, givenUntil: number | null, now: number): GoogleGate | undefined {
+  if (givenUntil === null) return undefined;
+  return { email, until: givenUntil, checkedAt: now, maxSeen: Math.max(now, g?.maxSeen ?? 0) };
 }
 
 /** Keep the latest time seen moving forward (for the clock check). */

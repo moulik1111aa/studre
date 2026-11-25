@@ -174,7 +174,7 @@ export function build({ outDir = dist } = {}) {
       .join('\n'),
   );
   const appSrc = bundle(join(src, 'main.ts'));
-  // MN_STORE=play: the Google Play build (no keys or approvals; MN Plus is sold through Play).
+  // MN_STORE=play: the Google Play build (no keys or lock; MN × is sold through Play).
   const store = process.env.MN_STORE === 'play' ? 'play' : '';
   const buildInfo = { version: JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version, builtAt: new Date().toISOString(), firebaseKey: firebaseKey(), store };
   const scriptFor = (info) =>

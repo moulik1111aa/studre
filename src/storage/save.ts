@@ -209,7 +209,7 @@ export interface Access {
   /** Owner's phone only: the master key and the keys made. */
   master?: string;
   issued?: IssuedKey[];
-  /** Unlocked with an approved Google account (core/gate.ts). */
+  /** MN × the owner gave the signed-in Google account, as last checked (core/gate.ts). */
   google?: GoogleGate;
 }
 
@@ -360,7 +360,7 @@ function parse(raw: string | null): SaveData | null {
       faceoff,
       children,
     } as SaveData;
-    // The Play build has no access keys or approvals, so it keeps none (an older copy's are dropped).
+    // The Play build has no access keys or owner's MN ×, so it keeps none (an older copy's are dropped).
     if ((globalThis as { __BUILD__?: { store?: string } }).__BUILD__?.store === 'play') delete out.access;
     return out;
   } catch {

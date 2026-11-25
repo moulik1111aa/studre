@@ -57,7 +57,7 @@ export class App {
   }
   /** Does this phone have MN × (always outside the Play build)? Set at boot by ui/membership.ts. */
   plus: () => boolean = () => true;
-  /** The Play Store build: no keys or approvals, and MN × is sold. */
+  /** The Play Store build: no keys or lock, and MN × is sold. */
   get store(): boolean {
     if (this.storeBuild) return true;
     // #unless play

@@ -1,8 +1,8 @@
 // Talking to Google: Firebase Auth (sign in with the Google ID token from the phone, keep the
 // session fresh) and Firestore (the family document and one document per child), over their
 // REST interfaces, so no Firebase library is bundled. A memory stand-in with the same shape
-// runs in browser tests. The approvals, the owner's tools and the stand-in are not in the Play
-// build (`#unless play`).
+// runs in browser tests. MN × requests (the app shared by link), the owner's tools and the
+// stand-in are not in the Play build (`#unless play`).
 
 import type { CloudChild, FamilyDoc } from '../core/cloud.ts';
 import { CHILD_ID, cleanFamilyDoc } from '../core/clean.ts';
@@ -32,7 +32,7 @@ export interface Session {
 
 export type CloudErrorKind = 'offline' | 'signed-out' | 'quota' | 'denied' | 'other';
 // #unless play
-/** The account that approves people (also written into firestore.rules). */
+/** The owner's account: gives MN × on the app shared by link (the cloud's rules know it by account id). */
 export const OWNER_EMAIL = 'moulik1111a@gmail.com';
 // #end
 
@@ -45,14 +45,14 @@ export class CloudError extends Error {
 }
 
 // #unless play
-/** An approved Google account (only the owner writes these). `until` 0 = no end date. */
+/** A Google account the owner gave MN × to (only the owner writes these). `until` 0 = no end date. */
 export interface AccessEntry {
   email: string;
   name: string;
   until: number;
   addedAt: number;
 }
-/** Someone who signed in but isn't approved yet. */
+/** A parent asking for MN × (written by them, read by the owner). */
 export interface AccessRequest {
   uid: string;
   email: string;
@@ -96,9 +96,13 @@ export interface OwnerKey {
 /** What the app needs from the cloud. */
 export interface CloudBackend {
   // #unless play
-  /** This account's approval (null: not approved). */
+  /** MN × from the owner for this account (null: not given). */
   myAccess(): Promise<AccessEntry | null>;
+  /** Ask the owner for MN ×. */
   requestAccess(r: Omit<AccessRequest, 'uid' | 'email' | 'name'>): Promise<void>;
+  /** This account's open request (null: none, or the owner has answered it). */
+  myRequest(): Promise<{ at: number } | null>;
+  dropMyRequest(): Promise<void>;
   checkIn(deviceId: string, d: CheckIn['devices'][string]): Promise<void>;
   // The owner's tools.
   listAccess(): Promise<AccessEntry[]>;
@@ -294,6 +298,20 @@ export class FirebaseRest implements CloudBackend {
   async requestAccess(r: Omit<AccessRequest, 'uid' | 'email' | 'name'>): Promise<void> {
     await this.patch(`requests/${this.me.uid}`, { email: this.me.email, name: this.me.name, phone: r.phone, device: r.device, version: r.version, at: r.at });
   }
+  async myRequest(): Promise<{ at: number } | null> {
+    // Refused (older cloud rules) counts as no open request, so MN × itself is still checked.
+    const res = await this.fs('GET', `requests/${this.me.uid}`).catch((e: CloudError) => {
+      if (e.kind === 'denied') return null;
+      throw e;
+    });
+    if (!res || res.status === 404) return null;
+    if (!res.ok) throw new CloudError('other', `Cloud error ${res.status}`);
+    const at = Number(unfields(((await res.json()) as { fields?: Record<string, FsValue> }).fields).at);
+    return { at: Number.isFinite(at) && at > 0 ? at : 0 };
+  }
+  async dropMyRequest(): Promise<void> {
+    await this.remove(`requests/${this.me.uid}`);
+  }
   async checkIn(deviceId: string, d: CheckIn['devices'][string]): Promise<void> {
     await this.patch(`checkins/${this.me.uid}`, { email: this.me.email, name: this.me.name, devices: { [deviceId]: d } }, ['email', 'name', `devices.${deviceId}`]);
   }
@@ -379,7 +397,7 @@ export class FirebaseRest implements CloudBackend {
     const r2 = await this.fs('PATCH', this.family, '', { fields: fields({ v: 1, deletedAt: Date.now() }) });
     if (!r2.ok) throw new CloudError('other', `Cloud error ${r2.status}`);
   }
-  /** Delete the account: every child, the family document, the approval request and phone
+  /** Delete the account: every child, the family document, any MN × request and phone
    *  check-ins (no note left behind, since no phone can sign in to it again), then the sign-in. */
   async deleteAccount(): Promise<void> {
     const uid = this.me.uid;
@@ -459,6 +477,15 @@ export class MemoryCloud implements CloudBackend {
   async requestAccess(r: Omit<AccessRequest, 'uid' | 'email' | 'name'>) {
     const b = this.bag<AccessRequest>('requests');
     b[this.me.uid] = { ...r, uid: this.me.uid, email: this.me.email, name: this.me.name };
+    this.setBag('requests', b);
+  }
+  async myRequest() {
+    const r = this.bag<AccessRequest>('requests')[this.me.uid];
+    return r ? { at: r.at } : null;
+  }
+  async dropMyRequest() {
+    const b = this.bag<AccessRequest>('requests');
+    delete b[this.me.uid];
     this.setBag('requests', b);
   }
   async checkIn(deviceId: string, d: CheckIn['devices'][string]) {

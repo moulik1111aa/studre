@@ -16,12 +16,12 @@ import { enterChild, playLevel } from './ui/flow.ts';
 import { startReminders } from './ui/remindsync.ts';
 import { startInbox } from './ui/inbox.ts';
 // #unless play
-import { accessState, lockScreen } from './ui/access.ts';
+import { accessState, lockScreen, setOpenedBy } from './ui/access.ts';
 import { ownerScreen } from './ui/owner.ts';
 import { installTestHooks } from './testhooks.ts';
 // #end
 import { startCloud } from './ui/cloud.ts';
-import { hasPlus, onPlusChange, plusState, startPlus, storeBuild } from './ui/membership.ts';
+import { hasPlus, onPlusChange, plusState, startPlus } from './ui/membership.ts';
 
 
 /** The app once it exists, so a start-up failure can still offer "Save a copy of my data". */
@@ -42,18 +42,21 @@ async function boot(): Promise<void> {
   // When there is a week of unsaved progress, parents see the backup screen first (browser
   // test runs only when they ask for it with &backup).
   const home = () => (app.save.data.children.length ? whosPlayingScreen : welcomeScreen);
-  // Access keys: the app opens only with a key for this phone (or on the owner's phone).
-  // Browser test runs (?debug) skip it unless they ask for it with &lock.
-  // The Play Store build has no keys or approvals: anyone may use it (MN × is sold there), and
-  // none of this is in it.
+  // The app shared by link opens with Google sign-in, a key for this phone, or on the owner's
+  // phone; how it opened decides MN × (ui/access.ts). Browser test runs (?debug) skip the lock,
+  // with everything included, unless they ask for it with &lock.
+  // The Play Store build has no keys or lock: anyone may use it (MN × is sold there), and none
+  // of this is in it.
   let locked = false;
   // #unless play
   const gated = !app.storeBuild && (!!native || !app.debug || params.has('lock'));
+  if (!gated) setOpenedBy(app, 'open');
   // #end
   const gate = async (how: 'fade' | 'liquid' = 'liquid') => {
     // #unless play
     const st = gated ? await accessState(app) : null;
     locked = !!st?.locked;
+    if (gated) setOpenedBy(app, st && !st.locked ? st.via : null);
     if (st?.locked) return void app.show(lockScreen(st, () => void gate()), how);
     // #end
     void app.show(home(), how);
@@ -81,17 +84,18 @@ async function boot(): Promise<void> {
   document.addEventListener('visibilitychange', async () => {
     if (document.visibilityState !== 'visible' || !gated || locked) return;
     const st = await accessState(app);
+    setOpenedBy(app, st.locked ? null : st.via);
     if (st.locked) {
       locked = true;
       void app.show(lockScreen(st, () => void gate()));
     }
   });
   // #end
-  // Shapes, Print and Precision are MN × looks: without MN × (Play build) they show as Notebook until MN × is on
-  // again. The saved choice is kept. While MN × is still being checked with Play, the look stays as it was.
+  // Shapes, Print and Precision are MN × looks: without MN × they show as Notebook until MN × is on
+  // again. The saved choice is kept. While MN × is still being checked, the look stays as it was.
   const fitLook = () => {
     const saved = app.save.data.settings.theme;
-    if (!PLUS_THEMES.includes(saved) || !storeBuild(app) || new URLSearchParams(location.search).has('theme')) return;
+    if (!PLUS_THEMES.includes(saved) || new URLSearchParams(location.search).has('theme')) return;
     app.applyTheme(plusState(app) === 'off' ? 'studio' : saved);
   };
   fitLook();
@@ -132,6 +136,8 @@ async function boot(): Promise<void> {
   const demo = params.get('demo');
   const seeded = app.debug && demo ? seedDemo(app, demo, { coins: Number(params.get('coins')) || 0, age: Number(params.get('age')) || 8, tips: params.has('tips') }) : null;
   if (seeded) {
+    // A demo run with &lock: MN × as the lock check finds it (a demo skips the lock screen).
+    if (gated) void accessState(app).then((st) => setOpenedBy(app, st.locked ? null : st.via));
     const child = app.child!;
     if (params.has('play')) playLevel(app, child, seeded);
     else enterChild(app, child);

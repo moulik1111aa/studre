@@ -91,6 +91,31 @@ test('a child copy goes up as bytes and comes back the same', async () => {
   assert.deepEqual(await b.getChild('c1'), { childId: 'c1', updatedAt: 123, device: 'dA', data: 'AAEC' });
 });
 
+test('asking for MN ×: the request goes to requests/{uid} with only the fields the rules allow, is read back, and is tidied away', async () => {
+  let stored: { fields: Record<string, unknown> } | null = null;
+  const g = fakeGoogle((c) => {
+    assert.match(c.url, /documents\/requests\/u1(\?|$)/);
+    if (c.method === 'PATCH') {
+      stored = JSON.parse(c.body!);
+      return { json: stored };
+    }
+    if (c.method === 'DELETE') {
+      stored = null;
+      return { json: {} };
+    }
+    return stored ? { json: stored } : { status: 404 };
+  });
+  const b = new FirebaseRest(cfg, live(), () => undefined, g.http);
+  assert.equal(await b.myRequest(), null);
+  await b.requestAccess({ phone: 'AAAA-BBBB', device: 'Phone AAAA-BBBB', version: 'v1', at: 1234 });
+  assert.deepEqual(Object.keys(stored!.fields).sort(), ['at', 'device', 'email', 'name', 'phone', 'version']);
+  assert.equal(fromFs(stored!.fields.email as never), 'a@b.com');
+  assert.deepEqual(await b.myRequest(), { at: 1234 });
+  await b.dropMyRequest();
+  assert.equal(g.calls.at(-1)!.method, 'DELETE');
+  assert.equal(await b.myRequest(), null);
+});
+
 test('owner lists, approval, and errors', async () => {
   const g = fakeGoogle((c) => {
     if (c.url.includes('/requests?')) return { json: { documents: [{ name: 'projects/x/databases/(default)/documents/requests/u9', fields: toFs({ email: 'z@y.com', name: 'Zed', phone: 'AAAA-BBBB', device: 'Phone AAAA-BBBB', version: 'v1', at: 9 }).mapValue.fields } ] } };

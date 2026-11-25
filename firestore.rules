@@ -6,10 +6,11 @@ rules_version = '2';
 //   families/{uid}            a family's sync document: its own grown-up only
 //   families/{uid}/children/* one child each: the gzipped, checked backup
 //
-// The shared APK's approvals (not used by the Play Store build):
-//   access/{email}            the owner's approved Google accounts (only the owner writes them)
-//   requests/{uid}            "please let me in": written by the person, read by the owner
-//   checkins/{uid}            which phones an account uses, and when (read by the owner)
+// MN × on the shared APK (not used by the Play Store build). Anyone may sign in and back up;
+// MN × is asked for and given by the owner:
+//   access/{email}            accounts the owner gave MN × to (only the owner writes them)
+//   requests/{uid}            "please may I have MN ×": written by the parent, read by the owner
+//   checkins/{uid}            which phones an account with MN × uses, and when (read by the owner)
 //   owner/keys                the owner's list of phone-code keys made
 //
 // The owner is an account id, never an email address. __OWNER_UID__ is filled in from the
@@ -93,9 +94,9 @@ service cloud.firestore {
       }
     }
 
-    // ── the shared APK's approvals (the owner by account id) ────────────────
+    // ── MN × on the shared APK (the owner by account id) ────────────────────
     match /access/{addr} {
-      // Each person may read the one entry for their own address; the owner reads and writes all.
+      // Each parent may read the one entry for their own address; the owner reads and writes all.
       allow get: if isOwner() || (signedIn() && myEmail() == addr);
       allow list, write: if isOwner();
     }

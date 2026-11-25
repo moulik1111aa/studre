@@ -1,8 +1,8 @@
 // Google sign-in on the phone: the parent signs in (behind the parent check, or on the
-// lock screen), the owner approves the account, and then the app unlocks and keeps the
-// family's progress backed up and in sync. (The Play build has no approvals: signing in is
-// enough, and none of the approval code is in it.) All the deciding is in core/cloud.ts and
-// core/gate.ts; the talking to Google is in platform/cloudapi.ts.
+// lock screen), and the family's progress is backed up and kept in sync. On the app shared by
+// link, signing in also opens MN (no approval since 25 Nov), and a parent may ask the owner
+// for MN × (none of that is in the Play build, where MN × is bought). All the deciding is in
+// core/cloud.ts and core/gate.ts; the talking to Google is in platform/cloudapi.ts.
 
 import { cleanRules } from '../core/clean.ts';
 import { escv, esc, type App } from './app.ts';
@@ -11,6 +11,7 @@ import { CloudError, FirebaseRest, type CloudBackend, type Session } from '../pl
 // #unless play
 import { MemoryCloud, OWNER_EMAIL } from '../platform/cloudapi.ts';
 import { confirmGate, gateState, seen, type GateState } from '../core/gate.ts';
+import { plusChanged } from './pluschange.ts';
 // #end
 import { decodeChild, familyRules, freshMemo, planSync, POLICY_VERSION, sameRules, type SyncMemo } from '../core/cloud.ts';
 import type { Backup } from '../core/backup.ts';
@@ -94,52 +95,93 @@ async function device(app: App): Promise<{ id: string; label: string; phone: str
   return { id: `d${phone.replace(/[^A-Za-z0-9]/g, '')}`, label: `Phone ${phone}`, phone };
 }
 
-// ── unlocking with Google ───────────────────────────────────────────────────
+// ── MN × from the owner (the app shared by link) ────────────────────────────
 
 // #unless play
-/** Unlocked by an approved Google account on this phone? (Works offline for 14 days.) */
-export function googleGate(app: App): GateState {
+/** MN × the owner gave the signed-in account, as this phone last heard (works offline for 14 days). */
+export function plusGrant(app: App): GateState {
   const g = app.save.data.access?.google;
   const now = Date.now();
+  // Another account signed in on this phone: its MN × is its own.
+  const who = account(app)?.email;
+  if (g && who && g.email !== who) return { ok: false, reason: 'none' };
   const st = gateState(g, now);
   if (g && st.ok && now > g.maxSeen + 60_000) app.save.update((d) => (d.access!.google = seen(d.access!.google, now)));
   return st;
 }
-// #end
 
-export type AccessAnswer = 'approved' | 'waiting' | 'offline' | 'signed-out' | 'error';
+/** What this phone knows about asking for MN × (per account): when it last checked, the open
+ *  request's time (0: none), and when MN × last ended (0: it didn't). */
+interface AskNote {
+  uid: string;
+  checkedAt: number;
+  askedAt: number;
+  endedAt: number;
+}
+const ASK_KEY = 'studyhard.mnx.ask';
+export function askNote(app: App): AskNote {
+  const uid = account(app)?.uid ?? '';
+  const n = readJson<AskNote>(ASK_KEY);
+  return n && n.uid === uid ? n : { uid, checkedAt: 0, askedAt: 0, endedAt: 0 };
+}
+const saveAsk = (n: AskNote) => ls.set(ASK_KEY, JSON.stringify(n));
 
-/** Ask the cloud whether this account is approved; ask the owner if not. */
-export async function checkAccess(app: App): Promise<AccessAnswer> {
+/** How often MN checks the owner's answer: often while a request is open, else a few times a day. */
+const CHECK_ASKED = 10 * 60_000;
+const CHECK_EVERY = 6 * 3_600_000;
+
+export type PlusCheck = 'on' | 'asked' | 'off' | 'offline' | 'signed-out' | 'error';
+
+/**
+ * Ask the cloud for this account's MN × (and whether a request is open). Not more often than
+ * every few hours (every 10 minutes while a request is open) unless `force`.
+ */
+export async function checkPlus(app: App, force = false): Promise<PlusCheck> {
   const b = backend(app);
   const s = b?.session;
   if (!b || !s) return 'signed-out';
-  // The Play Store build has no approvals: every signed-in parent may back up.
-  if (app.store) return 'approved';
-  // #unless play
+  const before = plusGrant(app).ok;
+  const n = askNote(app);
+  const now = Date.now();
+  if (!force && now - n.checkedAt < (n.askedAt ? CHECK_ASKED : CHECK_EVERY) && now >= n.checkedAt) return before ? 'on' : n.askedAt ? 'asked' : 'off';
   try {
-    const e = await b.myAccess();
-    const now = Date.now();
-    const d = await device(app);
-    const ok = !!e && (!e.until || e.until > now);
+    const [e, r] = await Promise.all([b.myAccess(), b.myRequest()]);
+    const at = Date.now();
+    const ok = !!e && (!e.until || e.until > at);
     app.save.update((data) => {
       data.access ??= {};
-      data.access.google = confirmGate(data.access.google, s.email, ok ? e!.until : null, now);
+      data.access.google = confirmGate(data.access.google, s.email, ok ? e!.until : null, at);
     });
+    saveAsk({ uid: s.uid, checkedAt: at, askedAt: !ok && r ? r.at || at : 0, endedAt: !ok && e?.until ? e.until : 0 });
     if (ok) {
-      await b.checkIn(d.id, { phone: d.phone, label: d.label, version: appVersion(), at: now }).catch(() => undefined);
-      return 'approved';
+      const d = await device(app);
+      await b.checkIn(d.id, { phone: d.phone, label: d.label, version: appVersion(), at }).catch(() => undefined);
+      // The request has its answer: tidy it away.
+      if (r) await b.dropMyRequest().catch(() => undefined);
     }
-    await b.requestAccess({ phone: d.phone, device: d.label, version: appVersion(), at: now });
-    return 'waiting';
+    if (ok !== before) plusChanged();
+    return ok ? 'on' : r ? 'asked' : 'off';
   } catch (e) {
     return e instanceof CloudError ? (e.kind === 'offline' ? 'offline' : e.kind === 'signed-out' ? 'signed-out' : 'error') : 'error';
   }
-  // #end
-  return 'approved';
 }
 
-// #unless play
+/** Ask the owner for MN × (requests/{uid}: the parent's email and name, this phone's code and label). */
+export async function askForPlus(app: App): Promise<'sent' | 'offline' | 'signed-out' | 'error'> {
+  const b = backend(app);
+  const s = b?.session;
+  if (!b || !s) return 'signed-out';
+  const d = await device(app);
+  const at = Date.now();
+  try {
+    await b.requestAccess({ phone: d.phone, device: d.label, version: appVersion(), at });
+  } catch (e) {
+    return e instanceof CloudError ? (e.kind === 'offline' ? 'offline' : e.kind === 'signed-out' ? 'signed-out' : 'error') : 'error';
+  }
+  saveAsk({ ...askNote(app), uid: s.uid, askedAt: at, endedAt: 0 });
+  return 'sent';
+}
+
 const appVersion = (): string => (globalThis as { MN_VERSION?: string }).MN_VERSION ?? 'web';
 // #end
 
@@ -178,9 +220,9 @@ async function googleIdToken(app: App): Promise<{ token: string } | { cancelled:
   return { error: r.error ?? 'Google sign-in didn’t work.' };
 }
 
-export type SignInResult = AccessAnswer | 'cancelled';
+export type SignInResult = 'signed-in' | 'cancelled' | 'offline' | 'error';
 
-/** Consent, the account sheet, Firebase, then the approval check. */
+/** Consent, the account sheet, Firebase, then the first backup. */
 export async function signIn(app: App): Promise<SignInResult> {
   const b = backend(app);
   if (!b) return 'error';
@@ -194,18 +236,20 @@ export async function signIn(app: App): Promise<SignInResult> {
   try {
     await b.signIn(t.token);
   } catch (e) {
-    app.toast(e instanceof CloudError && e.kind === 'offline' ? 'No internet connection. Connect and try again.' : 'Google sign-in didn’t work. Please try again.', 5000);
-    return 'error';
+    const offline = e instanceof CloudError && e.kind === 'offline';
+    app.toast(offline ? 'No internet connection. Connect and try again.' : 'Google sign-in didn’t work. Please try again.', 5000);
+    return offline ? 'offline' : 'error';
   }
-  const a = await checkAccess(app);
-  if (a === 'approved') {
-    await syncNow(app, true);
-    // A thank-you for the children: Plus gets a Cloud cape (shown to each child once).
-    let got: Child[] = [];
-    app.save.update((d) => (got = giveThanks(d.children, Date.now())));
-    if (got.length) setTimeout(() => app.toast(`Thank you! ${got.length === 1 ? got[0].name : 'Each child'} will find a present for Plus next time they play.`, 5000), 5200);
-  }
-  return a;
+  // The app shared by link: does the owner already give this account MN ×? (Quickly; it carries on regardless.)
+  // #unless play
+  if (!app.store) await Promise.race([checkPlus(app, true), new Promise((r) => setTimeout(r, 4000))]);
+  // #end
+  await syncNow(app, true);
+  // A thank-you for the children: Plus gets a Cloud cape (shown to each child once).
+  let got: Child[] = [];
+  app.save.update((d) => (got = giveThanks(d.children, Date.now())));
+  if (got.length) setTimeout(() => app.toast(`Thank you! ${got.length === 1 ? got[0].name : 'Each child'} will find a present for Plus next time they play.`, 5000), 5200);
+  return 'signed-in';
 }
 
 /** Sign out on this phone. Progress stays on the phone. */
@@ -218,9 +262,16 @@ export async function signOut(app: App): Promise<void> {
   ls.del(MEMO_KEY);
   ls.del(OTHER_KEY);
   await app.native?.googleSignOut?.().catch(() => undefined);
+  // #unless play
+  const had = plusGrant(app).ok;
+  ls.del(ASK_KEY);
+  // #end
   app.save.update((d) => {
     if (d.access) delete d.access.google;
   });
+  // #unless play
+  if (had) plusChanged();
+  // #end
 }
 
 /** Delete everything this family has in the cloud, then sign out. */
@@ -251,14 +302,14 @@ export async function deleteCloudAccount(app: App): Promise<boolean> {
 
 // ── syncing ─────────────────────────────────────────────────────────────────
 
-export type SyncOutcome = { ok: true; added: Child[]; dropped: string[]; sent: number; at: number } | { ok: false; why: 'signed-out' | 'not-approved' | 'offline' | 'busy' | 'error' | 'other-phone'; message: string };
+export type SyncOutcome = { ok: true; added: Child[]; dropped: string[]; sent: number; at: number } | { ok: false; why: 'signed-out' | 'offline' | 'busy' | 'error' | 'other-phone'; message: string };
 
 /**
- * Without MN × (Play Store build) the backup is an online backup from one phone: the phone
- * that last backed up. Another phone signing in takes it over (bringing the family's
- * progress with it); the first phone then stops until a parent takes it back.
+ * Without MN × the backup is an online backup from one phone: the phone that last backed up.
+ * Another phone signing in takes it over (bringing the family's progress with it); the first
+ * phone then stops until a parent takes it back.
  */
-export const onePhone = (app: App): boolean => app.store && !app.plus();
+export const onePhone = (app: App): boolean => !app.plus();
 const OTHER_KEY = 'studyhard.cloud.other';
 /** The other phone that keeps the online backup now (one-phone backup), if any. */
 export const otherPhone = (): string | null => ls.get(OTHER_KEY);
@@ -292,12 +343,6 @@ export function syncNow(app: App, asking = false, takeOver = false): Promise<Syn
 async function doSync(app: App, asking: boolean, takeOver: boolean): Promise<SyncOutcome> {
   const b = backend(app);
   if (!b?.session) return { ok: false, why: 'signed-out', message: 'Not signed in.' };
-  // #unless play
-  if (!app.store && !googleGate(app).ok && !isOwnerAccount(app)) {
-    const a = await checkAccess(app);
-    if (a !== 'approved') return { ok: false, why: a === 'offline' ? 'offline' : 'not-approved', message: a === 'waiting' ? 'Waiting for approval.' : 'Couldn’t check the account.' };
-  }
-  // #end
   const startedAt = saves;
   const d = await device(app);
   try {
@@ -440,6 +485,17 @@ export function startCloud(app: App): void {
     if (document.visibilityState === 'visible' && account(app) && Date.now() - lastSync() > 5 * 60_000) later(1500);
   });
   if (account(app)) later(2500);
+  // The app shared by link: the owner's answer about MN × (a few times a day; every 10 minutes
+  // while a request is open), when MN opens and when it comes back.
+  // #unless play
+  if (!app.store) {
+    const check = () => void (account(app) && checkPlus(app));
+    check();
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') check();
+    });
+  }
+  // #end
 }
 
 /** "Last backed up 5 min ago". */

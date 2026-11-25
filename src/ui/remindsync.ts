@@ -10,6 +10,7 @@ import { skillById } from '../core/areas/index.ts';
 import { FOCUS_GOAL } from '../core/focus.ts';
 import { focusFor, startFocus } from './focus.ts';
 import { hasPlus } from './membership.ts';
+import { onPlusChange } from './pluschange.ts';
 import { streaks } from '../core/stats.ts';
 import { AVATARS } from './icons.ts';
 import { levelInfo, questBadge } from './adventure.ts';
@@ -148,6 +149,8 @@ export function startReminders(app: App): void {
     timer = window.setTimeout(() => void push(app), 1200);
   };
   app.save.onSaved(later);
+  // MN × turning on or off (found at start, or answered later) changes the Focus widget.
+  onPlusChange(later);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') void push(app);
   });

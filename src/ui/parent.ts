@@ -40,7 +40,10 @@ import { lockSetupScreen } from './grownup.ts';
 // #unless play
 import { accessState, lockScreen, niceDay } from './access.ts';
 // #end
-import { hasPlus, needPlus, offeredTrialDays, plansCta, plansNow, plusScreen, plusTag, plusVideoFor, storeBuild } from './membership.ts';
+import { hasPlus, needPlus, offeredTrialDays, plansCta, plansNow, plusCta, plusIsExtra, plusScreen, plusTag, plusVideoFor, storeBuild } from './membership.ts';
+// #unless play
+import { askCtaHtml, checkAgain, requestPlus } from './membership.ts';
+// #end
 import { freshProgress } from '../core/path.ts';
 import { quietSettingsScreen } from './quiet.ts';
 import { quietSummary } from '../core/quiet.ts';
@@ -269,7 +272,7 @@ function premiumHtml(app: App): string {
   const hero = `<div class="pm-hero">
       <div class="pm-mascot" aria-hidden="true">${plusSvg({ cls: 'alive shiny', noShadow: true })}</div>
       <p class="pm-brand" aria-label="MN Times">MN ${timesMarkSvg()}</p>
-      ${on ? `<p class="pm-on">${store ? 'MN × is on for your family' : 'MN × is included in this version'}</p><h2 class="pm-h">Everything below is yours.</h2>` : '<h2 class="pm-h">See where to help, at a glance.</h2>'}
+      ${on ? `<p class="pm-on">${plusIsExtra(app) ? 'MN × is on for your family' : 'MN × is included in this version'}</p><h2 class="pm-h">Everything below is yours.</h2>` : '<h2 class="pm-h">See where to help, at a glance.</h2>'}
       <button class="pm-video"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.5v9l7.5-4.5z" fill="currentColor"/></svg>Watch the 1-minute video</button>
     </div>`;
   const peek = kid ? `<section class="pm-proof"><p class="pm-cap">${on ? 'Your full report' : 'Here’s what MN × shows you'}</p>${reportPeek(app, kid, on)}</section>` : '';
@@ -280,11 +283,14 @@ function premiumHtml(app: App): string {
   const priced = offers.map((o) => `${esc(o.price)} ${o.plan === 'lifetime' ? 'once' : esc(o.per)}`);
   const plans = !store || on || !priced.length ? '' : `<p class="pm-price">Plans: ${priced.length > 1 ? `${priced.slice(0, -1).join(', ')} or ${priced[priced.length - 1]}` : priced[0]}.</p>`;
   const trial = offeredTrialDays(app);
-  const cta = !store
-    ? '<div class="pm-cta-bar"><p class="pm-incl">Everything in MN × is included in this version of MN.</p></div>'
-    : on
-      ? '<div class="pm-cta-bar"><button class="pm-buy ghost pm-plans">Manage your plan</button></div>'
-      : `<div class="pm-cta-bar"><button class="pm-buy pm-plans">${esc(plansCta(app))}</button><small>${trial ? 'Cancel any time in Google Play. No charge if you cancel during the free days.' : 'Cancel any time in Google Play.'}</small></div>`;
+  // The app shared by link: included (keys), on, or "Request MN ×" (ui/membership.ts).
+  let cta = '';
+  // #unless play
+  if (!store) cta = askCtaHtml(app);
+  // #end
+  cta ||= on
+    ? '<div class="pm-cta-bar"><button class="pm-buy ghost pm-plans">Manage your plan</button></div>'
+    : `<div class="pm-cta-bar"><button class="pm-buy pm-plans">${esc(plansCta(app))}</button><small>${trial ? 'Cancel any time in Google Play. No charge if you cancel during the free days.' : 'Cancel any time in Google Play.'}</small></div>`;
   return `<div class="pm-page">${hero}${peek}${gains}${free}${plans}</div>${cta}`;
 }
 
@@ -294,7 +300,7 @@ function pageHtml(app: App, p: Page): string {
   return `${invite}${p === 'kids' ? guideInvite(app) : ''}${p === 'kids' && !invite ? trialNudge(app) : ''}${html}`;
 }
 
-const guidePage = (app: App): string => guideHtml(app.save.data.children.map((c) => c.name), storeBuild(app), hasPlus(app));
+const guidePage = (app: App): string => guideHtml(app.save.data.children.map((c) => c.name), plusIsExtra(app), hasPlus(app));
 
 /** On the Children page until the Guide has been opened (or this is closed): an invitation to it. */
 function guideInvite(app: App): string {
@@ -438,9 +444,7 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
   on('.restore-kid', 'click', () => void restoreFromFile(app, () => void app.show(parentScreen)));
   on('.cl-in', 'click', async () => {
     const r = await signIn(app);
-    if (r === 'approved') app.toast(onePhone(app) ? 'Signed in. An online backup of your family’s progress is kept with Google.' : 'Signed in. Progress is backed up and syncs on every phone.', 5000);
-    else if (r === 'waiting') app.toast('Signed in. Your account is waiting to be approved; backup starts once it is.', 6000);
-    else if (r === 'offline') app.toast('No internet connection. Connect and try again.');
+    if (r === 'signed-in') app.toast(onePhone(app) ? 'Signed in. An online backup of your family’s progress is kept with Google.' : 'Signed in. Progress is backed up and syncs on every phone.', 5000);
     render(false);
   });
   on('.cl-sync', 'click', async (b) => {
@@ -453,7 +457,7 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
       app.toast(r.added.length ? `Backed up. ${r.added.map((c) => c.name).join(' and ')} came from the cloud.` : 'Backed up.');
       if (r.added.length || r.dropped.length) render(false);
     } else {
-      app.toast(r.why === 'not-approved' ? 'Your account isn’t approved yet.' : r.message);
+      app.toast(r.message);
       if (r.why === 'other-phone') render(false);
     }
   });
@@ -465,7 +469,8 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
   });
   on('.mp-from-cloud', 'click', () => void app.show(plusScreen(parentScreen)));
   on('.cl-out', 'click', async () => {
-    const viaGoogle = !!app.save.data.access?.google && !app.save.data.access?.key;
+    // The app shared by link, opened with this account (no key): it needs Google or a key next time.
+    const viaGoogle = !storeBuild(app) && !app.save.data.access?.key && !app.save.data.access?.master;
     const { result } = app.sheet(`<h2>Sign out of Google?</h2><p>Progress stays on this phone, but stops backing up.${viaGoogle ? ' MN was unlocked with this account, so it will need Google or a key to open next time.' : ''}</p>`, [
       { label: 'Sign out', value: true, kind: 'danger' },
       { label: 'Cancel', value: false, kind: 'ghost', back: true },
@@ -598,9 +603,22 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
   on('.erase-row', 'click', () => void eraseEverything(app));
   on('.privacy-row', 'click', () => openLink(app, PRIVACY_URL));
   on('.pm-q', 'click', (b) => {
-    const sell = storeBuild(app) && !hasPlus(app);
-    void app.show(mnxPreviewScreen(b.dataset.demo as DemoId, parentScreen, sell ? plansCta(app) : null, () => void app.show(plusScreen(parentScreen))));
+    const cta = plusCta(app, parentScreen);
+    void app.show(mnxPreviewScreen(b.dataset.demo as DemoId, parentScreen, cta?.label ?? null, () => cta?.act()));
   });
+  // The app shared by link: ask the owner for MN ×, or look for their answer.
+  // #unless play
+  on('.pm-ask', 'click', async (b) => {
+    (b as HTMLButtonElement).disabled = true;
+    await requestPlus(app);
+    render(false);
+  });
+  on('.pm-check', 'click', async (b) => {
+    (b as HTMLButtonElement).disabled = true;
+    await checkAgain(app);
+    render(false);
+  });
+  // #end
   on('.pa-nudge-go', 'click', () => {
     openParentOn('premium');
     render(true);

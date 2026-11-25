@@ -1,5 +1,6 @@
-// MN Access: the owner's web page for approving who can use MN, from any browser (an iPhone
-// too; it can be added to the home screen). Signs in with Google (Firebase's popup), then
+// MN Access: the owner's web page for MN × requests (parents who signed in with Google and
+// asked for MN ×) and phone-code keys, from any browser (an iPhone too; it can be added to the
+// home screen). Anyone may open MN by signing in with Google since 25 Nov; MN × is given here. Signs in with Google (Firebase's popup), then
 // uses the same cloud client as the app (platform/cloudapi.ts). Only the owner's account can
 // read or change the lists; the cloud's rules check that too.
 
@@ -86,10 +87,10 @@ const why = (e: unknown) => (e instanceof CloudError ? e.message : 'Something we
 
 let tab: 'accounts' | 'keys' = location.hash === '#keys' ? 'keys' : 'accounts';
 const header = (s: Session | null) => `<header>
-  <div class="brand"><img src="../assets/icon-512.png" alt=""><div><h1>MN Access</h1><small>Who can use MN</small></div></div>
+  <div class="brand"><img src="../assets/icon-512.png" alt=""><div><h1>MN Access</h1><small>MN × and keys</small></div></div>
   ${s ? `<div class="who"><span>Signed in as <b>${esc(s.email)}</b></span><button class="btn out">Sign out</button></div>` : ''}
 </header>
-${s && s.email === OWNER_EMAIL ? `<nav class="tabs" role="tablist"><button role="tab" data-tab="accounts" aria-selected="${tab === 'accounts'}">Google accounts</button><button role="tab" data-tab="keys" aria-selected="${tab === 'keys'}">Phone keys</button></nav>` : ''}`;
+${s && s.email === OWNER_EMAIL ? `<nav class="tabs" role="tablist"><button role="tab" data-tab="accounts" aria-selected="${tab === 'accounts'}">MN ×</button><button role="tab" data-tab="keys" aria-selected="${tab === 'keys'}">Phone keys</button></nav>` : ''}`;
 
 /** The tab buttons and Sign out, on every signed-in page. */
 function wireHeader() {
@@ -106,7 +107,7 @@ function wireHeader() {
 function signInPage(message = '') {
   root.innerHTML = `${header(null)}<div class="card signin">
     <h2>Sign in</h2>
-    <p>Use the owner’s Google account to see requests and approve people.</p>
+    <p>Use the owner’s Google account to see MN × requests and give MN ×.</p>
     <div class="gbtn"><button class="gsi-btn" type="button"><span class="gsi-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg></span><span>Sign in with Google</span></button></div>
     <p class="msg" role="alert">${esc(message)}</p>
   </div>`;
@@ -149,7 +150,7 @@ async function dashboard() {
   const s = be?.session;
   if (!be || !s) return signInPage();
   if (s.email !== OWNER_EMAIL) {
-    root.innerHTML = `${header(s)}<div class="card signin"><h2>Not the owner’s account</h2><p>${esc(s.email)} can’t approve people. Sign out and use ${esc(OWNER_EMAIL)}.</p></div>`;
+    root.innerHTML = `${header(s)}<div class="card signin"><h2>Not the owner’s account</h2><p>${esc(s.email)} can’t give MN ×. Sign out and use ${esc(OWNER_EMAIL)}.</p></div>`;
     root.querySelector('.out')!.addEventListener('click', () => void signOut());
     return;
   }
@@ -179,23 +180,23 @@ async function dashboard() {
 
   root.innerHTML = `${header(s)}
     <div class="stats">
-      <div class="card stat"><b>${waiting.length}</b><span>Waiting</span></div>
-      <div class="card stat"><b>${approved.length}</b><span>Approved</span></div>
+      <div class="card stat"><b>${waiting.length}</b><span>Asking</span></div>
+      <div class="card stat"><b>${approved.length}</b><span>Have MN ×</span></div>
       <div class="card stat"><b>${allPhones.size}</b><span>Phones</span></div>
     </div>
-    <section><h2>Waiting for approval <button class="btn refresh">Refresh</button></h2>
+    <section><h2>Asking for MN × <button class="btn refresh">Refresh</button></h2>
       <div class="card list">${
         waiting.length
           ? waiting
               .map(
                 (r) => `<div class="row req" data-uid="${esc(r.uid)}">
           <div class="id"><b>${esc(r.name || r.email)}</b><span>${esc(r.email)}</span><div class="phones"><span class="chip">📱 ${esc(r.phone)}</span><span class="chip">Asked ${ago(r.at)}</span></div></div>
-          <div class="acts">${lengthPicker('len')}<button class="btn primary ok">Approve</button><button class="btn danger no">Deny</button></div></div>`,
+          <div class="acts">${lengthPicker('len')}<button class="btn primary ok">Give MN ×</button><button class="btn danger no">Say no</button></div></div>`,
               )
               .join('')
-          : '<p class="empty">No one is waiting.</p>'
+          : '<p class="empty">No one is asking.</p>'
       }</div></section>
-    <section><h2>Approved <small>${approved.length} ${approved.length === 1 ? 'account' : 'accounts'}</small></h2>
+    <section><h2>Have MN × <small>${approved.length} ${approved.length === 1 ? 'account' : 'accounts'}</small></h2>
       <div class="card list">${
         approved.length
           ? approved
@@ -207,14 +208,14 @@ async function dashboard() {
             <span class="chip ${ended ? 'end' : 'ok'}">${!a.until ? 'No end date' : ended ? `Ended ${day(a.until)}` : `Until ${day(a.until)}`}</span>
             ${phones.length ? phones.map((p) => `<span class="chip">📱 ${esc(p.phone)} · seen ${ago(p.at)}</span>`).join('') : '<span class="chip">Not opened yet</span>'}
           </div></div>
-          <div class="acts">${lengthPicker('len')}<button class="btn change">Change end date</button><button class="btn danger rm">Remove</button></div></div>`;
+          <div class="acts">${lengthPicker('len')}<button class="btn change">Change end date</button><button class="btn danger rm">Turn off</button></div></div>`;
               })
               .join('')
           : '<p class="empty">No one yet.</p>'
       }</div></section>
-    <section><h2>Approve an email</h2>
-      <div class="card"><form class="add"><input type="email" class="email" placeholder="name@gmail.com" autocomplete="off" autocapitalize="none" spellcheck="false" required aria-label="Email address">${lengthPicker('len')}<button class="btn primary">Approve</button></form></div>
-      <p class="note">Approved people can sign in on their phone straight away. A removed account locks the next time that phone goes online (within 14 days at most). Phone-code keys keep working as before.</p>
+    <section><h2>Give MN × to an email</h2>
+      <div class="card"><form class="add"><input type="email" class="email" placeholder="name@gmail.com" autocomplete="off" autocapitalize="none" spellcheck="false" required aria-label="Email address">${lengthPicker('len')}<button class="btn primary">Give MN ×</button></form></div>
+      <p class="note">Anyone can sign in to MN with Google; parents ask for MN × in MN’s Parent area. MN × turns on or off on their phones the next time MN checks: a few times a day when they’re online (offline, within 14 days at most). Phone-code keys include MN ×, as before.</p>
     </section>`;
 
   const busy = async (b: HTMLButtonElement, fn: () => Promise<void>, done: string) => {
@@ -237,9 +238,9 @@ async function dashboard() {
       void busy(e.currentTarget as HTMLButtonElement, async () => {
         await be!.approve({ email: r.email, name: r.name, until: untilFrom(lenOf(row)), addedAt: Date.now() });
         await be!.dropRequest(r.uid);
-      }, `${r.name || r.email} is approved.`),
+      }, `${r.name || r.email} has MN × now.`),
     );
-    row.querySelector<HTMLButtonElement>('.no')!.addEventListener('click', (e) => void busy(e.currentTarget as HTMLButtonElement, () => be!.dropRequest(r.uid), 'Request removed.'));
+    row.querySelector<HTMLButtonElement>('.no')!.addEventListener('click', (e) => void busy(e.currentTarget as HTMLButtonElement, () => be!.dropRequest(r.uid), 'Request closed.'));
   });
   root.querySelectorAll<HTMLElement>('.acc').forEach((row) => {
     const a = approved.find((x) => x.email === row.dataset.email)!;
@@ -247,8 +248,8 @@ async function dashboard() {
       void busy(e.currentTarget as HTMLButtonElement, () => be!.approve({ ...a, until: untilFrom(lenOf(row)) }), 'End date changed.'),
     );
     row.querySelector<HTMLButtonElement>('.rm')!.addEventListener('click', (e) => {
-      if (!confirm(`Remove ${a.name || a.email}? MN locks on their phones the next time they go online.`)) return;
-      void busy(e.currentTarget as HTMLButtonElement, () => be!.removeAccess(a.email), `${a.name || a.email} is removed.`);
+      if (!confirm(`Turn off MN × for ${a.name || a.email}? It turns off on their phones the next time MN checks. They keep using MN.`)) return;
+      void busy(e.currentTarget as HTMLButtonElement, () => be!.removeAccess(a.email), `MN × is off for ${a.name || a.email}.`);
     });
   });
   root.querySelector<HTMLFormElement>('.add')!.addEventListener('submit', (e) => {
@@ -256,7 +257,7 @@ async function dashboard() {
     const form = e.currentTarget as HTMLFormElement;
     const email = form.querySelector<HTMLInputElement>('.email')!.value.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast('Type a whole email address.');
-    void busy(form.querySelector('button')!, () => be!.approve({ email, name: '', until: untilFrom(lenOf(form)), addedAt: Date.now() }), `${email} is approved.`);
+    void busy(form.querySelector('button')!, () => be!.approve({ email, name: '', until: untilFrom(lenOf(form)), addedAt: Date.now() }), `${email} has MN × now.`);
   });
 }
 

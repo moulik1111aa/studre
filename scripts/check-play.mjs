@@ -24,6 +24,8 @@ export const FORBIDDEN = [
   'myAccess', 'requestAccess', 'checkIn(', 'listAccess', 'listRequests', 'listCheckins', 'ownerKeys', 'approve(',
   '__app', '__screens', '__mockGoogle', '__mockBilling', '__syncNow', '__lesson', '__showLesson', '__opener', '__swipe',
   'seedDemo', 'MemoryCloud', 'MockBilling', 'studyhard.mockcloud', 'Tester made',
+  // asking the owner for MN × (the app shared by link; Play sells it instead)
+  'askForPlus', 'myRequest', 'plusGrant', 'sharedPlus', 'setOpenedBy', 'Request MN',
 ];
 
 /** The owner's email, from the shared build's code (it must not reach the Play bundle). */
