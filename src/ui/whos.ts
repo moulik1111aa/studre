@@ -1,9 +1,7 @@
 // Who's playing? Big avatar buttons for each child, plus the parent area.
 
 import { escv, html, esc, type App, type Screen } from './app.ts';
-import { swipeEntryHtml, swipeOn, swipeScreen } from './swipe.ts';
-import { quietNow } from './quiet.ts';
-import { niceTime } from '../core/quiet.ts';
+import { openSwipe, swipeEntryHtml, swipeOn } from './swipe.ts';
 import { ICONS, avatarHtml } from './icons.ts';
 import { brandMark } from './loader.ts';
 import { stagger, drawOn } from '../render/motion.ts';
@@ -41,11 +39,7 @@ export function whosPlayingScreen(app: App): Screen {
     }),
   );
   el.querySelector('.fo-entry')?.addEventListener('click', () => void app.show(faceoffSetupScreen(), 'liquid'));
-  el.querySelector('.sw-entry')?.addEventListener('click', () => {
-    const q = quietNow(app);
-    if (q) app.toast(`MN is resting now. It opens again at ${niceTime(q.until)}.`);
-    else void app.show(swipeScreen, 'liquid');
-  });
+  el.querySelector('.sw-entry')?.addEventListener('click', () => openSwipe(app));
   el.querySelector('.faceoff-btn')!.addEventListener('click', () => void app.show(faceoffSetupScreen(), 'liquid'));
   el.querySelector('.parent-btn')!.addEventListener('click', async () => {
     if (await app.grownUp('Parent area')) void app.show(parentScreen);

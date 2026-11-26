@@ -304,6 +304,69 @@ test('face-off: tug of war against a guest, scoreboard and coins', async ({ page
   expect(save.children[0].wallet.lifetime).toBeGreaterThanOrEqual(5);
 });
 
+test('bedtime stops MN Swipe and Face-off at the door and mid-game; a match’s time counts, and a rematch checks the time left (review fix 17)', async ({ page }) => {
+  type W = { __app: { show(m: unknown): void; save: { update(f: (d: { settings: Record<string, unknown>; children: { stats: { secondsByDay: Record<string, number> }; wallet: { todaySeconds: number } }[] }) => void): void } }; __screens: { whosPlayingScreen: unknown } };
+  await page.goto('/?debug&demo=%4012&noloader');
+  await expect(page.locator('.map')).toBeVisible();
+  const home = () => page.evaluate(() => { const w = window as unknown as W; w.__app.show(w.__screens.whosPlayingScreen); });
+  const bedtime = (on: boolean) => page.evaluate((on) => (window as unknown as W).__app.save.update((d) => { d.settings.quiet = { bed: { on, from: '00:00', to: '23:59' } }; d.settings.quietUnlockUntil = 0; }), on);
+  // Bedtime starts while it's checked again (every half minute, and when MN comes back).
+  const tick = () => page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  await page.evaluate(() => (window as unknown as W).__app.save.update((d) => { d.settings.swipeOn = true; }));
+
+  // MN Swipe at bedtime: the calm stop screen, with no child's name.
+  await bedtime(true);
+  await home();
+  await page.click('.sw-entry');
+  await expect(page.locator('.quiet-bed .title')).toHaveText('Time to sleep');
+  // Open (no bedtime), then bedtime starts mid-game.
+  await bedtime(false);
+  await home();
+  await page.click('.sw-entry');
+  await expect(page.locator('.sw-intro')).toBeVisible();
+  await bedtime(true);
+  await tick();
+  await expect(page.locator('.quiet-bed')).toBeVisible();
+  await expect(page.locator('.swipe')).toHaveCount(0);
+
+  // Face-off at bedtime: the stop screen before the match.
+  await home();
+  await page.click('.fo-entry');
+  await page.click('.fo-start');
+  await expect(page.locator('.quiet-bed .title')).toHaveText('Time to sleep, Riya');
+  // Bedtime starting mid-match ends it; the time played counts for the child.
+  await bedtime(false);
+  await home();
+  await page.click('.fo-entry');
+  await page.click('.fo-start');
+  await expect(page.locator('.fo-half[data-side="0"] .choice').first()).toBeVisible({ timeout: 8000 });
+  const before = await page.evaluate(() => JSON.parse(localStorage.getItem('studyhard.save')!).children[0].wallet.todaySeconds as number);
+  await page.waitForTimeout(2200);
+  await bedtime(true);
+  await tick();
+  await expect(page.locator('.quiet-bed')).toBeVisible();
+  await expect(page.locator('.fo-match')).toHaveCount(0);
+  const after = await page.evaluate(() => JSON.parse(localStorage.getItem('studyhard.save')!).children[0].wallet.todaySeconds as number);
+  expect(after).toBeGreaterThanOrEqual(before + 2);
+
+  // Leaving a match early counts its time too; a rematch is refused once the time is used up.
+  await bedtime(false);
+  await home();
+  await page.click('.fo-entry');
+  await page.click('.fo-start');
+  await expect(page.locator('.fo-half[data-side="0"] .choice').first()).toBeVisible({ timeout: 8000 });
+  await page.waitForTimeout(1200);
+  await page.click('.fo-pause');
+  await page.getByRole('button', { name: 'End the match' }).click();
+  await expect(page.locator('.fo-setup')).toBeVisible();
+  const left = await page.evaluate(() => JSON.parse(localStorage.getItem('studyhard.save')!).children[0].wallet.todaySeconds as number);
+  expect(left).toBeGreaterThan(after);
+  await page.evaluate(() => (window as unknown as W).__app.save.update((d) => { d.settings.limitMinutes = 30; d.settings.timeUpMode = 'stop'; d.children[0].wallet.todaySeconds = 31 * 60; }));
+  await page.click('.fo-start');
+  await expect(page.locator('.toast', { hasText: 'has used today’s play time' })).toBeVisible();
+  await expect(page.locator('.fo-match')).toHaveCount(0);
+});
+
 test('parent can skip a level, and undo the last hour', async ({ page }) => {
   await page.goto('/?debug&demo=%400');
   await expect(page.locator('.map')).toBeVisible();

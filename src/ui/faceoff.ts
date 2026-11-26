@@ -1,5 +1,8 @@
 // Face-off (spec §6): set up two players (children or a guest with a level slider), pick a
 // mode, then race on one phone lying flat — the top half is turned 180° for the player opposite.
+// Like a level, a match starts only outside bedtime and school time and while each child has
+// play time left today (a rematch too), and its time counts for each child, also when it ends
+// early. Bedtime or school time starting mid-match ends it gently.
 
 import { escv, html, esc, type App, type Screen } from './app.ts';
 import type { Child } from '../storage/save.ts';
@@ -15,6 +18,7 @@ import { popIn, shake, stagger, wait, reducedMotion, EASE_OUT, EASE_SPRING, fitC
 import { whosPlayingScreen } from './whos.ts';
 import { timeState } from './flow.ts';
 import { remember } from '../core/undo.ts';
+import { quietNow, quietScreen, watchQuiet } from './quiet.ts';
 
 export interface Player {
   /** Child id, or 'guest'. */
@@ -38,6 +42,27 @@ const stageOf = (skill: number): number => {
 
 function playerFor(app: App, c: Child): Player {
   return { id: c.id, name: c.name, avatar: c.avatar, skill: childSkillIndex(app.path, c.progress, SKILLS) };
+}
+
+/** The children among the players (a guest has no profile). */
+const childrenOf = (app: App, ps: readonly Player[]): Child[] => ps.map((p) => app.save.data.children.find((k) => k.id === p.id)).filter((c): c is Child => !!c);
+
+/**
+ * Start a match (from the setup screen, a rematch or swapped sides): not at bedtime or school
+ * time (the calm stop screen), and not when a child has used today's play time (they're told,
+ * on the setup screen).
+ */
+function startMatch(app: App, a: Player, b: Player, mode: FaceoffMode): void {
+  const kids = childrenOf(app, [a, b]);
+  const q = kids.length && kids.every((c) => c.tester) ? null : quietNow(app);
+  if (q) return void app.show(quietScreen(kids[0] ?? null, q, () => startMatch(app, a, b, mode)), 'liquid');
+  const out = kids.find((c) => timeState(app, c) === 'stop');
+  if (out) {
+    if (!app.screen?.el.classList.contains('fo-setup')) void app.show(faceoffSetupScreen({ a, b, mode }));
+    app.toast(`${out.name} has used today’s play time.`);
+    return;
+  }
+  void app.show(faceoffMatchScreen(a, b, mode), 'liquid');
 }
 
 // ── setup ──────────────────────────────────────────────────────────────────
@@ -128,16 +153,7 @@ export function faceoffSetupScreen(prev?: { a: Player; b: Player; mode: FaceoffM
       }),
     );
     el.querySelector('.back-btn')!.addEventListener('click', () => void app.show(whosPlayingScreen));
-    el.querySelector('.fo-start')!.addEventListener('click', () => {
-      for (const p of players) {
-        const c = kids.find((k) => k.id === p.id);
-        if (c && timeState(app, c) === 'stop') {
-          app.toast(`${c.name} has used today’s play time.`);
-          return;
-        }
-      }
-      void app.show(faceoffMatchScreen(players[0], players[1], mode), 'liquid');
-    });
+    el.querySelector('.fo-start')!.addEventListener('click', () => startMatch(app, players[0], players[1], mode));
     paint();
     return { el, colors: ['#FF7AA8', '#5F3DC4'], mounted: () => stagger(el.querySelectorAll('.fo-body > *, .fo-start'), { gap: 70 }) };
   };
@@ -259,24 +275,38 @@ export function faceoffMatchScreen(a: Player, b: Player, mode: FaceoffMode) {
       });
     }
 
-    const finish = async (winner: 0 | 1) => {
-      over = true;
+    /** Count the match's time for each child (once): returns which sides were inside today's limit. */
+    let counted = false;
+    const countTime = (): [boolean, boolean] => {
+      const inside: [boolean, boolean] = [false, false];
+      if (counted || !started) return inside;
+      counted = true;
       const seconds = Math.round((performance.now() - started) / 1000);
       const kids = app.save.data.children;
-      let coins = 0;
       app.save.update((d) => {
-        recordPair(d.faceoff, a.id, b.id, winner);
         players.forEach((p, i) => {
           const c = kids.find((k) => k.id === p.id);
           if (!c) return;
           remember(c, [], Date.now(), app.today);
-          const inside = addPlayTime(c.wallet, app.today, seconds, d.settings.limitMinutes);
+          inside[i] = addPlayTime(c.wallet, app.today, seconds, d.settings.limitMinutes);
           c.stats.secondsByDay[app.today] = (c.stats.secondsByDay[app.today] ?? 0) + seconds;
-          if (i === winner && inside) {
-            coins = COINS.faceoffWin;
-            addCoins(c.wallet, coins);
-          }
         });
+      });
+      return inside;
+    };
+
+    const finish = async (winner: 0 | 1) => {
+      over = true;
+      stopWatching();
+      const inside = countTime();
+      let coins = 0;
+      app.save.update((d) => {
+        recordPair(d.faceoff, a.id, b.id, winner);
+        const c = app.save.data.children.find((k) => k.id === players[winner].id);
+        if (c && inside[winner]) {
+          coins = COINS.faceoffWin;
+          addCoins(c.wallet, coins);
+        }
       });
       app.sfx.fanfare();
       app.haptics.win();
@@ -296,22 +326,27 @@ export function faceoffMatchScreen(a: Player, b: Player, mode: FaceoffMode) {
       </div>`);
       el.appendChild(ov);
       ov.querySelectorAll('.fo-end').forEach((x, k) => popIn(x, k * 120, 0.5));
-      ov.querySelector('.rematch')!.addEventListener('click', () => void app.show(faceoffMatchScreen(a, b, mode)));
-      ov.querySelector('.swap')!.addEventListener('click', () => void app.show(faceoffMatchScreen(b, a, mode)));
+      ov.querySelector('.rematch')!.addEventListener('click', () => startMatch(app, a, b, mode));
+      ov.querySelector('.swap')!.addEventListener('click', () => startMatch(app, b, a, mode));
       ov.querySelector('[data-back]')!.addEventListener('click', () => void app.show(faceoffSetupScreen({ a, b, mode })));
     };
 
+    let pauseSheet: HTMLElement | null = null;
     const pause = () => {
       if (over) return;
       el.classList.add('paused');
-      const { result } = app.sheet(`<h2>Paused</h2><p>Both players can take a breather.</p>`, [
+      const { el: sheetEl, result } = app.sheet(`<h2>Paused</h2><p>Both players can take a breather.</p>`, [
         { label: 'Keep playing', value: 'resume', kind: 'mint', back: true },
         { label: 'End the match', value: 'leave', kind: 'ghost' },
       ], 'Paused');
+      pauseSheet = sheetEl;
       void result.then((v) => {
         el.classList.remove('paused');
         if (v === 'leave') {
           over = true;
+          stopWatching();
+          // The time played still counts, like leaving a level.
+          countTime();
           void app.show(faceoffSetupScreen({ a, b, mode }));
           return;
         }
@@ -320,6 +355,16 @@ export function faceoffMatchScreen(a: Player, b: Player, mode: FaceoffMode) {
       });
     };
     el.querySelector('.fo-pause')!.addEventListener('click', pause);
+
+    // Bedtime or school time starting mid-match: it ends there, the time counts, no winner.
+    const stopWatching = watchQuiet(app, (q) => {
+      if (over) return;
+      over = true;
+      countTime();
+      pauseSheet?.remove();
+      const kids = childrenOf(app, players);
+      void app.show(quietScreen(kids[0] ?? null, q, () => void app.show(faceoffSetupScreen({ a, b, mode }))), 'fade');
+    });
 
     const countdown = async () => {
       paintScores();
@@ -344,6 +389,7 @@ export function faceoffMatchScreen(a: Player, b: Player, mode: FaceoffMode) {
       keepAwake: true,
       colors: ['#FF7AA8', '#5F3DC4'],
       mounted: () => void countdown(),
+      destroy: () => stopWatching(),
       back: () => {
         pause();
         return true;

@@ -2,6 +2,8 @@
 // Swipe up for the next card. A right answer builds a streak (and the music); a wrong one brings
 // the same question back, solved, on the next card. Every few cards there's a fun fact.
 // Parents switch it on in the Parent area (App → MN Swipe); until then it isn't on the home screen.
+// Bedtime and school time stop it, also when they start while it's open. (With no child profile,
+// it doesn't count toward a child's daily time.)
 
 import { html, esc, type App, type Screen } from './app.ts';
 import { AREAS, allSkills } from '../core/areas/index.ts';
@@ -15,6 +17,14 @@ import { ICONS } from './icons.ts';
 import { Music, TRACKS } from '../audio/music.ts';
 import { reducedMotion } from '../render/motion.ts';
 import { whosPlayingScreen } from './whos.ts';
+import { quietNow, quietScreen, watchQuiet } from './quiet.ts';
+
+/** Open MN Swipe, unless it's bedtime or school time (the calm stop screen instead). */
+export function openSwipe(app: App): void {
+  const q = quietNow(app);
+  if (q) return void app.show(quietScreen(null, q, () => openSwipe(app)), 'liquid');
+  void app.show(swipeScreen, 'liquid');
+}
 
 type Band = 'all' | 'young' | 'mid' | 'old';
 const BANDS: { id: Band; label: string; stages: number[] }[] = [
@@ -328,6 +338,12 @@ export function swipeScreen(app: App): Screen {
     void app.show(whosPlayingScreen, 'liquid');
   };
   el.querySelector('.sw-x')!.addEventListener('click', leave);
+  // Bedtime or school time starting while Swipe is open: the music stops and MN says goodnight.
+  const stopWatching = watchQuiet(app, (q) => {
+    music.close();
+    observer.disconnect();
+    void app.show(quietScreen(null, q, () => openSwipe(app)), 'fade');
+  });
 
   add(introHtml()).classList.add('now');
   ensureAhead();
@@ -341,6 +357,7 @@ export function swipeScreen(app: App): Screen {
     keepAwake: true,
     pause: () => music.stop(),
     destroy: () => {
+      stopWatching();
       music.close();
       observer.disconnect();
     },

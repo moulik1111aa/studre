@@ -15,11 +15,35 @@ export function quietNow(app: App): QuietNow | null {
   return quietAt(st.quiet, new Date(), st.holiday, st.quietUnlockUntil ?? 0);
 }
 
-/** The stop screen. `then` runs after a parent unlocks it. */
-export function quietScreen(child: Child, q: QuietNow, then: () => void) {
+/**
+ * Bedtime or school time starting while a game is open (MN Swipe, Face-off, which can go on and
+ * on): checks every half minute and when MN comes back to the screen, and calls `onQuiet` once.
+ * Returns a function that stops watching.
+ */
+export function watchQuiet(app: App, onQuiet: (q: QuietNow) => void, everyMs = 30_000): () => void {
+  let done = false;
+  const check = () => {
+    if (done || document.visibilityState !== 'visible') return;
+    const q = quietNow(app);
+    if (!q) return;
+    stop();
+    onQuiet(q);
+  };
+  const timer = window.setInterval(check, everyMs);
+  document.addEventListener('visibilitychange', check);
+  function stop() {
+    done = true;
+    window.clearInterval(timer);
+    document.removeEventListener('visibilitychange', check);
+  }
+  return stop;
+}
+
+/** The stop screen (`child` null: a game with no child profile, like MN Swipe). `then` runs after a parent unlocks it. */
+export function quietScreen(child: Child | null, q: QuietNow, then: () => void) {
   return (app: App): Screen => {
     const bed = q.kind === 'bed';
-    const title = bed ? `Time to sleep, ${child.name}` : `School time, ${child.name}!`;
+    const title = bed ? (child ? `Time to sleep, ${child.name}` : 'Time to sleep') : child ? `School time, ${child.name}!` : 'School time!';
     const line = bed ? `MN opens again at ${niceTime(q.until)}. Sleep well, your jar will be waiting.` : `MN opens again at ${niceTime(q.until)}. Learn lots today!`;
     const sky = bed
       ? `<div class="moon" aria-hidden="true"><span>🌙</span>${plusSvg({ sleep: true, cls: 'sleepy' })}${Array.from({ length: 12 }, (_, i) => `<i style="--i:${i};left:${(i * 37) % 95}%;top:${(i * 53) % 70}%"></i>`).join('')}</div>`
