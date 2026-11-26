@@ -860,6 +860,33 @@ test('map tips: shown once, then again from the ☰ menu', async ({ page }) => {
   await expect(page.locator('.tips-ov')).toHaveCount(0);
 });
 
+test('parent check: three wrong tries lock it, closing MN doesn’t clear the lock, and it opens when the time is up (review fix 15)', async ({ page }) => {
+  await page.goto('/?debug&demo=%405&noloader');
+  await expect(page.locator('.map')).toBeVisible();
+  const ask = () => page.evaluate(() => void (window as unknown as { __app: { grownUp(): Promise<boolean> } }).__app.grownUp());
+  await ask();
+  for (let i = 0; i < 3; i++) {
+    await expect(page.locator('.grownup')).toBeVisible();
+    await page.locator('.gu-pad [data-k="1"]').click();
+    await page.locator('.grownup .ok').click();
+  }
+  await expect(page.locator('.toast', { hasText: 'Too many tries. Locked for 30 seconds.' })).toBeVisible();
+  await expect(page.locator('.grownup')).toHaveCount(0);
+  // Closing and opening MN again: still locked.
+  await page.reload();
+  await expect(page.locator('.map')).toBeVisible();
+  await ask();
+  await expect(page.locator('.toast', { hasText: /Please wait \d+ seconds and try again/ })).toBeVisible();
+  await expect(page.locator('.grownup')).toHaveCount(0);
+  // Half a minute later (as if the time had passed): open again.
+  await page.evaluate(() => {
+    const l = JSON.parse(localStorage.getItem('studyhard.pinlock')!);
+    localStorage.setItem('studyhard.pinlock', JSON.stringify({ ...l, at: l.at - 31_000 }));
+  });
+  await ask();
+  await expect(page.locator('.grownup')).toBeVisible();
+});
+
 test('locked copy: phone code shown, a wrong key is refused, a wrong code is just a wrong answer', async ({ page }) => {
   await page.goto('/?debug&noloader&lock');
   await expect(page.locator('.lock')).toBeVisible();

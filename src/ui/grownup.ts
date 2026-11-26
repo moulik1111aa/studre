@@ -9,9 +9,25 @@ import { isOwnerCode } from '../core/access.ts';
 // #end
 import { ICONS } from './icons.ts';
 import { stagger } from '../render/motion.ts';
+import { miss as missed, passed, readLock, tick, waitText, type PinLock } from '../core/pinlock.ts';
 
-let lockedUntil = 0;
-let misses = 0;
+// Wrong tries and the lock are kept on the phone, so closing MN doesn't clear them (core/pinlock.ts).
+const LOCK_KEY = 'studyhard.pinlock';
+function loadLock(): PinLock {
+  try {
+    return readLock(JSON.parse(localStorage.getItem(LOCK_KEY) ?? 'null'));
+  } catch {
+    return readLock(null);
+  }
+}
+function saveLock(l: PinLock): PinLock {
+  try {
+    localStorage.setItem(LOCK_KEY, JSON.stringify(l));
+  } catch {
+    /* private mode: the lock lasts while MN is open */
+  }
+  return l;
+}
 
 const enc = new TextEncoder();
 const b64 = (u: Uint8Array): string => btoa(String.fromCharCode(...u));
@@ -76,8 +92,9 @@ const padHtml = () => `<div class="pad gu-pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9, '',
  * PIN mode: the pad. Neither set up: a times question.
  */
 export async function grownUpCheck(app: App, reason: string): Promise<boolean> {
-  if (Date.now() < lockedUntil) {
-    app.toast(`Please wait ${Math.ceil((lockedUntil - Date.now()) / 1000)} seconds and try again.`);
+  const lock = saveLock(tick(loadLock(), Date.now()));
+  if (lock.left) {
+    app.toast(`Please wait ${waitText(lock.left)} and try again.`);
     return false;
   }
   const pin = app.save.data.settings.parentPin;
@@ -114,15 +131,14 @@ export async function grownUpCheck(app: App, reason: string): Promise<boolean> {
     const finish = (ok: boolean) => {
       if (!open) return;
       open = false;
+      if (ok) saveLock(passed(Date.now()));
       ov.remove();
       resolve(ok);
     };
     const miss = () => {
-      misses++;
-      if (misses >= 3) {
-        misses = 0;
-        lockedUntil = Date.now() + 30_000;
-        app.toast('Too many tries. Locked for 30 seconds.');
+      const l = saveLock(missed(loadLock(), Date.now()));
+      if (l.left) {
+        app.toast(`Too many tries. Locked for ${waitText(l.left)}.`);
         finish(false);
         return;
       }
@@ -131,10 +147,7 @@ export async function grownUpCheck(app: App, reason: string): Promise<boolean> {
       input?.animate([{ transform: 'translateX(-8px)' }, { transform: 'translateX(8px)' }, { transform: 'none' }], { duration: 300 });
     };
     ov.querySelector('.gu-phone')?.addEventListener('click', async () => {
-      if (await askPhone(app, reason)) {
-        misses = 0;
-        finish(true);
-      }
+      if (await askPhone(app, reason)) finish(true);
     });
     ov.querySelector('.gu-usepin')?.addEventListener('click', (e) => {
       ov.querySelector<HTMLElement>('.gu-pinpart')!.hidden = false;
@@ -144,7 +157,7 @@ export async function grownUpCheck(app: App, reason: string): Promise<boolean> {
       // #unless play
       // The owner code opens the hidden area instead (it never matches a PIN or an answer).
       if (typed.length === 7 && app.ownerHook && (await isOwnerCode(typed))) {
-        misses = 0;
+        saveLock(passed(Date.now()));
         // The owner counts as a parent: back from the owner area, whatever was asked goes ahead.
         ov.remove();
         open = false;
@@ -153,10 +166,8 @@ export async function grownUpCheck(app: App, reason: string): Promise<boolean> {
       }
       // #end
       const ok = maths ? Number(typed) === a * b : !!pin && validPin(typed) && (await pinMatches(typed, pin));
-      if (ok) {
-        misses = 0;
-        finish(true);
-      } else if (typed) miss();
+      if (ok) finish(true);
+      else if (typed) miss();
     });
     ov.querySelector('[data-back]')!.addEventListener('click', () => finish(false));
     app.root.appendChild(ov);

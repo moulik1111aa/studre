@@ -343,7 +343,7 @@ export class App {
     return { el: ov, result };
   }
 
-  /** The parent check: the phone's screen lock or the parent PIN (see grownup.ts). Three misses lock it for 30 s. */
+  /** The parent check: the phone's screen lock or the parent PIN (see grownup.ts). Three misses lock it, longer each time (core/pinlock.ts). */
   grownUp(reason = 'For parents'): Promise<boolean> {
     return grownUpCheck(this, reason);
   }
