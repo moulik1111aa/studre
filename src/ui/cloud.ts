@@ -8,6 +8,7 @@ import { cleanRules } from '../core/clean.ts';
 import { escv, esc, type App } from './app.ts';
 import { FIREBASE } from '../platform/firebase-config.ts';
 import { CloudError, DeleteStopped, FirebaseRest, type CloudBackend, type Session } from '../platform/cloudapi.ts';
+import { OFFLINE_SIGN_IN, sheetProblem } from '../core/signinerror.ts';
 // #unless play
 import { MemoryCloud, OWNER_EMAIL } from '../platform/cloudapi.ts';
 import { confirmGate, gateState, seen, type GateState } from '../core/gate.ts';
@@ -210,34 +211,46 @@ async function consent(app: App): Promise<boolean> {
 /** The Google ID token from the phone's account sheet (a stand-in in test runs). */
 async function googleIdToken(app: App): Promise<{ token: string } | { cancelled: true } | { error: string }> {
   // #unless play
-  if (!FIREBASE || mock(app)) return { token: (window as { __mockGoogle?: string }).__mockGoogle ?? 'parent@example.com|Parent' };
+  if (!FIREBASE || mock(app)) {
+    const who = (window as { __mockGoogle?: string }).__mockGoogle ?? 'parent@example.com|Parent';
+    // Browser tests: "!no-credential" acts out the phone's sheet failing that way.
+    return who.startsWith('!') ? { error: sheetProblem({ kind: who.slice(1) }).text } : { token: who };
+  }
   // #end
   if (!FIREBASE) return { error: 'Google sign-in isn’t available in this version of MN.' };
   if (!app.native?.googleSignIn) return { error: 'Update MN to the newest version to sign in with Google.' };
   const r = await app.native.googleSignIn({ webClientId: FIREBASE.webClientId });
   if (r.idToken) return { token: r.idToken };
   if (r.cancelled) return { cancelled: true };
-  return { error: r.error ?? 'Google sign-in didn’t work.' };
+  // What went wrong, in plain words, with a code to pass on (core/signinerror.ts).
+  return { error: sheetProblem(r).text };
 }
 
 export type SignInResult = 'signed-in' | 'cancelled' | 'offline' | 'error';
 
+let problem = '';
+/** Why the last sign-in didn't work ('' if it did, or was cancelled): for screens that show it. */
+export const signInProblem = (): string => problem;
+
 /** Consent, the account sheet, Firebase, then the first backup. */
 export async function signIn(app: App): Promise<SignInResult> {
+  problem = '';
   const b = backend(app);
   if (!b) return 'error';
   if (!(await consent(app))) return 'cancelled';
   const t = await googleIdToken(app);
   if ('cancelled' in t) return 'cancelled';
   if ('error' in t) {
-    app.toast(t.error, 5000);
+    problem = t.error;
+    app.toast(problem, 8000);
     return 'error';
   }
   try {
     await b.signIn(t.token);
   } catch (e) {
     const offline = e instanceof CloudError && e.kind === 'offline';
-    app.toast(offline ? 'No internet connection. Connect and try again.' : 'Google sign-in didn’t work. Please try again.', 5000);
+    problem = offline ? OFFLINE_SIGN_IN : e instanceof CloudError ? e.message : 'Google sign-in didn’t work. Please try again.';
+    app.toast(problem, 8000);
     return offline ? 'offline' : 'error';
   }
   // The app shared by link: does the owner already give this account MN ×? (Quickly; it carries on regardless.)

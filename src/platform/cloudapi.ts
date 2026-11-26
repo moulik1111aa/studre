@@ -6,6 +6,7 @@
 
 import type { CloudChild, FamilyDoc } from '../core/cloud.ts';
 import { CHILD_ID, cleanFamilyDoc } from '../core/clean.ts';
+import { firebaseProblem } from '../core/signinerror.ts';
 
 /** A child id as a path segment: only ids of the app's own shape, and encoded. */
 function seg(id: string): string {
@@ -239,8 +240,13 @@ export class FirebaseRest implements CloudBackend {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ postBody: `id_token=${encodeURIComponent(googleIdToken)}&providerId=google.com`, requestUri: 'http://localhost', returnSecureToken: true, returnIdpCredential: false }),
     });
-    const j = (await res.json().catch(() => ({}))) as Record<string, string>;
-    if (!res.ok || !j.idToken) throw new CloudError('denied', 'Google sign-in didn’t work. Please try again.');
+    const raw: unknown = await res.json().catch(() => ({}));
+    const j = (raw && typeof raw === 'object' ? raw : {}) as Record<string, string>;
+    if (!res.ok || !j.idToken) {
+      // Say what went wrong (core/signinerror.ts): a key, Google's answer, the phone's clock…
+      const p = firebaseProblem(res.status, raw);
+      throw new CloudError(p.busy ? 'quota' : 'denied', p.text);
+    }
     return { uid: j.localId, email: (j.email ?? '').toLowerCase(), name: j.displayName ?? j.fullName ?? '', idToken: j.idToken, refreshToken: j.refreshToken, exp: Date.now() + Number(j.expiresIn ?? 3600) * 1000 };
   }
   async signIn(googleIdToken: string): Promise<Session> {

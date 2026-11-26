@@ -1424,6 +1424,20 @@ test('google: signing in opens MN at once; a parent asks for MN ×, the owner gi
   await expect(page.locator('.pm-ask')).toHaveText('Request MN ×');
 });
 
+test('google: when signing in fails, the lock screen says what went wrong and what to do (review fix 16)', async ({ page }) => {
+  await page.goto('/?debug&noloader&lock&cloudmock');
+  await expect(page.locator('.lock .lk-g')).toBeVisible();
+  await asGoogle(page, '!no-credential');
+  await page.click('.lk-g');
+  await page.click('.sheet .btn.mint');
+  await expect(page.locator('.lk-gmsg')).toContainText('There’s no Google account on this phone');
+  await expect(page.locator('.lk-gmsg')).toContainText('Settings → Accounts');
+  // The message stays to read after the one at the bottom has gone; trying again works.
+  await asGoogle(page, 'asha@example.com|Asha');
+  await page.click('.lk-g');
+  await expect(page.locator('.lock')).toHaveCount(0);
+});
+
 test('google: "Delete account and data" asks Google to confirm an old sign-in, and says exactly what was deleted (review fix 14)', async ({ page }) => {
   await page.goto('/?debug&demo=%405&cloudmock');
   await expect(page.locator('.map')).toBeVisible();

@@ -52,7 +52,8 @@ export interface StudyHardPlugin {
   setAppIcon?(o: { name: string }): Promise<{ ok: boolean }>;
   appIcon?(): Promise<{ name?: string }>;
   /** Sign in with Google (Credential Manager); newer apps only. */
-  googleSignIn?(o: { webClientId: string }): Promise<{ idToken?: string; email?: string; name?: string; cancelled?: boolean; error?: string }>;
+  /** `kind`: what failed (StudyHardPlugin.googleSignIn), with Google's `type` and `message`; see core/signinerror.ts. */
+  googleSignIn?(o: { webClientId: string }): Promise<{ idToken?: string; email?: string; name?: string; cancelled?: boolean; error?: string; kind?: string; type?: string; message?: string }>;
   googleSignOut?(): Promise<void>;
   /** MN × purchases through Google Play (newer apps only; see platform/billing.ts). */
   billingProducts?(o: { subs: string[]; inapp: string[] }): Promise<{ ok: boolean; products?: PlayProduct[]; code?: number; message?: string }>;

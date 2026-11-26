@@ -50,7 +50,12 @@ import androidx.credentials.GetCredentialRequest;
 import androidx.credentials.GetCredentialResponse;
 import androidx.credentials.exceptions.ClearCredentialException;
 import androidx.credentials.exceptions.GetCredentialCancellationException;
+import androidx.credentials.exceptions.GetCredentialCustomException;
 import androidx.credentials.exceptions.GetCredentialException;
+import androidx.credentials.exceptions.GetCredentialInterruptedException;
+import androidx.credentials.exceptions.GetCredentialProviderConfigurationException;
+import androidx.credentials.exceptions.GetCredentialUnknownException;
+import androidx.credentials.exceptions.GetCredentialUnsupportedException;
 import androidx.credentials.exceptions.NoCredentialException;
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption;
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential;
@@ -277,17 +282,38 @@ public class StudyHardPlugin extends Plugin {
     }
 
     /** A stable id for this phone and app (survives reinstalling), for access keys. */
+    /** What failed, as a word that survives code shrinking (class names don't): see core/signinerror.ts. */
+    static String credentialKind(GetCredentialException e) {
+        if (e instanceof GetCredentialCancellationException) return "cancelled";
+        if (e instanceof NoCredentialException) return "no-credential";
+        if (e instanceof GetCredentialInterruptedException) return "interrupted";
+        if (e instanceof GetCredentialProviderConfigurationException) return "provider-config";
+        if (e instanceof GetCredentialUnsupportedException) return "unsupported";
+        if (e instanceof GetCredentialCustomException) return "custom";
+        if (e instanceof GetCredentialUnknownException) return "unknown";
+        return "other";
+    }
+
+    private static JSObject signInFailed(String kind, String type, String message) {
+        JSObject r = new JSObject();
+        r.put("kind", kind);
+        r.put("type", type == null ? "" : type);
+        String m = message == null ? "" : message;
+        r.put("message", m.length() > 300 ? m.substring(0, 300) : m);
+        r.put("error", kind + (m.isEmpty() ? "" : ": " + m));
+        return r;
+    }
+
     /**
      * Sign in with Google (Credential Manager): the account sheet, then the Google ID token
-     * for the Web client ID. Resolves { idToken, email, name } or { cancelled: true } or { error }.
+     * for the Web client ID. Resolves { idToken, email, name }, or { cancelled: true }, or
+     * { kind, type, message, error } saying what failed.
      */
     @PluginMethod
     public void googleSignIn(PluginCall call) {
         String clientId = call.getString("webClientId", "");
         if (clientId == null || clientId.isEmpty()) {
-            JSObject r = new JSObject();
-            r.put("error", "no client id");
-            call.resolve(r);
+            call.resolve(signInFailed("no-client-id", "", ""));
             return;
         }
         GetSignInWithGoogleOption option = new GetSignInWithGoogleOption.Builder(clientId).build();
@@ -296,29 +322,28 @@ public class StudyHardPlugin extends Plugin {
         cm.getCredentialAsync(getActivity(), request, null, signInWork, new CredentialManagerCallback<GetCredentialResponse, GetCredentialException>() {
             @Override
             public void onResult(GetCredentialResponse response) {
-                JSObject r = new JSObject();
                 Credential c = response.getCredential();
                 if (c instanceof CustomCredential && GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL.equals(c.getType())) {
                     try {
                         GoogleIdTokenCredential g = GoogleIdTokenCredential.createFrom(((CustomCredential) c).getData());
+                        JSObject r = new JSObject();
                         r.put("idToken", g.getIdToken());
                         r.put("email", g.getId());
                         r.put("name", g.getDisplayName() == null ? "" : g.getDisplayName());
+                        call.resolve(r);
                     } catch (Exception e) {
-                        r.put("error", "bad credential");
+                        call.resolve(signInFailed("bad-credential", "", e.getMessage()));
                     }
                 } else {
-                    r.put("error", "unexpected credential");
+                    call.resolve(signInFailed("unexpected-credential", c.getType(), ""));
                 }
-                call.resolve(r);
             }
 
             @Override
             public void onError(GetCredentialException e) {
-                JSObject r = new JSObject();
-                if (e instanceof GetCredentialCancellationException) r.put("cancelled", true);
-                else if (e instanceof NoCredentialException) r.put("error", "no Google account on this phone");
-                else r.put("error", e.getClass().getSimpleName() + ": " + e.getMessage());
+                String kind = credentialKind(e);
+                JSObject r = signInFailed(kind, e.getType(), e.getMessage() == null ? "" : String.valueOf(e.getMessage()));
+                if ("cancelled".equals(kind)) r.put("cancelled", true);
                 call.resolve(r);
             }
         });

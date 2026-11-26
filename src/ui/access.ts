@@ -11,7 +11,7 @@ import type { Access } from '../storage/save.ts';
 import { plusFaceSvg } from './plus.ts';
 import { ICONS } from './icons.ts';
 import { stagger, popIn } from '../render/motion.ts';
-import { account, cloudOn, plusGrant, signIn } from './cloud.ts';
+import { account, cloudOn, plusGrant, signIn, signInProblem } from './cloud.ts';
 import { plusChanged } from './pluschange.ts';
 
 import { googleButton } from './gbutton.ts';
@@ -172,7 +172,8 @@ export function lockScreen(state: AccessState, then: () => void, o: { renew?: bo
     const answer = (a: string) => {
       if (!gmsg) return;
       if (a === 'signed-in') return unlocked();
-      gmsg.textContent = a === 'offline' ? 'No internet connection. Connect and try again.' : a === 'cancelled' ? GOOGLE_NOTE : 'That didn’t work. Please try again.';
+      // What went wrong stays here to read (and send on), after the message at the bottom goes.
+      gmsg.textContent = a === 'cancelled' ? GOOGLE_NOTE : signInProblem() || (a === 'offline' ? 'No internet connection. Connect and try again.' : 'That didn’t work. Please try again.');
       popIn(gmsg, 0, 0.95);
     };
     const go = async (b: HTMLButtonElement) => {
