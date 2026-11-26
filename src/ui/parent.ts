@@ -47,6 +47,7 @@ import { askCtaHtml, checkAgain, requestPlus } from './membership.ts';
 import { freshProgress } from '../core/path.ts';
 import { quietSettingsScreen } from './quiet.ts';
 import { quietSummary } from '../core/quiet.ts';
+import { clockAhead, restartDay } from '../core/economy.ts';
 import { saveWorksheet } from './worksheet.ts';
 import { account, cloudOn, deleteCloudCopy, downloadCloudCopy, lastSync, onePhone, otherPhone, signIn, signOut, syncNow, syncText } from './cloud.ts';
 import { saveFamilyFile } from './familyfile.ts';
@@ -137,6 +138,14 @@ const sec = (title: string, body: string) => {
 };
 
 /** Children: who plays, how long, and how lessons and rewards work. */
+/** Shown when play counts on a later day than the phone's date (the date was changed back). */
+function dayClockHtml(app: App): string {
+  const ahead = app.save.data.children.find((c) => clockAhead(c.wallet, app.today))?.wallet.todayDay;
+  if (!ahead) return '';
+  const when = new Date(`${ahead}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  return `<button class="pa-row card day-clock"><b>Play time counts on ${esc(when)}</b><small>The phone’s date went back, so play still counts on that later day. If that date was a mistake, tap to count from today.</small></button>`;
+}
+
 function kidsHtml(app: App): string {
   const st = app.save.data.settings;
   return `${sec('Children', `<div class="pa-kids">${app.save.data.children
@@ -144,7 +153,7 @@ function kidsHtml(app: App): string {
           <div class="pk-btns"><button class="btn ghost small report" data-id="${escv(c.id)}">${ICONS.chart} Report</button><button class="icon-btn kid-set" data-id="${escv(c.id)}" aria-label="Settings for ${esc(c.name)}">⚙️</button></div></div>`)
         .join('')}</div>
       <button class="btn ghost small add-kid">+ Add a child</button>`)}
-    ${sec('Daily play', `<button class="pa-row card limits"><b>${escv(st.limitMinutes)} minutes a day</b><small>${st.timeUpMode === 'stop' ? 'Stops when time is up' : 'Keeps playing without coins'} · treats ${paceText(st.treatPace, 'treat')}, big reward ${paceText(st.goalPace, 'goal')}</small></button>
+    ${sec('Daily play', `${dayClockHtml(app)}<button class="pa-row card limits"><b>${escv(st.limitMinutes)} minutes a day</b><small>${st.timeUpMode === 'stop' ? 'Stops when time is up' : 'Keeps playing without coins'} · treats ${paceText(st.treatPace, 'treat')}, big reward ${paceText(st.goalPace, 'goal')}</small></button>
       <button class="pa-row card quiet-row"><b>Bedtime</b><small>${esc(quietSummary(st.quiet))}</small></button>
       <div class="card pa-toggles">${toggleRows(st, [T('holiday', 'Pause rewards', 'On holiday or unwell: jars don’t shrink and no daily reminder.')])}</div>`)}
     ${sec('Learning', `<div class="card pa-timer"><div class="pt-head"><b>Time per question</b><span class="pt-val"></span></div>
@@ -490,6 +499,22 @@ function bind(app: App, el: HTMLElement, body: HTMLElement, render: (animate: bo
     render(false);
   });
   on('.limits', 'click', () => void app.show(limitsScreen(false)));
+  on('.day-clock', 'click', async () => {
+    const { result } = app.sheet(
+      '<h2>Count play time from today?</h2><p>Use this if the phone’s date was set wrong before. Today’s play time then counts what each child has played today.</p>',
+      [
+        { label: 'Count from today', value: true, kind: 'mint' },
+        { label: 'Cancel', value: false, kind: 'ghost', back: true },
+      ],
+      'Play time',
+    );
+    if (!(await result)) return;
+    app.save.update((d) => {
+      for (const c of d.children) if (clockAhead(c.wallet, app.today)) restartDay(c.wallet, app.today, c.stats.secondsByDay[app.today] ?? 0);
+    });
+    app.toast('Play time counts from today again.');
+    render(false);
+  });
   on('.quiet-row', 'click', () => void app.show(quietSettingsScreen(parentScreen)));
   on('.icon-row', 'click', async () => {
     if (await needPlus(app, 'icons', parentScreen)) void chooseAppIcon(app);

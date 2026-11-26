@@ -49,7 +49,8 @@ export interface Wallet {
   /** Local day of the last counted play (YYYY-MM-DD) and the day melting was last applied. */
   lastPlayDay: string | null;
   meltCheckedDay: string | null;
-  /** Seconds of counted play today, and which day that is. */
+  /** Seconds of counted play today, and which day that is: the latest day this phone has counted
+   *  (it never moves back, see rollDay). */
   todaySeconds: number;
   todayDay: string | null;
   /** Rewards given so far. */
@@ -102,12 +103,36 @@ export function dayKey(d = new Date()): string {
   return `${d.getFullYear()}-${m}-${day}`;
 }
 
-/** Roll the daily clock over if the day changed. */
+/**
+ * Roll the daily clock over on a new day. Only a later day is a new day: when the phone's date
+ * goes back (turned back, or back from a day set ahead), play keeps counting on the latest day,
+ * so changing the date never hands out a fresh limit. A day set ahead does start fresh (the phone
+ * can't tell it from a real new day), but the time played is that day's, so it's used up by the
+ * time the day really comes. If the date had been wrong (far ahead), a parent starts the clock
+ * again from today (restartDay).
+ */
 export function rollDay(w: Wallet, today: string): void {
-  if (w.todayDay !== today) {
+  if (!w.todayDay || today > w.todayDay) {
     w.todayDay = today;
     w.todaySeconds = 0;
   }
+}
+
+/** The day play counts on is later than the phone's date: the date was changed back. */
+export const clockAhead = (w: Pick<Wallet, 'todayDay'>, today: string): boolean => !!w.todayDay && w.todayDay > today;
+
+/** A parent's "count from today": the phone's date was wrong before. `played`: seconds already played today. */
+export function restartDay(w: Wallet, today: string, played: number): void {
+  w.todayDay = today;
+  w.todaySeconds = Math.max(0, played);
+}
+
+/**
+ * One child played on two phones: the daily clock stays this phone's own (another phone's date
+ * may be off), and when both counted the same day, the longer time counts.
+ */
+export function mergeDayTime(here: Pick<Wallet, 'todayDay' | 'todaySeconds'>, other: Pick<Wallet, 'todayDay' | 'todaySeconds'>): Pick<Wallet, 'todayDay' | 'todaySeconds'> {
+  return { todayDay: here.todayDay, todaySeconds: here.todayDay && here.todayDay === other.todayDay ? Math.max(here.todaySeconds, other.todaySeconds) : here.todaySeconds };
 }
 
 /** Seconds left within today's limit. */
@@ -120,7 +145,7 @@ export function secondsLeft(w: Wallet, today: string, limitMinutes: number): num
 export function addPlayTime(w: Wallet, today: string, seconds: number, limitMinutes: number): boolean {
   rollDay(w, today);
   const inside = w.todaySeconds < limitMinutes * 60;
-  w.todaySeconds += seconds;
+  w.todaySeconds = Math.min(86400, w.todaySeconds + seconds);
   if (inside) w.lastPlayDay = today;
   return inside;
 }

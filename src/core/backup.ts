@@ -5,6 +5,7 @@
 // was edited by hand (say, to add coins) from being imported.
 
 import { mergeFix } from './fixit.ts';
+import { mergeDayTime } from './economy.ts';
 import { mergeAdventure } from './adventure.ts';
 import type { Child } from '../storage/save.ts';
 import type { LevelResult } from './path.ts';
@@ -97,8 +98,9 @@ export function mergeChild(here: Child, incoming: Child, incomingNewer: boolean)
   const days = { ...here.stats.secondsByDay };
   for (const [d, s] of Object.entries(incoming.stats.secondsByDay)) days[d] = Math.max(days[d] ?? 0, s);
   out.stats = { answered: Math.max(here.stats.answered, incoming.stats.answered), correct: Math.max(here.stats.correct, incoming.stats.correct), secondsByDay: days };
-  // Jars and rewards: from whoever has earned more.
+  // Jars and rewards: from whoever has earned more. The daily clock stays this phone's own.
   out.wallet = JSON.parse(JSON.stringify(here.wallet.lifetime >= incoming.wallet.lifetime ? here.wallet : incoming.wallet));
+  Object.assign(out.wallet, mergeDayTime(here.wallet, incoming.wallet));
   out.bossesBeaten = [...new Set([...here.bossesBeaten, ...incoming.bossesBeaten])];
   out.placed = here.placed || incoming.placed;
   // Play log: both, once each, oldest first; tallies from the side with more answers, then

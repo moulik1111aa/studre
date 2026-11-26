@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import { AREAS, skillById } from '../src/core/areas/index.ts';
 import { buildPath, freshProgress, frontier, isPlayable, makeRound, recordResult, starsFor, dueForRevision, noteAsked } from '../src/core/path.ts';
 import { Placement, stageForAge, answerFromCheck } from '../src/core/placement.ts';
-import { freshWallet, addCoins, chooseReward, markGiven, applyMelt, coinsForLevel, addPlayTime, secondsLeft, jarProgress } from '../src/core/economy.ts';
+import { freshWallet, addCoins, chooseReward, markGiven, applyMelt, coinsForLevel, addPlayTime, secondsLeft, jarProgress, mergeDayTime, clockAhead, restartDay } from '../src/core/economy.ts';
+import { mergeChild } from '../src/core/backup.ts';
+import { newChild } from '../src/storage/save.ts';
 import { REWARDS, CATEGORIES, costOf, pickable, rewardById, setOwnRewards, jarOf } from '../src/core/rewards.ts';
 import { Fight, bossFor, BOSSES, FIGHT } from '../src/core/boss.ts';
 import { createRng } from '../src/core/rng.ts';
@@ -162,6 +164,65 @@ test('economy: daily limit counts play only inside the limit', () => {
   assert.ok(!addPlayTime(w, '2026-10-16', 60, 30));
   assert.equal(secondsLeft(w, '2026-10-16', 30), 0);
   assert.equal(secondsLeft(w, '2026-10-17', 30), 1800);
+});
+
+test('economy: changing the phone’s date doesn’t hand out a fresh daily limit (review fix 13)', () => {
+  const full = () => {
+    const w = freshWallet();
+    addPlayTime(w, '2026-11-26', 30 * 60, 30);
+    assert.equal(secondsLeft(w, '2026-11-26', 30), 0);
+    return w;
+  };
+  // Back a day, a week or a year, and forward again: still used up, and play counts on the latest day.
+  for (const back of ['2026-11-25', '2026-11-19', '2025-11-26']) {
+    const w = full();
+    assert.equal(secondsLeft(w, back, 30), 0, back);
+    assert.ok(!addPlayTime(w, back, 60, 30), back);
+    assert.equal(w.todayDay, '2026-11-26');
+    assert.equal(secondsLeft(w, '2026-11-25', 30), 0, back);
+    assert.equal(secondsLeft(w, '2026-11-26', 30), 0, back);
+    assert.ok(clockAhead(w, back) && !clockAhead(w, '2026-11-26'));
+  }
+  // Tomorrow and back: tomorrow starts fresh (it could be a real new day), but going back keeps
+  // counting on tomorrow, and when tomorrow really comes its time is used.
+  let w = full();
+  assert.equal(secondsLeft(w, '2026-11-27', 30), 1800);
+  addPlayTime(w, '2026-11-27', 10 * 60, 30);
+  assert.equal(secondsLeft(w, '2026-11-26', 30), 20 * 60);
+  addPlayTime(w, '2026-11-26', 20 * 60, 30);
+  assert.equal(secondsLeft(w, '2026-11-27', 30), 0);
+  assert.equal(secondsLeft(w, '2026-11-28', 30), 1800);
+  // A real new day: a fresh limit, as always.
+  w = full();
+  assert.equal(secondsLeft(w, '2026-11-27', 30), 1800);
+  // A date that was far ahead and is put right: a parent counts from today again.
+  w = freshWallet();
+  addPlayTime(w, '2027-11-26', 30 * 60, 30);
+  assert.equal(secondsLeft(w, '2026-11-26', 30), 0);
+  restartDay(w, '2026-11-26', 5 * 60);
+  assert.equal(secondsLeft(w, '2026-11-26', 30), 25 * 60);
+  assert.equal(secondsLeft(w, '2026-11-27', 30), 1800);
+});
+
+test('economy: one child on two phones: the daily clock stays this phone’s, the same day counts the longer time', () => {
+  assert.deepEqual(mergeDayTime({ todayDay: '2026-11-26', todaySeconds: 600 }, { todayDay: '2026-11-26', todaySeconds: 1500 }), { todayDay: '2026-11-26', todaySeconds: 1500 });
+  // Another phone on another day (or with its date off) doesn't move this phone's clock.
+  assert.deepEqual(mergeDayTime({ todayDay: '2026-11-26', todaySeconds: 600 }, { todayDay: '2026-11-25', todaySeconds: 0 }), { todayDay: '2026-11-26', todaySeconds: 600 });
+  assert.deepEqual(mergeDayTime({ todayDay: '2026-11-26', todaySeconds: 600 }, { todayDay: '2027-01-01', todaySeconds: 1800 }), { todayDay: '2026-11-26', todaySeconds: 600 });
+  assert.deepEqual(mergeDayTime({ todayDay: null, todaySeconds: 0 }, { todayDay: null, todaySeconds: 0 }), { todayDay: null, todaySeconds: 0 });
+});
+
+test('economy: syncing with a phone that played less today doesn’t reset today’s time', () => {
+  const here = newChild('Riya', 8, 0, '2026-10-01');
+  const other = JSON.parse(JSON.stringify(here));
+  addPlayTime(here.wallet, '2026-11-26', 30 * 60, 30);
+  // The other phone has earned more (its wallet wins) but last counted yesterday.
+  other.wallet.lifetime = 999;
+  other.wallet.todayDay = '2026-11-25';
+  other.wallet.todaySeconds = 100;
+  const merged = mergeChild(here, other);
+  assert.equal(merged.wallet.lifetime, 999);
+  assert.equal(secondsLeft(merged.wallet, '2026-11-26', 30), 0);
 });
 
 test('boss fight: hits, criticals, special at 5 in a row, defends and phases', () => {

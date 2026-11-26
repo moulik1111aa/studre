@@ -266,6 +266,23 @@ test("time's up stops play for the day", async ({ page }) => {
   await expect(page.locator('.timesup')).toBeVisible();
 });
 
+test("time's up: setting the phone's date back doesn't start a fresh day; a parent can count from today (review fix 13)", async ({ page }) => {
+  // Play counted up to a later day (the date was set ahead, used up, then set back to today).
+  await seeded(page, '@0', `window.__app.save.update((d) => { const w = d.children[0].wallet; const t = new Date(); t.setDate(t.getDate() + 2); w.todayDay = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'); w.todaySeconds = 31 * 60; })`);
+  await expect(page.locator('.map')).toBeVisible();
+  await page.click('.play-next');
+  await expect(page.locator('.timesup')).toBeVisible();
+  // The Parent area says so, and the parent can count from today.
+  await page.evaluate(() => { const w = window as unknown as { __app: { show(m: unknown): void }; __screens: { parentScreen: unknown } }; w.__app.show(w.__screens.parentScreen); });
+  await expect(page.locator('.day-clock')).toContainText('Play time counts on');
+  await page.click('.day-clock');
+  await page.click('.sheet .btn.mint');
+  await expect(page.locator('.day-clock')).toHaveCount(0);
+  const w = await page.evaluate(() => { const a = (window as unknown as { __app: { today: string; save: { data: { children: { wallet: { todayDay: string; todaySeconds: number } }[] } } } }).__app; return { ...a.save.data.children[0].wallet, today: a.today }; });
+  expect(w.todayDay).toBe(w.today);
+  expect(w.todaySeconds).toBeLessThan(31 * 60);
+});
+
 test('face-off: tug of war against a guest, scoreboard and coins', async ({ page }) => {
   await page.goto('/?debug&demo=%4040');
   await expect(page.locator('.map')).toBeVisible();
