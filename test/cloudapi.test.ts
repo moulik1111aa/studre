@@ -3,7 +3,7 @@
 // lists, and errors (offline, busy, signed out).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CloudError, FirebaseRest, MemoryCloud, fieldPath, fromFs, toFs, type Session } from '../src/platform/cloudapi.ts';
+import { CloudError, DeleteStopped, FirebaseRest, MemoryCloud, authTime, fieldPath, fromFs, toFs, type Session } from '../src/platform/cloudapi.ts';
 
 const cfg = { apiKey: 'KEY', projectId: 'mn-test', webClientId: 'web.apps.googleusercontent.com' };
 type Call = { url: string; method: string; body?: string; auth?: string };
@@ -104,6 +104,88 @@ test('the stand-in cloud takes phones off the list the same way', async () => {
   assert.deepEqual(Object.keys((await mc.getFamily())!.devices).sort(), ['dA', 'dB']);
   await mc.putFamily({ ...fam, devices: { dB: { label: 'B', at: 3 } } }, { kids: [], removed: [], resets: [], device: 'dB', gone: ['dA'] });
   assert.deepEqual(Object.keys((await mc.getFamily())!.devices), ['dB']);
+});
+
+// ── deleting the account (review fix 14) ────────────────────────────────────
+
+/** An ID token whose payload says when the Google sign-in happened. */
+const jwt = (authSeconds: number) => `x.${Buffer.from(JSON.stringify({ auth_time: authSeconds, sub: 'u1' })).toString('base64url')}.sig`;
+
+test('when the session last signed in, from its ID token', () => {
+  assert.equal(authTime(jwt(1_764_000_000)), 1_764_000_000_000);
+  assert.equal(authTime('tok1'), 0);
+  assert.equal(authTime('a.@@@.b'), 0);
+  assert.equal(authTime(jwt(-5)), 0);
+  const b = new FirebaseRest(cfg, { ...live(), idToken: jwt(1_764_000_000) }, () => undefined, fakeGoogle(() => ({ json: {} })).http);
+  assert.equal(b.signedInAt(), 1_764_000_000_000);
+});
+
+test('confirming with Google again: the same account only, and another one changes nothing', async () => {
+  let who = 'u1';
+  const g = fakeGoogle(() => ({ json: { idToken: jwt(1_800_000_000), refreshToken: 'ref2', localId: who, email: 'A@B.com', expiresIn: '3600' } }));
+  const kept: (Session | null)[] = [];
+  const b = new FirebaseRest(cfg, live(), (s) => kept.push(s), g.http);
+  await b.reauth('google-token');
+  assert.equal(b.session!.refreshToken, 'ref2');
+  assert.equal(b.signedInAt(), 1_800_000_000_000);
+  assert.equal(kept.length, 1);
+  who = 'u2';
+  await assert.rejects(b.reauth('google-token'), (e: CloudError) => e.kind === 'denied' && /a@b\.com/.test(e.message));
+  assert.equal(b.session!.uid, 'u1');
+  assert.equal(kept.length, 1);
+});
+
+test('deleting the sign-in: too old a sign-in, already gone, and other errors', async () => {
+  let answer: { status: number; json: unknown } = { status: 400, json: { error: { code: 400, message: 'CREDENTIAL_TOO_OLD_LOGIN_AGAIN' } } };
+  const g = fakeGoogle((c) => (c.url.includes('securetoken') ? { json: { id_token: 'tok2', refresh_token: 'ref1', expires_in: '3600' } } : answer));
+  const b = new FirebaseRest(cfg, live(), () => undefined, g.http);
+  await assert.rejects(b.deleteSignIn(), (e: CloudError) => e.kind === 'recent-login');
+  assert.match(g.calls.at(-1)!.url, /accounts:delete/);
+  assert.deepEqual(JSON.parse(g.calls.at(-1)!.body!), { idToken: 'tok2' });
+  answer = { status: 400, json: { error: { code: 400, message: 'USER_NOT_FOUND' } } };
+  await b.deleteSignIn();
+  answer = { status: 500, json: {} };
+  await assert.rejects(b.deleteSignIn(), (e: CloudError) => e.kind === 'other');
+  answer = { status: 200, json: {} };
+  await b.deleteSignIn();
+});
+
+test('deleting the cloud data: every child, then the family; stopping part-way says so', async () => {
+  let failAfter = Infinity;
+  let deletes = 0;
+  const g = fakeGoogle((c) => {
+    if (c.method === 'GET') return { json: { documents: [{ name: 'p/families/u1/children/c1' }, { name: 'p/families/u1/children/c2' }] } };
+    if (c.method === 'DELETE') return ++deletes > failAfter ? 'offline' : { json: {} };
+    return { json: {} };
+  });
+  const b = new FirebaseRest(cfg, live(), () => undefined, g.http);
+  await b.deleteData();
+  const gone = g.calls.filter((c) => c.method === 'DELETE').map((c) => c.url.split('/documents/')[1]);
+  assert.deepEqual(gone, ['families/u1/children/c1', 'families/u1/children/c2', 'families/u1', 'requests/u1', 'checkins/u1']);
+  // The connection drops after the first child: part-way.
+  deletes = 0;
+  failAfter = 1;
+  await assert.rejects(b.deleteData(), (e: unknown) => e instanceof DeleteStopped && e.kind === 'offline');
+  // ...or before anything went: a plain error (nothing deleted).
+  deletes = 0;
+  failAfter = 0;
+  await assert.rejects(b.deleteData(), (e: unknown) => e instanceof CloudError && !(e instanceof DeleteStopped));
+});
+
+test('the stand-in cloud deletes the same way, and asks for a recent sign-in', async () => {
+  const m = new Map<string, string>();
+  const mc = new MemoryCloud({ get: (k) => m.get(k) ?? null, set: (k, v) => void m.set(k, v) }, null, () => undefined);
+  await mc.signIn('a@b.com|A');
+  assert.ok(Date.now() - mc.signedInAt() < 1000);
+  await mc.requestAccess({ phone: 'AAAA-BBBB', device: 'Phone', version: 'v', at: 1 });
+  m.set('studyhard.mockcloud.signedin.mock-a@b.com', '0');
+  await assert.rejects(mc.deleteSignIn(), (e: CloudError) => e.kind === 'recent-login');
+  await assert.rejects(mc.reauth('other@b.com|O'), (e: CloudError) => e.kind === 'denied');
+  await mc.reauth('a@b.com|A');
+  await mc.deleteData();
+  assert.equal(await mc.getFamily(), null);
+  assert.equal(await mc.myRequest(), null);
+  await mc.deleteSignIn();
 });
 
 test('a child copy goes up as bytes and comes back the same', async () => {

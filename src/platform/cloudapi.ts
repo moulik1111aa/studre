@@ -30,7 +30,8 @@ export interface Session {
   exp: number;
 }
 
-export type CloudErrorKind = 'offline' | 'signed-out' | 'quota' | 'denied' | 'other';
+/** 'recent-login': the step needs a Google sign-in from the last few minutes (deleting the account). */
+export type CloudErrorKind = 'offline' | 'signed-out' | 'quota' | 'denied' | 'recent-login' | 'other';
 // #unless play
 /** The owner's account: gives MN × on the app shared by link (the cloud's rules know it by account id). */
 export const OWNER_EMAIL = 'moulik1111a@gmail.com';
@@ -41,6 +42,25 @@ export class CloudError extends Error {
   constructor(kind: CloudErrorKind, message: string) {
     super(message);
     this.kind = kind;
+  }
+}
+
+/** Deleting the cloud data stopped part-way: some of it is already gone. */
+export class DeleteStopped extends CloudError {
+  constructor(cause: unknown) {
+    super(cause instanceof CloudError ? cause.kind : 'other', cause instanceof Error ? cause.message : 'Stopped part-way.');
+  }
+}
+
+/** When the Google sign-in behind an ID token happened (ms), from its auth_time; 0 if unknown. */
+export function authTime(idToken: string): number {
+  try {
+    const part = idToken.split('.')[1] ?? '';
+    const j = JSON.parse(atob(part.replace(/-/g, '+').replace(/_/g, '/'))) as { auth_time?: unknown };
+    const t = Number(j.auth_time);
+    return Number.isFinite(t) && t > 0 ? t * 1000 : 0;
+  } catch {
+    return 0;
   }
 }
 
@@ -131,7 +151,17 @@ export interface CloudBackend {
   /** Delete everything this family has in the cloud. */
   deleteAll(): Promise<void>;
   /** Delete everything, then the MN sign-in account itself. */
-  deleteAccount(): Promise<void>;
+  /** When this session last signed in with Google (ms; 0 if unknown). */
+  signedInAt(): number;
+  /** Sign in with Google again, for the same account only (another account is refused, and the
+   *  session stays as it was). Deleting the account needs a recent sign-in. */
+  reauth(googleIdToken: string): Promise<void>;
+  /** Delete the family's cloud data: every child, the family document, any MN × request and
+   *  phone check-ins, with no note left behind (the account goes next). If it stops part-way,
+   *  it throws DeleteStopped. */
+  deleteData(): Promise<void>;
+  /** Delete the MN sign-in itself (needs a recent sign-in: else a 'recent-login' error). */
+  deleteSignIn(): Promise<void>;
   session: Session | null;
 }
 
@@ -202,7 +232,8 @@ export class FirebaseRest implements CloudBackend {
     return res;
   }
 
-  async signIn(googleIdToken: string): Promise<Session> {
+  /** Firebase's sign-in with a Google ID token (the session isn't kept here). */
+  private async idp(googleIdToken: string): Promise<Session> {
     const res = await this.call(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key=${this.cfg.apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -210,10 +241,23 @@ export class FirebaseRest implements CloudBackend {
     });
     const j = (await res.json().catch(() => ({}))) as Record<string, string>;
     if (!res.ok || !j.idToken) throw new CloudError('denied', 'Google sign-in didn’t work. Please try again.');
-    const s: Session = { uid: j.localId, email: (j.email ?? '').toLowerCase(), name: j.displayName ?? j.fullName ?? '', idToken: j.idToken, refreshToken: j.refreshToken, exp: Date.now() + Number(j.expiresIn ?? 3600) * 1000 };
+    return { uid: j.localId, email: (j.email ?? '').toLowerCase(), name: j.displayName ?? j.fullName ?? '', idToken: j.idToken, refreshToken: j.refreshToken, exp: Date.now() + Number(j.expiresIn ?? 3600) * 1000 };
+  }
+  async signIn(googleIdToken: string): Promise<Session> {
+    const s = await this.idp(googleIdToken);
     this.session = s;
     this.onSession(s);
     return s;
+  }
+  signedInAt(): number {
+    return this.session ? authTime(this.session.idToken) : 0;
+  }
+  async reauth(googleIdToken: string): Promise<void> {
+    const before = this.me;
+    const s = await this.idp(googleIdToken);
+    if (s.uid !== before.uid) throw new CloudError('denied', `That’s another Google account. Choose ${before.email}.`);
+    this.session = s;
+    this.onSession(s);
   }
 
   private async token(force = false): Promise<string> {
@@ -404,24 +448,37 @@ export class FirebaseRest implements CloudBackend {
     const r2 = await this.fs('PATCH', this.family, '', { fields: fields({ v: 1, deletedAt: Date.now() }) });
     if (!r2.ok) throw new CloudError('other', `Cloud error ${r2.status}`);
   }
-  /** Delete the account: every child, the family document, any MN × request and phone
-   *  check-ins (no note left behind, since no phone can sign in to it again), then the sign-in. */
-  async deleteAccount(): Promise<void> {
+  async deleteData(): Promise<void> {
     const uid = this.me.uid;
-    const res = await this.fs('GET', `${this.family}/children`, '?pageSize=300&mask.fieldPaths=childId');
-    if (res.ok) {
-      const j = (await res.json()) as { documents?: { name: string }[] };
-      for (const d of j.documents ?? []) await this.deleteChild(d.name.split('/').pop()!);
-    } else if (res.status !== 404) throw new CloudError('other', `Cloud error ${res.status}`);
-    await this.remove(this.family);
+    let gone = 0;
+    try {
+      const res = await this.fs('GET', `${this.family}/children`, '?pageSize=300&mask.fieldPaths=childId');
+      if (res.ok) {
+        const j = (await res.json()) as { documents?: { name: string }[] };
+        for (const d of j.documents ?? []) {
+          await this.deleteChild(d.name.split('/').pop()!);
+          gone++;
+        }
+      } else if (res.status !== 404) throw new CloudError('other', `Cloud error ${res.status}`);
+      await this.remove(this.family);
+    } catch (e) {
+      throw gone ? new DeleteStopped(e) : e;
+    }
     for (const p of [`requests/${uid}`, `checkins/${uid}`]) await this.remove(p).catch(() => {});
+  }
+  async deleteSignIn(): Promise<void> {
     const idToken = await this.token(true);
     const r = await this.call(`https://identitytoolkit.googleapis.com/v1/accounts:delete?key=${this.cfg.apiKey}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ idToken }),
     });
-    if (!r.ok) throw new CloudError('other', `Account error ${r.status}`);
+    if (r.ok) return;
+    const msg = String(((await r.json().catch(() => ({}))) as { error?: { message?: string } }).error?.message ?? '');
+    // Already gone counts as done.
+    if (msg.startsWith('USER_NOT_FOUND')) return;
+    if (msg.startsWith('CREDENTIAL_TOO_OLD_LOGIN_AGAIN')) throw new CloudError('recent-login', 'Please confirm with Google again.');
+    throw new CloudError('other', `Account error ${r.status}${msg ? ` (${msg})` : ''}`);
   }
 
 }
@@ -453,6 +510,7 @@ export class MemoryCloud implements CloudBackend {
     const [email, name] = googleIdToken.split('|');
     const e = (email || 'parent@example.com').toLowerCase();
     const s: Session = { uid: `mock-${e}`, email: e, name: name || 'Parent', idToken: 'mock', refreshToken: 'mock', exp: Date.now() + 3_600_000 };
+    this.store.set(`studyhard.mockcloud.signedin.${s.uid}`, String(Date.now()));
     this.session = s;
     this.onSession(s);
     return s;
@@ -577,8 +635,35 @@ export class MemoryCloud implements CloudBackend {
   async deleteAll() {
     this.write({ family: { deletedAt: Date.now() } as FamilyDoc, kids: {} });
   }
-  async deleteAccount() {
-    await this.deleteAll();
+  // Signing in and deleting, as Google does it (a recent sign-in for deleting the sign-in). Browser
+  // tests make the sign-in old with studyhard.mockcloud.signedin.<uid> = 0, and make deleting the
+  // sign-in fail with studyhard.mockcloud.fail = "delete-sign-in".
+  signedInAt(): number {
+    return this.session ? Number(this.store.get(`studyhard.mockcloud.signedin.${this.session.uid}`) ?? 0) || 0 : 0;
+  }
+  async reauth(googleIdToken: string): Promise<void> {
+    const before = this.me;
+    const email = (googleIdToken.split('|')[0] || 'parent@example.com').toLowerCase();
+    if (`mock-${email}` !== before.uid) throw new CloudError('denied', `That’s another Google account. Choose ${before.email}.`);
+    this.store.set(`studyhard.mockcloud.signedin.${before.uid}`, String(Date.now()));
+  }
+  async deleteData() {
+    const uid = this.me.uid;
+    this.store.set(`studyhard.mockcloud.family.${uid}`, JSON.stringify({ family: null, kids: {} }));
+    for (const k of ['requests', 'checkins']) {
+      const b = this.bag<unknown>(k);
+      delete b[uid];
+      this.setBag(k, b);
+    }
+  }
+  async deleteSignIn() {
+    const uid = this.me.uid;
+    if (this.store.get('studyhard.mockcloud.fail') === 'delete-sign-in') throw new CloudError('other', 'Account error 500');
+    if (Date.now() - this.signedInAt() > 5 * 60_000) throw new CloudError('recent-login', 'Please confirm with Google again.');
+    this.store.set(`studyhard.mockcloud.signedin.${uid}`, '');
+    const gone = this.bag<number>('deleted');
+    gone[uid] = Date.now();
+    this.setBag('deleted', gone);
   }
 }
 // #end

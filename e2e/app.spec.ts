@@ -1397,6 +1397,52 @@ test('google: signing in opens MN at once; a parent asks for MN ×, the owner gi
   await expect(page.locator('.pm-ask')).toHaveText('Request MN ×');
 });
 
+test('google: "Delete account and data" asks Google to confirm an old sign-in, and says exactly what was deleted (review fix 14)', async ({ page }) => {
+  await page.goto('/?debug&demo=%405&cloudmock');
+  await expect(page.locator('.map')).toBeVisible();
+  await asGoogle(page, 'asha@example.com|Asha');
+  await page.evaluate(() => { const w = window as unknown as CloudW; w.__app.show(w.__screens.parentScreen); });
+  await page.click('.pa-tab[data-id="app"]');
+  await page.click('.cl-in');
+  await page.click('.sheet .btn.mint');
+  await page.click('.cl-sync');
+  await expect(page.locator('.cl-status')).toHaveText('Backed up just now');
+  const family = () => page.evaluate(() => JSON.parse(localStorage.getItem('studyhard.mockcloud.family.mock-asha@example.com') ?? 'null')?.family ?? null);
+  const kids = () => page.evaluate(() => (window as unknown as CloudW).__app.save.data.children.length);
+  expect(await family()).not.toBeNull();
+  // The sign-in was a while ago, so Google confirms first; choosing another account deletes nothing.
+  await page.evaluate(() => {
+    localStorage.setItem('studyhard.mockcloud.signedin.mock-asha@example.com', '0');
+    Object.assign(window, { __mockGoogle: 'other@example.com|Other' });
+  });
+  await page.click('.erase-row');
+  await page.getByRole('button', { name: 'Delete everything' }).click();
+  await expect(page.locator('.toast', { hasText: 'Nothing was deleted' })).toContainText('Choose asha@example.com');
+  expect(await family()).not.toBeNull();
+  expect(await kids()).toBe(1);
+  // The right account, but the sign-in can't be deleted just now: the backup goes, and MN says exactly that.
+  await page.evaluate(() => {
+    localStorage.setItem('studyhard.mockcloud.fail', 'delete-sign-in');
+    Object.assign(window, { __mockGoogle: 'asha@example.com|Asha' });
+  });
+  await page.click('.erase-row');
+  await page.getByRole('button', { name: 'Delete everything' }).click();
+  const half = page.locator('.sheet', { hasText: 'Not finished yet' });
+  await expect(half).toContainText('Your family’s online backup is deleted, but your MN sign-in isn’t. Nothing on this phone is deleted yet.');
+  expect(await family()).toBeNull();
+  expect(await kids()).toBe(1);
+  // Try again: it finishes.
+  await page.evaluate(() => localStorage.removeItem('studyhard.mockcloud.fail'));
+  await half.getByRole('button', { name: 'Try again' }).click();
+  await expect(page.locator('.toast', { hasText: 'Everything is deleted' })).toBeVisible();
+  // MN starts again (here the test's demo child is put back), signed out.
+  await page.waitForEvent('load');
+  await expect(page.locator('.map')).toBeVisible();
+  await page.evaluate(() => { const w = window as unknown as CloudW; w.__app.show(w.__screens.parentScreen); });
+  await page.click('.pa-tab[data-id="app"]');
+  await expect(page.locator('.pa-cloud')).toContainText('Saved on this phone only');
+});
+
 test('google: back up from the parent area; a new phone signs in and gets the children back', async ({ page, browser }) => {
   await page.goto('/?debug&demo=s4.x7%231&cloudmock');
   await expect(page.locator('.map')).toBeVisible();

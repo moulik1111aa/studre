@@ -7,7 +7,7 @@
 import { cleanRules } from '../core/clean.ts';
 import { escv, esc, type App } from './app.ts';
 import { FIREBASE } from '../platform/firebase-config.ts';
-import { CloudError, FirebaseRest, type CloudBackend, type Session } from '../platform/cloudapi.ts';
+import { CloudError, DeleteStopped, FirebaseRest, type CloudBackend, type Session } from '../platform/cloudapi.ts';
 // #unless play
 import { MemoryCloud, OWNER_EMAIL } from '../platform/cloudapi.ts';
 import { confirmGate, gateState, seen, type GateState } from '../core/gate.ts';
@@ -287,17 +287,62 @@ export async function deleteCloudCopy(app: App): Promise<boolean> {
   return true;
 }
 
-/** Delete the family's online backup and the MN sign-in account, then sign out. */
-export async function deleteCloudAccount(app: App): Promise<boolean> {
+/**
+ * What "Delete account and data" managed online:
+ *   done       the online backup and the MN sign-in are deleted (and this phone is signed out)
+ *   cancelled  the parent stopped at Google's confirmation: nothing deleted
+ *   nothing    nothing deleted (no connection, or another Google account was chosen): `why` says
+ *   some       the connection dropped part-way: some of the online backup is deleted
+ *   backup     the online backup is deleted, the MN sign-in isn't
+ */
+export type DeleteOutcome = { result: 'done' } | { result: 'cancelled' } | { result: 'nothing' | 'some' | 'backup'; why: string };
+
+/** Deleting the MN sign-in needs a Google sign-in from the last few minutes (Google's rule). */
+const RECENT_SIGN_IN = 4 * 60_000;
+
+const whyNot = (e: unknown): string => (e instanceof CloudError ? (e.kind === 'offline' ? 'No internet connection.' : e.message) : 'Something went wrong.');
+
+/**
+ * Delete the family's online backup and the MN sign-in, then sign out. Google is asked to confirm
+ * first when the sign-in isn't recent, so that nothing is deleted unless all of it can be.
+ */
+export async function deleteCloudAccount(app: App): Promise<DeleteOutcome> {
   const b = backend(app);
-  if (!b?.session) return true;
+  if (!b?.session) return { result: 'done' };
+  const confirm = async (): Promise<{ result: 'cancelled' } | { result: 'nothing'; why: string } | null> => {
+    const t = await googleIdToken(app);
+    if ('cancelled' in t) return { result: 'cancelled' };
+    if ('error' in t) return { result: 'nothing', why: t.error };
+    try {
+      await b.reauth(t.token);
+      return null;
+    } catch (e) {
+      return { result: 'nothing', why: whyNot(e) };
+    }
+  };
+  if (Date.now() - b.signedInAt() > RECENT_SIGN_IN) {
+    const stop = await confirm();
+    if (stop) return stop;
+  }
   try {
-    await b.deleteAccount();
-  } catch {
-    return false;
+    await b.deleteData();
+  } catch (e) {
+    return { result: e instanceof DeleteStopped ? 'some' : 'nothing', why: whyNot(e) };
+  }
+  try {
+    await b.deleteSignIn();
+  } catch (e) {
+    // The phone's clock and Google's disagreed about "recent": confirm once more, then try again.
+    let err: unknown = e;
+    if (e instanceof CloudError && e.kind === 'recent-login') {
+      const stop = await confirm();
+      if (stop) return { result: 'backup', why: stop.result === 'cancelled' ? 'Google wasn’t asked to confirm.' : stop.why };
+      err = await b.deleteSignIn().then(() => null, (x: unknown) => x);
+    }
+    if (err) return { result: 'backup', why: whyNot(err) };
   }
   await signOut(app);
-  return true;
+  return { result: 'done' };
 }
 
 // ── syncing ─────────────────────────────────────────────────────────────────

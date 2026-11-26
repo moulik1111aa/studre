@@ -3,7 +3,7 @@
 // reminders and notes, widget data and files made for sharing), and MN starts fresh.
 // The same steps are described for people without the app at site/delete.html.
 
-import type { App } from './app.ts';
+import { esc, type App } from './app.ts';
 import { freshSave } from '../storage/save.ts';
 import { account, deleteCloudAccount } from './cloud.ts';
 
@@ -36,9 +36,22 @@ export async function eraseEverything(app: App): Promise<void> {
     'Delete account and data',
   );
   if (!(await result)) return;
-  if (signedIn && !(await deleteCloudAccount(app))) {
-    app.toast('Couldn’t reach the online backup to delete it. Connect to the internet and try again; nothing was deleted.', 6000);
-    return;
+  // Online first (Google may ask the parent to confirm). Each message says exactly what is deleted.
+  while (signedIn) {
+    const r = await deleteCloudAccount(app);
+    if (r.result === 'done') break;
+    if (r.result === 'cancelled') return void app.toast('Nothing was deleted.', 4000);
+    if (r.result === 'nothing') return void app.toast(`Nothing was deleted. ${r.why} Please try again.`, 6000);
+    const what = r.result === 'some' ? 'Some of your family’s online backup is deleted, but not all of it, and your MN sign-in isn’t.' : 'Your family’s online backup is deleted, but your MN sign-in isn’t.';
+    const again = app.sheet(
+      `<h2>Not finished yet</h2><p>${esc(what)} Nothing on this phone is deleted yet.</p><p class="fine">${esc(r.why)}</p>`,
+      [
+        { label: 'Try again', value: true, kind: 'mint' },
+        { label: 'Stop here', value: false, kind: 'ghost', back: true },
+      ],
+      'Delete account and data',
+    );
+    if (!(await again.result)) return;
   }
   await wipeLocal(app);
   app.save.data = freshSave();
