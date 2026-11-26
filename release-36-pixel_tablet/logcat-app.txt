@@ -1,0 +1,283 @@
+--------- beginning of main
+11-26 16:05:19.331  3302  3302 I m.studyhard.app: Using CollectorTypeCMC GC.
+11-26 16:05:19.331  3302  3302 W m.studyhard.app: Unexpected CPU variant for x86: x86_64.
+11-26 16:05:19.331  3302  3302 W m.studyhard.app: Known variants: atom, sandybridge, silvermont, goldmont, goldmont-plus, goldmont-without-sha-xsaves, tremont, kabylake, alderlake, default
+11-26 16:05:19.363  3302  3302 E m.studyhard.app: Not starting debugger since process cannot load the jdwp agent.
+11-26 16:05:19.413  3302  3302 D nativeloader: Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+11-26 16:05:19.853  3302  3302 D nativeloader: Configuring clns-9 for other apk /data/app/~~m_DGF4-izSEeHBM1rB4T_A==/com.studyhard.app-3_tgsFTSG0w3Fb3JYgmAlw==/base.apk. target_sdk_version=36, uses_libraries=, library_path=/data/app/~~m_DGF4-izSEeHBM1rB4T_A==/com.studyhard.app-3_tgsFTSG0w3Fb3JYgmAlw==/lib/x86_64, permitted_path=/data:/mnt/expand:/data/user/0/com.studyhard.app
+11-26 16:05:19.861  3302  3302 I m.studyhard.app: AssetManager2(0x7dc8a6a15eb8) locale list changing from [] to [en-US]
+11-26 16:05:19.862  3302  3302 V GraphicsEnvironment: Currently set values for:
+11-26 16:05:19.862  3302  3302 V GraphicsEnvironment:   angle_gl_driver_selection_pkgs=[]
+11-26 16:05:19.862  3302  3302 V GraphicsEnvironment:   angle_gl_driver_selection_values=[]
+11-26 16:05:19.862  3302  3302 V GraphicsEnvironment: com.studyhard.app is not listed in per-application setting
+11-26 16:05:19.862  3302  3302 V GraphicsEnvironment: ANGLE allowlist from config: com.dreamgames.royalmatch com.dts.freefiremax com.dxx.firenow com.gramgames.mergedragons com.ludo.king com.mojang.minecraftpe com.my.defense com.nintendo.zaka com.os.airforce com.playrix.fishdomdd.gplay io.teslatech.callbreak jp.konami.prospia net.peakgames.toonblast
+11-26 16:05:19.862  3302  3302 V GraphicsEnvironment: com.studyhard.app is not listed in ANGLE allowlist or settings, returning default
+11-26 16:05:19.862  3302  3302 V GraphicsEnvironment: Neither updatable production driver nor prerelease driver is supported.
+--------- beginning of system
+11-26 16:05:20.039  3302  3325 I DisplayManager: Choreographer implicitly registered for the refresh rate.
+11-26 16:05:20.082  3302  3302 I m.studyhard.app: AssetManager2(0x7dc8a6a19a18) locale list changing from [] to [en-US]
+11-26 16:05:20.105  3302  3302 D AppCompatDelegate: Checking for metadata for AppLocalesMetadataHolderService : Service not found
+11-26 16:05:20.105  3302  3302 I m.studyhard.app: AssetManager2(0x7dc8a6a20458) locale list changing from [] to [en-US]
+11-26 16:05:20.129  3302  3302 E ashmem  : Pinning is deprecated since Android Q. Please use trim or other methods.
+11-26 16:05:20.394  3302  3302 D CompatChangeReporter: Compat change id reported: 377864165; UID 10216; state: ENABLED
+11-26 16:05:20.394  3302  3302 D DesktopModeFlags: Toggle override initialized to: OVERRIDE_UNSET
+11-26 16:05:20.438  3302  3302 I m.studyhard.app: AssetManager2(0x7dc8a6a1c8f8) locale list changing from [] to [en-US]
+11-26 16:05:20.442  3302  3302 I WebViewFactory: Loading com.google.android.webview version 133.0.6943.137 (code 694313738)
+11-26 16:05:20.442  3302  3302 I m.studyhard.app: AssetManager2(0x7dc8a6a1d578) locale list changing from [] to [en-US]
+11-26 16:05:20.442  3302  3302 I m.studyhard.app: AssetManager2(0x7dc8a6a1d258) locale list changing from [] to [en-US]
+11-26 16:05:20.443  3302  3302 I m.studyhard.app: AssetManager2(0x7dc8a6a20a98) locale list changing from [] to [en-US]
+11-26 16:05:20.443  3302  3302 I m.studyhard.app: AssetManager2(0x7dc8a6a1b958) locale list changing from [] to [en-US]
+11-26 16:05:20.443  3302  3302 V ResourcesManager: The following library key has been added: ResourcesKey{ mHash=8d615d53 mResDir=null mSplitDirs=[] mOverlayDirs=[] mLibDirs=[/data/app/~~VpqORLkx2qrNg2yuR07Y8w==/com.google.android.webview-09yuXHIFsrwfs_JTUMmOqQ==/WebViewGoogle.apk,/data/app/~~cCQ-_ymo1jBU_vlU7JSqew==/com.google.android.trichromelibrary_694313738-DSitp1O_6djd5SKy1-LhcA==/TrichromeLibrary.apk,/system_ext/framework/androidx.window.extensions.jar] mDisplayId=0 mOverrideConfig=v36 mCompatInfo={320dpi always-compat} mLoaders=[]}
+11-26 16:05:20.457  3302  3302 W m.studyhard.app: Failed to find entry 'classes.dex': Entry not found
+11-26 16:05:20.457  3302  3302 D nativeloader: Configuring clns-10 for other apk /data/app/~~cCQ-_ymo1jBU_vlU7JSqew==/com.google.android.trichromelibrary_694313738-DSitp1O_6djd5SKy1-LhcA==/TrichromeLibrary.apk. target_sdk_version=34, uses_libraries=ALL, library_path=/data/app/~~VpqORLkx2qrNg2yuR07Y8w==/com.google.android.webview-09yuXHIFsrwfs_JTUMmOqQ==/lib/x86_64:/data/app/~~VpqORLkx2qrNg2yuR07Y8w==/com.google.android.webview-09yuXHIFsrwfs_JTUMmOqQ==/WebViewGoogle.apk!/lib/x86_64:/data/app/~~cCQ-_ymo1jBU_vlU7JSqew==/com.google.android.trichromelibrary_694313738-DSitp1O_6djd5SKy1-LhcA==/TrichromeLibrary.apk!/lib/x86_64, permitted_path=/data:/mnt/expand
+11-26 16:05:20.468  3302  3302 D ApplicationLoaders: Returning zygote-cached class loader: /system_ext/framework/androidx.window.extensions.jar
+11-26 16:05:20.674  3302  3302 D nativeloader: Configuring clns-11 for other apk /data/app/~~VpqORLkx2qrNg2yuR07Y8w==/com.google.android.webview-09yuXHIFsrwfs_JTUMmOqQ==/WebViewGoogle.apk. target_sdk_version=34, uses_libraries=, library_path=/data/app/~~VpqORLkx2qrNg2yuR07Y8w==/com.google.android.webview-09yuXHIFsrwfs_JTUMmOqQ==/lib/x86_64:/data/app/~~VpqORLkx2qrNg2yuR07Y8w==/com.google.android.webview-09yuXHIFsrwfs_JTUMmOqQ==/WebViewGoogle.apk!/lib/x86_64:/data/app/~~cCQ-_ymo1jBU_vlU7JSqew==/com.google.android.trichromelibrary_694313738-DSitp1O_6djd5SKy1-LhcA==/TrichromeLibrary.apk!/lib/x86_64, permitted_path=/data:/mnt/expand
+11-26 16:05:20.776  3302  3325 I EGL_emulation: Opening libGLESv1_CM_emulation.so
+11-26 16:05:20.776  3302  3325 I EGL_emulation: Opening libGLESv2_emulation.so
+11-26 16:05:20.794  3302  3325 W HWUI    : Failed to initialize 101010-2 format, error = EGL_SUCCESS
+11-26 16:05:20.809  3302  3302 I cr_WVCFactoryProvider: version=133.0.6943.137 (694313738) minSdkVersion=29 isBundle=false multiprocess=true packageId=2
+11-26 16:05:20.819  3302  3302 I m.studyhard.app: AssetManager2(0x7dc8a6a1e1f8) locale list changing from [] to [en-US]
+11-26 16:05:20.884  3302  3302 D nativeloader: Load /data/app/~~cCQ-_ymo1jBU_vlU7JSqew==/com.google.android.trichromelibrary_694313738-DSitp1O_6djd5SKy1-LhcA==/TrichromeLibrary.apk!/lib/x86_64/libmonochrome_64.so using class loader ns clns-11 (caller=/data/app/~~VpqORLkx2qrNg2yuR07Y8w==/com.google.android.webview-09yuXHIFsrwfs_JTUMmOqQ==/WebViewGoogle.apk): ok
+11-26 16:05:20.889  3302  3302 D nativeloader: Load /system/lib64/libwebviewchromium_plat_support.so using class loader ns clns-11 (caller=/data/app/~~VpqORLkx2qrNg2yuR07Y8w==/com.google.android.webview-09yuXHIFsrwfs_JTUMmOqQ==/WebViewGoogle.apk): ok
+11-26 16:05:20.914  3302  3347 I chromium: [1126/160520.904040:INFO:variations_seed_loader.cc(67)] Failed to open file for reading.: No such file or directory (2)
+11-26 16:05:20.915  3302  3347 I cr_VariationsUtils: Failed reading seed file "/data/user/0/com.studyhard.app/app_webview/variations_seed_new"
+11-26 16:05:20.915  3302  3347 I chromium: [1126/160520.915654:INFO:variations_seed_loader.cc(67)] Failed to open file for reading.: No such file or directory (2)
+11-26 16:05:20.915  3302  3347 I cr_VariationsUtils: Failed reading seed file "/data/user/0/com.studyhard.app/app_webview/variations_seed"
+11-26 16:05:20.915  3302  3347 I cr_VariationsUtils: Requesting new seed from IVariationsSeedServer
+11-26 16:05:20.924  3302  3302 I cr_LibraryLoader: Successfully loaded native library
+11-26 16:05:20.925  3302  3302 I cr_CachingUmaRecorder: Flushed 6 samples from 6 histograms, 0 samples were dropped.
+11-26 16:05:20.928  3302  3302 I cr_CombinedPProvider: #registerProvider() provider:WV.C8@791dee3 isPolicyCacheEnabled:false policyProvidersSize:0
+11-26 16:05:20.957  3302  3302 I cr_PolicyProvider: #setManagerAndSource() 0
+11-26 16:05:21.132  3302  3302 I cr_CombinedPProvider: #linkNativeInternal() 1
+11-26 16:05:21.133  3302  3302 I cr_AppResProvider: #getApplicationRestrictionsFromUserManager() Bundle[EMPTY_PARCEL]
+11-26 16:05:21.133  3302  3302 I cr_PolicyProvider: #notifySettingsAvailable() 0
+11-26 16:05:21.133  3302  3302 I cr_CombinedPProvider: #onSettingsAvailable() 0
+11-26 16:05:21.133  3302  3302 I cr_CombinedPProvider: #flushPolicies()
+11-26 16:05:21.210  3302  3302 I m.studyhard.app: AssetManager2(0x7dc8a6a1a698) locale list changing from [] to [en-US]
+11-26 16:05:21.211  3302  3302 I m.studyhard.app: AssetManager2(0x7dc8a6a1e518) locale list changing from [] to [en-US]
+11-26 16:05:21.363  3302  3379 E chromium: [ERROR:simple_version_upgrade.cc(151)] Failed to write a new fake index.
+11-26 16:05:21.377  3302  3386 E chromium: [ERROR:simple_version_upgrade.cc(151)] Failed to write a new fake index.
+11-26 16:05:21.614  3302  3302 D Capacitor: Starting BridgeActivity
+11-26 16:05:21.650  3302  3302 D Capacitor: Registering plugin instance: CapacitorCookies
+11-26 16:05:21.650  3302  3302 D Capacitor: Registering plugin instance: WebView
+11-26 16:05:21.650  3302  3302 D Capacitor: Registering plugin instance: CapacitorHttp
+11-26 16:05:21.651  3302  3302 D Capacitor: Registering plugin instance: SystemBars
+11-26 16:05:21.651  3302  3302 D Capacitor: Registering plugin instance: StudyHard
+11-26 16:05:21.679  3302  3302 I m.studyhard.app: AssetManager2(0x7dc8a6a1c5d8) locale list changing from [] to [en-US]
+11-26 16:05:21.680  3302  3302 I TextToSpeech: Sucessfully bound to com.google.android.tts
+11-26 16:05:21.690  3302  3302 W Capacitor: Unable to read file at path public/plugins
+11-26 16:05:21.708  3302  3302 D Capacitor: Loading app at https://localhost
+11-26 16:05:21.732  3302  3383 W cr_media: BLUETOOTH_CONNECT permission is missing.
+11-26 16:05:21.733  3302  3383 W cr_media: getBluetoothAdapter() requires BLUETOOTH permission
+11-26 16:05:21.733  3302  3383 W cr_media: registerBluetoothIntentsIfNeeded: Requires BLUETOOTH permission
+11-26 16:05:21.735  3302  3426 W libc    : Access denied finding property "vendor.mesa.log"
+11-26 16:05:21.735  3302  3426 W libc    : Access denied finding property "vendor.mesa.log.file"
+11-26 16:05:21.735  3302  3426 E MESA    : Failed to open rendernode: No such file or directory
+11-26 16:05:21.742  3302  3426 W libc    : Access denied finding property "vendor.mesa.vk.trace.per.submit"
+11-26 16:05:21.742  3302  3426 W libc    : Access denied finding property "vendor.mesa.gallium.print.optio"
+11-26 16:05:21.742  3302  3426 W libc    : Access denied finding property "vendor.mesa.vk.trace.frame"
+11-26 16:05:21.744  3302  3426 W libc    : Access denied finding property "vendor.mesa.vk.wsi.headless.swa"
+11-26 16:05:21.757  3302  3426 W chromium: [WARNING:viz_main_impl.cc(85)] VizNullHypothesis is disabled (not a warning)
+11-26 16:05:21.759  3302  3302 D Capacitor: App started
+11-26 16:05:21.762  3302  3302 D Capacitor: App resumed
+11-26 16:05:21.774  3302  3302 W HWUI    : Unknown dataspace 0
+11-26 16:05:21.789  3302  3302 D InsetsController: Setting requestedVisibleTypes to -528 (was -9)
+11-26 16:05:21.809  3302  3382 D Capacitor: Handling local request: https://localhost/
+11-26 16:05:21.849  3302  3436 I CameraManagerGlobal: Connecting to camera service
+11-26 16:05:22.852  3302  3302 D InsetsController: hide(ime(), fromIme=false)
+11-26 16:05:22.852  3302  3302 I ImeTracker: com.studyhard.app:f85bf576: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+11-26 16:05:23.111  3302  3493 W InteractionJankMonitor: Initializing without READ_DEVICE_CONFIG permission. enabled=true, interval=1, missedFrameThreshold=3, frameTimeThreshold=64, package=com.studyhard.app
+11-26 16:05:23.331  3302  3302 E Capacitor/Console: File:  - Line 6 - Msg: Error injecting safe area CSS: TypeError: Cannot read properties of null (reading 'style')
+11-26 16:05:23.331  3302  3302 E Capacitor/Console: File:  - Line 6 - Msg: Error injecting safe area CSS: TypeError: Cannot read properties of null (reading 'style')
+11-26 16:05:23.331  3302  3302 E Capacitor/Console: File:  - Line 6 - Msg: Error injecting safe area CSS: TypeError: Cannot read properties of null (reading 'style')
+11-26 16:05:23.684  3302  3314 I TextToSpeech: Connected to TTS engine
+11-26 16:05:24.567  3302  3302 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-26 16:05:24.578  3302  3302 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 86551345, pluginId: StudyHard, methodName: readSave
+11-26 16:05:24.578  3302  3302 V Capacitor: callback: 86551345, pluginId: StudyHard, methodName: readSave, methodData: {}
+11-26 16:05:24.689  3302  3302 I Capacitor/Console: File:  - Line 334 - Msg: {"values":{}}
+11-26 16:05:24.689  3302  3302 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-26 16:05:24.691  3302  3302 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-26 16:05:24.691  3302  3302 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-26 16:05:24.691  3302  3302 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-26 16:05:24.691  3302  3302 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-26 16:05:24.691  3302  3302 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-26 16:05:24.691  3302  3302 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-26 16:05:24.691  3302  3302 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-26 16:05:24.691  3302  3302 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 86551346, pluginId: StudyHard, methodName: voices
+11-26 16:05:24.692  3302  3302 V Capacitor: callback: 86551346, pluginId: StudyHard, methodName: voices, methodData: {}
+11-26 16:05:24.693  3302  3302 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 86551347, pluginId: SystemBars, methodName: setStyle
+11-26 16:05:24.693  3302  3302 V Capacitor: callback: 86551347, pluginId: SystemBars, methodName: setStyle, methodData: {"style":"LIGHT"}
+11-26 16:05:24.693  3302  3302 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 86551348, pluginId: StudyHard, methodName: addListener
+11-26 16:05:24.693  3302  3302 V Capacitor: callback: 86551348, pluginId: StudyHard, methodName: addListener, methodData: {"eventName":"back"}
+11-26 16:05:24.693  3302  3302 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 86551349, pluginId: StudyHard, methodName: listPhotos
+11-26 16:05:24.693  3302  3302 V Capacitor: callback: 86551349, pluginId: StudyHard, methodName: listPhotos, methodData: {}
+11-26 16:05:24.693  3302  3302 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 86551350, pluginId: StudyHard, methodName: setReminders
+11-26 16:05:24.693  3302  3302 V Capacitor: callback: 86551350, pluginId: StudyHard, methodName: setReminders, methodData: {"plan":"{\"items\":[],\"widget\":{\"kids\":[],\"holiday\":false,\"facts\":[\"Leonardo da Vinci wrote his notes backwards, so you need a mirror to read them easily.\",\"Aesop's fables, with morals like the tortoise and the hare, come from ancient Greece.\",\"Lac insects make a sticky resin that is used to make colourful bangles in Jaipur.\",\"House geckos eat insects such as mosquitoes, so they are helpful to have around.\",\"Many birds, such as the swallow, travel long distances to warmer places in winter.\",\"Modern polo grew from a game played in Manipur, called Sagol Kangjei.\",\"Children need about 60 minutes of active play every day to stay strong and healthy.\",\"There are billions of galaxies in the universe.\",\"Gravity is the pull that keeps your feet on the ground.\",\"There are two high tides and two low tides most days.\",\"The Moon's gravity is about one sixth of Earth's.\",\"Camels store fat, not water, in their humps.\",\"Ants talk to each other using smells.\",\"Alligators and crocodiles look alike, but a crocodile's lower teeth show when its mouth is shut.\",\"The snow leopard lives high in the mountains and uses its long tail like a blanket.\",\"An octopus has blue blood.\",\"Some fish can change from female to male.\",\"Tides are mostly caused by the pull of the Moon.\",\"Your body has more than 600 muscles.\",\"The left lung is a little smaller than the right to make room for your heart.\",\"Your body makes new blood cells inside your bones.\",\"Roots hold a plant in the ground and drink up water.\",\"Popcorn pops because water inside each kernel turns to steam.\",\"Penicillin, a medicine, was discovered from a mould.\",\"Some plants live on other trees without hurting them, like orchids.\",\"Lightning is a giant spark of electricity in the sky.\",\"Glaciers are rivers of ice that move very slowly.\",\"Earth's land is always changing, very slowly.\",\"Plesiosaurs and ichthyosaurs were sea reptiles, not dinosaurs.\",\"Fish were among the first animals with backbones.\",\"Sound is made when something vibrates, which means it shakes very quickly.\",\"Gravity is the force that pulls everything towards the centre of the Earth.\",\"Rust forms when iron touches air and water for a long time.\",\"Glow sticks glow because of a chemical reaction inside them.\",\"A modern smartphone is more powerful than the computers that helped astronauts reach the Moon.\",\"The Samrat Yantra in Jaipur is one of the biggest stone sundials in the world.\",\"Robots are used in factories to lift heavy things and to do the same job again and again.\",\"The first lifts were pulled up by ropes, with people or animals doing the work.\",\"Alphonso mangoes, from Ratnagiri in Maharashtra, are famous for their sweet taste.\",\"Paneer is made by adding lemon juice or vinegar to hot milk so that it splits into curds.\"],\"adventure\":null,\"day\":null,\"focus\":null}}"}
+11-26 16:05:24.693  3302  3302 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 86551351, pluginId: StudyHard, methodName: addListener
+11-26 16:05:24.693  3302  3302 V Capacitor: callback: 86551351, pluginId: StudyHard, methodName: addListener, methodData: {"eventName":"launch"}
+11-26 16:05:24.693  3302  3302 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 86551352, pluginId: StudyHard, methodName: launchAction
+11-26 16:05:24.693  3302  3302 V Capacitor: callback: 86551352, pluginId: StudyHard, methodName: launchAction, methodData: {}
+11-26 16:05:24.693  3302  3302 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 86551353, pluginId: StudyHard, methodName: addListener
+11-26 16:05:24.693  3302  3302 V Capacitor: callback: 86551353, pluginId: StudyHard, methodName: addListener, methodData: {"eventName":"shared"}
+11-26 16:05:24.797  3302  3521 I TextToSpeech: Setting up the connection to TTS engine...
+11-26 16:05:24.892  3302  3302 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-26 16:05:24.892  3302  3302 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 86551354, pluginId: StudyHard, methodName: stopSpeaking
+11-26 16:05:24.892  3302  3302 V Capacitor: callback: 86551354, pluginId: StudyHard, methodName: stopSpeaking, methodData: {}
+11-26 16:05:24.898  3302  3302 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-26 16:05:24.900  3302  3302 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 86551355, pluginId: StudyHard, methodName: keepAwake
+11-26 16:05:24.900  3302  3302 V Capacitor: callback: 86551355, pluginId: StudyHard, methodName: keepAwake, methodData: {"on":true}
+11-26 16:05:25.157  3302  3378 D Capacitor: Handling local request: https://localhost/favicon.ico
+11-26 16:05:25.259  3302  3346 D SharedPreferencesImpl: Time required to fsync /data/user/0/com.studyhard.app/shared_prefs/studyhard_reminders.xml: [<1: 0, <2: 0, <4: 0, <8: 0, <16: 0, <32: 0, <64: 0, <128: 0, <256: 0, <512: 1, <1024: 0, <2048: 0, <4096: 0, <8192: 0, <16384: 0, >=16384: 0]
+11-26 16:05:25.271  3302  3302 I Capacitor/Console: File:  - Line 334 - Msg: {"voices":[],"state":"starting"}
+11-26 16:05:25.271  3302  3302 I Capacitor/Console: File:  - Line 334 - Msg: {"ids":[]}
+11-26 16:05:25.272  3302  3302 I Capacitor/Console: File:  - Line 334 - Msg: undefined
+11-26 16:05:25.272  3302  3302 I Capacitor/Console: File:  - Line 334 - Msg: {"enabled":false,"canAsk":true,"snoozeUntil":0}
+11-26 16:05:25.272  3302  3302 I Capacitor/Console: File:  - Line 334 - Msg: {"open":""}
+11-26 16:05:25.272  3302  3302 I Capacitor/Console: File:  - Line 334 - Msg: undefined
+11-26 16:05:25.275  3302  3302 I Capacitor/Console: File:  - Line 334 - Msg: undefined
+11-26 16:05:25.327  3302  3538 D ProfileInstaller: Installing profile for com.studyhard.app
+11-26 16:05:28.190  3302  3302 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-26 16:05:28.190  3302  3302 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-26 16:05:28.219  3302  3383 D AudioSystem: onNewServiceWithAdapter: media.audio_flinger service obtained 0x7dc7f6a80930
+11-26 16:05:28.223  3302  3474 I HWUI    : Davey! duration=3187ms; Flags=0, FrameTimelineVsyncId=8165, IntendedVsync=69392261047, Vsync=69692261035, InputEventId=0, HandleInputStart=69704543308, AnimationStart=69704544059, PerformTraversalsStart=69705806813, DrawStart=69705829257, FrameDeadline=69792261031, FrameStartTime=69704466693, FrameInterval=16666666, WorkloadTarget=16666666, SyncQueued=69705967233, SyncStart=69751661812, IssueDrawCommandsStart=69754257556, SwapBuffers=72598115386, FrameCompleted=72625711663, DequeueBufferDuration=2214, QueueBufferDuration=310864, GpuCompleted=72625711663, SwapBuffersCompleted=72614683716, DisplayPresentTime=0, CommandSubmissionCompleted=72598115386, 
+11-26 16:05:28.257  3302  3383 D AudioSystem: getService: checking for service media.audio_flinger: 0x7dc7e6aa3020
+11-26 16:05:28.259  3302  3302 I Choreographer: Skipped 173 frames!  The application may be doing too much work on its main thread.
+11-26 16:05:28.260  3302  3383 D AudioSystem: onNewService: media.audio_policy service obtained 0x7dc7e6aaf410
+11-26 16:05:28.262  3302  3383 D AudioSystem: getService: checking for service media.audio_policy: 0x7dc7e6aaf410
+11-26 16:05:28.391  3302  3302 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 86551356, pluginId: StudyHard, methodName: sharedFile
+11-26 16:05:28.391  3302  3302 V Capacitor: callback: 86551356, pluginId: StudyHard, methodName: sharedFile, methodData: {}
+11-26 16:05:28.391  3302  3302 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 86551357, pluginId: StudyHard, methodName: voices
+11-26 16:05:28.391  3302  3302 V Capacitor: callback: 86551357, pluginId: StudyHard, methodName: voices, methodData: {}
+11-26 16:05:28.397  3302  3383 I AAudio  : AAudioStreamBuilder_openStream() called ----------------------------------------
+11-26 16:05:28.414  3302  3383 I AudioStreamBuilder: rate   =  24000, channels  = 1, channelMask = 0x1, format   = 5, sharing = SH, dir = OUTPUT
+11-26 16:05:28.414  3302  3383 I AudioStreamBuilder: devices = AUDIO_PORT_HANDLE_NONE, sessionId = -1, perfMode = 11, callback: ON with frames = 4360
+11-26 16:05:28.414  3302  3383 I AudioStreamBuilder: usage  =      1, contentType = 0, inputPreset = 0, allowedCapturePolicy = 0
+11-26 16:05:28.414  3302  3383 I AudioStreamBuilder: privacy sensitive = false, opPackageName = (null), attributionTag = (null)
+11-26 16:05:28.414  3302  3383 D AudioStreamBuilder: build, global mmap policy is 0
+11-26 16:05:28.415  3302  3383 D AudioStreamBuilder: build, system mmap policy is 1
+11-26 16:05:28.415  3302  3383 D AudioStreamBuilder: build, final mmap policy is 1
+11-26 16:05:28.424  3302  3383 D AudioStreamBuilder: build, system mmap exclusive policy is 1
+11-26 16:05:28.424  3302  3383 D AudioStreamBuilder: build, final mmap exclusive policy is 1
+11-26 16:05:28.424  3302  3383 D AudioStreamBuilder: build() MMAP not used because AAUDIO_PERFORMANCE_MODE_LOW_LATENCY not requested.
+11-26 16:05:28.424  3302  3383 D m.studyhard.app: PlayerBase::PlayerBase()
+11-26 16:05:28.426  3302  3383 D AudioStreamTrack: open(), request notificationFrames = 0, frameCount = 0
+11-26 16:05:28.427  3302  3302 I Capacitor/Console: File:  - Line 334 - Msg: {}
+11-26 16:05:28.490  3302  3383 D AudioStreamTrack: open() flags changed from 0x00000008 to 0x00000000
+11-26 16:05:28.490  3302  3383 D AudioStreamTrack: open() perfMode changed from 11 to 10
+11-26 16:05:28.490  3302  3383 D AAudioStream: setState(s#1) from 0 to 2
+11-26 16:05:28.499  3302  3383 I AAudio  : AAudioStreamBuilder_openStream() returns 0 = AAUDIO_OK for s#1 ----------------
+11-26 16:05:28.541  3302  3383 D AAudio  : AAudioStream_requestStart(s#1) called --------------
+11-26 16:05:28.547  3302  3383 D AAudioStream: setState(s#1) from 2 to 3
+11-26 16:05:28.566  3302  3383 D AAudio  : AAudioStream_requestStart(s#1) returned 0 ---------
+11-26 16:05:28.574  3302  3326 D AudioStreamLegacy: onAudioDeviceUpdate() devices 2 => 2
+11-26 16:05:28.603  3302  3680 D AAudioStream: setState(s#1) from 3 to 4
+11-26 16:05:29.034  3302  3302 I Choreographer: Skipped 34 frames!  The application may be doing too much work on its main thread.
+11-26 16:05:29.043  3302  3326 I HWUI    : Davey! duration=3542ms; Flags=0, FrameTimelineVsyncId=8211, IntendedVsync=69792261031, Vsync=72675594249, InputEventId=0, HandleInputStart=72687062012, AnimationStart=72687062833, PerformTraversalsStart=72702007555, DrawStart=72702207133, FrameDeadline=72842260909, FrameStartTime=72686925067, FrameInterval=16666666, WorkloadTarget=16666666, SyncQueued=72702634130, SyncStart=72811878326, IssueDrawCommandsStart=72811907129, SwapBuffers=73441469429, FrameCompleted=73444412952, DequeueBufferDuration=2714, QueueBufferDuration=1722621, GpuCompleted=73444360664, SwapBuffersCompleted=73444412952, DisplayPresentTime=0, CommandSubmissionCompleted=73441469429, 
+11-26 16:05:29.330  3302  3302 I Capacitor/Console: File:  - Line 334 - Msg: {"voices":[{"name":"en-us-x-tpf-local","locale":"en-US","quality":400,"network":false},{"name":"en-us-x-sfg-local","locale":"en-US","quality":400,"network":false},{"name":"en-us-x-iob-local","locale":"en-US","quality":400,"network":false},{"name":"en-us-x-iom-local","locale":"en-US","quality":400,"network":false},{"name":"en-US-language","locale":"en-US","quality":400,"network":false},{"name":"en-us-x-tpd-local","locale":"en-US","quality":400,"network":false},{"name":"en-us-x-iog-local","locale":"en-US","quality":400,"network":false},{"name":"en-us-x-tpc-local","locale":"en-US","quality":400,"network":false},{"name":"en-us-x-iol-local","locale":"en-US","quality":400,"network":false},{"name":"en-us-x-sfg-network","locale":"en-US","quality":400,"network":true},{"name":"en-us-x-tpd-network","locale":"en-US","quality":400,"network":true},{"name":"en-us-x-tpc-network","locale":"en-US","quality":400,"network":true},{"name":"en-us-x-iob-network","locale":"en-US","quality":400,"network":true},{"name":"en-us-x-iol-network","locale":"en-US","quality":400,"network":true},{"name":"en-us-x-iom-network","locale":"en-US","quality":400,"network":true},{"name":"en-us-x-iog-network","locale":"en-US","quality":400,"network":true},{"name":"en-us-x-tpf-network","locale":"en-US","quality":400,"network":true}],"state":"ready"}
+11-26 16:05:29.830  3302  3676 I HWUI    : Davey! duration=1063ms; Flags=0, FrameTimelineVsyncId=8288, IntendedVsync=72892260907, Vsync=73458927551, InputEventId=0, HandleInputStart=73461299312, AnimationStart=73461300443, PerformTraversalsStart=73469572558, DrawStart=73469600239, FrameDeadline=73775594205, FrameStartTime=73461171130, FrameInterval=16666666, WorkloadTarget=16666666, SyncQueued=73469737774, SyncStart=73756484208, IssueDrawCommandsStart=73756550317, SwapBuffers=74218921737, FrameCompleted=74242539333, DequeueBufferDuration=3125, QueueBufferDuration=132267, GpuCompleted=74242539333, SwapBuffersCompleted=74236408152, DisplayPresentTime=0, CommandSubmissionCompleted=74218921737, 
+11-26 16:05:30.439  3302  3676 I HWUI    : Davey! duration=865ms; Flags=0, FrameTimelineVsyncId=8318, IntendedVsync=73775594205, Vsync=74225594187, InputEventId=0, HandleInputStart=74236912255, AnimationStart=74236912535, PerformTraversalsStart=74239465044, DrawStart=74239487007, FrameDeadline=74492260843, FrameStartTime=74236811624, FrameInterval=16666666, WorkloadTarget=16666666, SyncQueued=74239969587, SyncStart=74455378795, IssueDrawCommandsStart=74455408629, SwapBuffers=74829165338, FrameCompleted=74856443580, DequeueBufferDuration=4186, QueueBufferDuration=5212563, GpuCompleted=74856376610, SwapBuffersCompleted=74856443580, DisplayPresentTime=0, CommandSubmissionCompleted=74829165338, 
+11-26 16:05:35.416  3302  3302 I Choreographer: Skipped 31 frames!  The application may be doing too much work on its main thread.
+11-26 16:05:36.842  3302  3302 I Choreographer: Skipped 84 frames!  The application may be doing too much work on its main thread.
+11-26 16:05:36.869  3302  3314 I HWUI    : Davey! duration=1669ms; Flags=0, FrameTimelineVsyncId=8745, IntendedVsync=79092260659, Vsync=79308927317, InputEventId=0, HandleInputStart=79322487958, AnimationStart=79322488659, PerformTraversalsStart=79324835150, DrawStart=79324892336, FrameDeadline=79858927295, FrameStartTime=79322404743, FrameInterval=16666666, WorkloadTarget=16666666, SyncQueued=79325081558, SyncStart=79839607479, IssueDrawCommandsStart=79839636592, SwapBuffers=81252709882, FrameCompleted=81276177362, DequeueBufferDuration=2284, QueueBufferDuration=268490, GpuCompleted=81276177362, SwapBuffersCompleted=81268861085, DisplayPresentTime=0, CommandSubmissionCompleted=81252709882, 
+11-26 16:05:37.006  3302  3302 D InsetsController: hide(ime(), fromIme=false)
+11-26 16:05:37.006  3302  3302 I ImeTracker: com.studyhard.app:2b96e868: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+11-26 16:05:39.228  3302  3302 I Choreographer: Skipped 132 frames!  The application may be doing too much work on its main thread.
+11-26 16:05:39.247  3302  3314 I HWUI    : Davey! duration=3760ms; Flags=0, FrameTimelineVsyncId=8799, IntendedVsync=79858927295, Vsync=81258927239, InputEventId=0, HandleInputStart=81269677333, AnimationStart=81269677653, PerformTraversalsStart=81316831581, DrawStart=81316856699, FrameDeadline=81392260567, FrameStartTime=81269593668, FrameInterval=16666666, WorkloadTarget=16666666, SyncQueued=81316978831, SyncStart=81360161142, IssueDrawCommandsStart=81360189975, SwapBuffers=83623652797, FrameCompleted=83662399729, DequeueBufferDuration=2573, QueueBufferDuration=158387, GpuCompleted=83662399729, SwapBuffersCompleted=83654590696, DisplayPresentTime=0, CommandSubmissionCompleted=83623652797, 
+11-26 16:05:40.234  3302  3302 I Choreographer: Skipped 31 frames!  The application may be doing too much work on its main thread.
+11-26 16:05:40.289  3302  3314 I HWUI    : Davey! duration=2765ms; Flags=0, FrameTimelineVsyncId=9049, IntendedVsync=81442260565, Vsync=83642260477, InputEventId=0, HandleInputStart=83657425957, AnimationStart=83657427219, PerformTraversalsStart=83660360917, DrawStart=83660385784, FrameDeadline=84158927123, FrameStartTime=83655947481, FrameInterval=16666666, WorkloadTarget=16666666, SyncQueued=83660592583, SyncStart=84128881423, IssueDrawCommandsStart=84129541919, SwapBuffers=84632365687, FrameCompleted=84676242685, DequeueBufferDuration=3185, QueueBufferDuration=2403556, GpuCompleted=84676242685, SwapBuffersCompleted=84660307905, DisplayPresentTime=0, CommandSubmissionCompleted=84632365687, 
+11-26 16:05:40.601  3302  3314 I HWUI    : Davey! duration=799ms; Flags=0, FrameTimelineVsyncId=9087, IntendedVsync=83675593809, Vsync=84125593791, InputEventId=0, HandleInputStart=84137047980, AnimationStart=84137048712, PerformTraversalsStart=84137879171, DrawStart=84137900753, FrameDeadline=84708927101, FrameStartTime=84136950715, FrameInterval=16666666, WorkloadTarget=16666666, SyncQueued=84138327670, SyncStart=84660346693, IssueDrawCommandsStart=84663283205, SwapBuffers=84964407816, FrameCompleted=84996757862, DequeueBufferDuration=3665, QueueBufferDuration=892031, GpuCompleted=84996704903, SwapBuffersCompleted=84996757862, DisplayPresentTime=0, CommandSubmissionCompleted=84964407816, 
+11-26 16:05:40.856  3302  3326 I HWUI    : Davey! duration=770ms; Flags=0, FrameTimelineVsyncId=9109, IntendedVsync=84142260457, Vsync=84658927103, InputEventId=0, HandleInputStart=84663936450, AnimationStart=84663936771, PerformTraversalsStart=84666784440, DrawStart=84666806343, FrameDeadline=85025593755, FrameStartTime=84661124494, FrameInterval=16666666, WorkloadTarget=16666666, SyncQueued=84667220100, SyncStart=84997056127, IssueDrawCommandsStart=84997090358, SwapBuffers=85229259530, FrameCompleted=85242488758, DequeueBufferDuration=2684, QueueBufferDuration=258766, GpuCompleted=85242488758, SwapBuffersCompleted=85233547976, DisplayPresentTime=0, CommandSubmissionCompleted=85229259530, 
+11-26 16:05:47.770  3302  3676 I HWUI    : Davey! duration=891ms; Flags=0, FrameTimelineVsyncId=9802, IntendedVsync=91025593515, Vsync=91392260167, InputEventId=0, HandleInputStart=91403126013, AnimationStart=91403126353, PerformTraversalsStart=91404222329, DrawStart=91404244542, FrameDeadline=91692260155, FrameStartTime=91402970811, FrameInterval=16666666, WorkloadTarget=16666666, SyncQueued=91404356008, SyncStart=91646285556, IssueDrawCommandsStart=91646317073, SwapBuffers=92122838309, FrameCompleted=92159124084, DequeueBufferDuration=2404, QueueBufferDuration=108972, GpuCompleted=92159124084, SwapBuffersCompleted=92146163107, DisplayPresentTime=0, CommandSubmissionCompleted=92122838309, 
+11-26 16:05:47.780  3302  3302 I cr_A11yState: Enabled accessibility services list updated. []
+11-26 16:05:47.780  3302  3302 D AutofillManager: Fill dialog is enabled:false, hints=[]
+11-26 16:05:47.788  3302  3302 I cr_A11yState: Informing listeners of changes.
+11-26 16:05:47.788  3302  3302 I cr_A11yState: New AccessibilityState: State{isScreenReaderEnabled=false, isTouchExplorationEnabled=false, isPerformGesturesEnabled=false, isAnyAccessibilityServiceEnabled=false, isAccessibilityToolPresent=false, isSpokenFeedbackServicePresent=false, isTextShowPasswordEnabled=true, isOnlyPasswordManagersEnabled=false}
+11-26 16:05:47.790  3302  3302 I Choreographer: Skipped 33 frames!  The application may be doing too much work on its main thread.
+11-26 16:05:48.167  3302  3314 I HWUI    : Davey! duration=803ms; Flags=0, FrameTimelineVsyncId=9846, IntendedVsync=91658926823, Vsync=92208926801, InputEventId=0, HandleInputStart=92217672140, AnimationStart=92217672561, PerformTraversalsStart=92218799483, DrawStart=92218819983, FrameDeadline=92375593461, FrameStartTime=92217573844, FrameInterval=16666666, WorkloadTarget=16666666, SyncQueued=92219162885, SyncStart=92332774589, IssueDrawCommandsStart=92332899695, SwapBuffers=92547509685, FrameCompleted=92575829327, DequeueBufferDuration=2664, QueueBufferDuration=274800, GpuCompleted=92575829327, SwapBuffersCompleted=92562448057, DisplayPresentTime=0, CommandSubmissionCompleted=92547509685, 
+11-26 16:05:59.995  3302  3439 I HWUI    : Davey! duration=741ms; Flags=0, FrameTimelineVsyncId=10883, IntendedVsync=103442259685, Vsync=103675593009, InputEventId=0, HandleInputStart=103681352531, AnimationStart=103681353302, PerformTraversalsStart=103688190866, DrawStart=103688240420, FrameDeadline=103925592999, FrameStartTime=103681242146, FrameInterval=16666666, WorkloadTarget=16666666, SyncQueued=103688332958, SyncStart=103898726985, IssueDrawCommandsStart=103898762929, SwapBuffers=104356956130, FrameCompleted=104393967402, DequeueBufferDuration=3035, QueueBufferDuration=149062, GpuCompleted=104393967402, SwapBuffersCompleted=104386350485, DisplayPresentTime=0, CommandSubmissionCompleted=104356956130, 
+11-26 16:06:00.410  3302  3439 I HWUI    : Davey! duration=732ms; Flags=0, FrameTimelineVsyncId=10913, IntendedVsync=103925592999, Vsync=104392259647, InputEventId=0, HandleInputStart=104393259560, AnimationStart=104393260241, PerformTraversalsStart=104394289877, DrawStart=104394313583, FrameDeadline=104592259639, FrameStartTime=104393032881, FrameInterval=16666666, WorkloadTarget=16666666, SyncQueued=104396514347, SyncStart=104547098014, IssueDrawCommandsStart=104551002691, SwapBuffers=104747524728, FrameCompleted=104809039687, DequeueBufferDuration=3105, QueueBufferDuration=131977, GpuCompleted=104809039687, SwapBuffersCompleted=104791118514, DisplayPresentTime=0, CommandSubmissionCompleted=104747524728, 
+11-26 16:06:02.443  3302  3302 I Choreographer: Skipped 38 frames!  The application may be doing too much work on its main thread.
+11-26 16:06:02.453  3302  3326 I HWUI    : Davey! duration=921ms; Flags=0, FrameTimelineVsyncId=11085, IntendedVsync=105775592925, Vsync=106008926249, InputEventId=0, HandleInputStart=106018837317, AnimationStart=106018837968, PerformTraversalsStart=106022941411, DrawStart=106022965968, FrameDeadline=106242259573, FrameStartTime=106018749526, FrameInterval=16666666, WorkloadTarget=16666666, SyncQueued=106023923196, SyncStart=106202274071, IssueDrawCommandsStart=106202308101, SwapBuffers=106810299221, FrameCompleted=106875754360, DequeueBufferDuration=2483, QueueBufferDuration=120840, GpuCompleted=106875754360, SwapBuffersCompleted=106867758483, DisplayPresentTime=0, CommandSubmissionCompleted=106810299221, 
+11-26 16:06:02.891  3302  3676 I HWUI    : Davey! duration=929ms; Flags=0, FrameTimelineVsyncId=11129, IntendedVsync=106225592907, Vsync=106858926215, InputEventId=0, HandleInputStart=106870236096, AnimationStart=106870236387, PerformTraversalsStart=106870633239, DrawStart=106870655222, FrameDeadline=107058926207, FrameStartTime=106870144199, FrameInterval=16666666, WorkloadTarget=16666666, SyncQueued=106870750714, SyncStart=107013963972, IssueDrawCommandsStart=107016050015, SwapBuffers=107278933177, FrameCompleted=107298705984, DequeueBufferDuration=2704, QueueBufferDuration=391104, GpuCompleted=107298651823, SwapBuffersCompleted=107298705984, DisplayPresentTime=0, CommandSubmissionCompleted=107278933177, 
+11-26 16:06:03.917  3302  3676 I HWUI    : Davey! duration=741ms; Flags=0, FrameTimelineVsyncId=11220, IntendedVsync=107442259525, Vsync=107692259515, InputEventId=0, HandleInputStart=107697308371, AnimationStart=107697308632, PerformTraversalsStart=107701172999, DrawStart=107701201311, FrameDeadline=107892259507, FrameStartTime=107697198598, FrameInterval=16666666, WorkloadTarget=16666666, SyncQueued=107701732193, SyncStart=107860730793, IssueDrawCommandsStart=107860760897, SwapBuffers=108285694946, FrameCompleted=108342426666, DequeueBufferDuration=2503, QueueBufferDuration=278776, GpuCompleted=108342426666, SwapBuffersCompleted=108328518241, DisplayPresentTime=0, CommandSubmissionCompleted=108285694946, 
+11-26 16:06:05.150  3302  3302 I Choreographer: Skipped 37 frames!  The application may be doing too much work on its main thread.
+11-26 16:06:05.157  3302  3676 I HWUI    : Davey! duration=761ms; Flags=0, FrameTimelineVsyncId=11296, IntendedVsync=108575592813, Vsync=108692259475, InputEventId=0, HandleInputStart=108694743902, AnimationStart=108694744202, PerformTraversalsStart=108698500919, DrawStart=108698529261, FrameDeadline=108975592797, FrameStartTime=108694662661, FrameInterval=16666666, WorkloadTarget=16666666, SyncQueued=108698656140, SyncStart=108935216421, IssueDrawCommandsStart=108941417915, SwapBuffers=109538993502, FrameCompleted=109573822087, DequeueBufferDuration=4146, QueueBufferDuration=5124707, GpuCompleted=109573741446, SwapBuffersCompleted=109573822087, DisplayPresentTime=0, CommandSubmissionCompleted=109538993502, 
+11-26 16:06:05.777  3302  3676 I HWUI    : Davey! duration=794ms; Flags=0, FrameTimelineVsyncId=11326, IntendedVsync=108958926131, Vsync=109575592773, InputEventId=0, HandleInputStart=109577370893, AnimationStart=109577371333, PerformTraversalsStart=109580266754, DrawStart=109580292362, FrameDeadline=110025592755, FrameStartTime=109577260919, FrameInterval=16666666, WorkloadTarget=16666666, SyncQueued=109580401225, SyncStart=110006298655, IssueDrawCommandsStart=110006332025, SwapBuffers=110115538965, FrameCompleted=110179524251, DequeueBufferDuration=2865, QueueBufferDuration=169023, GpuCompleted=110179524251, SwapBuffersCompleted=110142251363, DisplayPresentTime=0, CommandSubmissionCompleted=110115538965, 
+11-26 16:06:08.003  3302  3383 I AAudio  : AAudioStreamBuilder_openStream() called ----------------------------------------
+11-26 16:06:08.003  3302  3383 I AudioStreamBuilder: rate   =  48000, channels  = 2, channelMask = 0x3, format   = 5, sharing = SH, dir = OUTPUT
+11-26 16:06:08.003  3302  3383 I AudioStreamBuilder: devices = AUDIO_PORT_HANDLE_NONE, sessionId = -1, perfMode = 12, callback: ON with frames = 4360
+11-26 16:06:08.003  3302  3383 I AudioStreamBuilder: usage  =      1, contentType = 0, inputPreset = 0, allowedCapturePolicy = 0
+11-26 16:06:08.003  3302  3383 I AudioStreamBuilder: privacy sensitive = false, opPackageName = (null), attributionTag = (null)
+11-26 16:06:08.003  3302  3383 D AudioStreamBuilder: build, global mmap policy is 0
+11-26 16:06:08.003  3302  3383 D AudioStreamBuilder: build, system mmap policy is 1
+11-26 16:06:08.003  3302  3383 D AudioStreamBuilder: build, final mmap policy is 1
+11-26 16:06:08.003  3302  3383 D AudioStreamBuilder: build, system mmap exclusive policy is 1
+11-26 16:06:08.003  3302  3383 D AudioStreamBuilder: build, final mmap exclusive policy is 1
+11-26 16:06:08.003  3302  3383 D m.studyhard.app: PlayerBase::PlayerBase()
+11-26 16:06:08.003  3302  3383 D AudioStreamTrack: open(), request notificationFrames = -8, frameCount = 0
+11-26 16:06:08.068  3302  3383 D AudioStreamTrack: open() flags changed from 0x00000104 to 0x00000000
+11-26 16:06:08.068  3302  3383 D AudioStreamTrack: open() perfMode changed from 12 to 10
+11-26 16:06:08.068  3302  3383 D AAudioStream: setState(s#2) from 0 to 2
+11-26 16:06:08.077  3302  3383 I AAudio  : AAudioStreamBuilder_openStream() returns 0 = AAUDIO_OK for s#2 ----------------
+11-26 16:06:08.077  3302  3383 D AAudio  : AAudioStream_requestStart(s#2) called --------------
+11-26 16:06:08.077  3302  3383 D AAudioStream: setState(s#2) from 2 to 3
+11-26 16:06:08.090  3302  3383 D AAudio  : AAudioStream_requestStart(s#2) returned 0 ---------
+11-26 16:06:08.090  3302  4700 D AAudioStream: setState(s#2) from 3 to 4
+11-26 16:06:08.097  3302  3474 D AudioStreamLegacy: onAudioDeviceUpdate() devices 2 => 2
+11-26 16:06:16.741  3302  3302 I Choreographer: Skipped 31 frames!  The application may be doing too much work on its main thread.
+11-26 16:06:17.495  3302  3474 I HWUI    : Davey! duration=910ms; Flags=0, FrameTimelineVsyncId=12255, IntendedVsync=120642258997, Vsync=121158925643, InputEventId=0, HandleInputStart=121168616254, AnimationStart=121168616635, PerformTraversalsStart=121173723926, DrawStart=121173780661, FrameDeadline=121558925627, FrameStartTime=121167945443, FrameInterval=16666666, WorkloadTarget=16666666, SyncQueued=121173967209, SyncStart=121524590167, IssueDrawCommandsStart=121524622165, SwapBuffers=121880002731, FrameCompleted=121903317208, DequeueBufferDuration=2815, QueueBufferDuration=678032, GpuCompleted=121903268245, SwapBuffersCompleted=121903317208, DisplayPresentTime=0, CommandSubmissionCompleted=121880002731, 
+11-26 16:06:18.920  3302  3302 I Choreographer: Skipped 30 frames!  The application may be doing too much work on its main thread.
+11-26 16:06:18.953  3302  3314 I HWUI    : Davey! duration=720ms; Flags=0, FrameTimelineVsyncId=12330, IntendedVsync=122375592261, Vsync=122558925587, InputEventId=0, HandleInputStart=122562142508, AnimationStart=122562143349, PerformTraversalsStart=122564134601, DrawStart=122564156994, FrameDeadline=122858925575, FrameStartTime=122562087606, FrameInterval=16666666, WorkloadTarget=16666666, SyncQueued=122564254450, SyncStart=122827502462, IssueDrawCommandsStart=122829229900, SwapBuffers=123342298115, FrameCompleted=123359103118, DequeueBufferDuration=2414, QueueBufferDuration=134531, GpuCompleted=123359103118, SwapBuffersCompleted=123344836453, DisplayPresentTime=0, CommandSubmissionCompleted=123342298115, 
+11-26 16:06:19.211  3302  3314 I HWUI    : Davey! duration=701ms; Flags=0, FrameTimelineVsyncId=12377, IntendedVsync=122842258909, Vsync=123342258889, InputEventId=0, HandleInputStart=123350429019, AnimationStart=123350429470, PerformTraversalsStart=123351052950, DrawStart=123351075113, FrameDeadline=123475592217, FrameStartTime=123347333259, FrameInterval=16666666, WorkloadTarget=16666666, SyncQueued=123351171698, SyncStart=123433261151, IssueDrawCommandsStart=123433322753, SwapBuffers=123592147548, FrameCompleted=123625796497, DequeueBufferDuration=3195, QueueBufferDuration=1496003, GpuCompleted=123625796497, SwapBuffersCompleted=123614489169, DisplayPresentTime=0, CommandSubmissionCompleted=123592147548, 
+11-26 16:06:30.839  3302  3302 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-26 16:06:30.839  3302  3302 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-26 16:06:31.005  3302  3302 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 86551358, pluginId: StudyHard, methodName: writeSave
+11-26 16:06:31.005  3302  3302 V Capacitor: callback: 86551358, pluginId: StudyHard, methodName: writeSave, methodData: {"key":"studyhard.save","value":"{\"version\":1,\"rev\":1,\"setupDone\":false,\"children\":[],\"activeChildId\":null,\"settings\":{\"limitMinutes\":30,\"timeUpMode\":\"stop\",\"treatPace\":1,\"goalPace\":1,\"holiday\":false,\"hiddenCategories\":[],\"sound\":true,\"music\":true,\"vibration\":true,\"voice\":true,\"voiceName\":\"\",\"voiceRate\":0.95,\"voiceGender\":\"m\",\"volume\":0.8,\"timerSeconds\":20,\"theme\":\"studio\",\"studioMoved\":true,\"ownRewards\":[],\"fx3d\":true,\"showFps\":false,\"confirmAnswers\":false,\"teach\":true,\"tourSeen\":true},\"faceoff\":{}}"}
+11-26 16:06:31.005  3302  3302 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 86551359, pluginId: StudyHard, methodName: writeSave
+11-26 16:06:31.005  3302  3302 V Capacitor: callback: 86551359, pluginId: StudyHard, methodName: writeSave, methodData: {"key":"studyhard.save.bak","value":"{\"version\":1,\"rev\":1,\"setupDone\":false,\"children\":[],\"activeChildId\":null,\"settings\":{\"limitMinutes\":30,\"timeUpMode\":\"stop\",\"treatPace\":1,\"goalPace\":1,\"holiday\":false,\"hiddenCategories\":[],\"sound\":true,\"music\":true,\"vibration\":true,\"voice\":true,\"voiceName\":\"\",\"voiceRate\":0.95,\"voiceGender\":\"m\",\"volume\":0.8,\"timerSeconds\":20,\"theme\":\"studio\",\"studioMoved\":true,\"ownRewards\":[],\"fx3d\":true,\"showFps\":false,\"confirmAnswers\":false,\"teach\":true,\"tourSeen\":true},\"faceoff\":{}}"}
+11-26 16:06:31.200  3302  3302 I Capacitor/Console: File:  - Line 334 - Msg: {"ok":true}
+11-26 16:06:31.203  3302  3302 I Capacitor/Console: File:  - Line 334 - Msg: {"ok":true}
+11-26 16:06:37.953  3302  3302 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-26 16:06:37.953  3302  3302 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-26 16:06:38.053  3302  3302 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 86551360, pluginId: StudyHard, methodName: deviceId
+11-26 16:06:38.053  3302  3302 V Capacitor: callback: 86551360, pluginId: StudyHard, methodName: deviceId, methodData: {}
+11-26 16:06:38.053  3302  3302 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 86551361, pluginId: StudyHard, methodName: haptic
+11-26 16:06:38.057  3302  3302 V Capacitor: callback: 86551361, pluginId: StudyHard, methodName: haptic, methodData: {"kind":"tap"}
+11-26 16:06:38.060  3302  3302 I Capacitor/Console: File:  - Line 334 - Msg: {"id":"e6821674a00f2e03"}
+11-26 16:06:38.063  3302  3302 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-26 16:06:38.064  3302  3302 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 86551362, pluginId: StudyHard, methodName: writeSave
+11-26 16:06:38.064  3302  3302 V Capacitor: callback: 86551362, pluginId: StudyHard, methodName: writeSave, methodData: {"key":"studyhard.save.bak","value":"{\"version\":1,\"rev\":1,\"setupDone\":false,\"children\":[],\"activeChildId\":null,\"settings\":{\"limitMinutes\":30,\"timeUpMode\":\"stop\",\"treatPace\":1,\"goalPace\":1,\"holiday\":false,\"hiddenCategories\":[],\"sound\":true,\"music\":true,\"vibration\":true,\"voice\":true,\"voiceName\":\"\",\"voiceRate\":0.95,\"voiceGender\":\"m\",\"volume\":0.8,\"timerSeconds\":20,\"theme\":\"studio\",\"studioMoved\":true,\"ownRewards\":[],\"fx3d\":true,\"showFps\":false,\"confirmAnswers\":false,\"teach\":true,\"tourSeen\":true},\"faceoff\":{}}"}
+11-26 16:06:38.065  3302  3302 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-26 16:06:38.065  3302  3302 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 86551363, pluginId: StudyHard, methodName: writeSave
+11-26 16:06:38.065  3302  3302 V Capacitor: callback: 86551363, pluginId: StudyHard, methodName: writeSave, methodData: {"key":"studyhard.save","value":"{\"version\":1,\"rev\":2,\"setupDone\":false,\"children\":[],\"activeChildId\":null,\"settings\":{\"limitMinutes\":30,\"timeUpMode\":\"stop\",\"treatPace\":1,\"goalPace\":1,\"holiday\":false,\"hiddenCategories\":[],\"sound\":true,\"music\":true,\"vibration\":true,\"voice\":true,\"voiceName\":\"\",\"voiceRate\":0.95,\"voiceGender\":\"m\",\"volume\":0.8,\"timerSeconds\":20,\"theme\":\"studio\",\"studioMoved\":true,\"ownRewards\":[],\"fx3d\":true,\"showFps\":false,\"confirmAnswers\":false,\"teach\":true,\"tourSeen\":true},\"faceoff\":{},\"access\":{\"maxDay\":\"2026-11-26\"}}"}
+11-26 16:06:38.130  3302  3302 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-26 16:06:38.131  3302  3302 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 86551364, pluginId: StudyHard, methodName: stopSpeaking
+11-26 16:06:38.131  3302  3302 V Capacitor: callback: 86551364, pluginId: StudyHard, methodName: stopSpeaking, methodData: {}
+11-26 16:06:38.131  3302  3302 I Capacitor/Console: File:  - Line 350 - Msg: [object Object]
+11-26 16:06:38.132  3302  3302 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 86551365, pluginId: StudyHard, methodName: keepAwake
+11-26 16:06:38.132  3302  3302 V Capacitor: callback: 86551365, pluginId: StudyHard, methodName: keepAwake, methodData: {"on":false}
+11-26 16:06:38.145  3302  3302 I Capacitor/Console: File:  - Line 334 - Msg: undefined
+11-26 16:06:38.145  3302  3302 I Capacitor/Console: File:  - Line 334 - Msg: {"ok":true}
+11-26 16:06:38.148  3302  3302 I Capacitor/Console: File:  - Line 334 - Msg: {"ok":true}
+11-26 16:06:38.148  3302  3302 I Capacitor/Console: File:  - Line 334 - Msg: undefined
+11-26 16:06:38.152  3302  3302 I Capacitor/Console: File:  - Line 334 - Msg: undefined
+11-26 16:06:40.841  3302  3383 D AAudio  : AAudioStream_requestStop(s#2) called
+11-26 16:06:40.841  3302  3383 D AAudioStream: setState(s#2) from 4 to 9
+11-26 16:06:40.841  3302  3383 D AudioTrack: stop(17): called with 1572416 frames delivered
+11-26 16:06:40.845  3302  3383 D AAudioStream: setState(s#2) from 9 to 10
+11-26 16:06:41.147  3302  3383 D AAudio  : AAudioStream_requestStop(s#1) called
+11-26 16:06:41.147  3302  3383 D AAudioStream: setState(s#1) from 4 to 9
+11-26 16:06:41.147  3302  3383 D AudioTrack: stop(15): called with 1744832 frames delivered
+11-26 16:06:41.148  3302  3383 D AAudioStream: setState(s#1) from 9 to 10
+11-26 16:06:45.845  3302  3383 D AAudio  : AAudioStream_requestStop(s#2) called
+11-26 16:06:45.845  3302  3383 D AAudio  : AAudioStream_close(s#2) called ---------------
+11-26 16:06:45.845  3302  3383 D AAudioStream: setState(s#2) from 10 to 11
+11-26 16:06:45.846  3302  3383 D AAudioStream: setState(s#2) from 11 to 12
+11-26 16:06:45.846  3302  3383 D AAudioStream: ~AudioStream(s#2) mPlayerBase strongCount = 2
+11-26 16:06:45.846  3302  3383 D AAudio  : AAudioStream_close(s#2) returned 0 ---------
+11-26 16:06:51.133  3302  3383 D AAudio  : AAudioStream_requestStop(s#1) called
+11-26 16:06:51.133  3302  3383 D AAudio  : AAudioStream_close(s#1) called ---------------
+11-26 16:06:51.133  3302  3383 D AAudioStream: setState(s#1) from 10 to 11
+11-26 16:06:51.134  3302  3383 D AAudioStream: setState(s#1) from 11 to 12
+11-26 16:06:51.134  3302  3383 D AAudioStream: ~AudioStream(s#1) mPlayerBase strongCount = 2
+11-26 16:06:51.134  3302  3383 D AAudio  : AAudioStream_close(s#1) returned 0 ---------
