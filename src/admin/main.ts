@@ -6,6 +6,7 @@
 
 import { CloudError, FirebaseRest, MemoryCloud, OWNER_EMAIL, type AccessEntry, type AccessRequest, type CheckIn, type CloudBackend, type OwnerKey, type Session } from '../platform/cloudapi.ts';
 import { dayNo, dayOf, makeKey, signingKey, tidyPhone } from '../core/access.ts';
+import { isLocal } from './local.ts';
 
 interface AdminConfig {
   apiKey: string;
@@ -21,7 +22,8 @@ interface FirebaseSignIn {
 const w = window as unknown as { __ADMIN__?: AdminConfig; __fbSignIn?: FirebaseSignIn };
 const cfg = w.__ADMIN__;
 const params = new URLSearchParams(location.search);
-const mock = params.has('mock');
+// The stand-in cloud is for trying the page on this computer only: on the live page `?mock` does nothing.
+const mock = params.has('mock') && isLocal(location.hostname);
 
 const DAY = 86_400_000;
 const LENGTHS: [number, string][] = [[0, 'No end date'], [30, '30 days'], [90, '90 days'], [365, '1 year']];
